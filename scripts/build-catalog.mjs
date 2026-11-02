@@ -146,7 +146,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     await mkdir(dist, { recursive: true });
     await copyFile(path.join(root, 'index.html'), path.join(dist, 'index.html'));
     await copyFile(path.join(root, 'tasks.html'), path.join(dist, 'tasks.html'));
-    for (const folder of ['css', 'js', 'data', '作品']) await cp(path.join(root, folder), path.join(dist, folder), { recursive: true });
+    await copyFile(path.join(root, 'assignment-1.html'), path.join(dist, 'assignment-1.html'));
+    for (const folder of ['css', 'js', 'data', '作品', 'examples']) await cp(path.join(root, folder), path.join(dist, folder), { recursive: true });
     await writeFile(path.join(dist, '.nojekyll'), '');
   }
   console.log(`Catalog updated: ${data.categories.length} exhibition(s), ${data.categories.flatMap(category => category.classes).reduce((sum, group) => sum + group.works.length, 0)} works`);
