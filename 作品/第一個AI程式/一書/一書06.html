@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陰影之館 - 互動式文字恐怖解謎</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap');
+
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #050508;
+            color: #d1d5db;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* 恐怖暗黑風格滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* 血腥閃爍動畫 */
+        @keyframes bloodPulse {
+            0%, 100% { box-shadow: inset 0 0 30px rgba(185, 28, 28, 0.2); }
+            50% { box-shadow: inset 0 0 70px rgba(185, 28, 28, 0.6); }
+        }
+
+        .blood-vignette {
+            animation: bloodPulse 4s infinite ease-in-out;
+        }
+
+        /* 驚嚇紅光閃爍 */
+        @keyframes jumpScareFlash {
+            0% { background-color: rgba(220, 38, 38, 0.8); }
+            100% { background-color: transparent; }
+        }
+
+        .scare-flash {
+            animation: jumpScareFlash 0.4s ease-out forwards;
+        }
+
+        /* 打字機游標 */
+        .typewriter-cursor::after {
+            content: '❘';
+            animation: blink 0.8s infinite;
+            color: #ef4444;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* 扭曲文字（高恐懼狀態） */
+        .sanity-glitch {
+            text-shadow: 2px 0 #ef4444, -2px 0 #3b82f6;
+            animation: glitch 1s infinite alternate;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+            100% { transform: translate(0); }
+        }
+
+        /* 選項按鈕 hover 特效 */
+        .choice-btn {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.8) 100%);
+        }
+        .choice-btn:hover {
+            transform: translateX(6px);
+            border-color: #ef4444;
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.4) 0%, rgba(31, 41, 55, 0.9) 100%);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+
+        /* 視覺圖片容器霧化 */
+        .scene-visual-mask {
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 bg-black blood-vignette relative">
+
+    <!-- 驚嚇與效果覆蓋層 -->
+    <div id="fx-overlay" class="fixed inset-0 pointer-events-none z-50"></div>
+
+    <!-- 頂部狀態列 -->
+    <header class="w-full max-w-4xl glass-panel bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 sm:p-4 mb-3 flex flex-wrap justify-between items-center gap-3 backdrop-blur-md z-20 shadow-2xl">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-ghost text-red-600 text-2xl animate-pulse"></i>
+            <div>
+                <h1 class="font-black text-lg sm:text-xl tracking-wider text-slate-100 font-serif">陰影之館</h1>
+                <p class="text-xs text-slate-500 flex items-center gap-1">
+                    <i class="fa-solid fa-location-dot text-red-500/70"></i> <span id="location-name">黑木古宅 - 外門</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- 理智值與時間 -->
+        <div class="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm">
+            <!-- 理智值 Sanity Bar -->
+            <div class="flex flex-col gap-1 w-28 sm:w-36">
+                <div class="flex justify-between items-center font-bold">
+                    <span class="text-slate-400 flex items-center gap-1"><i class="fa-solid fa-brain text-purple-400"></i> 理智值</span>
+                    <span id="sanity-value" class="text-purple-300">100%</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                    <div id="sanity-bar" class="bg-gradient-to-r from-purple-600 to-indigo-500 h-full w-full transition-all duration-500"></div>
+                </div>
+            </div>
+
+            <!-- 時間資訊 -->
+            <div class="bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 text-center">
+                <span class="text-[10px] text-slate-500 block uppercase tracking-widest">目前時間</span>
+                <span id="clock-display" class="font-bold text-red-500 font-mono text-sm sm:text-base">00:00 AM</span>
+            </div>
+
+            <!-- 功能控制鈕 -->
+            <div class="flex items-center gap-1.5">
+                <button id="btn-inventory" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-red-400 hover:border-red-900 transition-all relative" title="物品欄">
+                    <i class="fa-solid fa-briefcase text-base"></i>
+                    <span id="inv-badge" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                </button>
+                <button id="btn-gallery" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:border-amber-900 transition-all" title="結局圖鑑">
+                    <i class="fa-solid fa-book-skull text-base"></i>
+                </button>
+                <button id="btn-audio" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-900 transition-all" title="聲音切換">
+                    <i id="audio-icon" class="fa-solid fa-volume-high text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 遊戲主要內容區域 -->
+    <main class="w-full max-w-4xl flex-1 flex flex-col bg-slate-950/90 border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl relative z-10">
+
+        <!-- 動態氛圍畫布 / 視覺提示 -->
+        <div class="relative w-full h-44 sm:h-60 bg-black overflow-hidden border-b border-slate-900">
+            <canvas id="scene-canvas" class="w-full h-full block scene-visual-mask"></canvas>
+
+            <!-- 視覺情境標籤 -->
+            <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                <span id="scene-tag">靜謐黑暗</span>
+            </div>
+
+            <!-- 動態手電筒晃動光影覆蓋 -->
+            <div id="flashlight-overlay" class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_50%_50%,transparent_20%,rgba(0,0,0,0.85)_80%)]"></div>
+        </div>
+
+        <!-- 文本敘述區 -->
+        <div id="story-container" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-h-[320px] sm:max-h-[380px] border-b border-slate-900">
+            <div id="story-text" class="text-base sm:text-lg leading-relaxed text-slate-200 tracking-wide font-serif typewriter-cursor">
+                <!-- 故事文本將由 JS 打字機動態生成 -->
+            </div>
+        </div>
+
+        <!-- 選擇肢區 -->
+        <div class="p-4 sm:p-5 bg-slate-950/95 flex flex-col gap-2.5">
+            <div class="text-xs text-slate-500 font-sans tracking-wider uppercase mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-compass text-red-500"></i> 你打算怎麼做？
+            </div>
+            <div id="choices-container" class="grid grid-cols-1 gap-2.5">
+                <!-- 動態生成的選擇肢按鈕 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 物品欄 Modal -->
+    <div id="modal-inventory" class="fixed inset-0 bg-black/80 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full p-6 relative shadow-2xl">
+            <button id="close-inv" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-briefcase text-red-500"></i> 背包物品
+            </h3>
+            <div id="inventory-list" class="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto pr-1">
+                <!-- 動態物品清單 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 結局圖鑑 Modal -->
+    <div id="modal-gallery" class="fixed inset-0 bg-black/80 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl max-w-lg w-full p-6 relative shadow-2xl">
+            <button id="close-gallery" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-book-skull text-amber-500"></i> 結局與命運圖鑑
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">記錄你解開的所有命運終章 (收集進度: <span id="gallery-count">0</span>/5)</p>
+            <div id="gallery-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                <!-- 動態結局清單 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="w-full max-w-4xl text-center text-xs text-slate-600 mt-3 mb-1">
+        《陰影之館》文字冒險小遊戲 &copy; 2026 | 支援 Web Audio API 合成音效
+    </footer>
+
+    <script>
+        // Web Audio API 恐怖音效合成器 (完全不用外部 MP3)
+        class HorrorSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.ambientOsc = null;
+                this.ambientGain = null;
+                this.isAmbientPlaying = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // 低頻陰森背景低鳴聲
+            startAmbient() {
+                if (!this.enabled || this.isAmbientPlaying) return;
+                this.init();
+                try {
+                    this.ambientOsc = this.ctx.createOscillator();
+                    const lfo = this.ctx.createOscillator();
+                    this.ambientGain = this.ctx.createGain();
+                    const lfoGain = this.ctx.createGain();
+
+                    this.ambientOsc.type = 'sawtooth';
+                    this.ambientOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // 低音 A1
+
+                    // LFO 顫音效果
+                    lfo.frequency.setValueAtTime(0.2, this.ctx.currentTime);
+                    lfoGain.gain.setValueAtTime(10, this.ctx.currentTime);
+
+                    lfo.connect(this.ambientOsc.frequency);
+                    
+                    this.ambientGain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+
+                    this.ambientOsc.connect(this.ambientGain);
+                    this.ambientGain.connect(this.ctx.destination);
+
+                    this.ambientOsc.start();
+                    lfo.start();
+                    this.isAmbientPlaying = true;
+                } catch(e) { console.log(e); }
+            }
+
+            stopAmbient() {
+                if (this.ambientOsc && this.isAmbientPlaying) {
+                    try {
+                        this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1);
+                        setTimeout(() => {
+                            if (this.ambientOsc) this.ambientOsc.stop();
+                            this.isAmbientPlaying = false;
+                        }, 1000);
+                    } catch(e){}
+                }
+            }
+
+            // 心跳聲 (理智低或緊張時)
+            playHeartbeat() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                // 兩聲心跳 "咚-咚"
+                [0, 0.25].forEach(delay => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(80, now + delay);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + delay + 0.12);
+
+                    gain.gain.setValueAtTime(0.3, now + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + delay);
+                    osc.stop(now + delay + 0.12);
+                });
+            }
+
+            // 驚嚇高頻音 (Jump Scare Sting)
+            playScareSting() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc1.type = 'sawtooth';
+                osc2.type = 'square';
+
+                osc1.frequency.setValueAtTime(800, now);
+                osc1.frequency.exponentialRampToValueAtTime(120, now + 0.6);
+
+                osc2.frequency.setValueAtTime(840, now); // 不和諧音階
+                osc2.frequency.exponentialRampToValueAtTime(115, now + 0.6);
+
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.6);
+                osc2.stop(now + 0.6);
+            }
+
+            // 腳步聲 / 木地板吱呀聲
+            playCreak() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(300, now + 0.15);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            // 八音盒清脆音樂 (提示或記憶片段)
+            playMusicBoxTone() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                const note = notes[Math.floor(Math.random() * notes.length)];
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(note, now);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 1.2);
+            }
+        }
+
+        const audioEngine = new HorrorSoundEngine();
+
+        // 遊戲核心狀態
+        let gameState = {
+            currentNode: 'start',
+            sanity: 100,
+            timeMinutes: 0, // 0 = 00:00 AM
+            inventory: [],
+            unlockedEndings: JSON.parse(localStorage.getItem('shadow_manor_endings') || '[]'),
+            flags: {}
+        };
+
+        // 結局資料庫
+        const ENDINGS = {
+            'end_lost': { title: '終章一：永久迷失', desc: '你成為了黑木古宅中又一個永不消逝的幽魂。', color: 'text-red-400' },
+            'end_madness': { title: '終章二：理智崩解', desc: '無邊的幻象吞噬了你的大腦，你在狂笑中失去了自我。', color: 'text-purple-400' },
+            'end_escape': { title: '終章三：落荒而逃', desc: '你活著逃出了古宅，但黑夜中的低語將終生伴隨你。', color: 'text-blue-400' },
+            'end_truth': { title: '終章四：真相大白', desc: '你揭開了三十年前慘案的真相，淨化了滯留的怨靈。', color: 'text-amber-400' },
+            'end_curse': { title: '終章五：詛咒繼承人', desc: '你戴上了儀式面具，成為黑木宅邸新的主人...', color: 'text-emerald-400' }
+        };
+
+        // 故事地圖節點
+        const STORY_GRAPH = {
+            'start': {
+                location: '黑木古宅 - 外門',
+                tag: '荒涼夜色',
+                text: '夜幕低垂，暴雨將至。你站立在山頂這座荒廢已久的「黑木古宅」鐵門前。你的好友阿傑一週前為了拍攝探險影片進入此地後便音訊全無。鐵門虛掩著，冷風吹過發出令人牙酸的吱呀聲，彷彿在警告你不要靠近...',
+                choices: [
+                    { text: '推開鐵門，進入前院', target: 'courtyard', costSanity: 0, timeAdd: 5 },
+                    { text: '檢查門口的信箱', target: 'mailbox', costSanity: 0, timeAdd: 3 }
+                ]
+            },
+            'mailbox': {
+                location: '黑木古宅 - 舊信箱',
+                tag: '微弱痕跡',
+                text: '信箱已經鏽跡斑斑。你伸手摸索，裡面有一封發黃的信件與一支【微型手電筒】！信封上用鮮紅色的字跡寫著：「不要相信鐘聲...」',
+                onEnter: () => addItem('微型手電筒', '照明設備，可在黑暗中看清隱蔽線索。', 'fa-flashlight'),
+                choices: [
+                    { text: '收好手電筒，推開鐵門進入前院', target: 'courtyard', costSanity: 0, timeAdd: 2 }
+                ]
+            },
+            'courtyard': {
+                location: '黑木古宅 - 前院',
+                tag: '陰森死寂',
+                text: '前院雜草叢生，中央有一座早已乾涸的噴泉，噴泉雕像是一尊失去頭部的天使。宅邸大門沉重而深黑，側邊似乎有一扇通往地下室的斜木門。突然，你似乎看到二樓窗戶後面有一道白色的影子一閃而過！',
+                onEnter: () => audioEngine.playCreak(),
+                choices: [
+                    { text: '直接推開正門進入大廳', target: 'hall', costSanity: 5, timeAdd: 5 },
+                    { text: '前往側邊地下室入口檢查', target: 'basement_door', costSanity: 5, timeAdd: 8 },
+                    { text: '朝窗影方向大聲呼喊阿傑的名字', target: 'shout_courtyard', costSanity: 15, timeAdd: 2 }
+                ]
+            },
+            'shout_courtyard': {
+                location: '黑木古宅 - 前院',
+                tag: '驚悚迴響',
+                text: '你的聲音在空曠的山谷中迴盪。隨即，二樓窗戶傳來一陣狂暴的敲擊聲！「啪！啪！啪！」彷彿有無數隻手在玻璃上拼命抓撓！你的心臟猛然收縮...',
+                onEnter: () => {
+                    audioEngine.playScareSting();
+                    triggerJumpScare();
+                },
+                choices: [
+                    { text: '驚慌地衝進正門！', target: 'hall', costSanity: 10, timeAdd: 3 }
+                ]
+            },
+            'hall': {
+                location: '黑木古宅 - 一樓大廳',
+                tag: '大廳靜謐',
+                text: '大廳內瀰漫著濃重的霉味與塵土。一座高大的老爺鐘立在牆角，鐘擺靜止在十二點。大廳兩側有兩扇門：左側是【圖書室】，右側是【餐廳】；正面則是通往二樓的寬敞木樓梯。',
+                choices: [
+                    { text: '進入左側圖書室搜尋', target: 'library', costSanity: 0, timeAdd: 10 },
+                    { text: '進入右側餐廳檢查', target: 'dining_room', costSanity: 0, timeAdd: 10 },
+                    { text: '順著木樓梯走上二樓', target: 'stairs_2f', costSanity: 5, timeAdd: 5 }
+                ]
+            },
+            'library': {
+                location: '黑木古宅 - 圖書室',
+                tag: '塵封書籍',
+                text: '圖書室裡散落著無數發黃的古籍。書桌上放著一本打開的日記本，上面寫著：「1994年10月...儀式失敗了...古宅的空間開始扭曲...必須用八音盒的旋律壓制牠們...」你在抽屜裡發現了一把【生鏽鑰匙】。',
+                onEnter: () => addItem('生鏽鑰匙', '一把樣式古老的金屬鑰匙，可能可以打開某扇鎖住的門。', 'fa-key'),
+                choices: [
+                    { text: '仔細搜查書架後方', target: 'secret_passage', reqItem: '微型手電筒', costSanity: 5, timeAdd: 10 },
+                    { text: '返回大廳', target: 'hall', costSanity: 0, timeAdd: 5 }
+                ]
+            },
+            'dining_room': {
+                location: '黑木古宅 - 餐廳',
+                tag: '詭異宴席',
+                text: '長形餐桌上竟然擺放著看起來剛煮好的食物，但食物上爬滿了蠕動的黑蟲！牆上掛著古宅男主人黑木男爵的肖像畫，肖像畫的眼睛似乎正隨著你的移動而轉動！',
+                onEnter: () => audioEngine.playHeartbeat(),
+                choices: [
+                    { text: '靠近檢查男爵肖像畫', target: 'portrait_inspect', costSanity: 10, timeAdd: 5 },
+                    { text: '迅速退回大廳', target: 'hall', costSanity: 0, timeAdd: 3 }
+                ]
+            },
+            'portrait_inspect': {
+                location: '黑木古宅 - 餐廳',
+                tag: '視線凝視',
+                text: '當你湊近肖像畫時，畫像中男爵的嘴唇突然張開，吐出了一口黑色的黏液！畫像背面掉出了一張紙條，上面繪製著地下室儀式陣的符號...',
+                onEnter: () => {
+                    addItem('儀式符畫單', '記錄著古老封印儀式的排列圖解。', 'fa-scroll');
+                    audioEngine.playScareSting();
+                },
+                choices: [
+                    { text: '拿走紙條，退回大廳', target: 'hall', costSanity: 5, timeAdd: 5 }
+                ]
+            },
+            'secret_passage': {
+                location: '黑木古宅 - 密道',
+                tag: '幽暗密道',
+                text: '手電筒的光線照亮了書架後方的暗門。暗門後是一條直通地下深處的狹窄石階，空氣中瀰漫著濃烈的硫磺與鮮血氣味。',
+                choices: [
+                    { text: '沿石階下到地下儀式廳', target: 'ritual_room', costSanity: 10, timeAdd: 10 },
+                    { text: '退回圖書室', target: 'library', costSanity: 0, timeAdd: 5 }
+                ]
+            },
+            'stairs_2f': {
+                location: '黑木古宅 - 二樓走廊',
+                tag: '長廊幽影',
+                text: '二樓走廊鋪著破舊的紅地毯。走廊盡頭有一扇掛著鐵鍊鎖的門。走廊兩側是臥室與音樂室。你突然聽見音樂室內傳來斷斷續續的鋼琴琴聲...',
+                onEnter: () => audioEngine.playMusicBoxTone(),
+                choices: [
+                    { text: '推開音樂室的門', target: 'music_room', costSanity: 5, timeAdd: 5 },
+                    { text: '嘗試用【生鏽鑰匙】打開盡頭鎖住的門', target: 'locked_master_room', reqItem: '生鏽鑰匙', costSanity: 5, timeAdd: 5 },
+                    { text: '回一樓大廳', target: 'hall', costSanity: 0, timeAdd: 5 }
+                ]
+            },
+            'music_room': {
+                location: '黑木古宅 - 音樂室',
+                tag: '自鳴鋼琴',
+                text: '音樂室內空無一人，但鋼琴鍵盤卻自己在彈奏著哀傷的旋律！鋼琴頂部放著一個精美的【古董八音盒】。當你靠近時，琴聲突然戛然而止，全室陷入死寂！',
+                onEnter: () => addItem('古董八音盒', '能發出清脆安詳旋律的舊八音盒，似乎對怨靈有撫平作用。', 'fa-music'),
+                choices: [
+                    { text: '拿起八音盒，返回走廊', target: 'stairs_2f', costSanity: 5, timeAdd: 5 }
+                ]
+            },
+            'locked_master_room': {
+                location: '黑木古宅 - 主臥室',
+                tag: '失蹤真相',
+                text: '鑰匙咔噠一聲轉動，門開了！房間中央地上蜷縮著一個人——是阿傑！他極度恐懼地發抖，手裡緊握著一把【儀式短劍】。他看到你後崩潰喊道：「不是我...是這座宅邸...牠要我們獻祭理智！」',
+                onEnter: () => {
+                    addItem('儀式短劍', '帶有古老符文的鋒利短劍。', 'fa-wand-magic-sparkles');
+                    gameState.flags.foundFriend = true;
+                },
+                choices: [
+                    { text: '帶上阿傑，一起尋找出口逃離古宅', target: 'try_escape', costSanity: 0, timeAdd: 10 },
+                    { text: '帶上阿傑前往地下室徹底結束詛咒', target: 'ritual_room', costSanity: 10, timeAdd: 10 }
+                ]
+            },
+            'basement_door': {
+                location: '黑木古宅 - 地下室入口',
+                tag: '深淵之門',
+                text: '地下室的木門被粗鐵鎖緊鎖著。門縫中不斷冒出刺骨的冰冷寒氣。',
+                choices: [
+                    { text: '使用【生鏽鑰匙】開鎖', target: 'ritual_room', reqItem: '生鏽鑰匙', costSanity: 5, timeAdd: 5 },
+                    { text: '返回前院', target: 'courtyard', costSanity: 0, timeAdd: 3 }
+                ]
+            },
+            'ritual_room': {
+                location: '黑木古宅 - 地下儀式廳',
+                tag: '終極祭壇',
+                text: '地下室極度寬廣，地面畫著巨大的紅色六芒星陣！空氣中浮現出無數哀嚎的幽魂影跡。祭壇中央有一道通往異度空間的黑洞裂隙！巨大的壓迫感讓你的理智急劇下降！',
+                onEnter: () => {
+                    audioEngine.playHeartbeat();
+                    triggerJumpScare();
+                },
+                choices: [
+                    { text: '播放【古董八音盒】淨化怨靈', target: 'ending_truth_node', reqItem: '古董八音盒', costSanity: 0, timeAdd: 10 },
+                    { text: '拿起【儀式短劍】向黑洞獻祭自我', target: 'ending_curse_node', reqItem: '儀式短劍', costSanity: 50, timeAdd: 10 },
+                    { text: '驚恐萬分地掉頭逃跑！', target: 'try_escape', costSanity: 20, timeAdd: 5 }
+                ]
+            },
+            'try_escape': {
+                location: '黑木古宅 - 大門',
+                tag: '決死逃亡',
+                text: '你衝向大廳正門！然而正門已經被黑色的黏液死死封住。老爺鐘突然發出巨大的整點轟鳴！周圍的牆壁開始像心臟一樣跳動起伏...',
+                onEnter: () => audioEngine.playScareSting(),
+                choices: [
+                    { text: '用全身力量撞開正門！', target: 'ending_escape_node', costSanity: 10, timeAdd: 5 },
+                    { text: '放棄抵抗，融入黑暗...', target: 'ending_lost_node', costSanity: 100, timeAdd: 0 }
+                ]
+            },
+            // 結局節點
+            'ending_truth_node': {
+                location: '黑木古宅 - 淨化之地',
+                tag: '終章：真相大白',
+                text: '你將八音盒置於祭壇中央。清脆悠揚的旋律響徹地下廳，溫和的光芒擴散開來，幽魂們的哀嚎逐漸化為解脫的嘆息，黑洞隨之彌合。你與阿傑平安回到了陽光照射的山腳。',
+                onEnter: () => unlockEnding('end_truth'),
+                choices: [{ text: '重新開始探索', target: 'start', resetGame: true }]
+            },
+            'ending_curse_node': {
+                location: '黑木古宅 - 深淵祭壇',
+                tag: '終章：詛咒繼承',
+                text: '短劍刺入祭壇的瞬間，黑洞中的古老存在注入了你的身體。你的雙眼染上了猩紅，力量充斥全身。你露出了詭異的微笑...這座古宅，現在屬於你了。',
+                onEnter: () => unlockEnding('end_curse'),
+                choices: [{ text: '重新開始探索', target: 'start', resetGame: true }]
+            },
+            'ending_escape_node': {
+                location: '山間荒路',
+                tag: '終章：落荒而逃',
+                text: '你拼死撞破了大門，摔跌在暴雨中的泥濘山路上。你不敢回頭，一路狂奔直至山下警局。雖然保住了性命，但每當深夜寂靜時，耳邊總會響起那座古宅的老爺鐘聲...',
+                onEnter: () => unlockEnding('end_escape'),
+                choices: [{ text: '重新開始探索', target: 'start', resetGame: true }]
+            },
+            'ending_lost_node': {
+                location: '虛無裂隙',
+                tag: '終章：永久迷失',
+                text: '黑色的黏液蔓延過你的腳踝、胸膛直至頭頂。你的意識陷入永恆的冰冷與黑暗中。黑木古宅又多了一個無法離開的靈魂...',
+                onEnter: () => unlockEnding('end_lost'),
+                choices: [{ text: '重新開始探索', target: 'start', resetGame: true }]
+            },
+            'ending_madness_node': {
+                location: '瘋狂深淵',
+                tag: '終章：理智崩解',
+                text: '過度的恐怖超出了你的大腦承受極限。你的理智徹底歸零，視野充斥著崩潰的雜訊與幻象。你倒在地上發出失心的狂笑，永遠無法分清現實與幻覺...',
+                onEnter: () => unlockEnding('end_madness'),
+                choices: [{ text: '重新開始探索', target: 'start', resetGame: true }]
+            }
+        };
+
+        // Canvas 背景動態霧氣與粒子
+        const canvas = document.getElementById('scene-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function initCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            particles = [];
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2 + 1,
+                    alpha: Math.random() * 0.5 + 0.1,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: -Math.random() * 0.4 - 0.1
+                });
+            }
+        }
+
+        function drawCanvas() {
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製陰森迷霧粒子
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.x < 0 || p.x > canvas.width) p.x = Math.random() * canvas.width;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(180, 180, 200, ${p.alpha})`;
+                ctx.fill();
+            });
+
+            // 根據理智值繪製幻影雜訊
+            if (gameState.sanity < 40) {
+                ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + (40 - gameState.sanity) * 0.005})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            requestAnimationFrame(drawCanvas);
+        }
+
+        // 打字機動畫特效
+        let typewriterTimeout = null;
+        function typeWriter(text, elementId, speed = 25, callback = null) {
+            const container = document.getElementById(elementId);
+            container.textContent = '';
+            container.classList.add('typewriter-cursor');
+            let i = 0;
+
+            if (typewriterTimeout) clearTimeout(typewriterTimeout);
+
+            function type() {
+                if (i < text.length) {
+                    container.textContent += text.charAt(i);
+                    i++;
+                    if (i % 3 === 0) audioEngine.playCreak();
+                    typewriterTimeout = setTimeout(type, speed);
+                } else {
+                    container.classList.remove('typewriter-cursor');
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // 觸發視覺驚嚇閃爍
+        function triggerJumpScare() {
+            const overlay = document.getElementById('fx-overlay');
+            overlay.classList.remove('scare-flash');
+            void overlay.offsetWidth; // 強制重繪
+            overlay.classList.add('scare-flash');
+        }
+
+        // 背包系統
+        function addItem(name, desc, icon) {
+            if (!gameState.inventory.some(item => item.name === name)) {
+                gameState.inventory.push({ name, desc, icon });
+                document.getElementById('inv-badge').classList.remove('hidden');
+                showNotification(`獲得物品：【${name}】`);
+            }
+        }
+
+        function showNotification(msg) {
+            const notif = document.createElement('div');
+            notif.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-red-950/90 border border-red-800 text-red-200 px-4 py-2 rounded-xl text-sm z-50 backdrop-blur-md shadow-2xl transition-all duration-300 transform translate-y-4 opacity-0';
+            notif.innerHTML = `<i class="fa-solid fa-bell mr-2"></i>${msg}`;
+            document.body.appendChild(notif);
+
+            setTimeout(() => {
+                notif.classList.remove('translate-y-4', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                notif.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => notif.remove(), 300);
+            }, 2500);
+        }
+
+        // 解鎖結局
+        function unlockEnding(endingKey) {
+            if (!gameState.unlockedEndings.includes(endingKey)) {
+                gameState.unlockedEndings.push(endingKey);
+                localStorage.setItem('shadow_manor_endings', JSON.stringify(gameState.unlockedEndings));
+                showNotification(`解鎖全新結局：【${ENDINGS[endingKey].title}】`);
+            }
+        }
+
+        // 更新介面 UI 狀態
+        function updateUI() {
+            const node = STORY_GRAPH[gameState.currentNode];
+
+            // 更新標頭資訊
+            document.getElementById('location-name').textContent = node.location;
+            document.getElementById('scene-tag').textContent = node.tag;
+
+            // 時間計算 (從 00:00 開始)
+            const hours = Math.floor(gameState.timeMinutes / 60) % 12;
+            const mins = gameState.timeMinutes % 60;
+            const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} AM`;
+            document.getElementById('clock-display').textContent = timeStr;
+
+            // 理智值條
+            const sanityVal = Math.max(0, gameState.sanity);
+            document.getElementById('sanity-value').textContent = `${sanityVal}%`;
+            const sanityBar = document.getElementById('sanity-bar');
+            sanityBar.style.width = `${sanityVal}%`;
+
+            // 理智值低時樣式改變
+            const storyTextEl = document.getElementById('story-text');
+            if (sanityVal < 30) {
+                storyTextEl.classList.add('sanity-glitch');
+                sanityBar.className = 'bg-gradient-to-r from-red-600 to-rose-900 h-full w-full transition-all duration-500';
+            } else {
+                storyTextEl.classList.remove('sanity-glitch');
+                sanityBar.className = 'bg-gradient-to-r from-purple-600 to-indigo-500 h-full w-full transition-all duration-500';
+            }
+
+            // 渲染故事文本
+            typeWriter(node.text, 'story-text', 20, () => {
+                renderChoices(node.choices);
+            });
+
+            // 執行節點進入觸發器
+            if (node.onEnter) node.onEnter();
+        }
+
+        // 渲染選擇肢按鈕
+        function renderChoices(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+
+            choices.forEach(choice => {
+                // 檢查物品需求
+                if (choice.reqItem && !gameState.inventory.some(i => i.name === choice.reqItem)) {
+                    return; // 缺乏道具不顯示或置灰
+                }
+
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn w-full text-left p-3.5 rounded-xl border border-slate-800 text-slate-200 text-sm sm:text-base flex items-center justify-between group shadow-lg';
+                btn.innerHTML = `
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-angle-right text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                        ${choice.text}
+                    </span>
+                    ${choice.costSanity > 0 ? `<span class="text-xs text-purple-400 font-mono">理智 -${choice.costSanity}</span>` : ''}
+                `;
+
+                btn.onclick = () => {
+                    if (choice.resetGame) {
+                        resetGame();
+                        return;
+                    }
+
+                    // 扣除理智與時間增加
+                    gameState.sanity = Math.max(0, gameState.sanity - (choice.costSanity || 0));
+                    gameState.timeMinutes += (choice.timeAdd || 5);
+
+                    // 理智歸零判定
+                    if (gameState.sanity <= 0 && gameState.currentNode !== 'ending_madness_node') {
+                        gameState.currentNode = 'ending_madness_node';
+                    } else {
+                        gameState.currentNode = choice.target;
+                    }
+
+                    updateUI();
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
+        function resetGame() {
+            gameState.currentNode = 'start';
+            gameState.sanity = 100;
+            gameState.timeMinutes = 0;
+            gameState.inventory = [];
+            gameState.flags = {};
+            updateUI();
+        }
+
+        // Modal 控制事件
+        document.getElementById('btn-inventory').onclick = () => {
+            document.getElementById('inv-badge').classList.add('hidden');
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = '';
+
+            if (gameState.inventory.length === 0) {
+                list.innerHTML = `<div class="text-slate-500 text-sm text-center py-6">背包裡空空如也...</div>`;
+            } else {
+                gameState.inventory.forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center gap-3';
+                    itemEl.innerHTML = `
+                        <div class="w-10 h-10 rounded-lg bg-red-950/60 border border-red-900/50 flex items-center justify-center text-red-400">
+                            <i class="fa-solid ${item.icon || 'fa-box'} text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-200 text-sm">${item.name}</div>
+                            <div class="text-xs text-slate-400">${item.desc}</div>
+                        </div>
+                    `;
+                    list.appendChild(itemEl);
+                });
+            }
+            document.getElementById('modal-inventory').classList.remove('hidden');
+        };
+
+        document.getElementById('close-inv').onclick = () => {
+            document.getElementById('modal-inventory').classList.add('hidden');
+        };
+
+        document.getElementById('btn-gallery').onclick = () => {
+            const list = document.getElementById('gallery-list');
+            list.innerHTML = '';
+            document.getElementById('gallery-count').textContent = gameState.unlockedEndings.length;
+
+            Object.keys(ENDINGS).forEach(key => {
+                const unlocked = gameState.unlockedEndings.includes(key);
+                const endData = ENDINGS[key];
+
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-xl border ${unlocked ? 'bg-slate-900 border-slate-800' : 'bg-slate-950/40 border-slate-900 opacity-50'} flex items-center gap-3`;
+                card.innerHTML = `
+                    <div class="w-8 h-8 rounded-full ${unlocked ? 'bg-amber-950/80 border border-amber-700/60 text-amber-400' : 'bg-slate-900 text-slate-600'} flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid ${unlocked ? 'fa-lock-open' : 'fa-lock'}"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm ${unlocked ? endData.color : 'text-slate-500'}">${unlocked ? endData.title : '??? 未知終章'}</div>
+                        <div class="text-xs text-slate-400 mt-0.5">${unlocked ? endData.desc : '探索不同的抉擇以解鎖此命運。'}</div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            document.getElementById('modal-gallery').classList.remove('hidden');
+        };
+
+        document.getElementById('close-gallery').onclick = () => {
+            document.getElementById('modal-gallery').classList.add('hidden');
+        };
+
+        // 音效控制
+        const audioBtn = document.getElementById('btn-audio');
+        const audioIcon = document.getElementById('audio-icon');
+        audioBtn.onclick = () => {
+            audioEngine.enabled = !audioEngine.enabled;
+            if (audioEngine.enabled) {
+                audioIcon.className = 'fa-solid fa-volume-high text-base text-cyan-400';
+                audioEngine.startAmbient();
+            } else {
+                audioIcon.className = 'fa-solid fa-volume-xmark text-base text-slate-500';
+                audioEngine.stopAmbient();
+            }
+        };
+
+        // 第一次點擊畫面啟動 Web Audio
+        window.addEventListener('click', () => {
+            audioEngine.init();
+            if (audioEngine.enabled) audioEngine.startAmbient();
+        }, { once: true });
+
+        window.onresize = initCanvas;
+
+        // 初始化遊戲
+        window.onload = () => {
+            initCanvas();
+            drawCanvas();
+            updateUI();
+        };
+    </script>
+</body>
+</html>

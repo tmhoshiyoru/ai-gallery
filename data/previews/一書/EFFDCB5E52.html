@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 離線小恐龍 - 天氣與 Boss 寶箱終極版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .touch-btn:active {
+            transform: scale(0.95);
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .boss-pulse {
+            animation: pulse-fast 0.3s infinite;
+        }
+        @keyframes chest-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.08); }
+        }
+        .chest-anim {
+            animation: chest-bounce 1s infinite ease-in-out;
+        }
+        @keyframes alien-grab {
+            0%, 100% { transform: scale(1) rotate(-3deg); }
+            50% { transform: scale(1.1) rotate(3deg); }
+        }
+        .alien-grab-anim {
+            animation: alien-grab 0.4s infinite ease-in-out;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+#gameCanvas { object-fit: contain; background: #020617; }
+</style></head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 transition-colors duration-500 select-none">
+
+    <div class="w-full max-w-4xl bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-2xl p-4 sm:p-6 border border-slate-700 transition-colors duration-500 relative">
+        <!-- Top Navigation Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600/30 border border-indigo-500/50 rounded-xl text-3xl">🦖</div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-white tracking-wide">Google 離線小恐龍 <span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-md ml-1">寶箱 & 外星陷阱版</span></h1>
+                    <p class="text-xs text-slate-400">極限多重障礙 ‧ 討伐 Boss ‧ 擺動滑鼠擺脫外星人！</p>
+                </div>
+            </div>
+            
+            <!-- Controls & Weather Info Header -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Skin & Weapon Shop Button -->
+                <button id="openSkinShopBtn" class="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow border border-indigo-400">
+                    <span>🛒</span>
+                    <span>軍備商店</span>
+                </button>
+                <!-- Sound Toggle -->
+                <button id="soundToggleBtn" class="flex items-center space-x-1 px-3 py-1.5 bg-slate-700/80 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition border border-slate-600">
+                    <span id="soundIcon">🔊</span>
+                    <span id="soundStatus">音效: 開</span>
+                </button>
+                <!-- Weather Badge -->
+                <div id="weatherBadge" class="flex items-center space-x-1.5 text-xs px-3 py-1.5 bg-sky-900/60 text-sky-300 border border-sky-700/50 font-bold rounded-lg transition-all">
+                    <span id="weatherIcon">☀️</span>
+                    <span id="weatherText">晴天 Sunny</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Bar & Skin Status & Gold Coins -->
+        <div class="flex flex-wrap justify-between items-center px-4 py-2.5 mb-3 bg-slate-950/70 rounded-xl border border-slate-800 text-xs sm:text-sm gap-2">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <span class="pixel-font text-slate-400">HI <span id="highScoreText" class="text-amber-400">00000</span></span>
+                <span id="skinBadge" class="px-2.5 py-1 bg-indigo-950 text-indigo-300 border border-indigo-700/50 rounded-lg text-xs font-bold transition-all duration-300">
+                    造型: 經典 REX
+                </span>
+                <span id="weaponBadge" class="px-2.5 py-1 bg-amber-950 text-amber-300 border border-amber-700/50 rounded-lg text-xs font-bold transition-all duration-300">
+                    武器: 🔫 基礎雷射 (Atk 1)
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-1 text-amber-400 font-extrabold text-sm">
+                    <span>🪙</span>
+                    <span id="coinCountText" class="pixel-font">0</span>
+                </div>
+                <div class="text-emerald-400 font-extrabold pixel-font text-sm sm:text-base">
+                    SCORE <span id="currentScoreText">00000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Canvas Container -->
+        <div class="relative w-full aspect-[10/3.2] min-h-[230px] bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-700 shadow-2xl transition-colors duration-500">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+            <!-- Custom Notification Banner -->
+            <div id="notificationToast" class="hidden absolute top-3 left-1/2 -translate-x-1/2 bg-slate-900/95 text-amber-300 border border-amber-500 px-4 py-2 rounded-xl text-xs font-bold shadow-xl z-50 transition-all">
+                <span id="notificationText">提示訊息</span>
+            </div>
+
+            <!-- Alien Trap Overlay (Mouse Shake Event) -->
+            <div id="alienTrapOverlay" class="hidden absolute inset-0 bg-purple-950/90 backdrop-blur-md flex flex-col items-center justify-center text-white p-4 z-50">
+                <div class="text-5xl mb-2 alien-grab-anim">👾</div>
+                <div class="text-xs font-bold text-purple-300 tracking-wider mb-1 uppercase">⚠️ 突發事件：外星物體襲擊！</div>
+                <h3 class="text-lg sm:text-2xl font-black text-rose-400 mb-2 text-center animate-pulse">小恐龍被異形怪物抓住了！</h3>
+                <p class="text-xs sm:text-sm text-slate-200 mb-3 text-center max-w-sm">
+                    ⚡ 快速<span class="text-amber-300 font-black text-base px-1">左右擺動滑鼠 / 快速滑動螢幕</span>掙脫怪物的束縛！
+                </p>
+
+                <!-- Shake Progress Bar -->
+                <div class="w-11/12 max-w-md bg-slate-900 border-2 border-purple-500 rounded-full h-6 p-0.5 relative overflow-hidden my-2 shadow-inner">
+                    <div id="shakeProgressBar" class="bg-gradient-to-r from-amber-500 via-rose-500 to-emerald-400 h-full rounded-full transition-all duration-75" style="width: 0%;"></div>
+                    <span id="shakeProgressText" class="absolute inset-0 flex items-center justify-center text-xs font-black text-white drop-shadow">
+                        掙脫進度: 0 / 15 次
+                    </span>
+                </div>
+
+                <div class="text-[11px] text-purple-300 animate-bounce mt-2">
+                    ↔️ 擺動滑鼠中... 擺動越快掙脫越快！
+                </div>
+            </div>
+
+            <!-- Boss Battle UI Overlay -->
+            <div id="bossOverlay" class="hidden absolute top-3 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-rose-950/80 backdrop-blur-md border-2 border-rose-500 rounded-xl p-2.5 text-center shadow-red-900/50 shadow-2xl z-20">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-black text-rose-300 flex items-center gap-1">
+                        <span class="animate-ping w-2 h-2 rounded-full bg-rose-500"></span> 👹 BOSS 來襲！狂點擊擊退！
+                    </span>
+                    <span id="bossTimerText" class="text-xs font-bold text-amber-400 pixel-font">限時 12s</span>
+                </div>
+                <div class="w-full bg-slate-950 h-4 rounded-full overflow-hidden border border-rose-700 p-0.5">
+                    <div id="bossHpBar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full transition-all duration-75" style="width: 100%;"></div>
+                </div>
+                <div class="mt-1 flex justify-between text-[11px] text-slate-300 font-bold">
+                    <span>剩餘血量: <span id="bossHpText" class="text-yellow-400 text-sm font-extrabold">30</span> HP</span>
+                    <span id="bossWeaponAtkText" class="text-amber-300 text-[11px] font-black">當前傷害: 1/擊</span>
+                </div>
+            </div>
+
+            <!-- Treasure Chest Victory Modal Overlay -->
+            <div id="chestOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-white p-4 z-40">
+                <div class="text-xs font-bold text-amber-400 tracking-wider mb-1 uppercase">── BOSS 討伐成功 ──</div>
+                <h3 class="text-xl sm:text-2xl font-black text-amber-300 mb-3 text-center">🏆 獲得戰利品寶箱！</h3>
+                
+                <div id="chestBoxBtn" class="chest-anim text-6xl my-3 cursor-pointer hover:scale-110 transition duration-300 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                    🎁
+                </div>
+
+                <p id="chestInstructionText" class="text-xs text-slate-300 mb-4 animate-pulse">點擊寶箱開啟神秘獎勵！（小心有機會觸發外星人陷阱！）</p>
+
+                <div id="chestRewardResult" class="hidden text-center my-2 p-3 bg-amber-950/50 border border-amber-500/50 rounded-xl">
+                    <div id="chestRewardIcon" class="text-4xl mb-1">🪙</div>
+                    <div id="chestRewardTitle" class="text-sm font-extrabold text-amber-300">獲得獎勵</div>
+                    <div id="chestRewardDesc" class="text-xs text-slate-300 mt-1">金幣 +200</div>
+                </div>
+
+                <button id="closeChestBtn" class="hidden mt-2 px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition">
+                    繼續奔跑 🏃‍♂️
+                </button>
+            </div>
+
+            <!-- Skin & Weapon Shop Modal -->
+            <div id="skinShopModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col text-white p-4 z-50 overflow-y-auto">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <button id="shopTabSkinsBtn" class="px-3 py-1 bg-indigo-600 text-white text-xs font-extrabold rounded-lg border border-indigo-400 shadow">
+                            👗 恐龍造型
+                        </button>
+                        <button id="shopTabWeaponsBtn" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-lg border border-slate-700">
+                            ⚔️ 武器補給庫
+                        </button>
+                    </div>
+                    <button id="closeSkinShopBtn" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700">
+                        ✕ 關閉
+                    </button>
+                </div>
+                <p id="shopSubTitleText" class="text-xs text-slate-400 mb-3">使用獲得的金幣解鎖造型，或提升 Boss 戰武器攻擊力！</p>
+                
+                <div id="skinGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 overflow-y-auto max-h-[220px] p-1">
+                    <!-- Cards injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Start Screen Overlay -->
+            <div id="startOverlay" class="absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4 z-30">
+                <div class="text-5xl mb-3 animate-bounce">🦖</div>
+                <h2 class="text-xl sm:text-2xl font-black mb-2 text-center text-emerald-400">Google 小恐龍：寶箱 & 外星陷阱版</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mb-6 text-center max-w-md">
+                    挑戰極限障礙物 ‧ 討伐 <span class="text-rose-400 font-bold">BOSS 開寶箱</span> 解鎖造型，小心外星人抓捕陷阱！
+                </p>
+                <button id="startBtn" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white font-extrabold text-base rounded-xl shadow-lg shadow-emerald-900/40 transition">
+                    🎮 開始遊戲
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center text-white p-4 z-30">
+                <div class="text-3xl sm:text-4xl font-black tracking-widest text-rose-500 mb-2 pixel-font">GAME OVER</div>
+                <p id="finalScoreMsg" class="text-base sm:text-lg text-slate-200 mb-6">最終得分: 0</p>
+                <button id="restartBtn" class="flex items-center space-x-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-extrabold rounded-xl shadow-lg shadow-indigo-900/50 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <span>重新挑戰</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Controls Guide & Mobile Buttons -->
+        <div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-400">
+            <div class="hidden sm:flex items-center space-x-4">
+                <span class="flex items-center gap-1"><kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-600 font-mono text-slate-200">Space</kbd> / <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-600 font-mono text-slate-200">↑</kbd> 跳躍</span>
+                <span class="flex items-center gap-1"><kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-600 font-mono text-slate-200">↓</kbd> / <kbd class="px-2 py-1 bg-slate-800 rounded border border-slate-600 font-mono text-slate-200">S</kbd> 蹲下</span>
+                <span class="flex items-center gap-1 text-rose-400"><kbd class="px-2 py-1 bg-rose-900/50 rounded border border-rose-700 font-mono text-rose-200">滑鼠點擊</kbd> 攻擊 Boss</span>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div class="flex sm:hidden w-full gap-2">
+                <button id="mobileDuckBtn" class="touch-btn flex-1 py-3 bg-slate-700 active:bg-slate-600 rounded-xl text-white font-bold text-center select-none shadow">
+                    👇 蹲下 (Duck)
+                </button>
+                <button id="mobileAttackBtn" class="touch-btn flex-1 py-3 bg-rose-600 active:bg-rose-500 rounded-xl text-white font-bold text-center select-none shadow">
+                    ⚔️ 攻擊 (Attack)
+                </button>
+                <button id="mobileJumpBtn" class="touch-btn flex-2 py-3 bg-indigo-600 active:bg-indigo-500 rounded-xl text-white font-bold text-center select-none shadow">
+                    ⬆️ 跳躍 (Jump)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.12);
+
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch (e) {}
+            }
+
+            playAttack() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.08);
+
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.08);
+                } catch (e) {}
+            }
+
+            playBossExplode() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } catch (e) {}
+            }
+
+            playChestReward() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                        gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.08 + 0.2);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.2);
+                    });
+                } catch (e) {}
+            }
+
+            playHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.3);
+
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch (e) {}
+            }
+
+            playShakeProgress() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400 + Math.random() * 300, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.05);
+                } catch (e) {}
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 1000;
+        const CANVAS_HEIGHT = 320;
+        const GROUND_Y = 260;
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        const SKINS = [
+            { id: 'classic', name: '經典小恐龍 REX', color: '#334155', hat: null, price: 0 },
+            { id: 'cool', name: '墨鏡酷哥 🕶️', color: '#2563eb', hat: 'sunglasses', price: 100 },
+            { id: 'king', name: '皇家國王 👑', color: '#d97706', hat: 'crown', price: 200 },
+            { id: 'party', name: '派對恐龍 🎉', color: '#db2777', hat: 'party_hat', price: 250 },
+            { id: 'ninja', name: '忍者恐龍 🥷', color: '#dc2626', hat: 'headband', price: 300 },
+            { id: 'cyber', name: '賽博機器龍 🤖', color: '#0891b2', hat: 'cyber_visor', price: 400 },
+            { id: 'fire', name: '烈焰飛龍 🔥', color: '#ea580c', hat: 'flames', price: 500 },
+            { id: 'astronaut', name: '太空宇航龍 🧑‍🚀', color: '#94a3b8', hat: 'space_helmet', price: 600 },
+            { id: 'pirate', name: '航海海盜龍 🏴‍☠️', color: '#7c2d12', hat: 'pirate_hat', price: 700 },
+            { id: 'wizard', name: '魔法大導師 🧙‍♂️', color: '#7e22ce', hat: 'wizard_hat', price: 800 },
+            { id: 'galaxy', name: '璀璨銀河龍 🌌', color: '#6366f1', hat: 'galaxy_halo', price: 1000 },
+            { id: 'dragon', name: '遠古金龍 🐉', color: '#eab308', hat: 'dragon_horns', price: 1200 },
+            { id: 'golden', name: '終極黃金皇 ✨', color: '#f59e0b', hat: 'golden_aura', price: 1500 }
+        ];
+
+        const WEAPONS = [
+            { id: 'laser', name: '基礎雷射槍 🔫', icon: '🔫', damage: 1, price: 0, desc: '標準討伐武器，每次攻擊 1 點傷害' },
+            { id: 'fireball', name: '烈焰火球砲 🔥', icon: '🔥', damage: 2, price: 200, desc: '噴射高溫火球，每次攻擊 2 點傷害' },
+            { id: 'plasma', name: '等離子電漿 ⚡', icon: '⚡', damage: 3, price: 400, desc: '高能電漿打擊，每次攻擊 3 點傷害' },
+            { id: 'fish', name: '飛魚飛彈 🐟', icon: '🐟', damage: 3, price: 500, desc: '滑稽鮮魚飛彈，每次攻擊 3 點傷害' },
+            { id: 'star', name: '黃金手裏劍 🌟', icon: '🌟', damage: 4, price: 800, desc: '高速旋轉金光手裏劍，傷害 4 點' },
+            { id: 'banana', name: '神聖香蕉砲 🍌', icon: '🍌', damage: 5, price: 1000, desc: '香蕉重擊 Boss，每次攻擊 5 點傷害' },
+            { id: 'blackhole', name: '暗物質黑洞 🕳️', icon: '🕳️', damage: 6, price: 1500, desc: '釋放吞噬黑洞，每次攻擊 6 點傷害' },
+            { id: 'rocket', name: '超級機甲火箭 🚀', icon: '🚀', damage: 8, price: 2000, desc: '毀滅級火箭，每次攻擊高達 8 點傷害！' }
+        ];
+
+        const WEATHERS = [
+            { id: 'sunny', name: '晴天 Sunny', icon: '☀️', bgTop: '#0f172a', bgBottom: '#1e293b' },
+            { id: 'rainy', name: '雨天 Rainy', icon: '🌧️', bgTop: '#091527', bgBottom: '#111827' },
+            { id: 'snowy', name: '下雪 Snowy', icon: '❄️', bgTop: '#1e1b4b', bgBottom: '#312e81' },
+            { id: 'thunder', name: '雷陣雨 Thunderstorm', icon: '⚡', bgTop: '#020617', bgBottom: '#0f172a' },
+            { id: 'sunset', name: '夕陽 Sunset', icon: '🌅', bgTop: '#451a03', bgBottom: '#7c2d12' }
+        ];
+
+        let currentSkinIndex = 0;
+        let unlockedSkins = JSON.parse(window.__galleryStorage.getItem('dino_unlocked_skins') || '["classic"]');
+        let currentWeaponIndex = 0;
+        let unlockedWeapons = JSON.parse(window.__galleryStorage.getItem('dino_unlocked_weapons') || '["laser"]');
+        let goldCoins = parseInt(window.__galleryStorage.getItem('dino_gold_coins') || '0', 10);
+        let highScore = parseInt(window.__galleryStorage.getItem('dino_high_score') || '0', 10);
+
+        let isRunning = false;
+        let isGameOver = false;
+        let score = 0;
+        let gameSpeed = 8;
+        const INITIAL_SPEED = 8;
+        const MAX_SPEED = 22;
+        let frameCount = 0;
+        let obstacles = [];
+        let nextObstacleTimer = 0;
+
+        let isBossActive = false;
+        let boss = null;
+        let bossTimer = 0;
+        let lastBossTriggerScore = 0;
+        let attackProjectiles = [];
+        let isChestModalOpen = false;
+
+        let isAlienTrapped = false;
+        let shakeCount = 0;
+        let requiredShakes = 15;
+        let lastMouseX = null;
+        let shakeDirection = 0;
+        let activeShopTab = 'skins';
+
+        class WeatherSystem {
+            constructor() {
+                this.currentIdx = 0;
+                this.particles = [];
+                this.flashTimer = 0;
+                this.initParticles();
+            }
+
+            initParticles() {
+                this.particles = [];
+                for (let i = 0; i < 60; i++) {
+                    this.particles.push({
+                        x: Math.random() * CANVAS_WIDTH,
+                        y: Math.random() * CANVAS_HEIGHT,
+                        speedY: 2 + Math.random() * 5,
+                        speedX: -1 + Math.random() * 2,
+                        size: 2 + Math.random() * 3
+                    });
+                }
+            }
+
+            setWeather(index) {
+                this.currentIdx = index % WEATHERS.length;
+                const weather = WEATHERS[this.currentIdx];
+                document.getElementById('weatherIcon').innerText = weather.icon;
+                document.getElementById('weatherText').innerText = weather.name;
+                this.initParticles();
+            }
+
+            update() {
+                if (frameCount % 600 === 0 && frameCount > 0) {
+                    this.setWeather(this.currentIdx + 1);
+                }
+
+                const w = WEATHERS[this.currentIdx];
+                if (w.id === 'rainy' || w.id === 'thunder' || w.id === 'snowy') {
+                    this.particles.forEach(p => {
+                        p.y += p.speedY;
+                        p.x += (w.id === 'rainy' || w.id === 'thunder') ? -2 : p.speedX;
+                        if (p.y > CANVAS_HEIGHT) {
+                            p.y = -10;
+                            p.x = Math.random() * CANVAS_WIDTH;
+                        }
+                    });
+                }
+
+                if (w.id === 'thunder' && Math.random() < 0.02) {
+                    this.flashTimer = 5;
+                }
+                if (this.flashTimer > 0) this.flashTimer--;
+            }
+
+            draw() {
+                const w = WEATHERS[this.currentIdx];
+                
+                // Draw Background Gradient
+                const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+                if (this.flashTimer > 0) {
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(1, '#e2e8f0');
+                } else {
+                    grad.addColorStop(0, w.bgTop);
+                    grad.addColorStop(1, w.bgBottom);
+                }
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Draw Ground Line
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 4);
+
+                // Weather Effects
+                if (w.id === 'rainy' || w.id === 'thunder') {
+                    ctx.strokeStyle = w.id === 'thunder' ? '#a5f3fc' : '#cbd5e1';
+                    ctx.lineWidth = 1.5;
+                    this.particles.forEach(p => {
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x - 3, p.y + p.size * 3);
+                        ctx.stroke();
+                    });
+                } else if (w.id === 'snowy') {
+                    ctx.fillStyle = '#ffffff';
+                    this.particles.forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                } else if (w.id === 'sunny') {
+                    ctx.fillStyle = '#fef08a';
+                    ctx.beginPath();
+                    ctx.arc(CANVAS_WIDTH - 80, 50, 28, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (w.id === 'sunset') {
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(CANVAS_WIDTH - 120, 110, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        const weatherSys = new WeatherSystem();
+
+        class Dino {
+            constructor() {
+                this.x = 80;
+                this.width = 44;
+                this.height = 48;
+                this.y = GROUND_Y - this.height;
+                this.vy = 0;
+                this.gravity = 0.85;
+                this.jumpPower = -14.5;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.legFrame = 0;
+            }
+
+            jump() {
+                if (this.isGrounded) {
+                    this.vy = this.jumpPower;
+                    this.isGrounded = false;
+                    sound.playJump();
+                }
+            }
+
+            duck(isDucking) {
+                if (this.isGrounded) {
+                    this.isDucking = isDucking;
+                    if (isDucking) {
+                        this.height = 28;
+                        this.y = GROUND_Y - this.height;
+                    } else {
+                        this.height = 48;
+                        this.y = GROUND_Y - this.height;
+                    }
+                }
+            }
+
+            update() {
+                if (!this.isGrounded) {
+                    this.vy += this.gravity;
+                    this.y += this.vy;
+
+                    if (this.y >= GROUND_Y - this.height) {
+                        this.y = GROUND_Y - this.height;
+                        this.vy = 0;
+                        this.isGrounded = true;
+                    }
+                }
+
+                if (frameCount % 6 === 0) {
+                    this.legFrame = (this.legFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                const skin = SKINS[currentSkinIndex];
+                ctx.fillStyle = skin.color;
+
+                if (this.isDucking) {
+                    ctx.fillRect(this.x, this.y + 8, 52, 20);
+                    ctx.fillRect(this.x + 36, this.y + 2, 20, 14);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x + 48, this.y + 5, 4, 4);
+                } else {
+                    ctx.fillRect(this.x + 10, this.y + 14, 26, 22);
+                    ctx.fillRect(this.x + 20, this.y, 22, 18);
+                    ctx.fillRect(this.x + 32, this.y + 6, 12, 12);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x + 32, this.y + 3, 4, 4);
+
+                    ctx.fillStyle = skin.color;
+                    if (this.isGrounded) {
+                        if (this.legFrame === 0) {
+                            ctx.fillRect(this.x + 12, this.y + 36, 6, 12);
+                            ctx.fillRect(this.x + 26, this.y + 36, 6, 8);
+                        } else {
+                            ctx.fillRect(this.x + 12, this.y + 36, 6, 8);
+                            ctx.fillRect(this.x + 26, this.y + 36, 6, 12);
+                        }
+                    } else {
+                        ctx.fillRect(this.x + 14, this.y + 36, 6, 8);
+                        ctx.fillRect(this.x + 24, this.y + 36, 6, 8);
+                    }
+                }
+
+                this.drawHat(skin.hat);
+            }
+
+            drawHat(hatType) {
+                if (!hatType) return;
+                const headX = this.isDucking ? this.x + 36 : this.x + 20;
+                const headY = this.isDucking ? this.y + 2 : this.y;
+
+                if (hatType === 'sunglasses') {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(headX + 10, headY + 3, 12, 5);
+                } else if (hatType === 'crown') {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.moveTo(headX + 2, headY);
+                    ctx.lineTo(headX + 6, headY - 10);
+                    ctx.lineTo(headX + 11, headY - 4);
+                    ctx.lineTo(headX + 16, headY - 10);
+                    ctx.lineTo(headX + 20, headY);
+                    ctx.fill();
+                } else if (hatType === 'party_hat') {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.moveTo(headX + 5, headY);
+                    ctx.lineTo(headX + 12, headY - 14);
+                    ctx.lineTo(headX + 18, headY);
+                    ctx.fill();
+                } else if (hatType === 'headband') {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(headX, headY + 3, 22, 4);
+                } else if (hatType === 'golden_aura') {
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(headX + 11, headY + 10, 24, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            getHitbox() {
+                return {
+                    x: this.x + 4,
+                    y: this.y + 4,
+                    width: (this.isDucking ? 52 : this.width) - 8,
+                    height: this.height - 8
+                };
+            }
+        }
+
+        const dino = new Dino();
+
+        class Obstacle {
+            constructor(type, speed) {
+                this.type = type;
+                this.x = CANVAS_WIDTH + 50;
+                this.markedForDeletion = false;
+
+                if (type === 'cactus_small') {
+                    this.width = 24 + Math.floor(Math.random() * 3) * 16;
+                    this.height = 46;
+                    this.y = GROUND_Y - this.height;
+                } else if (type === 'cactus_large') {
+                    this.width = 32 + Math.floor(Math.random() * 2) * 24;
+                    this.height = 60;
+                    this.y = GROUND_Y - this.height;
+                } else if (type === 'bird') {
+                    this.width = 46;
+                    this.height = 36;
+                    const heights = [GROUND_Y - 40, GROUND_Y - 68, GROUND_Y - 95];
+                    this.y = heights[Math.floor(Math.random() * heights.length)];
+                    this.animFrame = 0;
+                } else if (type === 'spike_pit') {
+                    this.width = 54;
+                    this.height = 20;
+                    this.y = GROUND_Y - 18;
+                } else if (type === 'ufo') {
+                    this.width = 50;
+                    this.height = 30;
+                    this.y = GROUND_Y - 85 - Math.random() * 35;
+                    this.hoverOffset = 0;
+                } else if (type === 'crystal') {
+                    this.width = 30;
+                    this.height = 50;
+                    this.y = GROUND_Y - 50;
+                } else if (type === 'alien_tentacle') {
+                    this.width = 32;
+                    this.height = 56;
+                    this.y = GROUND_Y - 56;
+                    this.wave = 0;
+                }
+            }
+
+            update(speed) {
+                this.x -= speed;
+                if (this.type === 'ufo') this.hoverOffset = Math.sin(frameCount * 0.15) * 6;
+                if (this.type === 'alien_tentacle') this.wave = Math.sin(frameCount * 0.2) * 8;
+                if (this.x + this.width < -60) this.markedForDeletion = true;
+
+                if (this.type === 'bird' && frameCount % 10 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = '#475569';
+                if (this.type.startsWith('cactus')) {
+                    ctx.fillStyle = '#16a34a';
+                    ctx.fillRect(this.x + 8, this.y, this.width - 16, this.height);
+                    ctx.fillRect(this.x, this.y + 12, this.width, 12);
+                } else if (this.type === 'bird') {
+                    ctx.fillStyle = '#f43f5e';
+                    const wingY = this.animFrame === 0 ? this.y : this.y + 14;
+                    ctx.fillRect(this.x + 10, this.y + 10, 26, 14);
+                    ctx.fillRect(this.x + 18, wingY - 8, 8, 20);
+                } else if (this.type === 'spike_pit') {
+                    ctx.fillStyle = '#dc2626';
+                    const spikeNum = 4;
+                    const spikeWidth = this.width / spikeNum;
+                    for (let i = 0; i < spikeNum; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + i * spikeWidth, this.y + this.height);
+                        ctx.lineTo(this.x + (i + 0.5) * spikeWidth, this.y);
+                        ctx.lineTo(this.x + (i + 1) * spikeWidth, this.y + this.height);
+                        ctx.fill();
+                    }
+                } else if (this.type === 'ufo') {
+                    const drawY = this.y + this.hoverOffset;
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 25, drawY + 10, 12, Math.PI, 0);
+                    ctx.fill();
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillRect(this.x, drawY + 10, 50, 10);
+                } else if (this.type === 'alien_tentacle') {
+                    ctx.fillStyle = '#a855f7';
+                    ctx.fillRect(this.x + 8 + this.wave, this.y, 16, this.height);
+                } else if (this.type === 'crystal') {
+                    ctx.fillStyle = '#c084fc';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+
+            getHitbox() {
+                return {
+                    x: this.x + 4,
+                    y: this.y + 4,
+                    width: this.width - 8,
+                    height: this.height - 8
+                };
+            }
+        }
+
+        class Boss {
+            constructor() {
+                this.width = 120;
+                this.height = 110;
+                this.x = CANVAS_WIDTH + 50;
+                this.targetX = CANVAS_WIDTH - 180;
+                this.y = GROUND_Y - this.height;
+                this.maxHp = 30;
+                this.hp = 30;
+                this.hitShake = 0;
+            }
+
+            update() {
+                if (this.x > this.targetX) {
+                    this.x -= 4;
+                }
+                if (this.hitShake > 0) this.hitShake--;
+            }
+
+            draw() {
+                const drawX = this.x + (this.hitShake > 0 ? (Math.random() * 6 - 3) : 0);
+                ctx.fillStyle = '#be123c';
+                ctx.fillRect(drawX, this.y, this.width, this.height);
+                
+                // Eyes
+                ctx.fillStyle = '#facc15';
+                ctx.fillRect(drawX + 20, this.y + 25, 18, 18);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(drawX + 24, this.y + 29, 8, 8);
+
+                // Teeth
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(drawX + 10, this.y + 70, 40, 12);
+            }
+        }
+
+        class AttackProjectile {
+            constructor(x, y, targetX, targetY, weapon) {
+                this.x = x;
+                this.y = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.speed = 18;
+                this.weapon = weapon || WEAPONS[0];
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x += this.speed;
+                if (this.x >= this.targetX) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                if (this.weapon.icon) {
+                    ctx.font = '22px sans-serif';
+                    ctx.fillText(this.weapon.icon, this.x, this.y + 8);
+                } else {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function triggerBoss() {
+            isBossActive = true;
+            boss = new Boss();
+            bossTimer = 12;
+            obstacles = [];
+
+            const currentWp = WEAPONS[currentWeaponIndex];
+            document.getElementById('bossHpText').innerText = boss.hp;
+            document.getElementById('bossWeaponAtkText').innerText = `當前武器: ${currentWp.name} (Atk ${currentWp.damage})`;
+            document.getElementById('bossHpBar').style.width = '100%';
+            document.getElementById('bossTimerText').innerText = `限時 ${bossTimer}s`;
+            document.getElementById('bossOverlay').classList.remove('hidden');
+
+            const timerInterval = setInterval(() => {
+                if (!isRunning || !isBossActive) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                bossTimer--;
+                document.getElementById('bossTimerText').innerText = `限時 ${bossTimer}s`;
+                if (bossTimer <= 0) {
+                    clearInterval(timerInterval);
+                    if (isBossActive) gameOver();
+                }
+            }, 1000);
+        }
+
+        function handleBossAttack() {
+            if (!isBossActive || !boss) return;
+
+            const weapon = WEAPONS[currentWeaponIndex];
+            sound.playAttack();
+            attackProjectiles.push(new AttackProjectile(dino.x + 30, dino.y + 20, boss.x + 20, boss.y + 40, weapon));
+
+            boss.hp = Math.max(0, boss.hp - weapon.damage);
+            boss.hitShake = 4;
+            const percent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+            document.getElementById('bossHpBar').style.width = `${percent}%`;
+            document.getElementById('bossHpText').innerText = boss.hp;
+
+            if (boss.hp <= 0) {
+                sound.playBossExplode();
+                isBossActive = false;
+                boss = null;
+                document.getElementById('bossOverlay').classList.add('hidden');
+                openChestModal();
+            }
+        }
+
+        function openChestModal() {
+            isChestModalOpen = true;
+            document.getElementById('chestOverlay').classList.remove('hidden');
+            document.getElementById('chestRewardResult').classList.add('hidden');
+            document.getElementById('closeChestBtn').classList.add('hidden');
+            document.getElementById('chestInstructionText').classList.remove('hidden');
+            document.getElementById('chestBoxBtn').classList.remove('hidden');
+        }
+
+        document.getElementById('chestBoxBtn').addEventListener('click', () => {
+            // 45% chance to trigger Alien Trap
+            if (Math.random() < 0.45) {
+                document.getElementById('chestOverlay').classList.add('hidden');
+                triggerAlienTrap();
+            } else {
+                claimChestReward();
+            }
+        });
+
+        function claimChestReward() {
+            sound.playChestReward();
+            document.getElementById('chestBoxBtn').classList.add('hidden');
+            document.getElementById('chestInstructionText').classList.add('hidden');
+            
+            const rewardCoins = 150 + Math.floor(Math.random() * 200);
+            goldCoins += rewardCoins;
+            window.__galleryStorage.setItem('dino_gold_coins', goldCoins);
+            document.getElementById('coinCountText').innerText = goldCoins;
+
+            document.getElementById('chestRewardTitle').innerText = "獲得豐厚戰利品！";
+            document.getElementById('chestRewardDesc').innerText = `獲得 🪙 金幣 +${rewardCoins}！`;
+            document.getElementById('chestRewardResult').classList.remove('hidden');
+            document.getElementById('closeChestBtn').classList.remove('hidden');
+        }
+
+        document.getElementById('closeChestBtn').addEventListener('click', () => {
+            document.getElementById('chestOverlay').classList.add('hidden');
+            isChestModalOpen = false;
+        });
+
+        function triggerAlienTrap() {
+            isAlienTrapped = true;
+            shakeCount = 0;
+            requiredShakes = 15;
+            shakeDirection = 0;
+            lastMouseX = null;
+
+            document.getElementById('shakeProgressBar').style.width = '0%';
+            document.getElementById('shakeProgressText').innerText = `掙脫進度: 0 / ${requiredShakes} 次`;
+            document.getElementById('alienTrapOverlay').classList.remove('hidden');
+        }
+
+        function handleMouseShake(clientX) {
+            if (!isAlienTrapped) return;
+
+            if (lastMouseX !== null) {
+                const deltaX = clientX - lastMouseX;
+                if (Math.abs(deltaX) > 15) {
+                    const currentDir = deltaX > 0 ? 1 : -1;
+                    if (shakeDirection !== 0 && currentDir !== shakeDirection) {
+                        shakeCount++;
+                        sound.playShakeProgress();
+                        
+                        const percent = Math.min(100, Math.floor((shakeCount / requiredShakes) * 100));
+                        document.getElementById('shakeProgressBar').style.width = `${percent}%`;
+                        document.getElementById('shakeProgressText').innerText = `掙脫進度: ${shakeCount} / ${requiredShakes} 次`;
+
+                        if (shakeCount >= requiredShakes) {
+                            isAlienTrapped = false;
+                            document.getElementById('alienTrapOverlay').classList.add('hidden');
+                            showNotification("✨ 成功擺脫外星人！繼續奔跑！");
+                            claimChestReward();
+                            document.getElementById('chestOverlay').classList.remove('hidden');
+                        }
+                    }
+                    shakeDirection = currentDir;
+                }
+            }
+            lastMouseX = clientX;
+        }
+
+        function showNotification(msg) {
+            const toast = document.getElementById('notificationToast');
+            document.getElementById('notificationText').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        function spawnObstacles() {
+            if (isBossActive) return;
+
+            nextObstacleTimer--;
+            if (nextObstacleTimer <= 0) {
+                const types = ['cactus_small', 'cactus_large', 'bird', 'spike_pit', 'ufo', 'alien_tentacle', 'crystal'];
+                const selected = types[Math.floor(Math.random() * types.length)];
+                obstacles.push(new Obstacle(selected, gameSpeed));
+
+                nextObstacleTimer = Math.floor(60 + Math.random() * 70 - (gameSpeed * 1.5));
+            }
+        }
+
+        function checkCollisions() {
+            const dinoBox = dino.getHitbox();
+            for (let obs of obstacles) {
+                const obsBox = obs.getHitbox();
+                if (
+                    dinoBox.x < obsBox.x + obsBox.width &&
+                    dinoBox.x + dinoBox.width > obsBox.x &&
+                    dinoBox.y < obsBox.y + obsBox.height &&
+                    dinoBox.y + dinoBox.height > obsBox.y
+                ) {
+                    gameOver();
+                    break;
+                }
+            }
+        }
+
+        function startGame() {
+            sound.init();
+            isRunning = true;
+            isGameOver = false;
+            score = 0;
+            gameSpeed = INITIAL_SPEED;
+            frameCount = 0;
+            obstacles = [];
+            attackProjectiles = [];
+            isBossActive = false;
+            lastBossTriggerScore = 0;
+            isAlienTrapped = false;
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('bossOverlay').classList.add('hidden');
+            document.getElementById('chestOverlay').classList.add('hidden');
+            document.getElementById('alienTrapOverlay').classList.add('hidden');
+
+            weatherSys.setWeather(0);
+        }
+
+        function gameOver() {
+            sound.playHit();
+            isRunning = false;
+            isGameOver = true;
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('dino_high_score', highScore);
+                document.getElementById('highScoreText').innerText = String(highScore).padStart(5, '0');
+            }
+
+            document.getElementById('finalScoreMsg').innerText = `最終得分: ${Math.floor(score)}`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+        function update() {
+            if (!isRunning || isAlienTrapped || isChestModalOpen) return;
+
+            frameCount++;
+            score += 0.15;
+            document.getElementById('currentScoreText').innerText = String(Math.floor(score)).padStart(5, '0');
+
+            // Trigger Boss every 300 points
+            if (score >= lastBossTriggerScore + 300) {
+                lastBossTriggerScore = Math.floor(score / 300) * 300;
+                triggerBoss();
+            }
+
+            if (gameSpeed < MAX_SPEED && frameCount % 300 === 0) {
+                gameSpeed += 0.5;
+            }
+
+            dino.update();
+            spawnObstacles();
+
+            weatherSys.update();
+
+            // Update obstacles
+            obstacles.forEach(obs => obs.update(gameSpeed));
+            obstacles = obstacles.filter(obs => !obs.markedForDeletion);
+
+            // Update Boss & Projectiles
+            if (boss) boss.update();
+            attackProjectiles.forEach(p => p.update());
+            attackProjectiles = attackProjectiles.filter(p => !p.markedForDeletion);
+
+            checkCollisions();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            weatherSys.draw();
+            dino.draw();
+
+            obstacles.forEach(obs => obs.draw());
+            if (boss) boss.draw();
+            attackProjectiles.forEach(p => p.draw());
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        function renderShopModal() {
+            const container = document.getElementById('skinGridContainer');
+            container.innerHTML = '';
+
+            const tabSkinsBtn = document.getElementById('shopTabSkinsBtn');
+            const tabWeaponsBtn = document.getElementById('shopTabWeaponsBtn');
+
+            if (activeShopTab === 'skins') {
+                tabSkinsBtn.className = 'px-3 py-1 bg-indigo-600 text-white text-xs font-extrabold rounded-lg border border-indigo-400 shadow';
+                tabWeaponsBtn.className = 'px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-lg border border-slate-700';
+                document.getElementById('shopSubTitleText').innerText = '使用累積的金幣解鎖造型，或達到對應分數自動解鎖！';
+
+                SKINS.forEach((skin, index) => {
+                    const isUnlocked = unlockedSkins.includes(skin.id);
+                    const isEquipped = currentSkinIndex === index;
+
+                    const card = document.createElement('div');
+                    card.className = `p-2.5 rounded-xl border flex flex-col items-center justify-between text-center transition ${
+                        isEquipped 
+                            ? 'bg-indigo-900/60 border-indigo-400 ring-2 ring-indigo-400' 
+                            : isUnlocked 
+                            ? 'bg-slate-800 border-slate-700 hover:border-slate-500' 
+                            : 'bg-slate-900/80 border-slate-800 opacity-80'
+                    }`;
+
+                    card.innerHTML = `
+                        <div class="text-2xl mb-1">${skin.name.split(' ').pop() || '🦖'}</div>
+                        <div class="text-xs font-bold text-white mb-1">${skin.name}</div>
+                        ${
+                            isEquipped 
+                                ? `<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">裝備中</span>`
+                                : isUnlocked 
+                                ? `<button onclick="equipSkin(${index})" class="w-full mt-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition">使用</button>`
+                                : `<button onclick="buySkin(${index})" class="w-full mt-1 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold rounded-lg transition flex items-center justify-center gap-1">
+                                    <span>🪙 ${skin.price}</span>
+                                   </button>`
+                        }
+                    `;
+                    container.appendChild(card);
+                });
+            } else {
+                tabWeaponsBtn.className = 'px-3 py-1 bg-amber-600 text-white text-xs font-extrabold rounded-lg border border-amber-400 shadow';
+                tabSkinsBtn.className = 'px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-lg border border-slate-700';
+                document.getElementById('shopSubTitleText').innerText = '購買強大武器，在 Boss 討伐戰中提高攻擊力！';
+
+                WEAPONS.forEach((wp, index) => {
+                    const isUnlocked = unlockedWeapons.includes(wp.id);
+                    const isEquipped = currentWeaponIndex === index;
+
+                    const card = document.createElement('div');
+                    card.className = `p-2.5 rounded-xl border flex flex-col items-center justify-between text-center transition ${
+                        isEquipped 
+                            ? 'bg-amber-900/60 border-amber-400 ring-2 ring-amber-400' 
+                            : isUnlocked 
+                            ? 'bg-slate-800 border-slate-700 hover:border-slate-500' 
+                            : 'bg-slate-900/80 border-slate-800 opacity-80'
+                    }`;
+
+                    card.innerHTML = `
+                        <div class="text-2xl mb-1">${wp.icon}</div>
+                        <div class="text-xs font-bold text-white mb-0.5">${wp.name}</div>
+                        <div class="text-[10px] font-bold text-amber-300 mb-1">傷害: ${wp.damage} / 擊</div>
+                        ${
+                            isEquipped 
+                                ? `<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md">裝備中</span>`
+                                : isUnlocked 
+                                ? `<button onclick="equipWeapon(${index})" class="w-full mt-1 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold rounded-lg transition">裝備</button>`
+                                : `<button onclick="buyWeapon(${index})" class="w-full mt-1 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold rounded-lg transition flex items-center justify-center gap-1">
+                                    <span>🪙 ${wp.price}</span>
+                                   </button>`
+                        }
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        window.equipSkin = function(index) {
+            currentSkinIndex = index;
+            document.getElementById('skinBadge').innerText = `造型: ${SKINS[currentSkinIndex].name.split(' ')[0]}`;
+            renderShopModal();
+        };
+
+        window.buySkin = function(index) {
+            const skin = SKINS[index];
+            if (goldCoins >= skin.price) {
+                goldCoins -= skin.price;
+                window.__galleryStorage.setItem('dino_gold_coins', goldCoins);
+                document.getElementById('coinCountText').innerText = goldCoins;
+
+                unlockedSkins.push(skin.id);
+                window.__galleryStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins));
+                equipSkin(index);
+                showNotification(`✨ 成功解鎖造型：${skin.name}`);
+            } else {
+                showNotification(`🪙 金幣不足！解鎖需要 ${skin.price} 金幣！`);
+            }
+        };
+
+        window.equipWeapon = function(index) {
+            currentWeaponIndex = index;
+            const wp = WEAPONS[currentWeaponIndex];
+            document.getElementById('weaponBadge').innerText = `武器: ${wp.name.split(' ')[0]} (Atk ${wp.damage})`;
+            renderShopModal();
+        };
+
+        window.buyWeapon = function(index) {
+            const wp = WEAPONS[index];
+            if (goldCoins >= wp.price) {
+                goldCoins -= wp.price;
+                window.__galleryStorage.setItem('dino_gold_coins', goldCoins);
+                document.getElementById('coinCountText').innerText = goldCoins;
+
+                unlockedWeapons.push(wp.id);
+                window.__galleryStorage.setItem('dino_unlocked_weapons', JSON.stringify(unlockedWeapons));
+                equipWeapon(index);
+                showNotification(`⚔️ 成功購買武器：${wp.name}`);
+            } else {
+                showNotification(`🪙 金幣不足！購買需要 ${wp.price} 金幣！`);
+            }
+        };
+
+        document.getElementById('shopTabSkinsBtn').addEventListener('click', () => {
+            activeShopTab = 'skins';
+            renderShopModal();
+        });
+
+        document.getElementById('shopTabWeaponsBtn').addEventListener('click', () => {
+            activeShopTab = 'weapons';
+            renderShopModal();
+        });
+
+        document.getElementById('openSkinShopBtn').addEventListener('click', () => {
+            renderShopModal();
+            document.getElementById('skinShopModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeSkinShopBtn').addEventListener('click', () => {
+            document.getElementById('skinShopModal').classList.add('hidden');
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            document.getElementById('soundStatus').innerText = `音效: ${sound.enabled ? '開' : '關'}`;
+            document.getElementById('soundIcon').innerText = sound.enabled ? '🔊' : '🔇';
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        canvas.addEventListener('click', () => {
+            if (isBossActive) {
+                handleBossAttack();
+            } else if (isRunning && dino.isGrounded) {
+                dino.jump();
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!isRunning && !isGameOver) startGame();
+                else if (isRunning) dino.jump();
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                if (isRunning) dino.duck(true);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                if (isRunning) dino.duck(false);
+            }
+        });
+
+        // Mobile Controls
+        document.getElementById('mobileJumpBtn').addEventListener('click', () => {
+            if (!isRunning) startGame();
+            else dino.jump();
+        });
+        document.getElementById('mobileDuckBtn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning) dino.duck(true);
+        });
+        document.getElementById('mobileDuckBtn').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRunning) dino.duck(false);
+        });
+        document.getElementById('mobileAttackBtn').addEventListener('click', () => {
+            if (isBossActive) handleBossAttack();
+        });
+
+        window.addEventListener('mousemove', (e) => handleMouseShake(e.clientX));
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length > 0) handleMouseShake(e.touches[0].clientX);
+        });
+
+        // Initialize UI
+        document.getElementById('highScoreText').innerText = String(highScore).padStart(5, '0');
+        document.getElementById('coinCountText').innerText = goldCoins;
+
+        // Start animation loop
+        animate();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

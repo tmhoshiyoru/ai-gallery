@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告白吧！我的學霸戀人 - 高中科目戀愛模擬器</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 50%, #e8eaf6 100%);
+            touch-action: manipulation;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f472b6;
+            border-radius: 4px;
+        }
+
+        /* Heart particle effects */
+        .heart-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.8) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-110px) scale(1.4) rotate(25deg);
+            }
+        }
+
+        /* Glassmorphism containers */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+        }
+
+        /* Character Avatar Bounce & Animation */
+        .character-avatar-wrap {
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .character-avatar-wrap:hover {
+            transform: scale(1.04);
+        }
+
+        .avatar-svg {
+            filter: drop-shadow(0px 8px 16px rgba(0,0,0,0.15));
+        }
+
+        /* Speech bubble animation */
+        .speech-bubble {
+            position: absolute;
+            bottom: 85%;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        /* Glow effects */
+        .btn-glow {
+            box-shadow: 0 0 15px rgba(244, 114, 182, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 25px rgba(244, 114, 182, 0.8);
+            transform: translateY(-2px);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between select-none">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full p-3 md:p-4 flex justify-between items-center z-20">
+        <div class="flex items-center gap-2 bg-white/85 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border border-pink-200">
+            <i class="fa-solid fa-graduation-cap text-pink-500 text-lg md:text-xl"></i>
+            <span class="font-bold text-gray-800 tracking-wide text-xs md:text-sm">告白吧！我的學霸戀人</span>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <button id="soundToggle" onclick="toggleSound()" class="bg-white/85 hover:bg-white p-2 md:p-2.5 rounded-full shadow-sm text-pink-500 transition border border-pink-200">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-sm md:text-base"></i>
+            </button>
+            <button onclick="openGallery()" class="bg-pink-500 hover:bg-pink-600 text-white px-3.5 py-1.5 md:px-4 md:py-2 rounded-full shadow-md font-bold text-xs md:text-sm flex items-center gap-2 transition">
+                <i class="fa-solid fa-book-bookmark"></i>
+                <span>好感手帳</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main id="gameContainer" class="relative flex-1 w-full max-w-4xl mx-auto px-4 flex flex-col justify-between items-center overflow-hidden">
+        
+        <!-- === VIEW 1: CHARACTER SELECTION === -->
+        <div id="selectView" class="w-full h-full flex flex-col justify-center items-center py-2 z-10">
+            <div class="text-center mb-4 md:mb-6">
+                <h1 class="text-2xl md:text-4xl font-black text-pink-600 drop-shadow-sm mb-1.5">選擇你的心動學霸</h1>
+                <p class="text-gray-600 text-xs md:text-sm">「今天...你想和哪一位科目學霸展開知識的戀愛對談呢？」</p>
+            </div>
+
+            <!-- Character Cards Grid -->
+            <div id="characterGrid" class="grid grid-cols-2 md:grid-cols-5 gap-3 w-full max-w-3xl overflow-y-auto max-h-[70vh] p-1">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- === VIEW 2: DATING & QUESTION SCREEN === -->
+        <div id="dateView" class="hidden w-full h-full flex flex-col justify-end items-center pb-3 relative z-10">
+            
+            <!-- Character Portrait Area -->
+            <div class="relative w-full flex-1 flex flex-col justify-end items-center min-h-[220px]">
+                
+                <!-- Status Bar: Affinity & Difficulty Level -->
+                <div class="absolute top-0 left-0 right-0 flex justify-between items-center px-1 z-20">
+                    <div class="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-2xl shadow border border-pink-100 flex items-center gap-2">
+                        <span id="charSubjectBadge" class="text-[11px] px-2 py-0.5 rounded-full font-bold text-white bg-pink-500">國文</span>
+                        <div class="flex items-center gap-1">
+                            <i class="fa-solid fa-heart text-pink-500 text-sm animate-pulse"></i>
+                            <span id="affinityScore" class="font-black text-gray-700 text-sm md:text-base">0</span>
+                            <span class="text-[10px] text-gray-400">/ 100</span>
+                        </div>
+                    </div>
+
+                    <div id="difficultyBadge" class="bg-amber-100 border border-amber-300 text-amber-800 text-[11px] font-bold px-3 py-1.5 rounded-2xl shadow flex items-center gap-1">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span id="diffLabel">Level 1 基礎門檻</span>
+                    </div>
+                </div>
+
+                <!-- Avatar SVG Container with Emotion dynamics & Speech Bubble Overlay -->
+                <div class="relative flex items-center justify-center my-1 cursor-pointer character-avatar-wrap" onclick="interactCharacter()">
+                    <div id="portraitBg" class="absolute w-44 h-44 md:w-56 md:h-56 rounded-full bg-pink-200/50 blur-xl -z-10 animate-pulse"></div>
+                    
+                    <!-- Live Character Overlay Speech Bubble -->
+                    <div id="characterOverlayBubble" class="hidden speech-bubble z-30 bg-white/95 border-2 border-pink-400 px-3 py-1.5 rounded-2xl shadow-lg max-w-[220px] text-center">
+                        <span id="characterOverlayText" class="text-xs font-bold text-pink-600">加油喔！</span>
+                        <div class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-pink-400"></div>
+                    </div>
+
+                    <div id="svgAvatarBox" class="w-40 h-40 md:w-52 md:h-52 flex items-center justify-center avatar-svg transition-all duration-300">
+                        <!-- SVG graphic will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Character Name & Tagline -->
+                <div class="text-center mb-2">
+                    <span id="charName" class="text-lg md:text-xl font-black text-gray-800 bg-white/80 px-4 py-0.5 rounded-full shadow-sm border border-pink-100">林微風</span>
+                    <p id="charTitle" class="text-xs text-pink-600 font-bold mt-1">「溫柔婉約的古典少爺」</p>
+                </div>
+            </div>
+
+            <!-- Dialogue & Question Panel -->
+            <div class="w-full glass-panel rounded-3xl p-4 md:p-5 shadow-xl border border-white/80 relative">
+                
+                <!-- Exit / Switch Character Button -->
+                <button onclick="backToSelect()" class="absolute top-3 right-4 text-gray-400 hover:text-pink-500 transition text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> 換人
+                </button>
+
+                <!-- Dialogue Area -->
+                <div id="dialogueText" class="text-gray-800 text-xs md:text-sm font-medium min-h-[2.8rem] mb-3 flex items-center leading-relaxed">
+                    「請多指教...讓我們一起探索知識的浪漫吧。」
+                </div>
+
+                <!-- Question & Options List -->
+                <div id="optionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <!-- Option buttons populated by JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- === MODAL 1: AFFINITY HANDBOOK === -->
+    <div id="galleryModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl relative flex flex-col max-h-[85vh]">
+            <button onclick="closeGallery()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center gap-2 mb-3">
+                <i class="fa-solid fa-heart-circle-check text-pink-500 text-2xl"></i>
+                <h2 class="text-lg font-black text-gray-800">學霸戀人好感手帳</h2>
+            </div>
+
+            <p class="text-xs text-gray-500 mb-3">好感度累積至 100 分即可解鎖告白結局！題目會隨好感度提升而變難。</p>
+
+            <div id="galleryList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- === MODAL 2: CONFESSION / ENDING === -->
+    <div id="endingModal" class="hidden fixed inset-0 bg-pink-500/80 backdrop-blur-md z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center relative animate-bounce-in">
+            <div class="text-6xl my-2 text-pink-500 animate-pulse">💖</div>
+            <h2 id="confessionTitle" class="text-2xl font-black text-pink-600 mb-1">告白成功！</h2>
+            <p id="confessionCharName" class="text-xs font-bold text-gray-500 mb-4">林微風 (國文)</p>
+            
+            <div class="bg-pink-50 rounded-2xl p-4 border border-pink-200 mb-5 text-gray-700 italic text-xs md:text-sm leading-relaxed" id="confessionText">
+                「和你在一起時，我心中的詩句都有了畫面...」
+            </div>
+
+            <button onclick="closeEndingModal()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2.5 rounded-full shadow-lg transition btn-glow text-sm">
+                收下這份愛意 💕
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Synthesizer Toggle
+        let soundEnabled = true;
+        let synth = null;
+
+        function playToneSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!synth) {
+                    synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                    synth.volume.value = -12;
+                }
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+
+                if (type === 'click') {
+                    synth.triggerAttackRelease("C5", "8n");
+                } else if (type === 'correct') {
+                    synth.triggerAttackRelease(["E5", "G5", "C6"], "8n");
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(["A3", "F3"], "8n");
+                } else if (type === 'confess') {
+                    synth.triggerAttackRelease(["C4", "E4", "G4", "B4", "C5"], "4n");
+                }
+            } catch (e) {
+                console.log("Audio note:", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high text-sm md:text-base' : 'fa-solid fa-volume-xmark text-sm md:text-base';
+        }
+
+        // REDESIGNED SVG Personas Graphics Generator with detailed features & expressions
+        function generatePersonaSvg(id, emotion = 'normal') {
+            const mouthMap = {
+                normal: '<path d="M 43 62 Q 50 65 57 62" stroke="#334155" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
+                happy: '<path d="M 40 60 Q 50 72 60 60" stroke="#e11d48" stroke-width="3" fill="none" stroke-linecap="round"/>',
+                blush: '<path d="M 43 63 Q 50 69 57 63" stroke="#e11d48" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="33" cy="57" r="5" fill="#f472b6" opacity="0.6"/><circle cx="67" cy="57" r="5" fill="#f472b6" opacity="0.6"/>',
+                puzzled: '<path d="M 44 65 Q 50 60 56 65" stroke="#334155" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+            };
+
+            const eyeMap = {
+                normal: '<circle cx="36" cy="48" r="4" fill="#1e293b"/><circle cx="64" cy="48" r="4" fill="#1e293b"/><circle cx="37.5" cy="46.5" r="1.5" fill="#ffffff"/><circle cx="65.5" cy="46.5" r="1.5" fill="#ffffff"/>',
+                happy: '<path d="M 32 50 Q 36 43 40 50" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M 60 50 Q 64 43 68 50" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>',
+                blush: '<circle cx="36" cy="48" r="3.5" fill="#0f172a"/><circle cx="64" cy="48" r="3.5" fill="#0f172a"/><path d="M 32 42 Q 36 39 40 42" stroke="#334155" stroke-width="2" fill="none"/><path d="M 60 42 Q 64 39 68 42" stroke="#334155" stroke-width="2" fill="none"/>',
+                puzzled: '<circle cx="36" cy="48" r="3.5" fill="#1e293b"/><circle cx="64" cy="46" r="3.5" fill="#1e293b"/><path d="M 31 41 L 40 44" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/><path d="M 60 44 L 69 41" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>'
+            };
+
+            let bodyContent = '';
+
+            if (id === 'chinese') { // 林微風 - 溫柔古典詩人 (玉佩、翡翠綠漢服、精緻髮簪)
+                bodyContent = `
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="46" fill="#f0fdf4" stroke="#10b981" stroke-width="3"/>
+                        <!-- Hair Back -->
+                        <path d="M 20 52 C 18 18, 82 18, 80 52 C 80 75, 20 75, 20 52 Z" fill="#0f172a"/>
+                        <!-- Head / Face -->
+                        <circle cx="50" cy="50" r="23" fill="#fff1f2"/>
+                        <!-- bangs -->
+                        <path d="M 27 38 Q 42 22 50 36 Q 58 22 73 38 C 65 30, 35 30, 27 38 Z" fill="#1e293b"/>
+                        <!-- Hair Crown Ornament -->
+                        <rect x="43" y="14" width="14" height="10" rx="3" fill="#059669" stroke="#fbbf24" stroke-width="1.5"/>
+                        <circle cx="50" cy="19" r="2.5" fill="#ef4444"/>
+                        <!-- Elegant Hanfu -->
+                        <path d="M 26 72 L 50 86 L 74 72 L 80 96 L 20 96 Z" fill="#047857"/>
+                        <path d="M 34 72 L 50 84 L 66 72" stroke="#f8fafc" stroke-width="2.5" fill="none"/>
+                        <path d="M 38 72 L 50 81 L 62 72" stroke="#34d399" stroke-width="2" fill="none"/>
+                        <!-- Jade Pendant -->
+                        <circle cx="50" cy="88" r="4" fill="#a7f3d0" stroke="#059669" stroke-width="1.5"/>
+                        ${eyeMap[emotion] || eyeMap.normal}
+                        ${mouthMap[emotion] || mouthMap.normal}
+                    </svg>`;
+            } else if (id === 'math') { // 張嚴格 - 高冷眼鏡學長 (質感金邊半框眼鏡、俐落西裝、深藍領帶)
+                bodyContent = `
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="46" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+                        <!-- Sleek Hair Cut -->
+                        <path d="M 24 45 C 22 18, 78 18, 76 45 L 77 56 C 72 40, 28 40, 23 56 Z" fill="#1e1b4b"/>
+                        <!-- Head / Face -->
+                        <circle cx="50" cy="50" r="22" fill="#fff1f2"/>
+                        <!-- Stylish Bangs -->
+                        <path d="M 25 38 Q 38 28 50 34 Q 62 25 75 36 Q 60 28 50 38 Z" fill="#1e1b4b"/>
+                        <!-- Blazer & Shirt -->
+                        <path d="M 25 72 L 50 96 L 75 72 L 80 96 L 20 96 Z" fill="#1e3a8a"/>
+                        <path d="M 38 72 L 50 90 L 62 72 Z" fill="#ffffff"/>
+                        <path d="M 47 77 L 53 77 L 51 96 L 49 96 Z" fill="#0284c7"/>
+                        <!-- Glasses (Gold metallic frame) -->
+                        <rect x="29" y="42" width="17" height="11" rx="2" fill="none" stroke="#d97706" stroke-width="2"/>
+                        <rect x="54" y="42" width="17" height="11" rx="2" fill="none" stroke="#d97706" stroke-width="2"/>
+                        <line x1="46" y1="46" x2="54" y2="46" stroke="#d97706" stroke-width="2"/>
+                        ${eyeMap[emotion] || eyeMap.normal}
+                        ${mouthMap[emotion] || mouthMap.normal}
+                    </svg>`;
+            } else if (id === 'english') { // Jessica - 歐美風時尚學姐 (金髮雙馬尾、時尚耳環、亮色禮服)
+                bodyContent = `
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="46" fill="#fffbeb" stroke="#f59e0b" stroke-width="3"/>
+                        <!-- Hair Pigtails Side -->
+                        <circle cx="18" cy="55" r="12" fill="#f59e0b"/>
+                        <circle cx="82" cy="55" r="12" fill="#f59e0b"/>
+                        <!-- Long Blonde Hair Back -->
+                        <path d="M 20 50 C 15 20, 85 20, 80 50 C 82 82, 18 82, 20 50 Z" fill="#fbbf24"/>
+                        <!-- Head / Face -->
+                        <circle cx="50" cy="50" r="22" fill="#fff1f2"/>
+                        <!-- Stylish Hair Ribbon & Bangs -->
+                        <path d="M 28 36 Q 50 25 72 36 C 65 44, 35 44, 28 36 Z" fill="#f59e0b"/>
+                        <path d="M 32 24 L 20 28 L 26 34 Z" fill="#f43f5e"/>
+                        <path d="M 68 24 L 80 28 L 74 34 Z" fill="#f43f5e"/>
+                        <!-- Earrings -->
+                        <circle cx="26" cy="52" r="3" fill="#fbbf24"/>
+                        <circle cx="74" cy="52" r="3" fill="#fbbf24"/>
+                        <!-- Fashion Outfit -->
+                        <path d="M 28 72 Q 50 84 72 72 L 78 96 L 22 96 Z" fill="#f43f5e"/>
+                        <path d="M 40 72 Q 50 80 60 72" fill="#ffffff"/>
+                        ${eyeMap[emotion] || eyeMap.normal}
+                        ${mouthMap[emotion] || mouthMap.normal}
+                    </svg>`;
+            } else if (id === 'physics') { // 雷力 - 酷炫實驗少年 (頭頂護目鏡、深紫刺刺頭、實驗白袍)
+                bodyContent = `
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="46" fill="#faf5ff" stroke="#9333ea" stroke-width="3"/>
+                        <!-- Wild Spiky Purple Hair -->
+                        <path d="M 16 48 L 26 18 L 38 28 L 50 10 L 62 28 L 74 18 L 84 48 Z" fill="#6b21a8"/>
+                        <!-- Head / Face -->
+                        <circle cx="50" cy="52" r="22" fill="#fff1f2"/>
+                        <!-- Cool Goggles Headband -->
+                        <rect x="28" y="27" width="18" height="11" rx="4" fill="#a855f7" stroke="#3b0764" stroke-width="2"/>
+                        <rect x="54" y="27" width="18" height="11" rx="4" fill="#a855f7" stroke="#3b0764" stroke-width="2"/>
+                        <circle cx="37" cy="32.5" r="3" fill="#e9d5ff"/>
+                        <circle cx="63" cy="32.5" r="3" fill="#e9d5ff"/>
+                        <line x1="46" y1="32" x2="54" y2="32" stroke="#3b0764" stroke-width="3"/>
+                        <!-- Lab Coat & Graphic Shirt -->
+                        <path d="M 24 74 L 50 90 L 76 74 L 80 96 L 20 96 Z" fill="#f3e8ff"/>
+                        <path d="M 38 74 L 50 88 L 62 74 Z" fill="#7e22ce"/>
+                        <!-- Atomic emblem on shirt -->
+                        <circle cx="50" cy="82" r="2" fill="#fef08a"/>
+                        ${eyeMap[emotion] || eyeMap.normal}
+                        ${mouthMap[emotion] || mouthMap.normal}
+                    </svg>`;
+            } else if (id === 'history') { // 沈古音 - 神秘復古御姐 (姬髮式黑髮、精緻金色髮簪、古典酒紅旗袍)
+                bodyContent = `
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="46" fill="#fff1f2" stroke="#e11d48" stroke-width="3"/>
+                        <!-- Very Long Hime Cut Black Hair -->
+                        <path d="M 20 55 C 18 15, 82 15, 80 55 C 82 88, 18 88, 20 55 Z" fill="#18181b"/>
+                        <!-- Head / Face -->
+                        <circle cx="50" cy="50" r="22" fill="#fff1f2"/>
+                        <!-- Hime Cut Bangs & Sides -->
+                        <path d="M 26 36 Q 50 26 74 36 L 74 54 L 67 54 L 67 40 Q 50 33 33 40 L 33 54 L 26 54 Z" fill="#09090b"/>
+                        <!-- Golden Hairpin Ornament -->
+                        <line x1="60" y1="22" x2="84" y2="16" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round"/>
+                        <circle cx="84" cy="16" r="4" fill="#dc2626"/>
+                        <!-- Cheongsam Outfit -->
+                        <path d="M 26 72 L 50 82 L 74 72 L 78 96 L 22 96 Z" fill="#9f1239"/>
+                        <path d="M 50 72 L 50 96" stroke="#fbbf24" stroke-width="2"/>
+                        <!-- Traditional Plate Button -->
+                        <circle cx="50" cy="76" r="2" fill="#fbbf24"/>
+                        <circle cx="50" cy="84" r="2" fill="#fbbf24"/>
+                        ${eyeMap[emotion] || eyeMap.normal}
+                        ${mouthMap[emotion] || mouthMap.normal}
+                    </svg>`;
+            }
+            return bodyContent;
+        }
+
+        const CHARACTERS = [
+            {
+                id: 'chinese',
+                name: '林微風',
+                subject: '國文',
+                badgeBg: 'bg-emerald-600',
+                title: '溫柔婉約的古典少爺',
+                dialogue: {
+                    start: '「落紅不是無情物...你願意陪我一起感受詩詞裡的浪漫嗎？」',
+                    correct: '「妙極！你的文采令我心動不已...」',
+                    wrong: '「無妨，詩詞之道需要細細品味，我們慢慢來。」',
+                    click: '「浮生六記，不如有你陪伴的一刻。」'
+                },
+                overlayQuotes: {
+                    correct: ['「君子敏於思，你果然明慧過人。」', '「與你對答，如沐春風。」', '「妙筆生花，正合我意。」'],
+                    wrong: ['「這題有些深奧，莫要自責。」', '「靜心細思，下次定能答對。」', '「詩書浩瀚，我們一同研討。」']
+                },
+                confession: '「我讀過千篇詩詞，寫過萬字文章，但直到遇見你，我才真正懂得了『執子之手，與子偕老』的真諦...請留在我的身邊吧！」',
+                questions: {
+                    level1: [
+                        { q: '「月落烏啼霜滿天，江楓漁火對愁眠」描寫的是哪一個季節的景色？', options: ['深秋', '初春', '盛夏', '寒冬'], answer: 0, hint: '秋天的霜氣與漁火最相配。' },
+                        { q: '下列哪一位文人被後世尊稱為「詩仙」？', options: ['杜甫', '李白', '白居易', '蘇軾'], answer: 1, hint: '浪漫主義詩人，豪放不羈。' },
+                        { q: '「世外桃源」這個著名的成語出自哪一位文學家的作品？', options: ['王維', '陶淵明', '柳宗元', '韓愈'], answer: 1, hint: '《桃花源記》的作者，不為五斗米折腰。' },
+                        { q: '下列哪一部作品不屬於中國四大名著？', options: ['《紅樓夢》', '《水滸傳》', '《聊齋誌異》', '《西遊記》'], answer: 2, hint: '四大名著為三國、水滸、西遊、紅樓。' },
+                        { q: '「字字細斟酌」中，「斟酌」原意與下列何者相關？', options: ['飲酒', '裁縫', '種植', '繪畫'], answer: 0, hint: '倒酒稱斟，飲酒稱酌。' }
+                    ],
+                    level2: [
+                        { q: '「青青子衿，悠悠我心」原出自《詩經》，主要表達什麼情感？', options: ['對師長的敬意', '對思念之人的懷念', '對國家的憂慮', '對歲月流逝的感嘆'], answer: 1, hint: '常用於表達相思之情。' },
+                        { q: '唐代「山水田園詩派」的代表人物，有「詩佛」之稱的是？', options: ['王維', '孟浩然', '李商隱', '杜牧'], answer: 0, hint: '「詩中有畫，畫中有詩」。' },
+                        { q: '蘇軾《水調歌頭》中「人有悲歡離合」的下一句是？', options: ['月有陰晴圓缺', '千里共嬋娟', '起舞弄清影', '高處不勝寒'], answer: 0, hint: '對應人世間悲歡的自然現象。' },
+                        { q: '「出淤泥而不染，濯清漣而不妖」描寫的是哪一種花卉？', options: ['菊花', '梅花', '蓮花（荷花）', '牡丹'], answer: 2, hint: '周敦頤《愛蓮說》名句。' },
+                        { q: '下列何者是宋代「婉約派」詞人的代表？', options: ['辛棄疾', '陸游', '李清照', '蘇軾'], answer: 2, hint: '「尋尋覓覓，冷冷清清」的作者。' }
+                    ],
+                    level3: [
+                        { q: '下列古文中，何者不屬於「唐宋八大家」之列？', options: ['歐陽脩', '曾鞏', '屈原', '王安石'], answer: 2, hint: '屈原是戰國時期的楚國詩人。' },
+                        { q: '「先天下之憂而憂，後天下之樂而樂」出自范仲淹的哪篇名作？', options: ['《岳陽樓記》', '《醉翁亭記》', '《出師表》', '《阿房宮賦》'], answer: 0, hint: '描寫洞庭湖勝景與胸懷的名篇。' },
+                        { q: '張愛玲曾說人生有三恨：「一恨海棠無香，二恨鰣魚多刺」，三恨為何？', options: ['三恨紅樓夢未完', '三恨時光易逝', '三恨知音難尋', '三恨浮生若夢'], answer: 0, hint: '涉及古典文學四大名著之一。' },
+                        { q: '章回小說中常出現的「留得青山在，不怕沒柴燒」最早比喻什麼？', options: ['留有根基後圖發展', '保存森林資源', '勤儉持家', '隱居山林'], answer: 0, hint: '留存實力以待時機。' },
+                        { q: '「落霞與孤鶩齊飛，秋水共長天一色」出自王勃的哪作品？', options: ['《滕王閣序》', '《蘭亭集序》', '《赤壁賦》', '《陳情表》'], answer: 0, hint: '初唐四傑王勃的少年成名作。' }
+                    ]
+                }
+            },
+            {
+                id: 'math',
+                name: '張嚴格',
+                subject: '數學',
+                badgeBg: 'bg-blue-600',
+                title: '高冷理性的嚴謹學長',
+                dialogue: {
+                    start: '「世上所有難題都有唯一解，包括我對你的情感方程式。」',
+                    correct: '「邏輯非常清晰...看來你已經找到通往我內心的路徑了。」',
+                    wrong: '「計算出現偏差了喔。別急，我會一步一步教你。」',
+                    click: '「我和你的相遇，是概率論中最美麗的必然。」'
+                },
+                overlayQuotes: {
+                    correct: ['「計算精準，邏輯嚴密。」', '「很完美，思維非常敏捷。」', '「答案完全吻合我的預期。」'],
+                    wrong: ['「稍微粗心了，重新檢視條件。」', '「別慌，演算步驟需要冷靜。」', '「失敗是修正偏差的過程。」']
+                },
+                confession: '「如果把時間設為自變量，我對你的好感度就是一條單調遞增曲線，極限趨近於無窮大...你願意做我生命中唯一的常數嗎？」',
+                questions: {
+                    level1: [
+                        { q: '直角三角形中，兩直角邊長分別為 3 和 4，斜邊長度是多少？', options: ['5', '6', '7', '8'], answer: 0, hint: '畢氏定理：a² + b² = c²' },
+                        { q: '圓周率 π（Pi）大約等於多少？', options: ['3.14', '2.71', '1.61', '1.41'], answer: 0, hint: '最著名的圓形幾何常數。' },
+                        { q: '若方程式 x² - 9 = 0，則 x 的解為？', options: ['只有 3', '只有 -3', '3 或 -3', '0'], answer: 2, hint: '負數的平方也是正數。' },
+                        { q: '一個正方體共有幾個面？', options: ['4個', '6個', '8個', '12個'], answer: 1, hint: '骰子的面數。' },
+                        { q: '最小的質數（Prime number）是多少？', options: ['0', '1', '2', '3'], answer: 2, hint: '唯一偶數質數。' }
+                    ],
+                    level2: [
+                        { q: '正方形的邊長若增加為原來的 2 倍，其面積會變為原來的幾倍？', options: ['2倍', '3倍', '4倍', '8倍'], answer: 2, hint: '面積是邊長平方的關係（2²）。' },
+                        { q: '等差數列 2, 5, 8, 11... 的公差（d）是多少？', options: ['2', '3', '4', '5'], answer: 1, hint: '後項減去前項的差。' },
+                        { q: '在直角座標平面上，點 (3, -4) 位於第幾象限？', options: ['第一象限', '第二象限', '第三象限', '第四象限'], answer: 3, hint: 'x 為正，y 為負。' },
+                        { q: '一個多邊形的內角和公式為 (n-2) × 180°，則五邊形的內角和是？', options: ['360°', '540°', '720°', '900°'], answer: 1, hint: '(5-2) × 180°' },
+                        { q: 'log₁₀(1000) 的數值等於多少？', options: ['1', '2', '3', '10'], answer: 2, hint: '10 的幾次方等於 1000？' }
+                    ],
+                    level3: [
+                        { q: '已知三角函數 sin(30°) 的數值是多少？', options: ['1/2', '√2/2', '√3/2', '1'], answer: 0, hint: '直角三角形 30°-60°-90° 的對邊與斜邊比。' },
+                        { q: '擲一顆公正的六面骰子，出現質數點數（2, 3, 5）的機率是多少？', options: ['1/6', '1/3', '1/2', '2/3'], answer: 2, hint: '6 個點數中有 3 個質數。' },
+                        { q: '自然對數的底數 e（歐拉數）大約等於多少？', options: ['2.718', '3.141', '1.414', '1.732'], answer: 0, hint: '微積分中最關鍵的常數之一。' },
+                        { q: '若向量 A = (3, 4)，則向量 A 的長度（模長）為？', options: ['5', '7', '12', '25'], answer: 0, hint: '√(3² + 4²)' },
+                        { q: '排列組合中，從 5 個人中選出 2 人的組合數 C(5, 2) 是多少？', options: ['5', '10', '20', '25'], answer: 1, hint: '(5×4) / (2×1)' }
+                    ]
+                }
+            },
+            {
+                id: 'english',
+                name: 'Jessica',
+                subject: '英文',
+                badgeBg: 'bg-amber-500',
+                title: '自信時尚的歸國學姐',
+                dialogue: {
+                    start: '「Hey there! Ready to practice some English with me today?」',
+                    correct: '「Bingo! Your grammar is perfect, and so is your smile!」',
+                    wrong: '「Oops! Close enough, but don\'t give up! Try again next time.」',
+                    click: '「You are the only vocabulary in my heart.」'
+                },
+                overlayQuotes: {
+                    correct: ['「Superb! You nailed it!」', '「Awesome! So smart of you!」', '「Brilliant answer, sweetie!」'],
+                    wrong: ['「Don\'t worry, mistake is learning!」', '「Almost there! Keep going!」', '「Take a breath, you got this!」']
+                },
+                confession: '「I checked all the dictionaries, but none of them could define how much I love you. Will you be my precious someone forever?」',
+                questions: {
+                    level1: [
+                        { q: '「Every dog has its ___」（人人皆有得意時）句中的缺詞是？', options: ['day', 'night', 'bone', 'toy'], answer: 0, hint: '代表每一天都有屬於自己的時刻。' },
+                        { q: '名詞 "Child" 的複數型態應該是哪一個？', options: ['Childs', 'Children', 'Childrens', 'Childes'], answer: 1, hint: '不規則變化的複數名詞。' },
+                        { q: '「Break a leg!」這句片語在英語中通常是用來表達什麼？', options: ['警告危險', '祝你好運', '叫對方站住', '表達憤怒'], answer: 1, hint: '表演前常用的祝福語。' },
+                        { q: '單字 "Anxious" 最接近的意思是？', options: ['焦慮的', '興奮的', '憤怒的', '快樂的'], answer: 0, hint: '形容緊張不安的心情。' },
+                        { q: '「Better late than ___」（晚到總比不到好）缺詞是？', options: ['never', 'always', 'ever', 'now'], answer: 0, hint: '永遠不發生。' }
+                    ],
+                    level2: [
+                        { q: '片語 "Look forward to" 後面接動詞時，動詞應使用什麼形式？', options: ['原形動詞 (V)', '動名詞 (V-ing)', '過去式 (V-ed)', '不定詞 (to V)'], answer: 1, hint: '此處的 to 是介系詞喔！' },
+                        { q: '「If I ___ you, I would take the offer.」空缺處應填入？', options: ['am', 'was', 'were', 'be'], answer: 2, hint: '與現在事實相反的假設語氣。' },
+                        { q: '下列哪一個單字代表「好奇心」？', options: ['Curiosity', 'Generosity', 'Creativity', 'Honesty'], answer: 0, hint: 'Curious 的名詞形式。' },
+                        { q: '「Under the weather」這句俚語真正的意思是？', options: ['天氣惡劣', '身體不適', '非常高興', '下雨了'], answer: 1, hint: '形容生病或精神不佳。' },
+                        { q: '單字 "Enthusiastic" 的反義詞最接近哪一個？', options: ['Apathetic', 'Eager', 'Passionate', 'Active'], answer: 0, hint: '代表冷漠的、無精打采的。' }
+                    ],
+                    level3: [
+                        { q: '「Not only dynamic, but also smart.」這句話運用了哪種文法結構？', options: ['對等連接詞句型', '倒裝句型', '分詞構句', '關係代名詞'], answer: 0, hint: 'Not only... but also... 連接平行結構。' },
+                        { q: '單字 "Procrastinate" 的意思是？', options: ['拖延；延宕', '加速推進', '仔細調查', '爭取認同'], answer: 0, hint: '很多人做作業時常犯的習慣！' },
+                        { q: '「Piece of cake」在日常美語習慣用語中代表什麼？', options: ['輕而易舉的事', '分享食物', '極其珍貴', '複雜難懂'], answer: 0, hint: '形容事情像吃蛋糕一樣簡單。' },
+                        { q: '「Bite the bullet」這句老英式諺語意指？', options: ['咬緊牙關忍受困難', '衝動行事', '痛擊對手', '開口說話'], answer: 0, hint: '面對艱難局面的決心。' },
+                        { q: '單字 "Ubiquitous" 的意思最接近何者？', options: ['無所不在的', '極其稀有的', '古老神祕的', '危險致命的'], answer: 0, hint: '到處都能看到的。' }
+                    ]
+                }
+            },
+            {
+                id: 'physics',
+                name: '雷力',
+                subject: '物理',
+                badgeBg: 'bg-purple-600',
+                title: '充滿活力的熱血科學家',
+                dialogue: {
+                    start: '「你與我的吸引力，比萬有引力還要強烈百倍！」',
+                    correct: '「太棒了！我們之間產生的共振能量簡直破表！」',
+                    wrong: '「能量守恆！這次失敗會轉化為下次成功的動能！」',
+                    click: '「看到你，我心中的電子就開始狂歡跳躍！」'
+                },
+                overlayQuotes: {
+                    correct: ['「粒子碰撞產生愛的火花！」', '「完全符合物理定律，酷爆了！」', '「共振頻率100%匹配！」'],
+                    wrong: ['「動能轉換中，再試一次！」', '「沒事！摩擦力會帶我們前進！」', '「實驗總有誤差，重新修正！」']
+                },
+                confession: '「根據相對論，時間會因為速度而改變；但只要有你在身邊，我的世界就會進入永恆...請成為我人生唯一的能量來源吧！」',
+                questions: {
+                    level1: [
+                        { q: '提出「萬有引力定律」的著名物理學家是誰？', options: ['愛因斯坦', '牛頓', '伽利略', '居禮夫人'], answer: 1, hint: '被蘋果砸到的經典傳奇。' },
+                        { q: '光在真空中傳播的速度大約是多少？', options: ['每秒30萬公里', '每秒3萬公里', '每秒3000公里', '音速'], answer: 0, hint: '宇宙中最快的速度極限。' },
+                        { q: '電力學中，國際標準單位的「電流」單位是什麼？', options: ['伏特 (V)', '安培 (A)', '歐姆 (Ω)', '瓦特 (W)'], answer: 1, hint: '符號為 A。' },
+                        { q: '水的沸點在標準大氣壓下是多少攝氏度？', options: ['50℃', '80℃', '100℃', '120℃'], answer: 2, hint: '水變成水蒸氣的溫度。' },
+                        { q: '下列何者屬於導體（容易導電的物質）？', options: ['橡膠', '銅', '塑膠', '乾燥木頭'], answer: 1, hint: '金屬通常是優良導體。' }
+                    ],
+                    level2: [
+                        { q: '彩虹的形成主要是光線經過大氣水滴產生的什麼現象？', options: ['折射與全反射', '直線傳播', '波干涉', '熱輻射'], answer: 0, hint: '光線進入不同介質時會彎曲並反射。' },
+                        { q: '自由落體運動在不計空氣阻力下，其加速度稱為？', options: ['重力加速度', '向心加速度', '切向加速度', '角加速度'], answer: 0, hint: '數值約為 9.8 m/s²。' },
+                        { q: '愛因斯坦著名的質能互換公式是？', options: ['E = mc²', 'F = ma', 'V = IR', 'P = IV'], answer: 0, hint: '能量等於質量乘以光速平方。' },
+                        { q: '槓桿原理中，施力臂大於抗力臂時，屬於何種槓桿？', options: ['省力槓桿', '費力槓桿', '不省力也不費力', '無法確定'], answer: 0, hint: '施力距離長，可以節省力量。' },
+                        { q: '凸透鏡對光線具有什麼作用？', options: ['會聚作用', '發散作用', '吸收作用', '無任何作用'], answer: 0, hint: '放大鏡的運作原理。' }
+                    ],
+                    level3: [
+                        { q: '熱力學第一定律本質上就是哪一種物理定律的體現？', options: ['動量守恆', '能量守恆', '角動量守恆', '質量守恆'], answer: 1, hint: '能量既不能被創造，也不能被消滅。' },
+                        { q: '聲波在下列哪一種介質中的傳播速度最快？', options: ['空氣', '水', '鋼鐵', '真空'], answer: 2, hint: '介質密度越大且緊密，聲波傳遞越快。' },
+                        { q: '量子力學中著名的「薛丁格的貓」是用來討論什麼概念的思想實驗？', options: ['量子疊加態', '相對論', '光電效應', '核融合'], answer: 0, hint: '在未觀測前同時處於生存與死亡的狀態。' },
+                        { q: '光電效應是由哪位科學家提出成功解釋並獲得諾貝爾獎？', options: ['愛因斯坦', '波爾', '普朗克', '費曼'], answer: 0, hint: '證明光具有粒子性。' },
+                        { q: '超導體在達到臨界溫度時，其電阻會變為多少？', options: ['無限大', '保持不變', '零', '負數'], answer: 2, hint: '電流完全無阻礙流動。' }
+                    ]
+                }
+            },
+            {
+                id: 'history',
+                name: '沈古音',
+                subject: '歷史',
+                badgeBg: 'bg-rose-600',
+                title: '典雅沉穩的神秘御姐',
+                dialogue: {
+                    start: '「千年的歲月悠悠流逝，唯有我們此刻的相遇被烙印在史冊。」',
+                    correct: '「真聰明...你果然是最懂我歷史心思的人。」',
+                    wrong: '「歲月漫長，記錯歷史是常有的事，讓我為你解答。」',
+                    click: '「如果能穿越時空，我依然會在每一個時代選擇遇見你。」'
+                },
+                overlayQuotes: {
+                    correct: ['「博古通今，真令我刮目相看。」', '「這段歷史，你銘記於心了。」', '「智慧如你，配得上帝王級稱讚。」'],
+                    wrong: ['「歷史浩瀚，記錯無妨。」', '「莫急，古人的智慧需要沉澱。」', '「漫漫長河，我們慢慢品讀。」']
+                },
+                confession: '「歷史上記載了無數王朝的興衰與英雄的傳奇，但對我而言，最值得珍藏的史冊，就是未來有你參與的每一天...」',
+                questions: {
+                    level1: [
+                        { q: '中國歷史上唯一被正式承認的女皇帝是誰？', options: ['慈禧太后', '武則天', '呂后', '王昭君'], answer: 1, hint: '唐朝/武周時期的傳奇女帝。' },
+                        { q: '工業革命最早起源於哪一個國家？', options: ['美國', '法國', '英國', '德國'], answer: 2, hint: '蒸汽機改善與紡織業興起的國家。' },
+                        { q: '古埃及法老王建造的龐大陵墓建築稱為什麼？', options: ['空中花園', '金字塔', '萬里長城', '帕德嫩神殿'], answer: 1, hint: '角錐形的偉大建築奇蹟。' },
+                        { q: '三國時期赤壁之戰，是哪兩家聯軍擊敗了曹操？', options: ['劉備與孫權', '劉備與袁紹', '孫權與董卓', '曹操與劉備'], answer: 0, hint: '孫劉聯軍火燒赤壁。' },
+                        { q: '「萬里長城」的大規模修築最初是為了防範哪一個北方游牧民族？', options: ['匈奴', '契丹', '女真', '蒙古'], answer: 0, hint: '秦始皇時期重點防範對象。' }
+                    ],
+                    level2: [
+                        { q: '歐洲歷史上的「文藝復興」運動最早發源於哪一個國家？', options: ['義大利', '英國', '西班牙', '希臘'], answer: 0, hint: '佛羅倫斯是其興起重鎮。' },
+                        { q: '台灣歷史上的「日治時期」始於哪一年簽訂的《馬關條約》？', options: ['1895年', '1911年', '1945年', '1860年'], answer: 0, hint: '甲午戰爭後簽訂。' },
+                        { q: '美國《獨立宣言》簽署發表於哪一年？', options: ['1776年', '1789年', '1861年', '1812年'], answer: 0, hint: '美國國慶日 7月4日 的由來。' },
+                        { q: '絲綢之路的開闢，始於漢朝哪一位使者出使西域？', options: ['張騫', '班超', '鄭和', '玄奘'], answer: 0, hint: '「鑿空」西域第一人。' },
+                        { q: '法國大革命爆發的標誌性事件是攻占哪座建築？', options: ['巴士底監獄', '凡爾賽宮', '盧浮宮', '巴黎聖母院'], answer: 0, hint: '1789年7月14日爆發。' }
+                    ],
+                    level3: [
+                        { q: '漢武帝時期採納了哪位學者的建議，「罷黜百家，獨尊儒術」？', options: ['董仲舒', '司馬遷', '張騫', '主父堰'], answer: 0, hint: '確立儒家為正統思想的關鍵人物。' },
+                        { q: '第一次世界大戰的導火線是哪一個歷史事件？', options: ['塞拉耶佛事件', '凡爾賽條約', '珍珠港事件', '波士頓傾茶事件'], answer: 0, hint: '奧匈帝國皇儲斐迪南大公遇刺。' },
+                        { q: '麥哲倫船隊在歷史上的偉大創舉是？', options: ['首次完成環球航行', '發現美洲新大陸', '開闢印度的香料航線', '發現南極洲'], answer: 0, hint: '證實了地球是圓的。' },
+                        { q: '古希臘時期，以實行民主政治著稱的城邦是？', options: ['雅典', '斯巴達', '特洛伊', '馬其頓'], answer: 0, hint: '西方民主制度的發源地。' },
+                        { q: '北宋時期著名政治家司馬光主編的編年體通史巨著是？', options: ['《資治通鑑》', '《史記》', '《漢書》', '《尚書》'], answer: 0, hint: '鑑於往事，有資於治道。' }
+                    ]
+                }
+            }
+        ];
+
+        let state = {
+            selectedChar: null,
+            affinity: {
+                chinese: 0,
+                math: 0,
+                english: 0,
+                physics: 0,
+                history: 0
+            },
+            currentQuestion: null,
+            usedQuestionKeys: new Set(),
+            isAnsweringLocked: false // Prevents double-clicking options
+        };
+
+        function loadProgress() {
+            try {
+                const saved = window.__galleryStorage.getItem('study_love_affinity_v3');
+                if (saved) {
+                    state.affinity = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.log("Storage load note:", e);
+            }
+        }
+
+        function saveProgress() {
+            try {
+                window.__galleryStorage.setItem('study_love_affinity_v3', JSON.stringify(state.affinity));
+            } catch (e) {
+                console.log("Storage save note:", e);
+            }
+        }
+
+        function renderCharacterSelection() {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const aff = state.affinity[char.id] || 0;
+                const card = document.createElement('div');
+                card.className = `bg-white/90 rounded-3xl p-3 shadow-md border-2 border-pink-100 hover:border-pink-400 flex flex-col items-center justify-between cursor-pointer transition duration-300 transform hover:-translate-y-1`;
+                
+                card.onclick = () => selectCharacter(char.id);
+
+                card.innerHTML = `
+                    <div class="w-full flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${char.badgeBg}">${char.subject}</span>
+                        <span class="text-xs text-pink-500 font-bold"><i class="fa-solid fa-heart mr-0.5"></i>${aff}</span>
+                    </div>
+                    <div class="w-20 h-20 my-1 flex items-center justify-center">
+                        ${generatePersonaSvg(char.id, aff >= 100 ? 'blush' : 'normal')}
+                    </div>
+                    <div class="text-center mb-2">
+                        <div class="font-black text-gray-800 text-xs md:text-sm">${char.name}</div>
+                        <div class="text-[10px] text-gray-500 line-clamp-1">${char.title}</div>
+                    </div>
+                    <button class="w-full bg-pink-100 hover:bg-pink-500 hover:text-white text-pink-600 text-xs font-bold py-1 rounded-xl transition duration-200">
+                        開啟對話
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function selectCharacter(charId) {
+            playToneSound('click');
+            const char = CHARACTERS.find(c => c.id === charId);
+            if (!char) return;
+
+            state.selectedChar = char;
+            state.isAnsweringLocked = false;
+
+            // Update Header & Avatar
+            document.getElementById('charSubjectBadge').innerText = char.subject;
+            document.getElementById('charSubjectBadge').className = `text-[11px] px-2.5 py-0.5 rounded-full font-bold text-white ${char.badgeBg}`;
+            document.getElementById('charName').innerText = char.name;
+            document.getElementById('charTitle').innerText = `「${char.title}」`;
+            document.getElementById('dialogueText').innerText = char.dialogue.start;
+
+            updateAvatarExpression('normal');
+            updateAffinityDisplay();
+
+            // Hide speech bubble on entry
+            hideSpeechBubble();
+
+            // Switch View
+            document.getElementById('selectView').classList.add('hidden');
+            document.getElementById('dateView').classList.remove('hidden');
+
+            loadNextQuestion();
+        }
+
+        function updateAvatarExpression(emotion) {
+            if (!state.selectedChar) return;
+            const svgBox = document.getElementById('svgAvatarBox');
+            svgBox.innerHTML = generatePersonaSvg(state.selectedChar.id, emotion);
+        }
+
+        function backToSelect() {
+            playToneSound('click');
+            hideSpeechBubble();
+            document.getElementById('dateView').classList.add('hidden');
+            document.getElementById('selectView').classList.remove('hidden');
+            renderCharacterSelection();
+        }
+
+        function updateAffinityDisplay() {
+            if (!state.selectedChar) return;
+            const score = state.affinity[state.selectedChar.id] || 0;
+            document.getElementById('affinityScore').innerText = score;
+
+            // Update difficulty indicator badge based on affinity score
+            const diffBadge = document.getElementById('difficultyBadge');
+            const diffLabel = document.getElementById('diffLabel');
+
+            if (score < 35) {
+                diffLabel.innerText = "Level 1 基礎知識";
+                diffBadge.className = "bg-emerald-100 border border-emerald-300 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-2xl shadow flex items-center gap-1";
+            } else if (score < 70) {
+                diffLabel.innerText = "Level 2 進階挑戰";
+                diffBadge.className = "bg-amber-100 border border-amber-300 text-amber-800 text-[11px] font-bold px-3 py-1 rounded-2xl shadow flex items-center gap-1";
+            } else {
+                diffLabel.innerText = "Level 3 學霸高難考題";
+                diffBadge.className = "bg-rose-100 border border-rose-300 text-rose-800 text-[11px] font-bold px-3 py-1 rounded-2xl shadow flex items-center gap-1";
+            }
+        }
+
+        function loadNextQuestion() {
+            state.isAnsweringLocked = false;
+            hideSpeechBubble();
+
+            const char = state.selectedChar;
+            const score = state.affinity[char.id] || 0;
+
+            let levelKey = 'level1';
+            if (score >= 70) levelKey = 'level3';
+            else if (score >= 35) levelKey = 'level2';
+
+            const pool = char.questions[levelKey];
+            
+            // Pick a question that hasn't been shown recently if possible
+            let availableQs = pool.filter(q => !state.usedQuestionKeys.has(q.q));
+            if (availableQs.length === 0) {
+                // Reset cache for this level if all were answered
+                pool.forEach(q => state.usedQuestionKeys.delete(q.q));
+                availableQs = pool;
+            }
+
+            const chosenQ = availableQs[Math.floor(Math.random() * availableQs.length)];
+            state.usedQuestionKeys.add(chosenQ.q);
+            state.currentQuestion = chosenQ;
+
+            renderQuestionUI(chosenQ);
+        }
+
+        function renderQuestionUI(qObj) {
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            // Display question in the visual novel dialogue box
+            document.getElementById('dialogueText').innerHTML = `
+                <div>
+                    <span class="font-bold text-pink-600 text-[11px] block mb-0.5">【學霸隨堂問】</span>
+                    <span>${qObj.q}</span>
+                </div>
+            `;
+
+            qObj.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full text-left bg-white hover:bg-pink-50 border border-pink-200 hover:border-pink-400 p-2.5 rounded-2xl text-xs text-gray-700 font-bold transition duration-200 flex items-center justify-between shadow-sm`;
+                
+                btn.innerHTML = `
+                    <span>${optText}</span>
+                    <i class="fa-solid fa-circle-chevron-right text-xs text-pink-300"></i>
+                `;
+
+                btn.onclick = () => handleAnswer(idx, qObj.answer, qObj.hint, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function showSpeechBubble(text) {
+            const bubble = document.getElementById('characterOverlayBubble');
+            const bubbleText = document.getElementById('characterOverlayText');
+            bubbleText.innerText = text;
+            bubble.classList.remove('hidden');
+        }
+
+        function hideSpeechBubble() {
+            const bubble = document.getElementById('characterOverlayBubble');
+            bubble.classList.add('hidden');
+        }
+
+        function handleAnswer(selectedIndex, correctIndex, hint, clickedBtn) {
+            // Lock options immediately to prevent multi-clicking
+            if (state.isAnsweringLocked) return;
+            state.isAnsweringLocked = true;
+
+            const char = state.selectedChar;
+            const isCorrect = selectedIndex === correctIndex;
+
+            // Disable all option buttons visually and functionally
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.add('cursor-not-allowed', 'opacity-60');
+                if (idx === correctIndex) {
+                    btn.classList.remove('opacity-60', 'bg-white', 'border-pink-200');
+                    btn.classList.add('bg-emerald-100', 'border-emerald-400', 'text-emerald-800');
+                } else if (idx === selectedIndex && !isCorrect) {
+                    btn.classList.remove('opacity-60', 'bg-white', 'border-pink-200');
+                    btn.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-800');
+                }
+            });
+
+            if (isCorrect) {
+                playToneSound('correct');
+                // Increase affinity
+                const currentScore = state.affinity[char.id] || 0;
+                let addPoints = 15;
+                if (currentScore >= 70) addPoints = 10; // Level 3 challenge
+                
+                state.affinity[char.id] = Math.min(100, currentScore + addPoints);
+                saveProgress();
+                updateAffinityDisplay();
+
+                // Emotion Reaction
+                updateAvatarExpression('happy');
+                spawnHeartEffect();
+
+                // Random overlay quote from character
+                const quotes = char.overlayQuotes.correct;
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                showSpeechBubble(randomQuote);
+
+                document.getElementById('dialogueText').innerText = char.dialogue.correct;
+
+                // Check confession trigger
+                if (state.affinity[char.id] >= 100) {
+                    updateAvatarExpression('blush');
+                    setTimeout(() => {
+                        triggerConfession(char);
+                    }, 1400);
+                    return;
+                }
+
+            } else {
+                playToneSound('wrong');
+                updateAvatarExpression('puzzled');
+
+                // Random overlay wrong quote from character
+                const quotes = char.overlayQuotes.wrong;
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                showSpeechBubble(randomQuote);
+
+                document.getElementById('dialogueText').innerText = `${char.dialogue.wrong}（提示：${hint}）`;
+            }
+
+            // Next Question Transition
+            setTimeout(() => {
+                updateAvatarExpression('normal');
+                loadNextQuestion();
+            }, 2600);
+        }
+
+        function interactCharacter() {
+            if (state.isAnsweringLocked) return;
+            playToneSound('click');
+            spawnHeartEffect();
+            if (state.selectedChar) {
+                updateAvatarExpression('blush');
+                showSpeechBubble('💕 💕 💕');
+                document.getElementById('dialogueText').innerText = state.selectedChar.dialogue.click;
+                setTimeout(() => {
+                    updateAvatarExpression('normal');
+                    hideSpeechBubble();
+                }, 2000);
+            }
+        }
+
+        function spawnHeartEffect() {
+            const svgBox = document.getElementById('svgAvatarBox');
+            const rect = svgBox.getBoundingClientRect();
+
+            for (let i = 0; i < 5; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart-particle text-pink-500 text-xl md:text-2xl';
+                heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
+                
+                const offsetX = (Math.random() - 0.5) * 100;
+                const offsetY = (Math.random() - 0.5) * 50;
+                
+                heart.style.left = `${rect.left + rect.width / 2 + offsetX}px`;
+                heart.style.top = `${rect.top + offsetY}px`;
+
+                document.body.appendChild(heart);
+
+                setTimeout(() => {
+                    heart.remove();
+                }, 2500);
+            }
+        }
+
+        function triggerConfession(char) {
+            playToneSound('confess');
+            document.getElementById('confessionCharName').innerText = `${char.name} (${char.subject})`;
+            document.getElementById('confessionText').innerText = char.confession;
+            document.getElementById('endingModal').classList.remove('hidden');
+        }
+
+        function closeEndingModal() {
+            playToneSound('click');
+            document.getElementById('endingModal').classList.add('hidden');
+            backToSelect();
+        }
+
+        function openGallery() {
+            playToneSound('click');
+            const galleryList = document.getElementById('galleryList');
+            galleryList.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const aff = state.affinity[char.id] || 0;
+                const isUnlocked = aff >= 100;
+
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl border flex items-center justify-between ${isUnlocked ? 'bg-pink-50 border-pink-300' : 'bg-gray-50 border-gray-200'}`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-12 h-12 flex-shrink-0">
+                            ${generatePersonaSvg(char.id, isUnlocked ? 'blush' : 'normal')}
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-800 text-xs md:text-sm">${char.name} <span class="text-[10px] font-normal text-gray-500">(${char.subject})</span></div>
+                            <div class="text-[11px] text-pink-600 font-semibold mt-0.5">
+                                ${isUnlocked ? '❤️ 已解鎖告白誓言' : `好感度：${aff} / 100`}
+                            </div>
+                        </div>
+                    </div>
+                    ${isUnlocked ? `
+                        <button onclick='viewConfessionDirect("${char.id}")' class="bg-pink-500 text-white text-[11px] px-3 py-1 rounded-xl font-bold shadow hover:bg-pink-600 transition">
+                            告白回顧
+                        </button>
+                    ` : `
+                        <span class="text-[10px] text-gray-400 italic">未解鎖</span>
+                    `}
+                `;
+                galleryList.appendChild(item);
+            });
+
+            document.getElementById('galleryModal').classList.remove('hidden');
+        }
+
+        function viewConfessionDirect(charId) {
+            closeGallery();
+            const char = CHARACTERS.find(c => c.id === charId);
+            if (char) {
+                triggerConfession(char);
+            }
+        }
+
+        function closeGallery() {
+            playToneSound('click');
+            document.getElementById('galleryModal').classList.add('hidden');
+        }
+
+        window.onload = function() {
+            loadProgress();
+            renderCharacterSelection();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

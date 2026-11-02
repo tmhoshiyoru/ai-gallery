@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chrome 小恐龍：3D立體極速影院版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .bg-transition {
+            transition: background-image 1.2s ease-in-out, filter 1.2s ease-in-out;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-glow:active {
+            transform: scale(0.97);
+        }
+        .anaglyph-active {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.4), 0 0 25px rgba(6, 182, 212, 0.4);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 overflow-x-hidden select-none">
+
+    <div class="w-full max-w-5xl glass-panel rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col items-center gap-4 relative overflow-hidden">
+        
+        <!-- Header & Stats Display -->
+        <div class="w-full flex flex-wrap justify-between items-center gap-3 border-b border-white/10 pb-3">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm sm:text-base font-extrabold text-pink-400 flex items-center gap-1.5 animate-pulse">
+                    💖 3D KAWAII DINO CINEMA 💖
+                </span>
+                <!-- Location Badge -->
+                <span id="location-badge" class="px-3 py-1 text-xs rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 font-semibold flex items-center gap-1 shadow-sm">
+                    🇫🇷 巴黎埃菲爾鐵塔 (60s)
+                </span>
+            </div>
+            
+            <!-- Real-time Stats -->
+            <div class="flex items-center gap-4 text-xs sm:text-sm font-semibold">
+                <div class="text-slate-400 text-xs">
+                    下一站倒數: <span id="location-timer" class="text-emerald-400 font-bold">60s</span>
+                </div>
+                <div class="text-slate-400">
+                    <span class="text-slate-500 mr-1">HI</span><span id="high-score" class="text-slate-200">00000</span>
+                </div>
+                <div class="text-amber-400 font-extrabold text-base">
+                    <span id="current-score">00000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Controls & 3D Stereoscopic Mode Toolbar -->
+        <div class="w-full flex flex-wrap items-center justify-between gap-3 bg-black/50 px-4 py-2.5 rounded-xl border border-white/10">
+            <div class="flex items-center gap-3 text-xs text-slate-300 font-medium">
+                <label class="flex items-center gap-2 cursor-pointer bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-1 rounded-lg transition text-red-300 font-bold">
+                    <input type="checkbox" id="anaglyph-toggle" checked class="w-4 h-4 accent-red-500 cursor-pointer">
+                    <span>🕶️ 3D立體電影眼鏡模式 (Anaglyph 3D)</span>
+                </label>
+                <div class="flex items-center gap-2 border-l border-white/10 pl-3">
+                    <span>🎨 恐龍皮膚:</span>
+                    <input type="color" id="dino-color-picker" value="#38bdf8" class="w-6 h-6 rounded-md border border-slate-500 bg-transparent cursor-pointer">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap" id="color-presets">
+                <button data-color="#ff9ebb" class="w-5 h-5 rounded-full bg-[#ff9ebb] ring-2 ring-white/30 hover:scale-125 transition" title="櫻花粉"></button>
+                <button data-color="#38bdf8" class="w-5 h-5 rounded-full bg-[#38bdf8] ring-2 ring-white/30 hover:scale-125 transition" title="蘇打藍"></button>
+                <button data-color="#4ade80" class="w-5 h-5 rounded-full bg-[#4ade80] ring-2 ring-white/30 hover:scale-125 transition" title="抹茶綠"></button>
+                <button data-color="#facc15" class="w-5 h-5 rounded-full bg-[#facc15] ring-2 ring-white/30 hover:scale-125 transition" title="奶油黃"></button>
+                <button data-color="#c084fc" class="w-5 h-5 rounded-full bg-[#c084fc] ring-2 ring-white/30 hover:scale-125 transition" title="芋泥紫"></button>
+                <button data-color="#fb923c" class="w-5 h-5 rounded-full bg-[#fb923c] ring-2 ring-white/30 hover:scale-125 transition" title="蜜柑橘"></button>
+                <button data-color="#f43f5e" class="w-5 h-5 rounded-full bg-[#f43f5e] ring-2 ring-white/30 hover:scale-125 transition" title="草莓紅"></button>
+            </div>
+        </div>
+
+        <div id="canvas-container" class="relative w-full aspect-[8/2.8] rounded-xl overflow-hidden shadow-2xl border border-white/15 group transition-all duration-300">
+            
+            <!-- Real World Photo Background Container -->
+            <div id="photo-bg" class="absolute inset-0 bg-cover bg-center bg-no-repeat bg-transition filter brightness-[0.65] contrast-[1.1] scale-105" 
+                 style="background-image: url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80');">
+            </div>
+
+            <!-- Soft Gradient Vignette Overlay -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/40 pointer-events-none"></div>
+
+            <!-- Main Canvas for 3D Stereoscopic rendering -->
+            <canvas id="gameCanvas" width="900" height="280" class="relative z-10 w-full h-full object-contain"></canvas>
+
+            <!-- Start Overlay -->
+            <div id="start-screen" class="absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-center p-4">
+                <span class="text-5xl animate-bounce">🎀🦖✨</span>
+                <h1 class="text-xl sm:text-2xl text-pink-400 font-extrabold tracking-wide">超萌 Q 版 3D 小恐龍</h1>
+                <p class="text-xs text-slate-300 max-w-md leading-relaxed">
+                    水汪汪大眼睛與粉嫩腮紅的小恐龍登場！跳躍時會噴發愛心與星星粒子～<br>
+                    按 <span class="px-1.5 py-0.5 rounded bg-pink-900/60 text-pink-200 font-bold">空白鍵 Space</span> 跳躍，按 <span class="px-1.5 py-0.5 rounded bg-pink-900/60 text-pink-200 font-bold">↓ 箭頭下</span> 縮成可愛麻糬。
+                </p>
+                <button id="start-btn" class="btn-glow px-8 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 hover:opacity-90 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-xl transition mt-2">
+                    ▶ 開始超萌 3D 冒險之旅
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="game-over-screen" class="hidden absolute inset-0 z-20 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-center p-4">
+                <h2 class="text-2xl sm:text-3xl text-red-500 font-extrabold tracking-wider animate-pulse">GAME OVER</h2>
+                <p class="text-xs text-slate-300">按下空白鍵或下方按鈕重新出發</p>
+                <button id="restart-btn" class="btn-glow px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs sm:text-sm shadow-lg transition mt-2">
+                    ↻ 再玩一次 (RESTART)
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div class="w-full flex items-center justify-center gap-3">
+            <button id="touch-jump" class="flex-1 py-3.5 bg-slate-800/80 active:bg-slate-700 border border-slate-600 rounded-xl text-xs sm:text-sm font-bold text-slate-200 select-none touch-none shadow-md text-center btn-glow">
+                ▲ 跳躍 (SPACE / ↑)
+            </button>
+            <button id="touch-duck" class="flex-1 py-3.5 bg-slate-800/80 active:bg-slate-700 border border-slate-600 rounded-xl text-xs sm:text-sm font-bold text-slate-200 select-none touch-none shadow-md text-center btn-glow">
+                ▼ 蹲下 (DOWN / ↓)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Web Audio API Sound Effects Engine
+        class SoundEffects {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) this.ctx = new AudioContextClass();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+            }
+            playJump() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch(e) {}
+            }
+            playScore() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(587.33, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.22);
+                } catch(e) {}
+            }
+            playHit() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.22);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.22);
+                } catch(e) {}
+            }
+        }
+        const sfx = new SoundEffects();
+
+        const LOCATIONS = [
+            {
+                name: "🇫🇷 巴黎 埃菲爾鐵塔",
+                badgeClass: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80"
+            },
+            {
+                name: "🇯🇵 日本 富士山櫻花",
+                badgeClass: "bg-pink-500/20 text-pink-300 border-pink-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80"
+            },
+            {
+                name: "🇪🇬 埃及 開羅金字塔",
+                badgeClass: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80"
+            },
+            {
+                name: "🇺🇸 美國 大峽谷巨岩",
+                badgeClass: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?auto=format&fit=crop&w=1200&q=80"
+            },
+            {
+                name: "🇮🇹 義大利 羅馬競技場",
+                badgeClass: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80"
+            },
+            {
+                name: "🇨🇳 中國 萬里長城",
+                badgeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                imageUrl: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80"
+            }
+        ];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const photoBgEl = document.getElementById('photo-bg');
+        const anaglyphToggle = document.getElementById('anaglyph-toggle');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        const GROUND_Y = 240;
+        let enable3DAnaglyph = true;
+
+        if (anaglyphToggle) {
+            enable3DAnaglyph = anaglyphToggle.checked;
+            anaglyphToggle.addEventListener('change', (e) => {
+                enable3DAnaglyph = e.target.checked;
+                if (enable3DAnaglyph) canvasContainer.classList.add('anaglyph-active');
+                else canvasContainer.classList.remove('anaglyph-active');
+            });
+            if (enable3DAnaglyph) canvasContainer.classList.add('anaglyph-active');
+        }
+
+        let customDinoColor = '#38bdf8';
+        const colorPicker = document.getElementById('dino-color-picker');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', (e) => { customDinoColor = e.target.value; });
+        }
+        document.querySelectorAll('#color-presets button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                customDinoColor = btn.getAttribute('data-color');
+                if (colorPicker) colorPicker.value = customDinoColor;
+            });
+        });
+
+        let storedHighScore = 0;
+        try { storedHighScore = parseInt(window.__galleryStorage.getItem('dino_world_high_score')) || 0; } catch(e){}
+
+        let gameState = {
+            running: false,
+            gameOver: false,
+            score: 0,
+            highScore: storedHighScore,
+            speed: 620,
+            elapsedTime: 0,
+            lastTime: 0,
+            currentLocIndex: -1,
+            obstacles: [],
+            dustParticles: []
+        };
+
+        const player = {
+            x: 70,
+            y: GROUND_Y - 48,
+            vy: 0,
+            width: 46,
+            height: 48,
+            isGrounded: true,
+            isDucking: false,
+            animTimer: 0,
+            animFrame: 0,
+            pitchAngle: 0,
+
+            // Rapid narrow jump mechanics
+            gravity: 4300,
+            jumpForce: -1100,
+
+            reset() {
+                this.x = 70;
+                this.y = GROUND_Y - 48;
+                this.vy = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.animTimer = 0;
+                this.animFrame = 0;
+                this.pitchAngle = 0;
+            },
+
+            jump() {
+                if (this.isGrounded) {
+                    this.vy = this.jumpForce;
+                    this.isGrounded = false;
+                    sfx.playJump();
+
+                    for (let i = 0; i < 4; i++) {
+                        gameState.dustParticles.push({
+                            x: this.x + 10 + Math.random() * 20,
+                            y: GROUND_Y - 5,
+                            vx: -60 - Math.random() * 80,
+                            vy: -80 - Math.random() * 100,
+                            life: 0.45,
+                            type: Math.random() > 0.5 ? 'heart' : 'star'
+                        });
+                    }
+                }
+            },
+
+            duck(enable) {
+                this.isDucking = enable;
+                if (!this.isGrounded && enable) {
+                    this.vy += 22000 * 0.016; // Rapid dive
+                }
+            },
+
+            update(dt) {
+                const targetHeight = this.isDucking ? 28 : 48;
+                this.width = this.isDucking ? 60 : 46;
+                this.height = targetHeight;
+
+                if (!this.isGrounded) {
+                    this.vy += this.gravity * dt;
+                    this.y += this.vy * dt;
+
+                    // Calculate pitch angle based on vertical velocity
+                    this.pitchAngle = Math.max(-0.35, Math.min(0.4, this.vy * 0.0005));
+
+                    if (this.y >= GROUND_Y - this.height) {
+                        this.y = GROUND_Y - this.height;
+                        this.vy = 0;
+                        this.isGrounded = true;
+                        this.pitchAngle = 0;
+
+                        // Landing dust cloud
+                        for (let i = 0; i < 5; i++) {
+                            gameState.dustParticles.push({
+                                x: this.x + 10 + Math.random() * 25,
+                                y: GROUND_Y - 2,
+                                vx: -120 - Math.random() * 100,
+                                vy: -30 - Math.random() * 50,
+                                life: 0.28
+                            });
+                        }
+                    }
+                } else {
+                    this.y = GROUND_Y - this.height;
+                    this.pitchAngle = 0;
+                }
+
+                this.animTimer += dt;
+                if (this.animTimer >= 0.07) {
+                    this.animTimer = 0;
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            },
+
+            getBounds() {
+                return {
+                    x: this.x + 6,
+                    y: this.y + 4,
+                    width: this.width - 12,
+                    height: this.height - 6
+                };
+            },
+
+            draw(ctx, offsetX = 0, colorOverride = null) {
+                ctx.save();
+
+                // 1. DYNAMIC GROUND SHADOW
+                const heightAboveGround = GROUND_Y - (this.y + this.height);
+                const shadowScale = Math.max(0.2, 1 - heightAboveGround / 160);
+                const shadowOpacity = Math.max(0.05, 0.4 - heightAboveGround / 220);
+
+                if (colorOverride === null) {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + this.width / 2 + offsetX, GROUND_Y + 2, (this.isDucking ? 30 : 22) * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Tilt angle on jump/dive
+                const centerX = this.x + this.width / 2 + offsetX;
+                const centerY = this.y + this.height / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(this.pitchAngle);
+                ctx.translate(-centerX, -centerY);
+
+                const baseColor = colorOverride || customDinoColor || '#ff9ebb';
+                const sideColor = colorOverride || '#0f172a';
+                const bellyColor = colorOverride || '#fffbeb';
+                const blushColor = colorOverride || '#ff70a6';
+                const spikeColor = colorOverride || '#facc15';
+
+                const dx = this.x + offsetX;
+                const dy = this.y;
+
+                if (this.isDucking) {
+                    // --- DUCKING: SUPER CUTE MOCHI SQUISHY DINO ---
+                    if (colorOverride === null) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+                        ctx.beginPath();
+                        ctx.roundRect(dx + 4, dy + 6, 52, 24, 12);
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = baseColor;
+                    ctx.strokeStyle = sideColor;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(dx, dy + 4, 54, 24, 12);
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = bellyColor;
+                    ctx.beginPath();
+                    ctx.ellipse(dx + 28, dy + 18, 16, 7, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = spikeColor;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.arc(dx + 8 + i * 10, dy + 4, 3.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = blushColor;
+                    ctx.globalAlpha = 0.8;
+                    ctx.beginPath(); ctx.arc(dx + 44, dy + 16, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(dx + 42, dy + 9);
+                    ctx.lineTo(dx + 46, dy + 12);
+                    ctx.lineTo(dx + 42, dy + 15);
+                    ctx.stroke();
+
+                    ctx.fillStyle = baseColor;
+                    ctx.beginPath();
+                    ctx.arc(dx - 4, dy + 14, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else {
+                    // --- UPRIGHT: ROUND KAWAII BABY T-REX ---
+                    ctx.fillStyle = spikeColor;
+                    ctx.beginPath(); ctx.arc(dx + 6, dy + 16, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(dx + 10, dy + 10, 4.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(dx + 16, dy + 5, 4.5, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = baseColor;
+                    ctx.strokeStyle = sideColor;
+                    ctx.lineWidth = 2;
+
+                    ctx.beginPath();
+                    ctx.ellipse(dx + 20, dy + 30, 16, 15, 0, 0, Math.PI * 2);
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(dx + 26, dy + 14, 16, 0, Math.PI * 2);
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.fillStyle = bellyColor;
+                    ctx.beginPath();
+                    ctx.ellipse(dx + 24, dy + 32, 9, 11, -0.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = blushColor;
+                    ctx.globalAlpha = 0.75;
+                    ctx.beginPath(); ctx.arc(dx + 33, dy + 18, 4.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath(); ctx.arc(dx + 30, dy + 11, 4.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(dx + 31.5, dy + 9.5, 2, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(dx + 28.5, dy + 12.5, 1, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.strokeStyle = sideColor;
+                    ctx.lineWidth = 1.8;
+                    ctx.beginPath();
+                    ctx.arc(dx + 36, dy + 15, 2.5, 0.1, Math.PI * 0.95);
+                    ctx.stroke();
+
+                    ctx.fillStyle = baseColor;
+                    ctx.beginPath();
+                    ctx.ellipse(dx + 30, dy + 25, 4, 2.5, 0.3, 0, Math.PI * 2);
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(dx + 8, dy + 28);
+                    ctx.quadraticCurveTo(dx - 6, dy + 24, dx - 8, dy + 32);
+                    ctx.quadraticCurveTo(dx, dy + 36, dx + 8, dy + 34);
+                    ctx.fill(); ctx.stroke();
+
+                    ctx.strokeStyle = baseColor;
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+
+                    if (!this.isGrounded) {
+                        ctx.beginPath();
+                        ctx.moveTo(dx + 16, dy + 42); ctx.lineTo(dx + 12, dy + 47);
+                        ctx.moveTo(dx + 26, dy + 42); ctx.lineTo(dx + 30, dy + 46);
+                        ctx.stroke();
+                    } else {
+                        const legOffset = this.animFrame === 0 ? 7 : -7;
+                        ctx.beginPath();
+                        ctx.moveTo(dx + 16, dy + 42); ctx.lineTo(dx + 16 + legOffset, GROUND_Y);
+                        ctx.moveTo(dx + 26, dy + 42); ctx.lineTo(dx + 26 - legOffset, GROUND_Y);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.restore();
+            }
+        };
+
+        let obstacleTimer = 0;
+        let nextObstacleTime = 1.2;
+
+        function spawnObstacle() {
+            const rand = Math.random() * 100;
+            if (rand < 40) {
+                gameState.obstacles.push({
+                    type: 'cactus',
+                    x: 920,
+                    y: GROUND_Y - 48,
+                    width: 32,
+                    height: 48,
+                    color: '#22c55e',
+                    sideColor: '#14532d'
+                });
+            } else if (rand < 70) {
+                gameState.obstacles.push({
+                    type: 'cactus_double',
+                    x: 920,
+                    y: GROUND_Y - 52,
+                    width: 52,
+                    height: 52,
+                    color: '#16a34a',
+                    sideColor: '#0f391b'
+                });
+            } else {
+                const birdRand = Math.random() * 100;
+                let birdY;
+                if (birdRand < 35) birdY = GROUND_Y - 82;
+                else if (birdRand < 70) birdY = GROUND_Y - 56;
+                else birdY = GROUND_Y - 34;
+
+                gameState.obstacles.push({
+                    type: 'bird',
+                    x: 920,
+                    y: birdY,
+                    width: 44,
+                    height: 30,
+                    animTimer: 0,
+                    animFrame: 0,
+                    color: '#f43f5e',
+                    sideColor: '#881337'
+                });
+            }
+        }
+
+        // Draw 3D Volumetric Obstacle (Cactus / Bird)
+        function drawObstacle3D(ctx, obs, offsetX = 0, colorOverride = null) {
+            ctx.save();
+            const ox = obs.x + offsetX;
+            const oy = obs.y;
+
+            if (obs.type === 'cactus' || obs.type === 'cactus_double') {
+                const mainColor = colorOverride || obs.color;
+                const sideColor = colorOverride || obs.sideColor;
+
+                // Ground 3D Drop Shadow
+                if (colorOverride === null) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+                    ctx.beginPath();
+                    ctx.ellipse(ox + obs.width / 2, GROUND_Y + 2, obs.width / 2 + 4, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 3D Cactus Extrusion / Side Depth Face
+                ctx.fillStyle = sideColor;
+                ctx.beginPath();
+                ctx.roundRect(ox + 12, oy + 2, 12, obs.height, 6);
+                ctx.roundRect(ox + 4, oy + 14, 10, 16, 4);
+                ctx.roundRect(ox + 22, oy + 20, 10, 14, 4);
+                if (obs.type === 'cactus_double') {
+                    ctx.roundRect(ox + 30, oy + 8, 12, obs.height - 8, 6);
+                }
+                ctx.fill();
+
+                // Front Main Face
+                ctx.fillStyle = mainColor;
+                ctx.strokeStyle = '#052e16';
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ctx.roundRect(ox + 8, oy, 12, obs.height, 6);
+                ctx.fill(); ctx.stroke();
+
+                ctx.beginPath();
+                ctx.roundRect(ox, oy + 12, 10, 16, 4);
+                ctx.roundRect(ox + 18, oy + 18, 10, 14, 4);
+                ctx.fill(); ctx.stroke();
+
+                if (obs.type === 'cactus_double') {
+                    ctx.beginPath();
+                    ctx.roundRect(ox + 26, oy + 6, 12, obs.height - 6, 6);
+                    ctx.fill(); ctx.stroke();
+                }
+
+                // 3D Specular Highlight Line
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.25;
+                ctx.fillRect(ox + 10, oy + 4, 3, obs.height - 8);
+                ctx.globalAlpha = 1.0;
+
+            } else if (obs.type === 'bird') {
+                // 3D Flying Bird (Pterodactyl)
+                const mainColor = colorOverride || obs.color;
+                const sideColor = colorOverride || obs.sideColor;
+
+                // Bird Ground Shadow
+                if (colorOverride === null) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.beginPath();
+                    ctx.ellipse(ox + 20, GROUND_Y + 2, 16, 3.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 3D Depth Shadow
+                ctx.fillStyle = sideColor;
+                ctx.beginPath();
+                ctx.ellipse(ox + 23, oy + 16, 14, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Main 3D Bird Body
+                ctx.fillStyle = mainColor;
+                ctx.strokeStyle = '#4c0519';
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ctx.ellipse(ox + 20, oy + 14, 14, 8, 0, 0, Math.PI * 2);
+                ctx.fill(); ctx.stroke();
+
+                // 3D Beak
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(ox + 6, oy + 14);
+                ctx.lineTo(ox - 6, oy + 16);
+                ctx.lineTo(ox + 6, oy + 19);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+
+                // 3D Flapping Wings with Depth
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                if (obs.animFrame === 0) {
+                    // Wing Up
+                    ctx.moveTo(ox + 16, oy + 12);
+                    ctx.lineTo(ox + 28, oy - 12);
+                    ctx.lineTo(ox + 30, oy + 12);
+                } else {
+                    // Wing Down
+                    ctx.moveTo(ox + 16, oy + 16);
+                    ctx.lineTo(ox + 28, oy + 32);
+                    ctx.lineTo(ox + 30, oy + 16);
+                }
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
+        function updateLocationBackground() {
+            const locIndex = Math.floor(gameState.elapsedTime / 60) % LOCATIONS.length;
+            const badgeEl = document.getElementById('location-badge');
+            const timerEl = document.getElementById('location-timer');
+            const loc = LOCATIONS[locIndex];
+            const timeLeft = 60 - Math.floor(gameState.elapsedTime % 60);
+
+            if (locIndex !== gameState.currentLocIndex) {
+                gameState.currentLocIndex = locIndex;
+                photoBgEl.style.backgroundImage = `url('${loc.imageUrl}')`;
+                badgeEl.className = `px-3 py-1 text-xs rounded-full border font-semibold flex items-center gap-1 shadow-sm ${loc.badgeClass}`;
+            }
+
+            badgeEl.innerHTML = `${loc.name} (${timeLeft}s)`;
+            if (timerEl) timerEl.innerText = `${timeLeft}s`;
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameState.lastTime) gameState.lastTime = timestamp;
+            let dt = (timestamp - gameState.lastTime) / 1000;
+            gameState.lastTime = timestamp;
+
+            if (dt > 0.08) dt = 0.08;
+
+            if (gameState.running && !gameState.gameOver) {
+                gameState.elapsedTime += dt;
+                gameState.score += dt * 18;
+                gameState.speed = 620 + (gameState.score * 0.22);
+
+                document.getElementById('current-score').innerText = String(Math.floor(gameState.score)).padStart(5, '0');
+                document.getElementById('high-score').innerText = String(Math.floor(gameState.highScore)).padStart(5, '0');
+
+                if (Math.floor(gameState.score) > 0 && Math.floor(gameState.score) % 100 === 0 && Math.floor(gameState.score - dt * 18) % 100 !== 0) {
+                    sfx.playScore();
+                }
+
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = Math.floor(gameState.score);
+                    try { window.__galleryStorage.setItem('dino_world_high_score', gameState.highScore); } catch(e){}
+                }
+
+                player.update(dt);
+
+                // Obstacle Spawner
+                obstacleTimer += dt;
+                if (obstacleTimer >= nextObstacleTime) {
+                    obstacleTimer = 0;
+                    spawnObstacle();
+                    nextObstacleTime = 0.75 + Math.random() * Math.max(0.25, 0.8 - gameState.speed * 0.0005);
+                }
+
+                // Obstacles & Collision
+                const playerBox = player.getBounds();
+                for (let i = gameState.obstacles.length - 1; i >= 0; i--) {
+                    const obs = gameState.obstacles[i];
+                    obs.x -= gameState.speed * dt;
+
+                    if (obs.type === 'bird') {
+                        obs.animTimer += dt;
+                        if (obs.animTimer >= 0.12) {
+                            obs.animTimer = 0;
+                            obs.animFrame = (obs.animFrame + 1) % 2;
+                        }
+                    }
+
+                    const obsBox = { x: obs.x + 4, y: obs.y + 4, width: obs.width - 8, height: obs.height - 8 };
+                    if (checkCollision(playerBox, obsBox)) {
+                        gameState.gameOver = true;
+                        sfx.playHit();
+                        document.getElementById('game-over-screen').classList.remove('hidden');
+                    }
+
+                    if (obs.x < -80) gameState.obstacles.splice(i, 1);
+                }
+
+                // Dust particles
+                for (let i = gameState.dustParticles.length - 1; i >= 0; i--) {
+                    const p = gameState.dustParticles[i];
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt;
+                    if (p.life <= 0) gameState.dustParticles.splice(i, 1);
+                }
+
+                updateLocationBackground();
+            }
+
+            // --- 3D STEREOSCOPIC CANVAS RENDERING ENGINE ---
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const renderPass = (offsetX, colorOverride) => {
+                // 3D Ground Track & Speed Line
+                ctx.strokeStyle = colorOverride ? colorOverride : 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, GROUND_Y);
+                ctx.lineTo(canvas.width, GROUND_Y);
+                ctx.stroke();
+
+                // Ground Speed Dots
+                ctx.fillStyle = colorOverride ? colorOverride : 'rgba(255, 255, 255, 0.35)';
+                for (let x = 0; x < canvas.width; x += 40) {
+                    const offset = (x - (gameState.score * 12) % 40) + offsetX;
+                    ctx.fillRect(offset, GROUND_Y + 8, 8, 2);
+                }
+
+                // Dust & Heart/Star Particles
+                gameState.dustParticles.forEach(p => {
+                    if (p.type === 'heart') {
+                        ctx.fillStyle = colorOverride ? colorOverride : `rgba(255, 112, 166, ${p.life * 2.2})`;
+                        ctx.font = '12px sans-serif';
+                        ctx.fillText('💖', p.x + offsetX, p.y);
+                    } else if (p.type === 'star') {
+                        ctx.fillStyle = colorOverride ? colorOverride : `rgba(250, 204, 21, ${p.life * 2.2})`;
+                        ctx.font = '12px sans-serif';
+                        ctx.fillText('⭐', p.x + offsetX, p.y);
+                    } else {
+                        ctx.fillStyle = colorOverride ? colorOverride : `rgba(255, 255, 255, ${p.life * 3})`;
+                        ctx.beginPath();
+                        ctx.arc(p.x + offsetX, p.y, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Render 3D Obstacles
+                gameState.obstacles.forEach(obs => {
+                    drawObstacle3D(ctx, obs, offsetX, colorOverride);
+                });
+
+                // Render 3D Player Dinosaur
+                player.draw(ctx, offsetX, colorOverride);
+            };
+
+            if (enable3DAnaglyph) {
+                // Red pass offset
+                ctx.globalCompositeOperation = 'source-over';
+                renderPass(-3, 'rgba(239, 68, 68, 0.6)');
+                // Cyan pass offset
+                ctx.globalCompositeOperation = 'screen';
+                renderPass(3, 'rgba(6, 182, 212, 0.6)');
+                // Standard composite pass
+                ctx.globalCompositeOperation = 'source-over';
+                renderPass(0, null);
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                renderPass(0, null);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            sfx.init();
+            player.reset();
+            gameState.running = true;
+            gameState.gameOver = false;
+            gameState.score = 0;
+            gameState.speed = 620;
+            gameState.elapsedTime = 0;
+            gameState.obstacles = [];
+            gameState.dustParticles = [];
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+        }
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                sfx.init();
+                if (!gameState.running || gameState.gameOver) {
+                    startGame();
+                } else {
+                    player.jump();
+                }
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (gameState.running && !gameState.gameOver) {
+                    player.duck(true);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                player.duck(false);
+            }
+        });
+
+        // Touch control handlers
+        const touchJump = document.getElementById('touch-jump');
+        const touchDuck = document.getElementById('touch-duck');
+
+        if (touchJump) {
+            touchJump.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sfx.init();
+                if (!gameState.running || gameState.gameOver) startGame();
+                else player.jump();
+            });
+            touchJump.addEventListener('click', (e) => {
+                e.preventDefault();
+                sfx.init();
+                if (!gameState.running || gameState.gameOver) startGame();
+                else player.jump();
+            });
+        }
+
+        if (touchDuck) {
+            touchDuck.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (gameState.running && !gameState.gameOver) player.duck(true);
+            });
+            touchDuck.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                player.duck(false);
+            });
+            touchDuck.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (gameState.running && !gameState.gameOver) player.duck(true);
+            });
+            touchDuck.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                player.duck(false);
+            });
+        }
+
+        // Start requestAnimationFrame loop on load
+        requestAnimationFrame(gameLoop);
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

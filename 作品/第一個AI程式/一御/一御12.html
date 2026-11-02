@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>田園番茄大爆破 - Tomato Farm Splat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Mali:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', 'Mali', cursive, sans-serif;
+            background: #4a7c59;
+            background-image: 
+                radial-gradient(circle at 50% 20%, #8db580 0%, #4a7c59 70%, #2f5236 100%);
+            color: #2b2d42;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+
+        /* 木質與田園卡片風格 */
+        .wood-panel {
+            background: #d4a373;
+            background: linear-gradient(180deg, #e7bc91 0%, #bc8a5f 100%);
+            border: 4px solid #8c5e38;
+            box-shadow: 0 8px 0 #5c3d23, 0 12px 20px rgba(0,0,0,0.3);
+        }
+
+        .farm-card {
+            background: #fefae0;
+            border: 3px solid #dda15e;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* 按鈕風格 */
+        .farm-btn {
+            background: linear-gradient(180deg, #bc4749 0%, #9b2226 100%);
+            color: #fff;
+            border: 3px solid #6b1416;
+            box-shadow: 0 6px 0 #520f10, 0 10px 15px rgba(0,0,0,0.25);
+            transition: all 0.1s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .farm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #520f10, 0 12px 18px rgba(0,0,0,0.3);
+            filter: brightness(1.05);
+        }
+
+        .farm-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #520f10, 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        canvas {
+            background: linear-gradient(180deg, #e9edc9 0%, #ccd5ae 100%);
+            border: 6px solid #8c5e38;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.15), 0 10px 25px rgba(0,0,0,0.3);
+            border-radius: 16px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4">
+
+    <!-- 頂部標題與數據列 -->
+    <header class="w-full max-w-2xl flex flex-col items-center gap-2 mb-2">
+        <h1 class="text-3xl md:text-4xl font-bold text-amber-100 tracking-wide drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] flex items-center gap-2">
+            <span>🍅</span> 田園番茄大爆破 <span>🌾</span>
+        </h1>
+        
+        <!-- 數據儀表板 -->
+        <div class="w-full grid grid-cols-5 gap-1 md:gap-2 wood-panel p-2 md:p-3 rounded-2xl text-center font-bold">
+            <div class="farm-card p-1 rounded-xl flex flex-col justify-center">
+                <span class="text-[10px] md:text-xs text-amber-800 uppercase">豐收得分</span>
+                <span id="scoreText" class="text-base md:text-2xl text-red-700">0</span>
+            </div>
+            <div class="farm-card p-1 rounded-xl flex flex-col justify-center">
+                <span class="text-[10px] md:text-xs text-amber-800 uppercase">最高紀錄</span>
+                <span id="highScoreText" class="text-base md:text-2xl text-amber-700">0</span>
+            </div>
+            <div class="farm-card p-1 rounded-xl flex flex-col justify-center bg-red-100/80 border-red-300">
+                <span class="text-[10px] md:text-xs text-red-900 uppercase">🍅 番茄採收</span>
+                <span id="tomatoCountText" class="text-base md:text-2xl text-red-600">0/8</span>
+            </div>
+            <div class="farm-card p-1 rounded-xl flex flex-col justify-center">
+                <span class="text-[10px] md:text-xs text-amber-800 uppercase">爆破連擊</span>
+                <span id="comboText" class="text-base md:text-2xl text-orange-600">x1</span>
+            </div>
+            <div class="farm-card p-1 rounded-xl flex flex-col justify-center">
+                <span class="text-[10px] md:text-xs text-amber-800 uppercase">剩餘次數</span>
+                <div id="livesContainer" class="flex justify-center items-center gap-1 mt-1 text-red-600">
+                    <!-- 動態渲染番茄圖示 -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 遊戲畫布與浮動視窗 -->
+    <main class="relative w-full max-w-2xl aspect-[4/3] flex justify-center items-center">
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- 彈窗 Overlay -->
+        <div id="overlayModal" class="absolute inset-0 bg-stone-900/70 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+            <div class="wood-panel p-6 md:p-8 rounded-3xl max-w-md w-full flex flex-col items-center">
+                <div class="text-5xl mb-2 animate-bounce">🍅</div>
+                <h2 id="modalTitle" class="text-3xl md:text-4xl font-bold text-amber-100 drop-shadow-md mb-2">
+                    田園極速挑戰
+                </h2>
+                <p id="modalDesc" class="text-amber-50 text-base md:text-lg mb-6 leading-relaxed">
+                    一命極限模式！農作物木箱會動態滑動，注意巡邏農夫會擋球！精準瞄準爆破多汁番茄！
+                </p>
+                <button id="startBtn" class="farm-btn px-8 py-3 rounded-2xl text-xl font-bold flex items-center gap-2 cursor-pointer">
+                    <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    開始採收番茄！
+                </button>
+                <div class="mt-4 text-xs text-amber-900/80 font-bold space-y-1">
+                    <p>按鍵提示：<span class="text-amber-950">← / →</span> 或 <span class="text-amber-950">A / D</span> 移動 | <span class="text-amber-950">P</span> 暫停</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 行動裝置按鈕 -->
+    <footer class="w-full max-w-2xl mt-2 flex justify-between items-center text-xs text-amber-100 font-bold px-2">
+        <span>FARM ENGINE v3.5</span>
+        <div class="flex gap-2 md:hidden">
+            <button id="btnTouchLeft" class="px-5 py-2 farm-btn rounded-xl text-white font-bold">◀ 左移</button>
+            <button id="btnTouchRight" class="px-5 py-2 farm-btn rounded-xl text-white font-bold">右移 ▶</button>
+        </div>
+        <span>SOUND: ORGANIC SQUISH</span>
+    </footer>
+
+    <script>
+        class OrganicSoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            // 木質敲擊聲 (托盤與邊界彈跳)
+            playWoodBounce() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    
+                    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.08);
+                    
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.08);
+                } catch(e){}
+            }
+
+            // 多汁番茄爆破噴濺聲 (Splat!)
+            playTomatoSplat(combo = 1) {
+                if (!this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    
+                    // 低音爆裂 (Pop)
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    const pitch = 300 + Math.min(combo * 30, 300);
+                    
+                    osc.frequency.setValueAtTime(pitch, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+                    
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.12);
+
+                    // 水潤噪聲 (Squelch)
+                    const bufferSize = this.ctx.sampleRate * 0.08;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+
+                    const whiteNoise = this.ctx.createBufferSource();
+                    whiteNoise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(1200 + combo * 100, now);
+
+                    const noiseGain = this.ctx.createGain();
+                    noiseGain.gain.setValueAtTime(0.15, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+                    whiteNoise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+
+                    whiteNoise.start(now);
+                } catch(e){}
+            }
+
+            // 掉落失敗聲
+            playSplatFail() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.3);
+                    
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.3);
+                } catch(e){}
+            }
+
+            // 勝利音效
+            playVictoryJingle() {
+                if (!this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        try {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+                            osc.type = 'triangle';
+                            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+                            osc.connect(gain);
+                            gain.connect(this.ctx.destination);
+                            osc.start();
+                            osc.stop(this.ctx.currentTime + 0.25);
+                        } catch(e){}
+                    }, idx * 110);
+                });
+            }
+        }
+
+        const sound = new OrganicSoundEngine();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const comboText = document.getElementById('comboText');
+        const tomatoCountText = document.getElementById('tomatoCountText');
+        const livesContainer = document.getElementById('livesContainer');
+        const overlayModal = document.getElementById('overlayModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDesc = document.getElementById('modalDesc');
+        const startBtn = document.getElementById('startBtn');
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let score = 0;
+        let highScore = localStorage.getItem('tomato_high_score') || 0;
+        let lives = 1; // 一命模式
+        let combo = 0;
+        let harvestedTomatoes = 0;
+        let animationFrameId = null;
+
+        highScoreText.textContent = highScore;
+
+        // 木質托盤
+        const paddle = {
+            width: 124,
+            height: 18,
+            x: (CANVAS_WIDTH - 124) / 2,
+            y: CANVAS_HEIGHT - 38,
+            speed: 11,
+            color: '#8c5e38'
+        };
+
+        // 鮮豔番茄彈珠
+        const tomato = {
+            radius: 12,
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT - 60,
+            speed: 10,
+            dx: 7,
+            dy: -7,
+            rotation: 0,
+            rotationSpeed: 0.1,
+            trail: [],
+            maxTrail: 6
+        };
+
+        // 農作物木箱
+        const brickConfig = {
+            rowCount: 3,
+            columnCount: 8,
+            padding: 12,
+            offsetTop: 70,
+            offsetLeft: 35,
+            height: 28,
+            styles: [
+                { topColor: '#e63946', mainColor: '#d62828', darkColor: '#9d0208', points: 30, icon: '🍅', label: '番茄', isTomato: true },
+                { topColor: '#ffb703', mainColor: '#fb8500', darkColor: '#b25200', points: 20, icon: '🌽', label: '玉米', isTomato: false },
+                { topColor: '#a7c957', mainColor: '#6a994e', darkColor: '#386641', points: 10, icon: '🥬', label: '生菜', isTomato: false }
+            ]
+        };
+
+        // 巡邏擋球農夫 (會在木箱下方左右 patrol 並反彈番茄)
+        const farmerGuard = {
+            width: 80,
+            height: 36,
+            x: CANVAS_WIDTH / 2 - 40,
+            y: 205,
+            dx: 3.2,
+            blockedCount: 0
+        };
+
+        let rowVelocities = [1.8, -1.4, 2.2];
+        let bricks = [];
+        let particles = [];
+        let splatDecals = [];
+        let floatingTexts = [];
+
+        const brickWidth = (CANVAS_WIDTH - (brickConfig.offsetLeft * 2) - ((brickConfig.columnCount - 1) * brickConfig.padding)) / brickConfig.columnCount;
+
+        const keys = { left: false, right: false };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+            } else if ((e.key === 'p' || e.key === 'P') && gameRunning) {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            }
+        });
+
+        function handlePointerMove(clientX) {
+            if (!gameRunning || gamePaused) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const mouseX = (clientX - rect.left) * scaleX;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, mouseX - paddle.width / 2));
+        }
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX);
+            }
+        }, { passive: true });
+
+        const btnLeft = document.getElementById('btnTouchLeft');
+        const btnRight = document.getElementById('btnTouchRight');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+
+        startBtn.addEventListener('click', () => {
+            sound.init();
+            if (!gameRunning) {
+                startGame();
+            } else if (gamePaused) {
+                togglePause();
+            }
+        });
+
+        function initBricks() {
+            bricks = [];
+            rowVelocities = [1.8, -1.4, 2.2];
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const x = brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding);
+                    const y = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: x,
+                        y: y,
+                        status: 1,
+                        style: brickConfig.styles[r % brickConfig.styles.length]
+                    };
+                }
+            }
+        }
+
+        function updateLivesUI() {
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                livesContainer.innerHTML += `<span class="text-xl">🍅</span>`;
+            }
+        }
+
+        function resetTomatoAndPaddle() {
+            paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+            tomato.x = CANVAS_WIDTH / 2;
+            tomato.y = CANVAS_HEIGHT - 60;
+            
+            const angle = (Math.random() * 0.6 - 0.3) - Math.PI / 2; 
+            const speed = tomato.speed;
+            tomato.dx = speed * Math.cos(angle);
+            tomato.dy = speed * Math.sin(angle);
+            tomato.trail = [];
+        }
+
+        function startGame() {
+            score = 0;
+            lives = 1;
+            combo = 0;
+            harvestedTomatoes = 0;
+            farmerGuard.x = CANVAS_WIDTH / 2 - 40;
+            farmerGuard.dx = 3.2;
+            farmerGuard.blockedCount = 0;
+            scoreText.textContent = score;
+            comboText.textContent = 'x1';
+            tomatoCountText.textContent = `0/${brickConfig.columnCount}`;
+            updateLivesUI();
+            initBricks();
+            resetTomatoAndPaddle();
+            
+            particles = [];
+            splatDecals = [];
+            floatingTexts = [];
+            gameRunning = true;
+            gamePaused = false;
+            overlayModal.classList.add('opacity-0', 'pointer-events-none');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function togglePause() {
+            gamePaused = !gamePaused;
+            if (gamePaused) {
+                modalTitle.textContent = '遊戲暫停';
+                modalDesc.textContent = '農場採收暫停中，按下下方按鈕繼續爆破！';
+                startBtn.textContent = '繼續遊戲';
+                overlayModal.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                overlayModal.classList.add('opacity-0', 'pointer-events-none');
+                gameLoop();
+            }
+        }
+
+        function createTomatoSplatParticles(x, y) {
+            const count = 18;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2;
+                const isSeed = Math.random() < 0.3;
+                
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    radius: isSeed ? Math.random() * 1.5 + 1 : Math.random() * 4 + 2,
+                    color: isSeed ? '#ffbe0b' : (Math.random() > 0.5 ? '#d62828' : '#e63946'),
+                    alpha: 1,
+                    decay: Math.random() * 0.025 + 0.015,
+                    isSeed: isSeed
+                });
+            }
+
+            if (splatDecals.length > 25) splatDecals.shift();
+            splatDecals.push({
+                x: x,
+                y: y,
+                radius: Math.random() * 15 + 10,
+                color: 'rgba(186, 24, 27, 0.25)',
+                points: Math.floor(Math.random() * 3) + 5,
+                alpha: 0.8
+            });
+        }
+
+        function addFloatingText(x, y, text, color = '#bc4749') {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                alpha: 1,
+                dy: -1.2
+            });
+        }
+
+        function updatePhysics() {
+            // 1. 托盤移動
+            if (keys.left) paddle.x -= paddle.speed;
+            if (keys.right) paddle.x += paddle.speed;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, paddle.x));
+
+            // 2. 番茄旋轉與軌跡
+            tomato.rotation += tomato.rotationSpeed;
+            tomato.trail.push({ x: tomato.x, y: tomato.y });
+            if (tomato.trail.length > tomato.maxTrail) tomato.trail.shift();
+
+            tomato.x += tomato.dx;
+            tomato.y += tomato.dy;
+
+            // 3. 移動木箱排 (滑動與反彈)
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                let minX = CANVAS_WIDTH;
+                let maxX = 0;
+
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    b.x += rowVelocities[r];
+                    if (b.x < minX) minX = b.x;
+                    if (b.x + brickWidth > maxX) maxX = b.x + brickWidth;
+                }
+
+                if (minX <= 12 || maxX >= CANVAS_WIDTH - 12) {
+                    rowVelocities[r] = -rowVelocities[r];
+                }
+            }
+
+            // 4. 巡邏農夫防守擋球
+            farmerGuard.x += farmerGuard.dx;
+            if (farmerGuard.x <= 15 || farmerGuard.x + farmerGuard.width >= CANVAS_WIDTH - 15) {
+                farmerGuard.dx = -farmerGuard.dx;
+            }
+
+            if (
+                tomato.x + tomato.radius > farmerGuard.x &&
+                tomato.x - tomato.radius < farmerGuard.x + farmerGuard.width &&
+                tomato.y + tomato.radius > farmerGuard.y &&
+                tomato.y - tomato.radius < farmerGuard.y + farmerGuard.height
+            ) {
+                tomato.dy = -Math.abs(tomato.dy);
+                sound.playWoodBounce();
+                farmerGuard.blockedCount++;
+                addFloatingText(farmerGuard.x + farmerGuard.width / 2, farmerGuard.y - 10, '🛡️ 農夫擋下！', '#ffb703');
+            }
+
+            // 5. 邊界撞擊 (左右上)
+            if (tomato.x - tomato.radius <= 0) {
+                tomato.x = tomato.radius;
+                tomato.dx = -tomato.dx;
+                sound.playWoodBounce();
+            } else if (tomato.x + tomato.radius >= CANVAS_WIDTH) {
+                tomato.x = CANVAS_WIDTH - tomato.radius;
+                tomato.dx = -tomato.dx;
+                sound.playWoodBounce();
+            }
+
+            if (tomato.y - tomato.radius <= 0) {
+                tomato.y = tomato.radius;
+                tomato.dy = -tomato.dy;
+                sound.playWoodBounce();
+            }
+
+            // 6. 掉落底部邊界 (Game Over)
+            if (tomato.y + tomato.radius >= CANVAS_HEIGHT) {
+                sound.playSplatFail();
+                lives--;
+                updateLivesUI();
+
+                if (lives <= 0) {
+                    gameRunning = false;
+                    modalTitle.textContent = '🍅 番茄爆裂！';
+                    modalDesc.textContent = `一命極限挑戰結束！最終得分：${score} 分 (共採收 ${harvestedTomatoes} 個番茄)`;
+                    startBtn.textContent = '重新挑戰';
+                    overlayModal.classList.remove('opacity-0', 'pointer-events-none');
+                    return;
+                }
+            }
+
+            // 7. 托盤碰撞檢測
+            if (
+                tomato.y + tomato.radius >= paddle.y &&
+                tomato.y - tomato.radius <= paddle.y + paddle.height &&
+                tomato.x + tomato.radius >= paddle.x &&
+                tomato.x - tomato.radius <= paddle.x + paddle.width &&
+                tomato.dy > 0
+            ) {
+                sound.playWoodBounce();
+                combo = 0;
+                comboText.textContent = 'x1';
+
+                const hitPoint = (tomato.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const maxAngle = Math.PI / 3;
+                const bounceAngle = hitPoint * maxAngle;
+                
+                tomato.dx = tomato.speed * Math.sin(bounceAngle);
+                tomato.dy = -tomato.speed * Math.cos(bounceAngle);
+            }
+
+            // 8. 擊碎木箱碰撞檢測
+            let activeBricks = 0;
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        activeBricks++;
+                        if (
+                            tomato.x + tomato.radius > b.x &&
+                            tomato.x - tomato.radius < b.x + brickWidth &&
+                            tomato.y + tomato.radius > b.y &&
+                            tomato.y - tomato.radius < b.y + brickConfig.height
+                        ) {
+                            b.status = 0;
+                            combo++;
+                            const pointsEarned = b.style.points * combo;
+                            score += pointsEarned;
+                            
+                            if (b.style.isTomato) {
+                                harvestedTomatoes++;
+                                tomatoCountText.textContent = `${harvestedTomatoes}/${brickConfig.columnCount}`;
+                            }
+
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem('tomato_high_score', highScore);
+                                highScoreText.textContent = highScore;
+                            }
+
+                            scoreText.textContent = score;
+                            comboText.textContent = `x${combo}`;
+
+                            sound.playTomatoSplat(combo);
+                            createTomatoSplatParticles(tomato.x, tomato.y);
+                            addFloatingText(b.x + brickWidth / 2, b.y, `+${pointsEarned} ${b.style.isTomato ? '🍅' : ''}`);
+
+                            tomato.dy = -tomato.dy;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 9. 勝利判定
+            if (activeBricks === 0) {
+                gameRunning = false;
+                sound.playVictoryJingle();
+                modalTitle.textContent = '🎉 豐收大勝利！';
+                modalDesc.textContent = `太厲害了！你完美採收了所有番茄與農作物！總得分：${score}`;
+                startBtn.textContent = '再玩一次';
+                overlayModal.classList.remove('opacity-0', 'pointer-events-none');
+                return;
+            }
+
+            // 10. 更新粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // 11. 更新浮動文字
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.dy;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        // 繪製右下角眼神追蹤農夫 🧑‍🌾
+        function drawFarmer(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 農夫帽子
+            ctx.fillStyle = '#e9c46a';
+            ctx.beginPath();
+            ctx.ellipse(0, -18, 20, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 帽子頂
+            ctx.beginPath();
+            ctx.arc(0, -22, 12, Math.PI, 0);
+            ctx.fill();
+
+            // 臉部
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(0, -8, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 眼神焦點追蹤番茄
+            const angle = Math.atan2(tomato.y - (y - 8), tomato.x - x);
+            const pupilDist = 3;
+            const pupilX = Math.cos(angle) * pupilDist;
+            const pupilY = Math.sin(angle) * pupilDist;
+
+            // 眼白
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-4, -10, 3.5, 0, Math.PI * 2);
+            ctx.arc(4, -10, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 眼珠 (追蹤彈珠)
+            ctx.fillStyle = '#2b2d42';
+            ctx.beginPath();
+            ctx.arc(-4 + pupilX, -10 + pupilY, 1.8, 0, Math.PI * 2);
+            ctx.arc(4 + pupilX, -10 + pupilY, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 親切鬍子
+            ctx.fillStyle = '#6c584c';
+            ctx.beginPath();
+            ctx.arc(0, -4, 5, 0, Math.PI);
+            ctx.fill();
+
+            // 吊帶褲
+            ctx.fillStyle = '#2a6f97';
+            ctx.beginPath();
+            ctx.roundRect(-12, 2, 24, 20, 4);
+            ctx.fill();
+
+            // 手提竹籃 🧺
+            ctx.fillStyle = '#dda15e';
+            ctx.beginPath();
+            ctx.arc(16, 10, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // 繪製巡邏防守農夫 🧑‍🌾
+        function drawPatrolFarmer(x, y, width, height) {
+            ctx.save();
+            ctx.translate(x + width / 2, y + height / 2);
+
+            // 農夫身體
+            ctx.fillStyle = '#2b9348';
+            ctx.beginPath();
+            ctx.roundRect(-20, -5, 40, 22, 6);
+            ctx.fill();
+
+            // 農夫頭部
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(0, -12, 11, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 草帽
+            ctx.fillStyle = '#e9c46a';
+            ctx.beginPath();
+            ctx.ellipse(0, -18, 20, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 擋球籃子 / 盾牌
+            ctx.fillStyle = '#dda15e';
+            ctx.strokeStyle = '#8c5e38';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-width / 2, 2, width, 14, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // 標籤文字
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px Mali';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🧺 擋球農夫', 0, 9);
+
+            ctx.restore();
+        }
+
+        // 繪製鮮豔番茄彈珠 🍅
+        function drawTomato(x, y, radius, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            // 番茄本體
+            ctx.fillStyle = '#e63946';
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 番茄立體陰影與高光
+            ctx.fillStyle = '#ff758f';
+            ctx.beginPath();
+            ctx.arc(-radius * 0.3, -radius * 0.3, radius * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 番茄頂部綠蒂 🌿
+            ctx.fillStyle = '#386641';
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * Math.PI * 2) / 5;
+                ctx.beginPath();
+                ctx.ellipse(
+                    Math.cos(angle) * (radius * 0.4), 
+                    Math.sin(angle) * (radius * 0.4) - radius * 0.7, 
+                    3, 7, angle, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 背景溫暖網格
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1.5;
+            for (let x = 0; x < CANVAS_WIDTH; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y < CANVAS_HEIGHT; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CANVAS_WIDTH, y);
+                ctx.stroke();
+            }
+
+            // 1. 背景番茄汁噴濺印記
+            splatDecals.forEach(d => {
+                ctx.save();
+                ctx.globalAlpha = d.alpha;
+                ctx.fillStyle = d.color;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 2. 繪製右下角眼神跟蹤農夫 🧑‍🌾 與巡邏擋球農夫
+            drawFarmer(CANVAS_WIDTH - 50, CANVAS_HEIGHT - 45);
+            drawPatrolFarmer(farmerGuard.x, farmerGuard.y, farmerGuard.width, farmerGuard.height);
+
+            // 3. 繪製農作物木箱
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.fillStyle = b.style.mainColor;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, brickWidth, brickConfig.height, 6);
+                        ctx.fill();
+
+                        if (b.style.isTomato) {
+                            ctx.strokeStyle = '#ffb703';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+
+                        ctx.fillStyle = b.style.topColor;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x + 2, b.y + 2, brickWidth - 4, 6, 3);
+                        ctx.fill();
+
+                        ctx.fillStyle = b.style.darkColor;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x + 2, b.y + brickConfig.height - 6, brickWidth - 4, 4, 2);
+                        ctx.fill();
+
+                        ctx.font = 'bold 12px Mali, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(`${b.style.icon} ${b.style.label}`, b.x + brickWidth / 2, b.y + brickConfig.height / 2);
+
+                        if (b.style.isTomato) {
+                            ctx.fillStyle = '#ffb703';
+                            ctx.font = 'bold 9px Fredoka';
+                            ctx.fillText('HIGH PTS', b.x + brickWidth / 2, b.y - 5);
+                        }
+                    }
+                }
+            }
+
+            // 4. 繪製木質托盤
+            ctx.save();
+            ctx.fillStyle = '#8c5e38';
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fill();
+
+            ctx.fillStyle = '#bc8a5f';
+            ctx.fillRect(paddle.x + 6, paddle.y + 3, paddle.width - 12, 3);
+            ctx.fillStyle = '#5c3d23';
+            ctx.fillRect(paddle.x + 6, paddle.y + paddle.height - 5, paddle.width - 12, 2);
+            ctx.restore();
+
+            // 5. 繪製番茄軌跡
+            for (let i = 0; i < tomato.trail.length; i++) {
+                const pos = tomato.trail[i];
+                const alpha = (i + 1) / tomato.trail.length * 0.35;
+                const r = tomato.radius * ((i + 1) / tomato.trail.length);
+                
+                ctx.fillStyle = `rgba(230, 57, 70, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 6. 繪製主體番茄
+            drawTomato(tomato.x, tomato.y, tomato.radius, tomato.rotation);
+
+            ctx.save();
+            ctx.font = 'bold 10px Fredoka, sans-serif';
+            ctx.fillStyle = '#800f2f';
+            ctx.textAlign = 'center';
+            ctx.fillText('🍅 彈珠', tomato.x, tomato.y - tomato.radius - 4);
+            ctx.restore();
+
+            // 7. 繪製噴濺微粒
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                if (p.isSeed) {
+                    ctx.ellipse(p.x, p.y, p.radius * 2, p.radius, Math.PI / 4, 0, Math.PI * 2);
+                } else {
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 8. 繪製浮動得分與提示文字
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = 'bold 17px Fredoka';
+                ctx.fillStyle = ft.color;
+                ctx.textAlign = 'center';
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 4;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function gameLoop() {
+            if (!gameRunning || gamePaused) return;
+
+            updatePhysics();
+            render();
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        render();
+    </script>
+</body>
+</html>

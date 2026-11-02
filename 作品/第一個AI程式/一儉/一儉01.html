@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梗圖爆碎 - 科幻迷因打磚塊 Meme Brick Breaker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .neon-glow-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        .cyber-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+
+        canvas {
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(6, 182, 212, 0.3);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .cyber-btn {
+            position: relative;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+        }
+        .cyber-btn:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center p-3 select-none">
+
+    <!-- 頂部資訊列 -->
+    <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 my-1 cyber-card rounded-xl">
+        <div class="flex items-center space-x-2">
+            <span class="text-cyan-400 font-black text-lg md:text-xl tracking-wider neon-glow-cyan">MEME BREAKER 🤡</span>
+        </div>
+        
+        <div class="flex space-x-4 md:space-x-6 text-sm md:text-base font-bold">
+            <div class="flex items-center space-x-1">
+                <span class="text-gray-400">SCORE:</span>
+                <span id="scoreText" class="text-yellow-400 text-lg md:text-xl">0</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <span class="text-gray-400">HIGH:</span>
+                <span id="highScoreText" class="text-emerald-400 text-lg md:text-xl">0</span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <span class="text-gray-400">LIVES:</span>
+                <span id="livesContainer" class="flex text-red-500 text-lg md:text-xl">❤️❤️❤️</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 遊戲畫布主要區域 -->
+    <main class="relative flex-1 w-full max-w-4xl flex justify-center items-center my-1">
+        <canvas id="gameCanvas" class="w-full h-full max-h-[72vh] aspect-[4/3]"></canvas>
+
+        <!-- 遊戲開始 / 過關 / GameOver 梗圖遮罩面板 -->
+        <div id="overlayScreen" class="absolute inset-0 flex flex-col justify-center items-center cyber-card rounded-xl z-10 transition-opacity duration-300 p-4">
+            <div id="memeImageContainer" class="mb-4 text-center">
+                <!-- 迷因圖片展示區 -->
+                <img id="memeImage" src="https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?w=300&auto=format&fit=crop&q=80" class="w-28 h-28 md:w-36 md:h-36 object-cover rounded-full border-4 border-cyan-400 shadow-lg mx-auto mb-2 animate-bounce" alt="Meme Avatar" />
+            </div>
+            <h1 id="overlayTitle" class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 mb-2 tracking-widest text-center">
+                梗圖大爆碎！
+            </h1>
+            <p id="overlaySubtitle" class="text-cyan-200 text-sm md:text-base mb-6 text-center max-w-md px-4 font-bold">
+                準備好擊碎所有迷因表情包了嗎？發射小球開始爆破！
+            </p>
+            <button id="startBtn" class="cyber-btn bg-cyan-400 text-slate-950 font-black px-8 py-3 rounded-lg text-lg tracking-wider hover:bg-cyan-300">
+                🚀 開始迷因大戰 🚀
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部控制說明與行動按鈕 -->
+    <footer class="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center text-xs text-gray-400 px-4 py-1 gap-1">
+        <div>
+            控制方式: 方向鍵 <span class="text-cyan-400 font-bold">← / →</span> 或拖曳畫面 | <span class="text-cyan-400 font-bold">Space</span> 發射小球
+        </div>
+        <div class="flex gap-4 md:hidden w-full justify-center mt-1">
+            <button id="btnLeft" class="cyber-card px-6 py-2 rounded-lg text-cyan-400 active:bg-cyan-500/20 text-lg font-bold flex-1 max-w-[120px]">◀</button>
+            <button id="btnRight" class="cyber-card px-6 py-2 rounded-lg text-cyan-400 active:bg-cyan-500/20 text-lg font-bold flex-1 max-w-[120px]">▶</button>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const livesContainer = document.getElementById('livesContainer');
+        const overlayScreen = document.getElementById('overlayScreen');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const memeImage = document.getElementById('memeImage');
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+
+        const LOGICAL_WIDTH = 800;
+        const LOGICAL_HEIGHT = 600;
+
+        let score = 0;
+        let highScore = localStorage.getItem('breakout_high_score') || 0;
+        let lives = 3;
+        let gameState = 'START';
+        let animationFrameId = null;
+
+        const keys = { left: false, right: false };
+
+        highScoreText.textContent = highScore;
+
+        // --- 迷因梗圖視覺與文字庫 ---
+        const MEME_TEXTS = [
+            '驚不驚喜！', '意不意外！', '真香！', '這太強了！', '傷害性不高 侮辱性極強', 
+            '我全都要！', '我就爛！', '聽我一句勸', '太狠了！', '傑哥不要！', 
+            '就這？', '要素過多！', '阿姨我不想努力了', '你很懂喔！'
+        ];
+
+        // 迷因表情圖 Icon 產生器（繪製 SVG Emoji / 特效圖像作為磚塊背景）
+        const MEME_EMOJIS = ['🤡', '🐶', '🗿', '🐱', '🐸', '🥸', '💀', '🔥', '💩', '🕶️'];
+
+        // 遊戲結算梗圖 URL (以 SVG Canvas 動態畫布與視覺替代)
+        const WIN_MEME_EMOJI = '😎';
+        const LOSE_MEME_EMOJI = '😭';
+
+        // --- 物件定義 ---
+        const paddle = {
+            width: 130,
+            height: 18,
+            x: (LOGICAL_WIDTH - 130) / 2,
+            y: LOGICAL_HEIGHT - 35,
+            speed: 13,
+            color: '#06b6d4'
+        };
+
+        const ball = {
+            x: LOGICAL_WIDTH / 2,
+            y: LOGICAL_HEIGHT - 50,
+            radius: 9,
+            speed: 11,
+            maxSpeed: 18,
+            dx: 7,
+            dy: -7,
+            attached: true,
+            trail: []
+        };
+
+        const brickConfig = {
+            rowCount: 4, // 增加到 4 排磚塊，內容更豐富
+            columnCount: 8,
+            padding: 12,
+            offsetTop: 60,
+            offsetLeft: 30,
+            height: 32,
+            colors: [
+                { main: '#f43f5e', glow: 'rgba(244, 63, 94, 0.6)', meme: '🤡' }, // 第一排：小丑
+                { main: '#eab308', glow: 'rgba(234, 179, 8, 0.6)', meme: '🐶' },  // 第二排：Doge 柴犬
+                { main: '#a855f7', glow: 'rgba(168, 85, 247, 0.6)', meme: '🗿' }, // 第三排：石像
+                { main: '#3b82f6', glow: 'rgba(59, 130, 246, 0.6)', meme: '🐸' }  // 第四排：佩佩蛙
+            ]
+        };
+
+        let bricks = [];
+        let particles = [];
+        let floatingTexts = []; // 浮動梗圖文字特效
+
+        function getBrickWidth() {
+            const totalPadding = brickConfig.padding * (brickConfig.columnCount - 1);
+            const availableWidth = LOGICAL_WIDTH - (brickConfig.offsetLeft * 2) - totalPadding;
+            return availableWidth / brickConfig.columnCount;
+        }
+
+        function initBricks() {
+            const brickWidth = getBrickWidth();
+            bricks = [];
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const rowInfo = brickConfig.colors[r % brickConfig.colors.length];
+                    bricks[r][c] = {
+                        x: brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding),
+                        y: brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding),
+                        width: brickWidth,
+                        height: brickConfig.height,
+                        status: 1,
+                        color: rowInfo,
+                        emoji: rowInfo.meme
+                    };
+                }
+            }
+        }
+
+        function resetBallAndPaddle() {
+            paddle.x = (LOGICAL_WIDTH - paddle.width) / 2;
+            ball.attached = true;
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.radius;
+            
+            const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
+            ball.dx = ball.speed * Math.sin(angle);
+            ball.dy = -ball.speed * Math.cos(angle);
+            ball.trail = [];
+        }
+
+        function initGame() {
+            score = 0;
+            lives = 3;
+            updateUI();
+            initBricks();
+            resetBallAndPaddle();
+            particles = [];
+            floatingTexts = [];
+        }
+
+        function updateUI() {
+            scoreText.textContent = score;
+            highScoreText.textContent = highScore;
+            livesContainer.textContent = '❤️'.repeat(Math.max(0, lives));
+        }
+
+        // 觸發梗圖浮動文字特效
+        function createMemePopup(x, y) {
+            const randomText = MEME_TEXTS[Math.floor(Math.random() * MEME_TEXTS.length)];
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: randomText,
+                alpha: 1.0,
+                dy: -1.5,
+                scale: 0.8 + Math.random() * 0.4
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            const count = 14;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+                const speed = 2 + Math.random() * 5;
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    radius: 2 + Math.random() * 4,
+                    alpha: 1,
+                    color: color.main
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            // 繪製與更新碎片粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= 0.025;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 繪製與更新梗圖浮動文字
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.dy;
+                ft.alpha -= 0.018;
+
+                if (ft.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = `900 ${16 * ft.scale}px "Noto Sans TC", sans-serif`;
+                ctx.fillStyle = '#fde047';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+        }
+
+        // 碰撞檢測
+        function collisionDetection() {
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + b.width &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + b.height
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            score += 10;
+                            
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem('breakout_high_score', highScore);
+                            }
+                            
+                            updateUI();
+                            const centerX = b.x + b.width / 2;
+                            const centerY = b.y + b.height / 2;
+                            createExplosion(centerX, centerY, b.color);
+                            createMemePopup(centerX, centerY);
+
+                            if (checkWin()) {
+                                gameState = 'VICTORY';
+                                showOverlay('迷因之王就是你！', '你成功擊碎了所有梗圖防線！這太強了！', '😎 再玩一次 😎', 'WIN');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            return bricks.every(row => row.every(b => b.status === 0));
+        }
+
+        function drawPaddle() {
+            ctx.save();
+            ctx.fillStyle = paddle.color;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 15;
+            
+            const r = 8;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, r);
+            ctx.fill();
+
+            // 滑塊裝飾線
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(paddle.x + 20, paddle.y + 4, paddle.width - 40, 2);
+            ctx.restore();
+        }
+
+        function drawBall() {
+            // 繪製尾跡殘影
+            for (let i = 0; i < ball.trail.length; i++) {
+                const pos = ball.trail[i];
+                const alpha = (i + 1) / ball.trail.length * 0.4;
+                ctx.save();
+                ctx.fillStyle = `rgba(236, 72, 153, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, ball.radius * (0.5 + (i / ball.trail.length) * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 繪製球體
+            ctx.save();
+            ctx.fillStyle = '#f43f5e';
+            ctx.shadowColor = '#ec4899';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x - 2, ball.y - 2, ball.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 繪製帶有梗圖 Emoji 表情包的磚塊
+        function drawBricks() {
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        ctx.fillStyle = b.color.main;
+                        ctx.shadowColor = b.color.glow;
+                        ctx.shadowBlur = 10;
+                        
+                        // 圓角磚塊
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.width, b.height, 6);
+                        ctx.fill();
+
+                        // 內部光澤邊界
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillRect(b.x + 2, b.y + 2, b.width - 4, 3);
+
+                        // 繪製梗圖 Emoji 圖標
+                        ctx.font = '16px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(b.emoji, b.x + b.width / 2, b.y + b.height / 2 + 1);
+
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function update() {
+            if (keys.left && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+            if (keys.right && paddle.x + paddle.width < LOGICAL_WIDTH) {
+                paddle.x += paddle.speed;
+            }
+
+            if (ball.attached) {
+                ball.x = paddle.x + paddle.width / 2;
+                ball.y = paddle.y - ball.radius;
+                return;
+            }
+
+            ball.trail.push({ x: ball.x, y: ball.y });
+            if (ball.trail.length > 8) ball.trail.shift();
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.dx = -ball.dx;
+            } else if (ball.x + ball.radius > LOGICAL_WIDTH) {
+                ball.x = LOGICAL_WIDTH - ball.radius;
+                ball.dx = -ball.dx;
+            }
+
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.dy = -ball.dy;
+            }
+
+            // 滑塊接球
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width &&
+                ball.dy > 0
+            ) {
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const bounceAngle = hitPoint * (Math.PI / 3);
+                
+                ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.35);
+                ball.dx = ball.speed * Math.sin(bounceAngle);
+                ball.dy = -ball.speed * Math.cos(bounceAngle);
+            }
+
+            collisionDetection();
+
+            // 球落到底部邊界
+            if (ball.y - ball.radius > LOGICAL_HEIGHT) {
+                lives--;
+                updateUI();
+
+                if (lives <= 0) {
+                    gameState = 'GAMEOVER';
+                    showOverlay('就這？GAME OVER', '傷害性不高，侮辱性極強！小球已經跌入虛空！', '🤡 不服再戰 🤡', 'LOSE');
+                } else {
+                    resetBallAndPaddle();
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+            drawBackgroundGrid();
+            drawBricks();
+            drawPaddle();
+            drawBall();
+            updateAndDrawParticles();
+        }
+
+        function drawBackgroundGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
+            ctx.lineWidth = 1;
+
+            const gridSize = 40;
+            for (let x = 0; x < LOGICAL_WIDTH; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, LOGICAL_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y < LOGICAL_HEIGHT; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(LOGICAL_WIDTH, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            if (gameState === 'PLAYING') {
+                update();
+            }
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function showOverlay(title, subtitle, btnText, mode = 'START') {
+            overlayTitle.textContent = title;
+            overlaySubtitle.textContent = subtitle;
+            startBtn.textContent = btnText;
+
+            // 根據遊戲狀態切換動態梗圖顯示
+            if (mode === 'WIN') {
+                memeImage.src = 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?w=300&auto=format&fit=crop&q=80';
+            } else if (mode === 'LOSE') {
+                memeImage.src = 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&auto=format&fit=crop&q=80';
+            } else {
+                memeImage.src = 'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?w=300&auto=format&fit=crop&q=80';
+            }
+
+            overlayScreen.classList.remove('hidden');
+            setTimeout(() => {
+                overlayScreen.style.opacity = '1';
+            }, 10);
+        }
+
+        function hideOverlay() {
+            overlayScreen.style.opacity = '0';
+            setTimeout(() => {
+                overlayScreen.classList.add('hidden');
+            }, 300);
+        }
+
+        function releaseBall() {
+            if (ball.attached) {
+                ball.attached = false;
+            }
+        }
+
+        function startGame() {
+            initGame();
+            gameState = 'PLAYING';
+            hideOverlay();
+        }
+
+        // --- 控制輸入綁定 ---
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+            } else if (e.key === ' ' || e.key === 'Spacebar') {
+                if (gameState === 'PLAYING') {
+                    releaseBall();
+                } else if (gameState === 'START' || gameState === 'GAMEOVER' || gameState === 'VICTORY') {
+                    startGame();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            } else if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            }
+        });
+
+        const bindTouchBtn = (btn, keyProp) => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyProp] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyProp] = false;
+            });
+            btn.addEventListener('mousedown', () => keys[keyProp] = true);
+            btn.addEventListener('mouseup', () => keys[keyProp] = false);
+            btn.addEventListener('mouseleave', () => keys[keyProp] = false);
+        };
+
+        bindTouchBtn(btnLeft, 'left');
+        bindTouchBtn(btnRight, 'right');
+
+        function handlePointerMove(clientX) {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = LOGICAL_WIDTH / rect.width;
+            const mouseX = (clientX - rect.left) * scaleX;
+            paddle.x = Math.max(0, Math.min(LOGICAL_WIDTH - paddle.width, mouseX - paddle.width / 2));
+        }
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX);
+        }, { passive: true });
+
+        canvas.addEventListener('click', () => {
+            if (gameState === 'PLAYING') releaseBall();
+        });
+
+        startBtn.addEventListener('click', startGame);
+
+        function resizeCanvas() {
+            canvas.width = LOGICAL_WIDTH;
+            canvas.height = LOGICAL_HEIGHT;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function() {
+            resizeCanvas();
+            initBricks();
+            resetBallAndPaddle();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

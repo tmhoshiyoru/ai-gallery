@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>龍騰版高一英文(二) - 尋找單字大挑戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .grid-cell {
+            transition: background-color 0.15s ease, transform 0.15s ease;
+            aspect-ratio: 1;
+        }
+        .grid-cell.selected {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            transform: scale(0.92);
+            border-radius: 9999px;
+        }
+        .grid-cell.found {
+            background-color: #10b981 !important;
+            color: white !important;
+            border-radius: 9999px;
+            animation: pulse-found 0.3s ease-out;
+        }
+        .grid-cell.hint {
+            animation: ping-hint 1s infinite alternate;
+        }
+        @keyframes pulse-found {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        @keyframes ping-hint {
+            0% { background-color: #fef08a; color: #1e293b; }
+            100% { background-color: #fde047; color: #1e293b; transform: scale(1.05); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between p-2 sm:p-4 md:p-6 selection:bg-none">
+
+    <header class="max-w-6xl mx-auto w-full flex flex-col sm:flex-row justify-between items-center gap-4 mb-3">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg shadow-blue-500/30">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                    龍騰英文(二) 單字大搜尋
+                </h1>
+                <p class="text-xs text-slate-400">高中英文龍騰版第二冊核心單字大挑戰</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-800/80 backdrop-blur border border-slate-700/60 px-4 py-2 rounded-2xl shadow-inner">
+            <div class="text-center px-2">
+                <span class="block text-[10px] uppercase font-bold text-slate-400">時間</span>
+                <span id="timer-display" class="text-lg font-mono font-bold text-amber-400">00:00</span>
+            </div>
+            <div class="h-6 w-px bg-slate-700"></div>
+            <div class="text-center px-2">
+                <span class="block text-[10px] uppercase font-bold text-slate-400">進度</span>
+                <span id="progress-display" class="text-lg font-mono font-bold text-emerald-400">0/0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto w-full flex-1 flex flex-col lg:flex-row gap-4 items-stretch justify-center">
+        <!-- Sidebar Controls & Word List -->
+        <div class="w-full lg:w-80 flex flex-col gap-3 order-2 lg:order-1">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 shadow-xl backdrop-blur">
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">課本範圍 (龍騰二冊)</label>
+                        <select id="category-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-xl p-2.5 outline-none focus:border-blue-500 transition">
+                            <option value="b2_l1_l3">📚 Lesson 1 - Lesson 3</option>
+                            <option value="b2_l4_l6" selected>📚 Lesson 4 - Lesson 6</option>
+                            <option value="b2_l7_l9">📚 Lesson 7 - Lesson 9</option>
+                            <option value="b2_l10_l12">📚 Lesson 10 - Lesson 12</option>
+                            <option value="b2_all">🌟 第二冊全範圍綜合</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">棋盤難度</label>
+                        <select id="difficulty-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-xl p-2.5 outline-none focus:border-blue-500 transition">
+                            <option value="easy">簡單 (8x8)</option>
+                            <option value="medium" selected>中等 (10x10)</option>
+                            <option value="hard">困難 (12x12)</option>
+                            <option value="extreme">🔥 大盤面 (25x25)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="btn-restart" class="flex-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-xl shadow-lg shadow-blue-600/20 text-sm transition flex items-center justify-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        新局
+                    </button>
+                    <button id="btn-hint" class="bg-slate-700 hover:bg-amber-600 text-amber-300 hover:text-white font-bold py-2.5 px-3 rounded-xl border border-slate-600 text-sm transition flex items-center justify-center gap-1">
+                        💡 提示 (<span id="hint-count">3</span>)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Target Words Box -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 shadow-xl backdrop-blur flex-1 flex flex-col min-h-[220px]">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex justify-between items-center">
+                    <span>待尋找單字 (中文提示)</span>
+                    <span id="words-found-text" class="text-blue-400 font-mono text-xs">0% 完成</span>
+                </h3>
+                <div id="word-list" class="grid grid-cols-1 gap-2 overflow-y-auto max-h-[320px] custom-scrollbar pr-1">
+                    <!-- Word Badges dynamically populated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Board Container -->
+        <div class="w-full lg:flex-1 flex justify-center order-1 lg:order-2 overflow-hidden">
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-3 sm:p-4 shadow-2xl backdrop-blur max-w-full w-full flex justify-center items-center overflow-auto custom-scrollbar">
+                <div id="grid-container" class="grid gap-1 sm:gap-1.5 justify-center select-none touch-none bg-slate-900/90 p-2 sm:p-3 rounded-2xl border border-slate-800 transition-all">
+                    <!-- Grid cells populated by JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-90 transition-transform duration-300" id="modal-content">
+            <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 class="text-2xl font-black text-white mb-1">太棒了！課本單字全都通關！</h2>
+            <p class="text-slate-400 text-sm mb-6">你已經找出所有龍騰版英文第二冊單字！</p>
+            
+            <div class="bg-slate-900/60 rounded-2xl p-4 mb-6 border border-slate-700/50 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">花費時間</span>
+                    <span id="final-time" class="font-bold text-amber-400 font-mono">00:00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">總共尋獲</span>
+                    <span id="final-words" class="font-bold text-emerald-400 font-mono">0 個單字</span>
+                </div>
+            </div>
+
+            <button id="btn-modal-restart" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition">
+                再玩一局
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-4 text-center text-xs text-slate-500">
+        高中英文龍騰版第二冊 單字搜尋益智遊戲 &copy; 2026
+    </footer>
+
+    <script>
+        class SoundController {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playSelect() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+            playFound() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                osc.frequency.setValueAtTime(783.99, now + 0.16);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+            playWin() {
+                this.init();
+                if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const start = this.ctx.currentTime + idx * 0.1;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, start);
+                    gain.gain.setValueAtTime(0.2, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.25);
+                });
+            }
+        }
+
+        const sound = new SoundController();
+
+        // 龍騰版高中英文第二冊 (Senior High English Book 2) 核心單字庫
+        const LUNGTENG_B2_WORDS = {
+            b2_l1_l3: {
+                title: "Lesson 1 - Lesson 3",
+                words: [
+                    { word: "ATTRACTIVE", translation: "有吸引力的" },
+                    { word: "PROTECT", translation: "保護" },
+                    { word: "DELICATE", translation: "脆弱的；精細的" },
+                    { word: "DISASTER", translation: "災難" },
+                    { word: "SURVIVE", translation: "倖存；存活" },
+                    { word: "SCENERY", translation: "風景" },
+                    { word: "ATMOSPHERE", translation: "氣氛；大氣" },
+                    { word: "IMPRESSIVE", translation: "令人印象深刻的" },
+                    { word: "OPPORTUNITY", translation: "機會" },
+                    { word: "VALUABLE", translation: "有價值的" },
+                    { word: "ENTERTAIN", translation: "款待；娛樂" },
+                    { word: "REDUCE", translation: "減少" },
+                    { word: "COMPLAINT", translation: "抱怨" },
+                    { word: "IMMEDIATELY", translation: "立即地" },
+                    { word: "DISAPPOINT", translation: "使失望" }
+                ]
+            },
+            b2_l4_l6: {
+                title: "Lesson 4 - Lesson 6",
+                words: [
+                    { word: "CREATIVE", translation: "有創意的" },
+                    { word: "INVENT", translation: "發明" },
+                    { word: "INSPIRE", translation: "鼓舞；靈感" },
+                    { word: "EXPERIMENT", translation: "實驗" },
+                    { word: "DISCOVER", translation: "發現" },
+                    { word: "APPLICATION", translation: "應用；申請" },
+                    { word: "TECHNIQUE", translation: "技術；技巧" },
+                    { word: "REVOLUTION", translation: "革命" },
+                    { word: "ACCIDENTAL", translation: "意外的" },
+                    { word: "MATERIAL", translation: "材料；原料" },
+                    { word: "PURPOSE", translation: "目的" },
+                    { word: "IMPROVE", translation: "改善" },
+                    { word: "FEATURE", translation: "特色" },
+                    { word: "CONVENIENT", translation: "方便的" },
+                    { word: "ORIGINAL", translation: "原創的" }
+                ]
+            },
+            b2_l7_l9: {
+                title: "Lesson 7 - Lesson 9",
+                words: [
+                    { word: "CULTURE", translation: "文化" },
+                    { word: "TRADITION", translation: "傳統" },
+                    { word: "FESTIVAL", translation: "節慶" },
+                    { word: "CELEBRATE", translation: "慶祝" },
+                    { word: "SYMBOL", translation: "象徵" },
+                    { word: "HARMONY", translation: "和諧" },
+                    { word: "COMMUNITY", translation: "社區；共同體" },
+                    { word: "GENEROSITY", translation: "慷慨" },
+                    { word: "EXPRESSION", translation: "表達；表情" },
+                    { word: "MEMORABLE", translation: "難忘的" },
+                    { word: "IDENTITY", translation: "身分；認同" },
+                    { word: "GATHERING", translation: "聚會" },
+                    { word: "APPRECIATE", translation: "感謝；賞識" },
+                    { word: "SPIRITUAL", translation: "精神上的" },
+                    { word: "CUSTOM", translation: "習俗" }
+                ]
+            },
+            b2_l10_l12: {
+                title: "Lesson 10 - Lesson 12",
+                words: [
+                    { word: "CHALLENGE", translation: "挑戰" },
+                    { word: "ACHIEVE", translation: "成就；達到" },
+                    { word: "DETERMINED", translation: "下定決心的" },
+                    { word: "OBSTACLE", translation: "障礙" },
+                    { word: "ENCOURAGE", translation: "鼓勵" },
+                    { word: "MOTIVATE", translation: "激勵" },
+                    { word: "CONFIDENCE", translation: "信心" },
+                    { word: "SUCCESS", translation: "成功" },
+                    { word: "ATTITUDE", translation: "態度" },
+                    { word: "STRUGGLE", translation: "掙扎；努力" },
+                    { word: "PERSIST", translation: "堅持" },
+                    { word: "LIMITATION", translation: "限制" },
+                    { word: "POTENTIAL", translation: "潛力" },
+                    { word: "VICTORY", translation: "勝利" },
+                    { word: "INSPIRATIONAL", translation: "鼓舞人心的" }
+                ]
+            }
+        };
+
+        // Combine all sections for full book review
+        LUNGTENG_B2_WORDS.b2_all = {
+            title: "第二冊全範圍綜合",
+            words: [
+                ...LUNGTENG_B2_WORDS.b2_l1_l3.words,
+                ...LUNGTENG_B2_WORDS.b2_l4_l6.words,
+                ...LUNGTENG_B2_WORDS.b2_l7_l9.words,
+                ...LUNGTENG_B2_WORDS.b2_l10_l12.words
+            ]
+        };
+
+        class WordSearchGame {
+            constructor() {
+                this.category = 'b2_l4_l6';
+                this.difficulty = 'medium';
+                this.gridSize = 10;
+                this.grid = [];
+                this.placedWords = [];
+                this.isSelecting = false;
+                this.selectionStart = null;
+                this.currentSelection = [];
+                this.hintsLeft = 3;
+                
+                this.timerInterval = null;
+                this.secondsElapsed = 0;
+
+                this.gridContainer = document.getElementById('grid-container');
+                this.wordListContainer = document.getElementById('word-list');
+                this.timerDisplay = document.getElementById('timer-display');
+                this.progressDisplay = document.getElementById('progress-display');
+                this.wordsFoundText = document.getElementById('words-found-text');
+                this.hintCountDisplay = document.getElementById('hint-count');
+
+                this.bindEvents();
+                this.startNewGame();
+            }
+
+            bindEvents() {
+                document.getElementById('category-select').addEventListener('change', (e) => {
+                    this.category = e.target.value;
+                    this.startNewGame();
+                });
+
+                document.getElementById('difficulty-select').addEventListener('change', (e) => {
+                    this.difficulty = e.target.value;
+                    this.startNewGame();
+                });
+
+                document.getElementById('btn-restart').addEventListener('click', () => this.startNewGame());
+                document.getElementById('btn-modal-restart').addEventListener('click', () => {
+                    this.hideVictoryModal();
+                    this.startNewGame();
+                });
+
+                document.getElementById('btn-hint').addEventListener('click', () => this.giveHint());
+
+                window.addEventListener('pointerup', () => this.endSelection());
+                window.addEventListener('touchend', () => this.endSelection());
+            }
+
+            startNewGame() {
+                this.stopTimer();
+                this.secondsElapsed = 0;
+                this.updateTimerDisplay();
+                this.hintsLeft = this.difficulty === 'extreme' ? 5 : 3;
+                this.hintCountDisplay.textContent = this.hintsLeft;
+
+                if (this.difficulty === 'easy') this.gridSize = 8;
+                else if (this.difficulty === 'medium') this.gridSize = 10;
+                else if (this.difficulty === 'hard') this.gridSize = 12;
+                else if (this.difficulty === 'extreme') this.gridSize = 25;
+
+                this.generateBoard();
+                this.renderBoard();
+                this.renderWordList();
+                this.updateProgress();
+                this.startTimer();
+            }
+
+            generateBoard() {
+                this.grid = Array(this.gridSize).fill(null).map(() => Array(this.gridSize).fill(''));
+                this.placedWords = [];
+
+                const pool = [...LUNGTENG_B2_WORDS[this.category].words];
+                pool.sort(() => Math.random() - 0.5);
+                
+                let targetWordCount = 8;
+                if (this.gridSize === 8) targetWordCount = 6;
+                else if (this.gridSize === 10) targetWordCount = 8;
+                else if (this.gridSize === 12) targetWordCount = 10;
+                else if (this.gridSize === 25) targetWordCount = 15;
+
+                const selectedWords = pool.filter(item => item.word.length <= this.gridSize).slice(0, targetWordCount);
+
+                const directions = [
+                    [0, 1],   // Right
+                    [1, 0],   // Down
+                    [1, 1],   // Diagonal Down-Right
+                    [-1, 1],  // Diagonal Up-Right
+                ];
+
+                if (this.difficulty !== 'easy') {
+                    directions.push([0, -1]);  // Left
+                    directions.push([-1, 0]);  // Up
+                    directions.push([-1, -1]); // Diagonal Up-Left
+                    directions.push([1, -1]);  // Diagonal Down-Left
+                }
+
+                for (let item of selectedWords) {
+                    const word = item.word;
+                    let placed = false;
+                    let attempts = 0;
+
+                    while (!placed && attempts < 300) {
+                        attempts++;
+                        const dir = directions[Math.floor(Math.random() * directions.length)];
+                        const [dr, dc] = dir;
+
+                        const startR = Math.floor(Math.random() * this.gridSize);
+                        const startC = Math.floor(Math.random() * this.gridSize);
+
+                        let canPlace = true;
+                        let path = [];
+
+                        for (let i = 0; i < word.length; i++) {
+                            const r = startR + dr * i;
+                            const c = startC + dc * i;
+
+                            if (r < 0 || r >= this.gridSize || c < 0 || c >= this.gridSize) {
+                                canPlace = false;
+                                break;
+                            }
+
+                            if (this.grid[r][c] !== '' && this.grid[r][c] !== word[i]) {
+                                canPlace = false;
+                                break;
+                            }
+
+                            path.push({ r, c });
+                        }
+
+                        if (canPlace) {
+                            for (let i = 0; i < word.length; i++) {
+                                const { r, c } = path[i];
+                                this.grid[r][c] = word[i];
+                            }
+                            this.placedWords.push({
+                                word: word,
+                                translation: item.translation,
+                                path: path,
+                                found: false
+                            });
+                            placed = true;
+                        }
+                    }
+                }
+
+                const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                for (let r = 0; r < this.gridSize; r++) {
+                    for (let c = 0; c < this.gridSize; c++) {
+                        if (this.grid[r][c] === '') {
+                            this.grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+                        }
+                    }
+                }
+            }
+
+            renderBoard() {
+                this.gridContainer.innerHTML = '';
+                this.gridContainer.style.gridTemplateColumns = `repeat(${this.gridSize}, minmax(0, 1fr))`;
+
+                let cellSizeClass = "w-7 h-7 text-xs sm:w-9 sm:h-9 sm:text-sm md:w-10 md:h-10 md:text-base";
+                if (this.gridSize === 25) {
+                    cellSizeClass = "w-4 h-4 text-[8px] sm:w-5 sm:h-5 sm:text-[10px] md:w-6 md:h-6 md:text-xs font-semibold p-0";
+                    this.gridContainer.style.minWidth = "auto";
+                } else {
+                    this.gridContainer.style.minWidth = "auto";
+                }
+
+                for (let r = 0; r < this.gridSize; r++) {
+                    for (let c = 0; c < this.gridSize; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = `grid-cell ${cellSizeClass} bg-slate-800 text-slate-100 flex items-center justify-center rounded cursor-pointer border border-slate-700/40 shadow-sm`;
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+                        cell.textContent = this.grid[r][c];
+
+                        cell.addEventListener('pointerdown', (e) => this.startSelection(r, c, e));
+                        cell.addEventListener('pointerenter', () => this.updateSelection(r, c));
+
+                        this.gridContainer.appendChild(cell);
+                    }
+                }
+
+                this.gridContainer.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (!this.isSelecting) return;
+                    const touch = e.touches[0];
+                    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+                    if (targetElement && targetElement.dataset.row !== undefined) {
+                        const r = parseInt(targetElement.dataset.row);
+                        const c = parseInt(targetElement.dataset.col);
+                        this.updateSelection(r, c);
+                    }
+                }, { passive: false });
+            }
+
+            renderWordList() {
+                this.wordListContainer.innerHTML = '';
+                this.placedWords.forEach(item => {
+                    const wordBadge = document.createElement('div');
+                    wordBadge.id = `word-badge-${item.word}`;
+                    wordBadge.className = 'flex items-center justify-between px-3 py-2 bg-slate-900/80 border border-slate-700/80 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300';
+                    wordBadge.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="tracking-wider text-slate-200 font-bold">${item.word}</span>
+                            <span class="text-[11px] text-slate-400 font-normal">${item.translation}</span>
+                        </div>
+                        <span class="check-icon text-slate-600">⚪</span>
+                    `;
+                    this.wordListContainer.appendChild(wordBadge);
+                });
+            }
+
+            startSelection(r, c, e) {
+                sound.init();
+                this.isSelecting = true;
+                this.selectionStart = { r, c };
+                this.highlightCells([{ r, c }]);
+                sound.playSelect();
+            }
+
+            updateSelection(targetR, targetC) {
+                if (!this.isSelecting || !this.selectionStart) return;
+
+                const startR = this.selectionStart.r;
+                const startC = this.selectionStart.c;
+
+                const dr = targetR - startR;
+                const dc = targetC - startC;
+
+                if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) {
+                    const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+                    const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+                    const steps = Math.max(Math.abs(dr), Math.abs(dc));
+
+                    const linePath = [];
+                    for (let i = 0; i <= steps; i++) {
+                        linePath.push({
+                            r: startR + stepR * i,
+                            c: startC + stepC * i
+                        });
+                    }
+
+                    if (JSON.stringify(linePath) !== JSON.stringify(this.currentSelection)) {
+                        sound.playSelect();
+                        this.highlightCells(linePath);
+                    }
+                }
+            }
+
+            highlightCells(path) {
+                this.currentSelection = path;
+
+                const allCells = this.gridContainer.querySelectorAll('.grid-cell');
+                allCells.forEach(cell => {
+                    if (!cell.classList.contains('found')) {
+                        cell.classList.remove('selected');
+                    }
+                });
+
+                path.forEach(({ r, c }) => {
+                    const index = r * this.gridSize + c;
+                    const cell = allCells[index];
+                    if (cell && !cell.classList.contains('found')) {
+                        cell.classList.add('selected');
+                    }
+                });
+            }
+
+            endSelection() {
+                if (!this.isSelecting) return;
+                this.isSelecting = false;
+
+                if (this.currentSelection.length > 0) {
+                    this.checkWordFound(this.currentSelection);
+                }
+
+                const allCells = this.gridContainer.querySelectorAll('.grid-cell');
+                allCells.forEach(cell => cell.classList.remove('selected'));
+                this.currentSelection = [];
+            }
+
+            checkWordFound(path) {
+                const selectedLetters = path.map(({ r, c }) => this.grid[r][c]).join('');
+                const reversedLetters = selectedLetters.split('').reverse().join('');
+
+                const match = this.placedWords.find(item => 
+                    !item.found && (item.word === selectedLetters || item.word === reversedLetters)
+                );
+
+                if (match) {
+                    match.found = true;
+                    sound.playFound();
+
+                    const allCells = this.gridContainer.querySelectorAll('.grid-cell');
+                    match.path.forEach(({ r, c }) => {
+                        const index = r * this.gridSize + c;
+                        const cell = allCells[index];
+                        cell.classList.remove('selected', 'hint');
+                        cell.classList.add('found');
+                    });
+
+                    const badge = document.getElementById(`word-badge-${match.word}`);
+                    if (badge) {
+                        badge.className = 'flex items-center justify-between px-3 py-2 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-xs sm:text-sm font-bold text-emerald-400 line-through transition-all duration-300';
+                        badge.querySelector('.check-icon').textContent = '✅';
+                    }
+
+                    this.updateProgress();
+
+                    if (this.placedWords.every(w => w.found)) {
+                        this.handleVictory();
+                    }
+                }
+            }
+
+            giveHint() {
+                if (this.hintsLeft <= 0) return;
+
+                const unfoundWords = this.placedWords.filter(w => !w.found);
+                if (unfoundWords.length === 0) return;
+
+                const targetWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
+                const startPos = targetWord.path[0];
+
+                const index = startPos.r * this.gridSize + startPos.c;
+                const cell = this.gridContainer.children[index];
+
+                if (cell && !cell.classList.contains('found')) {
+                    cell.classList.add('hint');
+                    setTimeout(() => cell.classList.remove('hint'), 3000);
+                }
+
+                this.hintsLeft--;
+                this.hintCountDisplay.textContent = this.hintsLeft;
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    this.secondsElapsed++;
+                    this.updateTimerDisplay();
+                }, 1000);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) clearInterval(this.timerInterval);
+            }
+
+            updateTimerDisplay() {
+                const mins = Math.floor(this.secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (this.secondsElapsed % 60).toString().padStart(2, '0');
+                this.timerDisplay.textContent = `${mins}:${secs}`;
+            }
+
+            updateProgress() {
+                const total = this.placedWords.length;
+                const found = this.placedWords.filter(w => w.found).length;
+                this.progressDisplay.textContent = `${found}/${total}`;
+                
+                const percentage = total > 0 ? Math.round((found / total) * 100) : 0;
+                this.wordsFoundText.textContent = `${percentage}% 完成`;
+            }
+
+            handleVictory() {
+                this.stopTimer();
+                sound.playWin();
+
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 120,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
+                }
+
+                document.getElementById('final-time').textContent = this.timerDisplay.textContent;
+                document.getElementById('final-words').textContent = `${this.placedWords.length} 個單字`;
+
+                this.showVictoryModal();
+            }
+
+            showVictoryModal() {
+                const modal = document.getElementById('victory-modal');
+                const content = document.getElementById('modal-content');
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-90');
+                content.classList.add('scale-100');
+            }
+
+            hideVictoryModal() {
+                const modal = document.getElementById('victory-modal');
+                const content = document.getElementById('modal-content');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-100');
+                content.classList.add('scale-90');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            new WordSearchGame();
+        });
+    </script>
+</body>
+</html>

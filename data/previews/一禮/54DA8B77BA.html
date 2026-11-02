@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cute Animal Breakout - 可愛動物打磚塊</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Cute Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            background-color: #fff0f5; /* LavenderBlush */
+            color: #5c3c42;
+            user-select: none;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .kawaii-shadow {
+            box-shadow: 0 10px 25px -5px rgba(255, 182, 193, 0.6), 0 8px 10px -6px rgba(255, 105, 180, 0.3);
+        }
+
+        .kawaii-btn {
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 0 #ff99b3;
+        }
+        .kawaii-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #ff99b3;
+        }
+        .kawaii-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #ff99b3;
+        }
+
+        canvas {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 select-none">
+
+    <!-- Header HUD Container -->
+    <div class="w-full max-w-2xl bg-white/90 backdrop-blur border-4 border-pink-300 rounded-t-3xl p-3 sm:p-4 flex flex-wrap justify-between items-center gap-2 text-pink-700 shadow-md">
+        <div class="flex flex-col">
+            <span class="text-pink-400 text-xs font-bold tracking-wider">SCORE 01</span>
+            <span id="score-val" class="text-pink-600 text-xl sm:text-2xl font-black">00000</span>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-amber-400 text-xs font-bold tracking-wider">BEST 👑</span>
+            <span id="highscore-val" class="text-amber-500 text-xl sm:text-2xl font-black">00000</span>
+        </div>
+        <div class="flex flex-col items-end">
+            <span class="text-pink-400 text-xs font-bold tracking-wider">LIVES 💕</span>
+            <div id="lives-container" class="flex gap-1 text-base sm:text-xl">
+                <!-- Heart Icons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Frame -->
+    <div id="screen-container" class="relative w-full max-w-2xl bg-amber-50/80 border-x-4 border-b-4 border-pink-300 rounded-b-3xl overflow-hidden kawaii-shadow flex justify-center items-center">
+        
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="600" height="450" class="w-full h-auto block"></canvas>
+
+        <!-- Overlay Menu System -->
+        <div id="menu-overlay" class="absolute inset-0 bg-pink-100/95 flex flex-col justify-center items-center p-6 text-center z-30">
+            <div class="text-5xl mb-2 animate-bounce">🐱🐶🐸</div>
+            <h1 id="menu-title" class="text-3xl sm:text-5xl font-black text-pink-500 mb-2 drop-shadow-sm">
+                ANIMAL BREAKOUT
+            </h1>
+            <p id="menu-sub" class="text-pink-400 font-semibold text-sm sm:text-base mb-6 animate-pulse">
+                點擊按鈕或按下空白鍵開始遊戲！
+            </p>
+            <div class="text-xs sm:text-sm text-pink-600/80 max-w-md space-y-1.5 mb-6 bg-white/70 p-4 rounded-2xl border border-pink-200">
+                <p>🎮 操作：鍵盤方向鍵 ◄ ► 或 滑鼠 / 觸控 移動</p>
+                <p>🔊 撞擊磚塊會發出專屬動物叫聲喔！</p>
+                <p>✨ 收集小魚 🐟、骨頭 🦴 與草莓 🍓 觸發寶物魔法！</p>
+            </div>
+            <button id="start-btn" class="kawaii-btn bg-pink-400 hover:bg-pink-300 text-white font-extrabold py-3 px-8 rounded-full text-base sm:text-lg">
+                START GAME 💕
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar Controls -->
+    <div class="w-full max-w-2xl mt-3 flex justify-between items-center text-xs text-pink-600 font-bold px-2">
+        <div class="flex gap-2">
+            <button id="btn-sound" class="bg-white hover:bg-pink-50 text-pink-500 border-2 border-pink-200 px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                🔊 <span id="sound-text">音效：開啟</span>
+            </button>
+        </div>
+        <div class="text-pink-400 font-semibold">
+            CUTE ANIMAL EDITION 🐾
+        </div>
+    </div>
+
+    <!-- Game Logic Script -->
+    <script>
+        /**
+         * ANIMAL SOUND SYNTHESIZER (Web Audio API)
+         * Synthesizes 6 distinct cute animal voices dynamically!
+         */
+        class AnimalAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // 🐶 DOG BARK (Short, energetic pitch drop)
+            playDogBark() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.12);
+            }
+
+            // 🐱 CAT MEOW (Sweet frequency pitch glide)
+            playCatMeow() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(850, now + 0.12);
+                osc.frequency.exponentialRampToValueAtTime(550, now + 0.25);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.25);
+            }
+
+            // 🐸 FROG RIBBIT (Low FM modulation croak)
+            playFrogRibbit() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const carrier = this.ctx.createOscillator();
+                const modulator = this.ctx.createOscillator();
+                const modGain = this.ctx.createGain();
+                const mainGain = this.ctx.createGain();
+
+                carrier.type = 'sawtooth';
+                carrier.frequency.setValueAtTime(140, now);
+
+                modulator.type = 'square';
+                modulator.frequency.setValueAtTime(35, now); // Croak rate
+
+                modGain.gain.setValueAtTime(80, now);
+
+                modulator.connect(modGain);
+                modGain.connect(carrier.frequency);
+
+                mainGain.gain.setValueAtTime(0.25, now);
+                mainGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                carrier.connect(mainGain);
+                mainGain.connect(this.ctx.destination);
+
+                modulator.start();
+                carrier.start();
+                modulator.stop(now + 0.15);
+                carrier.stop(now + 0.15);
+            }
+
+            // 🐷 PIG OINK (Wobbly vibrato)
+            playPigOink() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(310, now + 0.08);
+                osc.frequency.linearRampToValueAtTime(240, now + 0.18);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.18);
+            }
+
+            // 🦆 DUCK QUACK (Nasal synth quack)
+            playDuckQuack() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.15);
+            }
+
+            // 🐰 RABBIT BOING / CHIRP (High playful chirp)
+            playRabbitChirp() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.12);
+            }
+
+            // Paddle Bounce Sound
+            playPaddleHit() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(380, now);
+                osc.frequency.exponentialRampToValueAtTime(520, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.08);
+            }
+
+            // Powerup Sound
+            playPowerup() {
+                if (this.muted || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        if (!this.ctx) return;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.1);
+                    }, i * 60);
+                });
+            }
+
+            playLoseLife() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(150, now + 0.25);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.25);
+            }
+
+            playVictory() {
+                const notes = [392.00, 523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        if (this.muted || !this.ctx) return;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.2);
+                    }, i * 100);
+                });
+            }
+        }
+
+        const audio = new AnimalAudioEngine();
+
+        /**
+         * GAME ENGINE & CANVAS SETUP
+         */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Element References
+        const scoreValEl = document.getElementById('score-val');
+        const highscoreValEl = document.getElementById('highscore-val');
+        const livesContainerEl = document.getElementById('lives-container');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const menuTitle = document.getElementById('menu-title');
+        const menuSub = document.getElementById('menu-sub');
+        const startBtn = document.getElementById('start-btn');
+        const btnSound = document.getElementById('btn-sound');
+        const soundText = document.getElementById('sound-text');
+
+        // Game Constants
+        const CANVAS_WIDTH = 600;
+        const CANVAS_HEIGHT = 450;
+        const BRICK_ROWS = 3;
+        const BRICK_COLS = 8;
+        const BRICK_PADDING = 10;
+        const BRICK_OFFSET_TOP = 50;
+        const BRICK_OFFSET_LEFT = 30;
+        const BRICK_WIDTH = 58;
+        const BRICK_HEIGHT = 28;
+
+        /**
+         * Animal Types Definition
+         */
+        const ANIMAL_TYPES = [
+            { type: 'CAT',    color: '#ffb3ba', earColor: '#ff80bf', sound: () => audio.playCatMeow(), points: 30, name: '小貓' },
+            { type: 'DOG',    color: '#ffdfba', earColor: '#e69900', sound: () => audio.playDogBark(), points: 30, name: '小狗' },
+            { type: 'FROG',   color: '#baffc9', earColor: '#33cc66', sound: () => audio.playFrogRibbit(), points: 20, name: '青蛙' },
+            { type: 'PIG',    color: '#ffc6ff', earColor: '#ff66cc', sound: () => audio.playPigOink(), points: 20, name: '小豬' },
+            { type: 'DUCK',   color: '#ffffba', earColor: '#ffaa00', sound: () => audio.playDuckQuack(), points: 10, name: '鴨子' },
+            { type: 'RABBIT', color: '#e8dff5', earColor: '#ff99cc', sound: () => audio.playRabbitChirp(), points: 10, name: '兔兔' }
+        ];
+
+        // Power-Up Configurations
+        const POWERUPS = {
+            FISH:     { symbol: '🐟', color: '#70d6ff', text: '大腳爪！' },
+            BONE:     { symbol: '🦴', color: '#ffd6a5', text: '減速球！' },
+            STRAWBERRY:{ symbol: '🍓', color: '#ffadad', text: '加生命！' },
+            CARROT:   { symbol: '🥕', color: '#caffbf', text: '雙球球！' }
+        };
+
+        // Game States
+        const STATES = { START: 0, PLAYING: 1, GAMEOVER: 2, VICTORY: 3 };
+        let gameState = STATES.START;
+
+        // Dynamic State Variables
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('cute_breakout_highscore')) || 0;
+        let lives = 3;
+
+        // Keyboard Controls
+        const keys = { Left: false, Right: false };
+
+        // Paddle Object (Cute Paw / Wooden Board)
+        const paddle = {
+            width: 100,
+            height: 16,
+            x: (CANVAS_WIDTH - 100) / 2,
+            y: CANVAS_HEIGHT - 35,
+            speed: 7.5,
+            baseWidth: 100
+        };
+
+        // Ball Array (Support Multi-Ball)
+        let balls = [];
+        let bricks = [];
+        let particles = [];
+        let floatingTexts = [];
+        let powerups = [];
+
+        // HUD Highscore Initialization
+        highscoreValEl.textContent = String(highScore).padStart(5, '0');
+
+        /**
+         * Initialize Bricks with Animals
+         */
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const x = c * (BRICK_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT;
+                    const y = r * (BRICK_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP;
+                    
+                    // Assign animal type per brick column/row mix
+                    const animalIndex = (r * 2 + (c % 2)) % ANIMAL_TYPES.length;
+                    const animal = ANIMAL_TYPES[animalIndex];
+
+                    bricks[r][c] = {
+                        x: x,
+                        y: y,
+                        status: 1,
+                        animal: animal
+                    };
+                }
+            }
+        }
+
+        /**
+         * Create Ball Helper
+         */
+        function createBall(x, y, vx = null, vy = null) {
+            const angle = (Math.random() * 50 - 25) * (Math.PI / 180);
+            const speed = 4.8;
+            return {
+                x: x !== undefined ? x : CANVAS_WIDTH / 2,
+                y: y !== undefined ? y : paddle.y - 12,
+                radius: 7,
+                dx: vx !== null ? vx : speed * Math.sin(angle),
+                dy: vy !== null ? vy : -speed * Math.cos(angle)
+            };
+        }
+
+        function resetBallAndPaddle() {
+            paddle.width = paddle.baseWidth;
+            paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+            balls = [createBall()];
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            updateScoreUI();
+            updateLivesUI();
+            initBricks();
+            resetBallAndPaddle();
+            particles = [];
+            floatingTexts = [];
+            powerups = [];
+        }
+
+        /**
+         * HUD UI Updating
+         */
+        function updateScoreUI() {
+            scoreValEl.textContent = String(score).padStart(5, '0');
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('cute_breakout_highscore', highScore);
+                highscoreValEl.textContent = String(highScore).padStart(5, '0');
+            }
+        }
+
+        function updateLivesUI() {
+            livesContainerEl.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'inline-block text-pink-500 drop-shadow';
+                heart.innerHTML = '❤️';
+                livesContainerEl.appendChild(heart);
+            }
+        }
+
+        /**
+         * Cute Particle FX Engine
+         */
+        function createCuteExplosion(x, y, color) {
+            const symbols = ['❤️', '✨', '🐾', '🌸'];
+            const count = 10;
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 5,
+                    dy: (Math.random() - 0.5) * 5,
+                    symbol: symbols[Math.floor(Math.random() * symbols.length)],
+                    life: 1.0,
+                    decay: Math.random() * 0.03 + 0.02,
+                    size: Math.random() * 6 + 10
+                });
+            }
+        }
+
+        function createFloatingText(x, y, text, color) {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                opacity: 1.0,
+                dy: -1.2
+            });
+        }
+
+        function spawnPowerup(x, y) {
+            if (Math.random() > 0.3) return; // 30% chance
+
+            const keys = Object.keys(POWERUPS);
+            const randomType = keys[Math.floor(Math.random() * keys.length)];
+            const config = POWERUPS[randomType];
+
+            powerups.push({
+                x: x,
+                y: y,
+                dy: 1.6,
+                type: randomType,
+                config: config
+            });
+        }
+
+        /**
+         * Input Event Listeners
+         */
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = true;
+            if (e.key === ' ' || e.key === 'Enter') {
+                if (gameState !== STATES.PLAYING) startGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = false;
+        });
+
+        function handlePointerMove(e) {
+            if (gameState !== STATES.PLAYING) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const canvasX = (clientX - rect.left) * scaleX;
+            paddle.x = canvasX - paddle.width / 2;
+
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > CANVAS_WIDTH) paddle.x = CANVAS_WIDTH - paddle.width;
+        }
+
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+
+        startBtn.addEventListener('click', () => {
+            audio.init();
+            startGame();
+        });
+
+        btnSound.addEventListener('click', () => {
+            audio.init();
+            audio.muted = !audio.muted;
+            soundText.textContent = `音效：${audio.muted ? '關閉' : '開啟'}`;
+        });
+
+        function startGame() {
+            audio.init();
+            resetGame();
+            gameState = STATES.PLAYING;
+            menuOverlay.classList.add('hidden');
+        }
+
+        function gameOver() {
+            gameState = STATES.GAMEOVER;
+            menuTitle.innerHTML = 'GAME OVER';
+            menuTitle.className = 'text-3xl sm:text-5xl font-black text-pink-600 mb-2 drop-shadow-sm';
+            menuSub.textContent = '別氣餒！再試一次吧 🐾';
+            startBtn.textContent = 'RETRY 💕';
+            menuOverlay.classList.remove('hidden');
+        }
+
+        function victory() {
+            gameState = STATES.VICTORY;
+            audio.playVictory();
+            menuTitle.innerHTML = 'STAGE CLEAR! 🎉';
+            menuTitle.className = 'text-3xl sm:text-5xl font-black text-amber-500 mb-2 drop-shadow-sm';
+            menuSub.textContent = '太厲害了！你救了所有動物夥伴！';
+            startBtn.textContent = 'PLAY AGAIN 🌟';
+            menuOverlay.classList.remove('hidden');
+        }
+
+        /**
+         * PHYSICS & GAME LOGIC UPDATE
+         */
+        function update() {
+            if (gameState !== STATES.PLAYING) return;
+
+            // 1. Move Paddle via Key inputs
+            if (keys.Right) paddle.x += paddle.speed;
+            if (keys.Left) paddle.x -= paddle.speed;
+
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > CANVAS_WIDTH) paddle.x = CANVAS_WIDTH - paddle.width;
+
+            // 2. Update Balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const b = balls[i];
+
+                b.x += b.dx;
+                b.y += b.dy;
+
+                // Wall Collisions
+                if (b.x - b.radius < 0) {
+                    b.x = b.radius;
+                    b.dx = -b.dx;
+                } else if (b.x + b.radius > CANVAS_WIDTH) {
+                    b.x = CANVAS_WIDTH - b.radius;
+                    b.dx = -b.dx;
+                }
+
+                if (b.y - b.radius < 0) {
+                    b.y = b.radius;
+                    b.dy = -b.dy;
+                }
+
+                // Paddle Collision
+                if (
+                    b.y + b.radius >= paddle.y &&
+                    b.y - b.radius <= paddle.y + paddle.height &&
+                    b.x + b.radius >= paddle.x &&
+                    b.x - b.radius <= paddle.x + paddle.width &&
+                    b.dy > 0
+                ) {
+                    const hitPoint = (b.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    const maxAngle = 55 * (Math.PI / 180);
+                    const bounceAngle = hitPoint * maxAngle;
+                    const speed = Math.hypot(b.dx, b.dy);
+
+                    b.dx = speed * Math.sin(bounceAngle);
+                    b.dy = -speed * Math.cos(bounceAngle);
+                    b.y = paddle.y - b.radius;
+
+                    audio.playPaddleHit();
+                }
+
+                // Brick Collisions
+                let activeBricksCount = 0;
+                for (let r = 0; r < BRICK_ROWS; r++) {
+                    for (let c = 0; c < BRICK_COLS; c++) {
+                        const brick = bricks[r][c];
+                        if (brick.status === 1) {
+                            activeBricksCount++;
+
+                            if (
+                                b.x + b.radius > brick.x &&
+                                b.x - b.radius < brick.x + BRICK_WIDTH &&
+                                b.y + b.radius > brick.y &&
+                                b.y - b.radius < brick.y + BRICK_HEIGHT
+                            ) {
+                                brick.status = 0;
+                                b.dy = -b.dy;
+
+                                // Play Animal Sound Effects!
+                                brick.animal.sound();
+
+                                // Score & FX
+                                score += brick.animal.points;
+                                updateScoreUI();
+                                createCuteExplosion(brick.x + BRICK_WIDTH / 2, brick.y + BRICK_HEIGHT / 2, brick.animal.color);
+                                createFloatingText(brick.x + BRICK_WIDTH / 2, brick.y, `+${brick.animal.points}`, '#ff6699');
+                                spawnPowerup(brick.x + BRICK_WIDTH / 2, brick.y + BRICK_HEIGHT / 2);
+
+                                activeBricksCount--;
+                            }
+                        }
+                    }
+                }
+
+                if (activeBricksCount === 0) {
+                    victory();
+                    return;
+                }
+
+                // Ball fell out
+                if (b.y - b.radius > CANVAS_HEIGHT) {
+                    balls.splice(i, 1);
+                }
+            }
+
+            // Lose life check
+            if (balls.length === 0) {
+                lives--;
+                updateLivesUI();
+                audio.playLoseLife();
+
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    resetBallAndPaddle();
+                }
+            }
+
+            // 3. Powerups Update
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.y += p.dy;
+
+                // Collect
+                if (
+                    p.y + 12 >= paddle.y &&
+                    p.y - 12 <= paddle.y + paddle.height &&
+                    p.x + 12 >= paddle.x &&
+                    p.x - 12 <= paddle.x + paddle.width
+                ) {
+                    audio.playPowerup();
+                    createFloatingText(p.x, p.y, p.config.text, '#ff3385');
+
+                    if (p.type === 'FISH') {
+                        paddle.width = 140;
+                        setTimeout(() => { paddle.width = paddle.baseWidth; }, 8000);
+                    } else if (p.type === 'BONE') {
+                        balls.forEach(b => { b.dx *= 0.75; b.dy *= 0.75; });
+                    } else if (p.type === 'STRAWBERRY') {
+                        if (lives < 5) { lives++; updateLivesUI(); }
+                    } else if (p.type === 'CARROT') {
+                        if (balls.length > 0) {
+                            const b = balls[0];
+                            balls.push(createBall(b.x, b.y, -b.dx, b.dy));
+                        }
+                    }
+
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                if (p.y > CANVAS_HEIGHT) powerups.splice(i, 1);
+            }
+
+            // 4. Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.dx;
+                pt.y += pt.dy;
+                pt.life -= pt.decay;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            // 5. Update Floating Texts
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.dy;
+                ft.opacity -= 0.02;
+                if (ft.opacity <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        /**
+         * CUTE CANVAS RENDER ENGINE
+         */
+        function drawAnimalHead(ctx, x, y, width, height, animal) {
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+
+            // Draw Brick Base Background (Rounded Rect)
+            ctx.fillStyle = animal.color;
+            ctx.beginPath();
+            ctx.roundRect(x, y, width, height, 10);
+            ctx.fill();
+
+            // Inner Shadow / Border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.save();
+
+            // Draw Animal Ears based on Type
+            ctx.fillStyle = animal.earColor;
+            if (animal.type === 'CAT') {
+                // Pointy cat ears
+                ctx.beginPath();
+                ctx.moveTo(x + 8, y); ctx.lineTo(x + 16, y - 6); ctx.lineTo(x + 22, y); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(x + width - 8, y); ctx.lineTo(x + width - 16, y - 6); ctx.lineTo(x + width - 22, y); ctx.fill();
+            } else if (animal.type === 'DOG') {
+                // Floppy dog ears
+                ctx.beginPath();
+                ctx.ellipse(x + 6, y + 10, 5, 8, 0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(x + width - 6, y + 10, 5, 8, -0.2, 0, Math.PI * 2); ctx.fill();
+            } else if (animal.type === 'RABBIT') {
+                // Long rabbit ears
+                ctx.beginPath();
+                ctx.ellipse(centerX - 8, y - 5, 4, 10, -0.1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(centerX + 8, y - 5, 4, 10, 0.1, 0, Math.PI * 2); ctx.fill();
+            } else if (animal.type === 'BEAR' || animal.type === 'PIG') {
+                // Round ears
+                ctx.beginPath(); ctx.arc(x + 8, y + 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x + width - 8, y + 2, 6, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Draw Cute Face Features (Eyes & Nose)
+            ctx.fillStyle = '#4a2e35';
+
+            // Eyes
+            ctx.beginPath(); ctx.arc(centerX - 10, centerY - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(centerX + 10, centerY - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+
+            // Blushes (Pink cheeks)
+            ctx.fillStyle = 'rgba(255, 102, 153, 0.4)';
+            ctx.beginPath(); ctx.arc(centerX - 14, centerY + 3, 3.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(centerX + 14, centerY + 3, 3.5, 0, Math.PI * 2); ctx.fill();
+
+            // Nose / Snout
+            ctx.fillStyle = '#4a2e35';
+            if (animal.type === 'DUCK') {
+                // Orange Beak
+                ctx.fillStyle = '#ff9900';
+                ctx.beginPath(); ctx.ellipse(centerX, centerY + 3, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (animal.type === 'PIG') {
+                // Snout
+                ctx.fillStyle = '#ff80bf';
+                ctx.beginPath(); ctx.ellipse(centerX, centerY + 3, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+            } else {
+                // Small nose dot
+                ctx.beginPath(); ctx.arc(centerX, centerY + 2, 1.8, 0, Math.PI * 2); ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function draw() {
+            // Background (Warm Soft Gradient)
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+            bgGradient.addColorStop(0, '#fff5f7');
+            bgGradient.addColorStop(1, '#ffebf0');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw Cute Animal Bricks
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const brick = bricks[r][c];
+                    if (brick.status === 1) {
+                        drawAnimalHead(ctx, brick.x, brick.y, BRICK_WIDTH, BRICK_HEIGHT, brick.animal);
+                    }
+                }
+            }
+
+            // Draw Cute Paddle (Wooden / Paw board)
+            ctx.fillStyle = '#ffb3c6';
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#ff80a0';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Paw Print on Paddle Center
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(paddle.x + paddle.width / 2, paddle.y + 9, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(paddle.x + paddle.width / 2 - 7, paddle.y + 5, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(paddle.x + paddle.width / 2 + 7, paddle.y + 5, 2, 0, Math.PI * 2); ctx.fill();
+
+            // Draw Cute Balls (With Face Eyes!)
+            balls.forEach(b => {
+                ctx.fillStyle = '#ff6699';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cute White Highlight & Face
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(b.x - 2, b.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+            });
+
+            // Draw Falling Power-ups
+            powerups.forEach(p => {
+                ctx.font = '20px "Fredoka", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.config.symbol, p.x, p.y);
+            });
+
+            // Draw Cute Particles
+            particles.forEach(pt => {
+                ctx.globalAlpha = Math.max(0, pt.life);
+                ctx.font = `${pt.size}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(pt.symbol, pt.x, pt.y);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Draw Floating Score Texts
+            floatingTexts.forEach(ft => {
+                ctx.fillStyle = ft.color;
+                ctx.globalAlpha = Math.max(0, ft.opacity);
+                ctx.font = 'bold 12px "Fredoka", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        /**
+         * MAIN ANIMATION LOOP
+         */
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start Application Loop
+        initBricks();
+        resetBallAndPaddle();
+        requestAnimationFrame(gameLoop);
+
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

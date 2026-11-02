@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DINO RUN! 探險世界 - Pixel Explorer Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', 'Noto Sans TC', monospace, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background-color: #030712;
+            color: #f8fafc;
+        }
+
+        .pixel-canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            transition: all 0.1s ease;
+        }
+        .touch-btn:active {
+            background: rgba(245, 158, 11, 0.35);
+            border-color: rgba(245, 158, 11, 0.8);
+            transform: scale(0.95);
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8)); }
+            50% { filter: drop-shadow(0 0 16px rgba(245, 158, 11, 1)); }
+        }
+        .title-glow {
+            animation: titleGlow 2s infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 md:p-6 bg-slate-950 text-white select-none">
+
+    <div class="w-full max-w-5xl flex flex-col items-center">
+
+        <!-- Header -->
+        <div class="w-full flex justify-between items-center mb-3 px-2 text-xs md:text-sm font-bold">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl md:text-3xl title-glow">🤠🦖</span>
+                <span class="text-amber-400 tracking-wider text-base md:text-xl font-black">DINO RUN! 探險世界</span>
+            </div>
+
+            <div class="flex items-center space-x-2 md:space-x-3">
+                <button id="soundToggleBtn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 transition flex items-center justify-center" title="開關音效">
+                    <svg id="soundOnIcon" class="w-5 h-5 fill-amber-400" viewBox="0 0 24 24">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <svg id="soundOffIcon" class="w-5 h-5 fill-gray-400 hidden" viewBox="0 0 24 24">
+                        <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                    </svg>
+                </button>
+
+                <button id="themeToggleBtn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 transition flex items-center justify-center" title="切換晝夜">
+                    <svg class="w-5 h-5 fill-amber-300" viewBox="0 0 24 24">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full bg-slate-900 rounded-2xl shadow-2xl border-4 border-amber-600/70 overflow-hidden">
+            <canvas id="gameCanvas" class="w-full h-auto pixel-canvas block cursor-pointer" width="960" height="360"></canvas>
+
+            <!-- Start Overlay -->
+            <div id="startOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/65 backdrop-blur-[2px]">
+                <div class="bg-slate-900/95 text-amber-300 border-2 border-amber-500/80 px-8 py-6 rounded-2xl shadow-2xl text-center animate-pulse max-w-md">
+                    <p class="text-base md:text-lg font-black mb-3 tracking-wide">點擊畫面 或 按 [空白鍵] 開始冒險</p>
+                    <div class="text-xs text-slate-300 leading-relaxed space-y-1 text-left bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+                        <p>🦘 <span class="text-amber-400 font-bold">輕盈緩降跳躍 (Gravity = 0.28)</span>: 跳躍更輕飄平緩！</p>
+                        <p>🏃 <span class="text-amber-400 font-bold">超慢速起步 (3.0)</span>: 隨著距離平滑加速！</p>
+                        <p>⬆️ <span class="text-white font-bold">地面跳躍 / 飛天往上</span>: Space / ↑ / W 鍵</p>
+                        <p>⬇️ <span class="text-white font-bold">地面蹲下 / 飛天往下</span>: ↓ / S 鍵</p>
+                        <p>🚀 <span class="text-amber-400 font-bold">飛天切換</span>: 按 W 鍵 / 點擊 🚀 飛天按鈕</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-[3px]">
+                <p class="text-2xl md:text-4xl font-black tracking-widest text-red-500 mb-3 drop-shadow-lg">冒 險 結 束</p>
+                <p id="finalScoreText" class="text-xs md:text-sm text-amber-300 mb-6 font-bold text-center px-4 leading-relaxed"></p>
+                <button id="restartBtn" class="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl shadow-xl hover:scale-105 active:scale-95 transition text-sm flex items-center space-x-2">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                    </svg>
+                    <span>重新挑戰</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="w-full grid grid-cols-4 gap-2 mt-4 md:hidden">
+            <button id="touchDuckBtn" class="touch-btn py-4 rounded-xl text-center text-xs font-bold flex items-center justify-center">
+                <span>⬇️ 蹲/向下</span>
+            </button>
+            <button id="touchJumpBtn" class="touch-btn py-4 rounded-xl text-center text-xs font-bold flex items-center justify-center">
+                <span>⬆️ 跳/向上</span>
+            </button>
+            <button id="touchFlyBtn" class="touch-btn py-4 bg-amber-500/20 border-amber-500/60 rounded-xl text-center text-xs font-bold flex items-center justify-center text-amber-300 col-span-2">
+                <span>🚀 飛天開關</span>
+            </button>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="w-full mt-4 p-4 bg-slate-900/90 rounded-2xl border border-slate-800 text-xs md:text-sm space-y-2">
+            <div class="font-bold text-amber-400 border-b border-slate-800 pb-2 flex items-center justify-between">
+                <span>🎮 探險家恐龍操作指南：</span>
+                <span class="text-amber-300 font-semibold text-xs">道具距仙人掌 > 160px</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-300">
+                <div>• <span class="font-semibold text-amber-300">浮空感跳躍 (Low Gravity):</span> 低重力 (0.28)，下降過程順暢不驟墜。</div>
+                <div>• <span class="font-semibold text-white">專用飛天能量：</span> 僅在飛天時消耗，地面跑步與跳躍完全不耗能。</div>
+                <div>• <span class="font-semibold text-white">高空自由上下：</span> 按 W/↑ 攀升，按 S/↓ 降高閃避怪物。</div>
+                <div>• <span class="font-semibold text-white">能量補給：</span> 拾取 ⛽ (+40%) 與 🚀 火箭背包 (100% 滿能量)。</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 8-bit Web Audio Sound FX
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(620, this.ctx.currentTime + 0.18);
+
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playFly() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(540, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playCoin() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now);
+                osc.frequency.setValueAtTime(1318.51, now + 0.08);
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.22);
+            }
+
+            playFuel() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.linearRampToValueAtTime(880, now + 0.18);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            playDiamond() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [1046.50, 1318.51, 1567.98, 2093.00];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + index * 0.04);
+                    gain.gain.setValueAtTime(0.1, now + index * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + index * 0.04 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + index * 0.04);
+                    osc.stop(now + index * 0.04 + 0.12);
+                });
+            }
+
+            playHit() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.35);
+
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playScore() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(587.33, now);
+                osc.frequency.setValueAtTime(880, now + 0.08);
+
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
+
+        const sound = new SoundFX();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GROUND_Y = 300;
+        const INITIAL_SPEED = 3.0; // VERY SLOW starting pace
+        const MAX_SPEED = 9.5;      // Gentle upper speed limit
+        let gameSpeed = INITIAL_SPEED;
+
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('dino_hi_score') || '0', 10);
+        let coinCount = 0;
+        let diamondCount = 0;
+        let isGameOver = false;
+        let isGameStarted = false;
+        let frameCount = 0;
+        let isDarkMode = false;
+        let isManualDark = false;
+
+        const COLOR_MAP = {
+            1: '#1b3a13', // Dark Outline
+            2: '#43a047', // Dino Green Skin
+            3: '#a5d6a7', // Light Belly Green
+            4: '#8d6e63', // Explorer Hat Brown
+            5: '#2e7d32', // Hat Ribbon
+            6: '#fbc02d', // Badge Yellow
+            7: '#ffffff', // Eye White
+            8: '#0284c7'  // Vest Blue
+        };
+
+        const DINO_GREEN_STAND = [
+            [0,0,0,0,0,0,0,4,4,4,4,4,4,4,0,0,0,0,0,0],
+            [0,0,0,0,0,4,4,4,4,5,4,4,4,4,4,0,0,0,0,0],
+            [0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0],
+            [0,0,0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+            [0,0,0,0,0,1,2,2,2,2,2,2,2,2,7,1,0,0,0,0],
+            [0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0,0],
+            [0,0,0,0,0,1,2,2,2,2,2,2,2,1,1,1,0,0,0,0],
+            [0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0,0],
+            [0,0,0,0,0,0,1,2,2,2,1,1,1,1,1,0,0,0,0,0],
+            [0,0,0,0,0,1,8,8,2,2,2,2,1,0,0,0,0,0,0,0],
+            [0,0,0,0,1,8,8,8,8,2,2,2,2,1,0,0,0,0,0,0],
+            [0,0,1,2,8,6,8,3,3,2,2,2,2,1,0,0,0,0,0,0],
+            [0,0,1,2,2,8,8,8,3,3,3,2,2,2,1,0,0,0,0,0],
+            [0,1,2,2,2,2,2,3,3,3,3,2,2,1,0,0,0,0,0,0],
+            [0,1,2,2,2,2,2,2,3,3,3,2,1,0,0,0,0,0,0,0],
+            [0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0],
+            [0,0,0,1,1,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,2,2,2,1,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,2,0,2,1,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,2,0,2,1,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,1,0,2,1,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0]
+        ];
+
+        const DINO_GREEN_RUN1 = JSON.parse(JSON.stringify(DINO_GREEN_STAND));
+        DINO_GREEN_RUN1[19] = [0,0,0,0,0,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        DINO_GREEN_RUN1[20] = [0,0,0,0,0,1,1,0,2,1,0,0,0,0,0,0,0,0,0,0];
+
+        const DINO_GREEN_RUN2 = JSON.parse(JSON.stringify(DINO_GREEN_STAND));
+        DINO_GREEN_RUN2[19] = [0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,0,0,0,0,0];
+        DINO_GREEN_RUN2[20] = [0,0,0,0,0,1,2,0,1,1,0,0,0,0,0,0,0,0,0,0];
+
+        const DINO_GREEN_DUCK1 = [
+            [0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,5,4,4,4,4,4,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,7,1,0,0,0,0,0,0],
+            [1,1,1,0,0,0,1,1,8,8,1,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0],
+            [1,2,2,1,0,1,8,8,6,8,3,3,2,2,2,2,2,2,1,1,1,0,0,0,0,0,0,0],
+            [0,1,2,2,1,2,8,8,8,3,3,3,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0],
+            [0,0,1,2,2,2,2,3,3,3,3,2,2,2,1,1,1,1,1,0,0,0,0,0,0,0,0,0],
+            [0,0,0,1,2,2,2,2,3,3,3,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,1,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,1,2,2,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,2,0,0,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        ];
+
+        const DINO_GREEN_DUCK2 = JSON.parse(JSON.stringify(DINO_GREEN_DUCK1));
+        DINO_GREEN_DUCK2[12] = [0,0,0,0,0,0,0,2,1,0,0,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+        function drawColoredMatrix(matrix, startX, startY, pixelSize) {
+            for (let r = 0; r < matrix.length; r++) {
+                for (let c = 0; c < matrix[r].length; c++) {
+                    const colorCode = matrix[r][c];
+                    if (colorCode !== 0 && COLOR_MAP[colorCode]) {
+                        ctx.fillStyle = COLOR_MAP[colorCode];
+                        ctx.fillRect(startX + c * pixelSize, startY + r * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+            }
+        }
+
+        const dino = {
+            x: 70,
+            y: GROUND_Y - 48,
+            width: 44,
+            height: 48,
+            vy: 0,
+            gravity: 0.28,      // LOW GRAVITY FOR FLOATIER JUMP
+            jumpForce: -10.0,    // BALANCED JUMP FORCE
+            isJumping: false,
+            isDucking: false,
+            isFlyingActive: false,
+            flightEnergy: 100,
+            maxFlightEnergy: 100,
+            energyBurnRate: 0.38,
+            grounded: true,
+            moveUpPressed: false,
+            moveDownPressed: false,
+
+            update() {
+                // FLIGHT ENERGY DEDICATED CONSUMPTION
+                if (this.isFlyingActive && this.flightEnergy > 0) {
+                    this.flightEnergy -= this.energyBurnRate;
+                    if (this.flightEnergy <= 0) {
+                        this.flightEnergy = 0;
+                        this.isFlyingActive = false; // Smooth automatic descent when empty
+                    }
+
+                    // Vertical Sky Navigation (UP / DOWN)
+                    const flightSpeed = 4.8;
+                    if (this.moveUpPressed) {
+                        this.y -= flightSpeed;
+                    } else if (this.moveDownPressed) {
+                        this.y += flightSpeed;
+                    } else {
+                        // Soft hovering wave when idle in sky
+                        this.y += Math.sin(frameCount * 0.08) * 0.75;
+                    }
+
+                    // Sky Boundaries
+                    const minSkyY = 30;
+                    const maxSkyY = GROUND_Y - 55;
+                    if (this.y < minSkyY) this.y = minSkyY;
+                    if (this.y > maxSkyY) this.y = maxSkyY;
+
+                    this.vy = 0;
+                    this.grounded = false;
+
+                    sound.playFly();
+                } else {
+                    // Ground physics with low gravity
+                    if (!this.grounded) {
+                        this.vy += this.gravity;
+                        if (this.isDucking) this.vy += 0.8;
+                    }
+                }
+
+                this.y += this.vy;
+
+                const currentHeight = this.isDucking ? 31 : 48;
+                if (this.y >= GROUND_Y - currentHeight) {
+                    this.y = GROUND_Y - currentHeight;
+                    this.vy = 0;
+                    this.grounded = true;
+                    this.isJumping = false;
+                } else {
+                    this.grounded = false;
+                }
+
+                this.height = currentHeight;
+                this.width = this.isDucking ? 61 : 44;
+            },
+
+            jump() {
+                if (this.grounded && !this.isDucking) {
+                    this.vy = this.jumpForce;
+                    this.grounded = false;
+                    this.isJumping = true;
+                    sound.playJump();
+                }
+            },
+
+            toggleFlight() {
+                if (this.flightEnergy > 0) {
+                    this.isFlyingActive = !this.isFlyingActive;
+                    if (this.isFlyingActive && this.grounded) {
+                        this.y = GROUND_Y - 120;
+                        this.grounded = false;
+                    }
+                }
+            },
+
+            draw() {
+                let matrix;
+                if (!this.grounded) {
+                    matrix = DINO_GREEN_STAND;
+                } else if (this.isDucking) {
+                    matrix = (Math.floor(frameCount / 8) % 2 === 0) ? DINO_GREEN_DUCK1 : DINO_GREEN_DUCK2;
+                } else {
+                    matrix = (Math.floor(frameCount / 8) % 2 === 0) ? DINO_GREEN_RUN1 : DINO_GREEN_RUN2;
+                }
+
+                drawColoredMatrix(matrix, this.x, this.y, 2.2);
+
+                // Flight Thruster Flame Effects
+                if (this.isFlyingActive && this.flightEnergy > 0) {
+                    ctx.fillStyle = (frameCount % 4 < 2) ? '#ef4444' : '#f59e0b';
+                    ctx.fillRect(this.x - 8, this.y + 18, 8, 14);
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(this.x - 5, this.y + 22, 5, 8);
+
+                    // Jet Sparks
+                    ctx.fillStyle = '#f97316';
+                    ctx.fillRect(this.x - 12, this.y + 30 + (frameCount % 3) * 2, 4, 4);
+                }
+            },
+
+            getHitbox() {
+                const p = 4;
+                return {
+                    x: this.x + p,
+                    y: this.y + p,
+                    width: this.width - p * 2,
+                    height: this.height - p * 2
+                };
+            }
+        };
+
+        class Background {
+            draw() {
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+                if (isDarkMode) {
+                    skyGrad.addColorStop(0, '#020617');
+                    skyGrad.addColorStop(0.5, '#0f172a');
+                    skyGrad.addColorStop(1, '#1e1b4b');
+                } else {
+                    skyGrad.addColorStop(0, '#0284c7');
+                    skyGrad.addColorStop(0.5, '#38bdf8');
+                    skyGrad.addColorStop(1, '#f97316');
+                }
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+
+                // Sun / Moon
+                ctx.fillStyle = isDarkMode ? '#fef08a' : '#fde047';
+                ctx.beginPath();
+                ctx.arc(800, isDarkMode ? 60 : 80, isDarkMode ? 24 : 32, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Desert Dunes
+                ctx.fillStyle = isDarkMode ? '#1e1b4b' : '#ea580c';
+                ctx.beginPath();
+                ctx.moveTo(100, GROUND_Y);
+                ctx.lineTo(240, GROUND_Y - 110);
+                ctx.lineTo(380, GROUND_Y);
+                ctx.fill();
+
+                ctx.fillStyle = isDarkMode ? '#312e81' : '#d97706';
+                ctx.beginPath();
+                ctx.moveTo(400, GROUND_Y);
+                ctx.lineTo(580, GROUND_Y - 140);
+                ctx.lineTo(760, GROUND_Y);
+                ctx.fill();
+
+                // Ground Terrain
+                ctx.fillStyle = isDarkMode ? '#334155' : '#ca8a04';
+                ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+                ctx.fillStyle = isDarkMode ? '#1e293b' : '#a16207';
+                ctx.fillRect(0, GROUND_Y + 16, canvas.width, canvas.height - GROUND_Y - 16);
+            }
+        }
+
+        const background = new Background();
+
+        class Collectible {
+            constructor(type, spawnX) {
+                this.type = type;
+                this.x = spawnX;
+                this.y = (type === 'fuel' || type === 'jetpack') 
+                         ? GROUND_Y - 45 
+                         : GROUND_Y - (Math.random() > 0.5 ? 35 : 180);
+                this.width = 24;
+                this.height = 24;
+                this.collected = false;
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+
+            draw() {
+                if (this.collected) return;
+                ctx.save();
+                if (this.type === 'fuel') {
+                    // Fuel Canister
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(this.x + 4, this.y + 2, 16, 20);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x + 8, this.y + 6, 8, 4);
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fillRect(this.x + 10, this.y + 12, 4, 8);
+                } else if (this.type === 'jetpack') {
+                    // Jetpack Rocket
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fillRect(this.x + 6, this.y + 2, 12, 18);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(this.x + 9, this.y + 5, 6, 6);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(this.x + 4, this.y + 20, 16, 4);
+                } else if (this.type === 'coin') {
+                    ctx.fillStyle = '#facc15';
+                    ctx.strokeStyle = '#a16207';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x + 12, this.y + 12, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (this.type === 'diamond') {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.strokeStyle = '#0369a1';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 12, this.y);
+                    ctx.lineTo(this.x + 24, this.y + 10);
+                    ctx.lineTo(this.x + 12, this.y + 24);
+                    ctx.lineTo(this.x, this.y + 10);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            getHitbox() {
+                return { x: this.x, y: this.y, width: this.width, height: this.height };
+            }
+        }
+
+        class Cactus {
+            constructor() {
+                this.x = canvas.width + 40;
+                this.type = Math.floor(Math.random() * 3);
+                this.width = this.type === 1 ? 38 : 24;
+                this.height = this.type === 2 ? 56 : 42;
+                this.y = GROUND_Y - this.height;
+            }
+
+            update() { this.x -= gameSpeed; }
+
+            draw() {
+                ctx.fillStyle = isDarkMode ? '#059669' : '#15803d';
+                ctx.strokeStyle = '#064e3b';
+                ctx.lineWidth = 2;
+
+                if (this.type === 0) {
+                    ctx.fillRect(this.x + 8, this.y, 8, this.height);
+                    ctx.fillRect(this.x + 2, this.y + 12, 20, 5);
+                } else if (this.type === 1) {
+                    ctx.fillRect(this.x + 4, this.y + 8, 8, this.height - 8);
+                    ctx.fillRect(this.x + 24, this.y, 8, this.height);
+                } else {
+                    ctx.fillRect(this.x + 8, this.y, 10, this.height);
+                    ctx.fillRect(this.x + 2, this.y + 16, 24, 6);
+                }
+            }
+
+            getHitbox() { return { x: this.x + 2, y: this.y + 2, width: this.width - 4, height: this.height - 2 }; }
+        }
+
+        class Pterodactyl {
+            constructor() {
+                this.x = canvas.width + 50;
+                this.width = 46;
+                this.height = 32;
+                const heights = [GROUND_Y - 34, GROUND_Y - 60, GROUND_Y - 90];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+            }
+
+            update() { this.x -= gameSpeed + 0.8; }
+
+            draw() {
+                ctx.fillStyle = isDarkMode ? '#94a3b8' : '#475569';
+                ctx.beginPath();
+                ctx.ellipse(this.x + 22, this.y + 16, 18, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                const wingUp = (Math.floor(frameCount / 8) % 2 === 0);
+                ctx.beginPath();
+                ctx.moveTo(this.x + 16, this.y + 16);
+                ctx.lineTo(this.x + 6, wingUp ? this.y - 12 : this.y + 28);
+                ctx.lineTo(this.x + 30, this.y + 16);
+                ctx.fill();
+            }
+
+            getHitbox() { return { x: this.x + 4, y: this.y + 4, width: this.width - 8, height: this.height - 8 }; }
+        }
+
+        class SkyMonster {
+            constructor() {
+                this.type = Math.floor(Math.random() * 3);
+                this.x = canvas.width + 60;
+                this.width = this.type === 0 ? 54 : (this.type === 1 ? 50 : 44);
+                this.height = this.type === 0 ? 36 : (this.type === 1 ? 38 : 28);
+                this.y = 50 + Math.random() * 100;
+            }
+
+            update() {
+                this.x -= gameSpeed + 1.2;
+            }
+
+            draw() {
+                ctx.save();
+                if (this.type === 0) {
+                    // Purple Sky Dragon
+                    ctx.fillStyle = '#7e22ce';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + 26, this.y + 18, 22, 10, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const wingFlap = (Math.floor(frameCount / 6) % 2 === 0);
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 20, this.y + 18);
+                    ctx.lineTo(this.x + 8, wingFlap ? this.y - 16 : this.y + 32);
+                    ctx.lineTo(this.x + 36, this.y + 18);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(this.x + 40, this.y + 12, 4, 4);
+                } else if (this.type === 1) {
+                    // Thunder Cloud Monster
+                    ctx.fillStyle = isDarkMode ? '#475569' : '#334155';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 16, this.y + 20, 14, 0, Math.PI * 2);
+                    ctx.arc(this.x + 32, this.y + 16, 16, 0, Math.PI * 2);
+                    ctx.arc(this.x + 42, this.y + 22, 10, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (frameCount % 6 < 3) {
+                        ctx.fillStyle = '#facc15';
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 22, this.y + 28);
+                        ctx.lineTo(this.x + 16, this.y + 38);
+                        ctx.lineTo(this.x + 24, this.y + 38);
+                        ctx.lineTo(this.x + 18, this.y + 48);
+                        ctx.lineTo(this.x + 28, this.y + 32);
+                        ctx.fill();
+                    }
+                } else {
+                    // Alien UFO
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 22, this.y + 10, 10, Math.PI, 0);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + 22, this.y + 16, 20, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 14, this.y + 22);
+                    ctx.lineTo(this.x + 2, this.y + 42);
+                    ctx.lineTo(this.x + 42, this.y + 42);
+                    ctx.lineTo(this.x + 30, this.y + 22);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            getHitbox() {
+                return { x: this.x + 2, y: this.y + 2, width: this.width - 4, height: this.height - 4 };
+            }
+        }
+
+        let obstacles = [];
+        let skyMonsters = [];
+        let collectibles = [];
+        let nextObstacleTimer = 0;
+        let nextSkyMonsterTimer = 0;
+
+        function spawnManager() {
+            nextObstacleTimer--;
+            if (nextObstacleTimer <= 0) {
+                let newObstacle;
+                if (score > 120 && Math.random() < 0.45) {
+                    newObstacle = new Pterodactyl();
+                } else {
+                    newObstacle = new Cactus();
+                }
+                obstacles.push(newObstacle);
+
+                // ITEM SPAWN SAFEGUARD: Strict 160px+ distance separation ahead/behind cacti
+                const rand = Math.random();
+                let itemType = null;
+                if (rand < 0.3) itemType = 'fuel';
+                else if (rand < 0.42) itemType = 'jetpack';
+                else if (rand < 0.62) itemType = 'diamond';
+                else if (rand < 0.88) itemType = 'coin';
+
+                if (itemType) {
+                    const safeSpawnX = newObstacle.x + 165 + Math.random() * 85;
+                    collectibles.push(new Collectible(itemType, safeSpawnX));
+                }
+
+                const minGap = 60 + gameSpeed * 10;
+                nextObstacleTimer = Math.floor(Math.random() * 90 + minGap);
+            }
+
+            nextSkyMonsterTimer--;
+            if (nextSkyMonsterTimer <= 0) {
+                if (score > 150) {
+                    skyMonsters.push(new SkyMonster());
+                }
+                nextSkyMonsterTimer = Math.floor(Math.random() * 140 + 90);
+            }
+        }
+
+        function checkCollision(r1, r2) {
+            return (
+                r1.x < r2.x + r2.width &&
+                r1.x + r1.width > r2.x &&
+                r1.y < r2.y + r2.height &&
+                r1.y + r1.height > r2.y
+            );
+        }
+
+        function updateTheme() {
+            if (!isManualDark) {
+                isDarkMode = Math.floor(score / 500) % 2 === 1;
+            }
+        }
+
+        function update() {
+            if (!isGameStarted || isGameOver) return;
+
+            frameCount++;
+
+            // SMOOTH & VERY GENTLE ACCELERATION (Starts at 3.0, caps at 9.5)
+            if (gameSpeed < MAX_SPEED) {
+                gameSpeed += 0.0003;
+            }
+
+            score += 0.12;
+            const currentIntScore = Math.floor(score);
+            if (currentIntScore > 0 && currentIntScore % 100 === 0 && Math.floor(score - 0.12) % 100 !== 0) {
+                sound.playScore();
+            }
+
+            updateTheme();
+            dino.update();
+            spawnManager();
+
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                collectibles[i].update();
+                if (!collectibles[i].collected && checkCollision(dino.getHitbox(), collectibles[i].getHitbox())) {
+                    collectibles[i].collected = true;
+                    if (collectibles[i].type === 'fuel') {
+                        dino.flightEnergy = Math.min(dino.maxFlightEnergy, dino.flightEnergy + 40);
+                        sound.playFuel();
+                    } else if (collectibles[i].type === 'jetpack') {
+                        dino.flightEnergy = dino.maxFlightEnergy;
+                        dino.isFlyingActive = true;
+                        sound.playFuel();
+                    } else if (collectibles[i].type === 'coin') {
+                        coinCount++;
+                        score += 50;
+                        sound.playCoin();
+                    } else if (collectibles[i].type === 'diamond') {
+                        diamondCount++;
+                        score += 150;
+                        sound.playDiamond();
+                    }
+                }
+                if (collectibles[i].x < -30) collectibles.splice(i, 1);
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                if (checkCollision(dino.getHitbox(), obstacles[i].getHitbox())) {
+                    triggerGameOver();
+                }
+                if (obstacles[i].x < -60) obstacles.splice(i, 1);
+            }
+
+            for (let i = skyMonsters.length - 1; i >= 0; i--) {
+                skyMonsters[i].update();
+                if (checkCollision(dino.getHitbox(), skyMonsters[i].getHitbox())) {
+                    triggerGameOver();
+                }
+                if (skyMonsters[i].x < -70) skyMonsters.splice(i, 1);
+            }
+        }
+
+        function drawHUD() {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px "Press Start 2P", monospace';
+            ctx.textAlign = 'right';
+
+            const scoreStr = String(Math.floor(score)).padStart(5, '0');
+            const hiStr = String(Math.floor(highScore)).padStart(5, '0');
+
+            ctx.fillText(`HI ${hiStr}  ${scoreStr}`, canvas.width - 20, 32);
+
+            ctx.textAlign = 'left';
+            ctx.fillText(`🪙 ${coinCount}  💎 ${diamondCount}`, 20, 32);
+
+            // FLIGHT ENERGY GAUGE DISPLAY
+            const barX = 20;
+            const barY = 46;
+            const barWidth = 160;
+            const barHeight = 16;
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+            const energyPct = dino.flightEnergy / dino.maxFlightEnergy;
+            ctx.fillStyle = energyPct > 0.4 ? '#22c55e' : (energyPct > 0.2 ? '#f59e0b' : '#ef4444');
+            ctx.fillRect(barX + 2, barY + 2, Math.max(0, (barWidth - 4) * energyPct), barHeight - 4);
+
+            ctx.fillStyle = dino.isFlyingActive ? '#fef08a' : '#ffffff';
+            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.fillText(`FLIGHT ENERGY ${Math.ceil(energyPct * 100)}%`, barX + barWidth + 12, barY + 12);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            background.draw();
+            collectibles.forEach(c => c.draw());
+            obstacles.forEach(o => o.draw());
+            skyMonsters.forEach(m => m.draw());
+            dino.draw();
+            drawHUD();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (isGameStarted) return;
+            isGameStarted = true;
+            isGameOver = false;
+            score = 0;
+            coinCount = 0;
+            diamondCount = 0;
+            gameSpeed = INITIAL_SPEED;
+            obstacles = [];
+            skyMonsters = [];
+            collectibles = [];
+            dino.flightEnergy = 100;
+            dino.isFlyingActive = false;
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            dino.jump();
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            sound.playHit();
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('dino_hi_score', Math.floor(highScore));
+            }
+
+            document.getElementById('finalScoreText').innerHTML = `最終得分: ${Math.floor(score)} | 🪙: ${coinCount} | 💎: ${diamondCount}<br><span class="text-xs text-amber-300 mt-2 block">💡 飛天能量專用於高空巡航，地面奔跑完全免費！</span>`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            isGameOver = false;
+            score = 0;
+            coinCount = 0;
+            diamondCount = 0;
+            gameSpeed = INITIAL_SPEED;
+            obstacles = [];
+            skyMonsters = [];
+            collectibles = [];
+            dino.y = GROUND_Y - 48;
+            dino.vy = 0;
+            dino.grounded = true;
+            dino.flightEnergy = 100;
+            dino.isFlyingActive = false;
+            dino.isDucking = false;
+            dino.moveUpPressed = false;
+            dino.moveDownPressed = false;
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            dino.jump();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (!isGameStarted && ['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+                startGame();
+                return;
+            }
+
+            if (isGameOver && ['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+                restartGame();
+                return;
+            }
+
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+                dino.moveUpPressed = true;
+                if (!dino.isFlyingActive && e.code === 'KeyW') {
+                    dino.toggleFlight();
+                } else if (!dino.isFlyingActive && e.code === 'ArrowUp') {
+                    dino.jump();
+                }
+            } else if (e.code === 'Space') {
+                if (dino.isFlyingActive) {
+                    dino.isFlyingActive = false;
+                }
+                dino.jump();
+            }
+
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                dino.moveDownPressed = true;
+                if (!dino.isFlyingActive) {
+                    dino.isDucking = true;
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+                dino.moveUpPressed = false;
+            }
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                dino.moveDownPressed = false;
+                dino.isDucking = false;
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!isGameStarted) startGame();
+            else if (isGameOver) restartGame();
+            else if (!dino.isFlyingActive) dino.jump();
+        });
+
+        const touchJumpBtn = document.getElementById('touchJumpBtn');
+        const touchDuckBtn = document.getElementById('touchDuckBtn');
+        const touchFlyBtn = document.getElementById('touchFlyBtn');
+
+        touchJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isGameStarted) startGame();
+            else if (isGameOver) restartGame();
+            else {
+                if (dino.isFlyingActive) {
+                    dino.moveUpPressed = true;
+                } else {
+                    dino.jump();
+                }
+            }
+        });
+        touchJumpBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            dino.moveUpPressed = false;
+        });
+
+        touchDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (dino.isFlyingActive) {
+                dino.moveDownPressed = true;
+            } else {
+                dino.isDucking = true;
+            }
+        });
+        touchDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            dino.moveDownPressed = false;
+            dino.isDucking = false;
+        });
+
+        touchFlyBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isGameStarted) startGame();
+            else if (isGameOver) restartGame();
+            else dino.toggleFlight();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            restartGame();
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            document.getElementById('soundOnIcon').classList.toggle('hidden', !sound.enabled);
+            document.getElementById('soundOffIcon').classList.toggle('hidden', sound.enabled);
+        });
+
+        document.getElementById('themeToggleBtn').addEventListener('click', () => {
+            isManualDark = true;
+            isDarkMode = !isDarkMode;
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

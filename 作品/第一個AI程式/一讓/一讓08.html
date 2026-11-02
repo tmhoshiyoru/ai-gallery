@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MILK DRAGON OVERLORD - 奶龍大作戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #05050a;
+            color: #fff;
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 5px #00f3ff, 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 5px #ff0055, 0 0 10px #ff0055, 0 0 20px #ff0055;
+        }
+        .neon-text-gold {
+            text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00, 0 0 20px #ffcc00;
+        }
+
+        .btn-arcade {
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-arcade:active {
+            transform: scale(0.95);
+        }
+        
+        .glass-panel {
+            background: rgba(10, 10, 26, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+        }
+
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+        }
+        .touch-btn:active {
+            background: rgba(0, 243, 255, 0.4);
+            border-color: #00f3ff;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center relative min-h-screen bg-slate-950 p-2 md:p-6 overflow-hidden">
+
+    <!-- MAIN CENTERED GAME FRAME CONTAINER -->
+    <div id="gameFrame" class="relative w-full max-w-4xl h-[95vh] md:h-[90vh] max-h-[900px] bg-slate-900/90 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,243,255,0.25)] border-2 border-cyan-500/40 flex flex-col justify-between">
+
+        <!-- GAME CANVAS -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+        <!-- UI OVERLAY -->
+        <div id="uiContainer" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+            
+            <!-- TOP HUD: BOSS HP & PLAYER STATS -->
+            <div class="w-full flex flex-col items-center gap-2">
+                <!-- Boss HP Bar -->
+                <div id="bossHud" class="w-full max-w-3xl flex flex-col items-center transition-all duration-500 opacity-0 transform -translate-y-4">
+                    <div class="w-full flex justify-between items-end mb-1 px-1">
+                        <span id="bossName" class="text-xs md:text-sm font-black tracking-widest text-yellow-400 uppercase neon-text-gold"><i class="fa-solid fa-dragon mr-1"></i> 沉思巨龍 · 奶龍 (MILK DRAGON)</span>
+                        <span id="bossPhaseText" class="text-xs font-bold text-yellow-400 bg-yellow-950/60 px-2 py-0.5 rounded border border-yellow-500/50">PHASE 1 / 3</span>
+                    </div>
+                    <div class="w-full h-5 md:h-6 bg-gray-950/80 rounded-full border border-yellow-500/50 p-0.5 relative overflow-hidden shadow-[0_0_15px_rgba(255,204,0,0.4)]">
+                        <div id="bossHpFill" class="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-amber-300 rounded-full w-full transition-all duration-200"></div>
+                        <div class="absolute top-0 bottom-0 left-[33.33%] w-0.5 bg-black/60 z-10"></div>
+                        <div class="absolute top-0 bottom-0 left-[66.66%] w-0.5 bg-black/60 z-10"></div>
+                    </div>
+                </div>
+
+                <!-- Top Header Stats -->
+                <div class="w-full flex justify-between items-start mt-2">
+                    <div class="flex flex-col">
+                        <div class="text-xs text-cyan-400/80 tracking-wider">SCORE</div>
+                        <div id="scoreText" class="text-2xl md:text-3xl font-black text-cyan-300 neon-text-cyan">000000</div>
+                    </div>
+                    
+                    <button id="pauseBtn" class="pointer-events-auto btn-arcade w-10 h-10 rounded-xl bg-gray-900/80 border border-cyan-500/50 text-cyan-400 flex items-center justify-center hover:bg-cyan-500/20 active:scale-90">
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BOTTOM HUD: PLAYER HP, MP & SKILLS -->
+            <div class="w-full max-w-xl mx-auto flex flex-col gap-2 mb-2">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 flex flex-col gap-1">
+                        <div class="flex justify-between text-xs font-bold text-orange-400">
+                            <span><i class="fa-solid fa-cow text-orange-400 mr-1"></i>橘牛 HP</span>
+                            <span id="hpText">100 / 100</span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-900/90 rounded-full border border-orange-500/30 p-0.5">
+                            <div id="playerHpFill" class="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full w-full transition-all duration-150"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col gap-1">
+                        <div class="flex justify-between text-xs font-bold text-yellow-300">
+                            <span><i class="fa-solid fa-bottle-droplet text-yellow-300 mr-1"></i>MILK MP</span>
+                            <span id="mpText">100 / 100</span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-900/90 rounded-full border border-yellow-500/30 p-0.5">
+                            <div id="playerMpFill" class="h-full bg-gradient-to-r from-yellow-400 to-amber-200 rounded-full w-full transition-all duration-150"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill CD Icons -->
+                <div class="hidden md:flex justify-center items-center gap-6 mt-1">
+                    <div class="flex items-center gap-2">
+                        <div id="cdDashKey" class="w-8 h-8 rounded-lg bg-gray-800 border border-cyan-400/50 flex items-center justify-center text-xs font-bold text-cyan-300 relative overflow-hidden">
+                            SHIFT
+                            <div id="cdDashMask" class="absolute inset-0 bg-black/70 h-0 transition-all"></div>
+                        </div>
+                        <span class="text-xs text-gray-400">衝刺 Dash</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="cdAttackKey" class="px-2 h-8 rounded-lg bg-gray-800 border border-orange-400/50 flex items-center justify-center text-xs font-bold text-orange-300">
+                            <i class="fa-solid fa-mouse mr-1"></i> 滑鼠左鍵 (鮮奶彈)
+                        </div>
+                        <span class="text-xs text-gray-400">普攻 Fire</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="cdSkillKey" class="w-8 h-8 rounded-lg bg-gray-800 border border-yellow-400/50 flex items-center justify-center text-xs font-bold text-yellow-300 relative overflow-hidden">
+                            K
+                            <div id="cdSkillMask" class="absolute inset-0 bg-black/70 h-0 transition-all"></div>
+                        </div>
+                        <span class="text-xs text-gray-400">牛來！必殺</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOUCH CONTROLS (MOBILE) -->
+        <div id="touchControls" class="absolute inset-0 z-20 pointer-events-none flex justify-between items-end p-4 md:hidden">
+            <div class="grid grid-cols-3 gap-1 w-36 h-36 pointer-events-auto">
+                <div></div>
+                <button id="btnUp" class="touch-btn rounded-xl flex items-center justify-center text-xl text-cyan-300 active:scale-95">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <div></div>
+                <button id="btnLeft" class="touch-btn rounded-xl flex items-center justify-center text-xl text-cyan-300 active:scale-95">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div></div>
+                <button id="btnRight" class="touch-btn rounded-xl flex items-center justify-center text-xl text-cyan-300 active:scale-95">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <div></div>
+                <button id="btnDown" class="touch-btn rounded-xl flex items-center justify-center text-xl text-cyan-300 active:scale-95">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div></div>
+            </div>
+
+            <div class="flex items-center gap-3 pointer-events-auto">
+                <button id="btnDash" class="touch-btn w-14 h-14 rounded-full flex flex-col items-center justify-center text-xs font-bold text-cyan-300 border-cyan-400/50 active:scale-95">
+                    <i class="fa-solid fa-wind text-lg"></i>
+                    <span class="text-[9px]">DASH</span>
+                </button>
+                <button id="btnSkill" class="touch-btn w-14 h-14 rounded-full flex flex-col items-center justify-center text-xs font-bold text-yellow-300 border-yellow-400/50 active:scale-95">
+                    <i class="fa-solid fa-bottle-droplet text-lg"></i>
+                    <span class="text-[9px]">MILK</span>
+                </button>
+                <button id="btnAttack" class="touch-btn w-18 h-18 rounded-full bg-orange-500/20 border-orange-400 flex flex-col items-center justify-center text-xs font-bold text-orange-200 active:scale-95">
+                    <i class="fa-solid fa-crosshairs text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- START SCREEN MODAL -->
+        <div id="startModal" class="absolute inset-0 z-30 flex items-center justify-center bg-black/85 backdrop-blur-md p-6">
+            <div class="glass-panel p-6 md:p-8 rounded-3xl max-w-md w-full text-center flex flex-col items-center border border-orange-500/40">
+                <div class="w-20 h-20 rounded-2xl bg-orange-500/20 border border-orange-400/60 flex items-center justify-center text-orange-400 text-4xl mb-4 shadow-[0_0_25px_rgba(255,140,0,0.4)]">
+                    <i class="fa-solid fa-cow"></i>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-black text-orange-400 neon-text-gold mb-1">橘小牛 vs 奶龍</h1>
+                <p class="text-xs text-cyan-300 font-bold mb-5 tracking-widest">MOO MOO COW BATTLE OVERLORD</p>
+
+                <div class="w-full bg-slate-900/80 p-4 rounded-xl text-left text-xs text-gray-300 space-y-2 mb-6 border border-slate-700">
+                    <div class="flex justify-between"><span><i class="fa-solid fa-keyboard text-orange-400 mr-2"></i>自由移動:</span> <span class="font-bold text-white">W / A / S / D 或 方向鍵</span></div>
+                    <div class="flex justify-between"><span><i class="fa-solid fa-mouse text-orange-400 mr-2"></i>滑鼠瞄準攻擊:</span> <span class="font-bold text-white">左鍵長按 (發射濃奶彈)</span></div>
+                    <div class="flex justify-between"><span><i class="fa-solid fa-wind text-cyan-400 mr-2"></i>衝刺閃避:</span> <span class="font-bold text-white">Shift (無敵時間)</span></div>
+                    <div class="flex justify-between"><span><i class="fa-solid fa-bottle-droplet text-yellow-300 mr-2"></i>牛來！必殺:</span> <span class="font-bold text-white">K (發射「牛來！」語錄彈幕)</span></div>
+                </div>
+
+                <button id="startGameBtn" class="pointer-events-auto btn-arcade w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 font-black text-slate-950 tracking-widest hover:brightness-110 shadow-[0_0_25px_rgba(255,165,0,0.5)]">
+                    哞！開始決戰 START GAME
+                </button>
+            </div>
+        </div>
+
+        <!-- UPGRADE SELECT MODAL -->
+        <div id="upgradeModal" class="absolute inset-0 z-40 hidden flex items-center justify-center bg-black/85 backdrop-blur-md p-6">
+            <div class="max-w-2xl w-full flex flex-col items-center text-center">
+                <span class="text-xs font-black tracking-widest text-yellow-400 bg-yellow-950/60 px-3 py-1 rounded-full border border-yellow-500/50 mb-2">STAGE COMPLETE</span>
+                <h2 class="text-3xl font-black text-white neon-text-gold mb-6">選擇橘小牛的進化天賦</h2>
+                <div id="upgradeOptionsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full"></div>
+            </div>
+        </div>
+
+        <!-- PAUSE MODAL -->
+        <div id="pauseModal" class="absolute inset-0 z-40 hidden flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
+            <div class="glass-panel p-8 rounded-3xl max-w-sm w-full text-center flex flex-col items-center">
+                <h2 class="text-3xl font-black text-cyan-300 neon-text-cyan mb-6">GAME PAUSED</h2>
+                <div class="flex flex-col gap-3 w-full">
+                    <button id="resumeBtn" class="pointer-events-auto btn-arcade py-3 rounded-xl bg-cyan-500 text-black font-bold hover:bg-cyan-400">繼續遊戲 RESUME</button>
+                    <button id="restartPauseBtn" class="pointer-events-auto btn-arcade py-3 rounded-xl bg-gray-800 text-white font-bold border border-gray-600 hover:bg-gray-700">重新開始 RESTART</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME OVER / VICTORY MODAL -->
+        <div id="endModal" class="absolute inset-0 z-40 hidden flex items-center justify-center bg-black/90 backdrop-blur-lg p-6">
+            <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center flex flex-col items-center border border-cyan-500/40">
+                <span id="endBadge" class="text-xs font-black px-3 py-1 rounded-full mb-3 uppercase tracking-widest bg-cyan-950 text-cyan-400 border border-cyan-500/40">VICTORY</span>
+                <h2 id="endTitle" class="text-3xl font-black mb-2 italic text-cyan-300 neon-text-cyan">MISSION ACCOMPLISHED</h2>
+                <p id="endSubtitle" class="text-xs text-gray-300 mb-6">恭喜！橘小牛成功擊敗了奶龍 Overlord！</p>
+
+                <div class="w-full bg-slate-900/80 p-4 rounded-xl flex justify-around items-center mb-6 border border-slate-800">
+                    <div>
+                        <div class="text-[10px] text-gray-400 uppercase">Final Score</div>
+                        <div id="endScore" class="text-2xl font-black text-cyan-300">000000</div>
+                    </div>
+                    <div class="h-8 w-px bg-slate-700"></div>
+                    <div>
+                        <div class="text-[10px] text-gray-400 uppercase">Time Survived</div>
+                        <div id="endTime" class="text-2xl font-black text-yellow-400">00:00</div>
+                    </div>
+                </div>
+
+                <button id="restartEndBtn" class="pointer-events-auto btn-arcade w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 font-black text-slate-950 tracking-widest hover:brightness-110 shadow-[0_0_20px_rgba(255,165,0,0.4)]">
+                    再次挑戰 REPLAY
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            playShoot() { this.playTone(480, 'sine', 0.09, 0.08); }
+            playLaser() { this.playTone(320, 'sawtooth', 0.22, 0.08); }
+            playMissile() { this.playTone(220, 'triangle', 0.3, 0.1); }
+            playExplosion(big = false) {
+                this.playTone(90, 'sawtooth', big ? 0.6 : 0.3, big ? 0.25 : 0.12);
+            }
+            playPhaseUp() { this.playTone(750, 'triangle', 0.4, 0.15); }
+        }
+        const soundFX = new SoundFX();
+
+        let canvas = document.getElementById('gameCanvas');
+        let ctx = canvas.getContext('2d');
+
+        let screenWidth = window.innerWidth;
+        let screenHeight = window.innerHeight;
+
+        const mousePos = { x: screenWidth / 2, y: screenHeight / 2 };
+
+        function resizeCanvas() {
+            const frame = document.getElementById('gameFrame');
+            if (frame) {
+                const rect = frame.getBoundingClientRect();
+                screenWidth = rect.width;
+                screenHeight = rect.height;
+            } else {
+                screenWidth = window.innerWidth;
+                screenHeight = window.innerHeight;
+            }
+            canvas.width = screenWidth;
+            canvas.height = screenHeight;
+            if (typeof player !== 'undefined' && player) {
+                player.x = Math.max(25, Math.min(screenWidth - 25, player.x));
+                player.y = Math.max(60, Math.min(screenHeight - 35, player.y));
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        let gameState = 'START';
+        let score = 0;
+        let gameTime = 0;
+        let lastTime = 0;
+        let screenShake = 0;
+
+        const keys = {};
+        const touchState = { up: false, down: false, left: false, right: false, dash: false, attack: false, skill: false };
+
+        window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) touchState.attack = true;
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0) touchState.attack = false;
+        });
+
+        function setupTouchBtn(id, key) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); touchState[key] = true; }, { passive: false });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); touchState[key] = false; }, { passive: false });
+        }
+
+        setupTouchBtn('btnUp', 'up');
+        setupTouchBtn('btnDown', 'down');
+        setupTouchBtn('btnLeft', 'left');
+        setupTouchBtn('btnRight', 'right');
+        setupTouchBtn('btnDash', 'dash');
+        setupTouchBtn('btnAttack', 'attack');
+        setupTouchBtn('btnSkill', 'skill');
+
+        class Player {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.width = 44;
+                this.height = 44;
+                this.x = screenWidth / 2;
+                this.y = screenHeight - 110;
+                this.maxHp = 100;
+                this.hp = 100;
+                this.maxMp = 100;
+                this.mp = 100;
+                this.speed = 380;
+                this.fireRate = 0.14;
+                this.fireTimer = 0;
+                this.bulletDamage = 28;
+                this.doubleShot = false;
+                this.lifesteal = 0;
+                this.mpRegen = 16;
+                this.rotation = 0;
+                
+                this.isDashing = false;
+                this.dashTimer = 0;
+                this.dashDuration = 0.22;
+                this.dashCooldown = 1.1;
+                this.dashCdTimer = 0;
+                
+                this.skillCd = 3.8;
+                this.skillCdTimer = 0;
+            }
+
+            update(dt) {
+                this.mp = Math.min(this.maxMp, this.mp + this.mpRegen * dt);
+
+                if (this.fireTimer > 0) this.fireTimer -= dt;
+                if (this.dashCdTimer > 0) this.dashCdTimer -= dt;
+                if (this.skillCdTimer > 0) this.skillCdTimer -= dt;
+
+                // Calculate angle aiming toward mouse
+                const dx = mousePos.x - this.x;
+                const dy = mousePos.y - this.y;
+                this.rotation = Math.atan2(dy, dx) + Math.PI / 2;
+
+                if (this.isDashing) {
+                    this.dashTimer -= dt;
+                    createDashParticle(this.x, this.y);
+                    if (this.dashTimer <= 0) {
+                        this.isDashing = false;
+                    }
+                }
+
+                let moveX = 0;
+                let moveY = 0;
+                if (keys['KeyA'] || keys['ArrowLeft'] || touchState.left) moveX -= 1;
+                if (keys['KeyD'] || keys['ArrowRight'] || touchState.right) moveX += 1;
+                if (keys['KeyW'] || keys['ArrowUp'] || touchState.up) moveY -= 1;
+                if (keys['KeyS'] || keys['ArrowDown'] || touchState.down) moveY += 1;
+
+                if (moveX !== 0 && moveY !== 0) {
+                    const len = Math.hypot(moveX, moveY);
+                    moveX /= len;
+                    moveY /= len;
+                }
+
+                const currentSpeed = this.isDashing ? this.speed * 2.2 : this.speed;
+                this.x += moveX * currentSpeed * dt;
+                this.y += moveY * currentSpeed * dt;
+
+                this.x = Math.max(25, Math.min(screenWidth - 25, this.x));
+                this.y = Math.max(60, Math.min(screenHeight - 35, this.y));
+
+                if ((keys['ShiftLeft'] || keys['ShiftRight'] || touchState.dash) && this.dashCdTimer <= 0 && !this.isDashing) {
+                    this.isDashing = true;
+                    this.dashTimer = this.dashDuration;
+                    this.dashCdTimer = this.dashCooldown;
+                    soundFX.playLaser();
+                }
+
+                // Primary shooting
+                if ((keys['KeyJ'] || keys['Space'] || touchState.attack) && this.fireTimer <= 0) {
+                    this.fireTimer = this.fireRate;
+                    soundFX.playShoot();
+
+                    const aimAngle = this.rotation - Math.PI / 2;
+                    const bSpeed = 880;
+                    const vx = Math.cos(aimAngle) * bSpeed;
+                    const vy = Math.sin(aimAngle) * bSpeed;
+
+                    if (this.doubleShot) {
+                        const perpX = -Math.sin(aimAngle) * 12;
+                        const perpY = Math.cos(aimAngle) * 12;
+                        bullets.push(new PlayerBullet(this.x + perpX, this.y + perpY, vx, vy, this.bulletDamage, aimAngle));
+                        bullets.push(new PlayerBullet(this.x - perpX, this.y - perpY, vx, vy, this.bulletDamage, aimAngle));
+                    } else {
+                        bullets.push(new PlayerBullet(this.x, this.y, vx, vy, this.bulletDamage, aimAngle));
+                    }
+                }
+
+                // Special Homing Quote Skill: 牛來！
+                if ((keys['KeyK'] || keys['KeyL'] || touchState.skill) && this.skillCdTimer <= 0 && this.mp >= 30) {
+                    this.mp -= 30;
+                    this.skillCdTimer = this.skillCd;
+                    soundFX.playMissile();
+                    const aimAngle = this.rotation - Math.PI / 2;
+                    
+                    // 發射 3 枚扇形散開並具備追蹤效果的「牛來！」語錄彈幕
+                    const angles = [aimAngle - 0.35, aimAngle, aimAngle + 0.35];
+                    angles.forEach(ang => {
+                        missiles.push(new HomingMissile(
+                            this.x, 
+                            this.y, 
+                            Math.cos(ang) * 350, 
+                            Math.sin(ang) * 350,
+                            '牛來！'
+                        ));
+                    });
+                }
+            }
+
+            takeDamage(amount) {
+                if (this.isDashing) return;
+                this.hp -= amount;
+                screenShake = 12;
+                soundFX.playExplosion(false);
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    triggerGameOver();
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                if (this.isDashing) {
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = '#ffaa00';
+                    ctx.strokeStyle = '#ffaa00';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // DRAW ORANGE COW (迷因橘牛)
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = 'rgba(235, 120, 20, 0.6)';
+
+                // Ears (耳朵)
+                ctx.fillStyle = '#d95b16';
+                ctx.beginPath();
+                ctx.ellipse(-23, -6, 9, 5, -Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(23, -6, 9, 5, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Head Base (頭部底色)
+                ctx.fillStyle = '#e86b23';
+                ctx.beginPath();
+                ctx.moveTo(0, -26);
+                ctx.bezierCurveTo(24, -26, 26, -10, 24, 12);
+                ctx.bezierCurveTo(20, 26, -20, 26, -24, 12);
+                ctx.bezierCurveTo(-26, -10, -24, -26, 0, -26);
+                ctx.closePath();
+                ctx.fill();
+
+                // Broad Muzzle / Snout (淺色大牛嘴/鼻孔區)
+                ctx.fillStyle = '#fce4c8';
+                ctx.beginPath();
+                ctx.ellipse(0, -13, 16, 11, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Nostrils (雙鼻孔)
+                ctx.fillStyle = '#b36d52';
+                ctx.beginPath();
+                ctx.ellipse(-5, -13, 2.5, 3.5, 0.1, 0, Math.PI * 2);
+                ctx.ellipse(5, -13, 2.5, 3.5, -0.1, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Lips/Mouth Line (厚嘴唇)
+                ctx.strokeStyle = '#d68e72';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(0, -8, 8, 0.15 * Math.PI, 0.85 * Math.PI);
+                ctx.stroke();
+
+                // Eyes (濃密雙眼)
+                ctx.fillStyle = '#3a2010';
+                ctx.beginPath();
+                ctx.ellipse(-10, 2, 4.5, 3.5, -0.1, 0, Math.PI * 2);
+                ctx.ellipse(10, 2, 4.5, 3.5, 0.1, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye Highlights (眼睛高光)
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-11, 1, 1.3, 0, Math.PI * 2);
+                ctx.arc(9, 1, 1.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Iconic Eyebrows (經典招牌深色濃眉)
+                ctx.fillStyle = '#2b170c';
+                ctx.beginPath();
+                ctx.ellipse(-10, 8, 6, 2, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(10, 8, 6, 2, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class Boss {
+            constructor() {
+                this.width = 140;
+                this.height = 140;
+                this.x = screenWidth / 2;
+                this.y = 170;
+                this.phase = 1;
+                this.maxHp = 12000;
+                this.hp = 12000;
+                this.active = true;
+
+                this.attackTimer = 0;
+                this.moveTimer = 0;
+                this.targetX = screenWidth / 2;
+                
+                this.laserWarning = false;
+                this.laserActive = false;
+                this.laserTimer = 0;
+
+                this.thinkAnimTimer = 0;
+            }
+
+            update(dt) {
+                if (!this.active) return;
+
+                this.attackTimer += dt;
+                this.moveTimer += dt;
+                this.thinkAnimTimer += dt * 3;
+
+                if (this.moveTimer > 2.2) {
+                    this.targetX = Math.random() * (screenWidth - 220) + 110;
+                    this.moveTimer = 0;
+                }
+                this.x += (this.targetX - this.x) * 1.8 * dt;
+
+                if (this.phase === 1) {
+                    this.updatePhase1(dt);
+                } else if (this.phase === 2) {
+                    this.updatePhase2(dt);
+                } else if (this.phase === 3) {
+                    this.updatePhase3(dt);
+                }
+            }
+
+            updatePhase1(dt) {
+                if (this.attackTimer > 1.3) {
+                    this.attackTimer = 0;
+                    if (Math.random() < 0.5) {
+                        this.fireQuestionMarkBullets(6, 260);
+                    } else {
+                        this.fireQuoteAttack();
+                    }
+                }
+            }
+
+            updatePhase2(dt) {
+                if (this.attackTimer > 1.8) {
+                    this.attackTimer = 0;
+                    const rand = Math.random();
+                    if (rand < 0.35) {
+                        this.fireQuoteAttack();
+                    } else if (rand < 0.65) {
+                        this.fireBobaRingBarrage(18, 280);
+                    } else if (rand < 0.85) {
+                        this.triggerLaserAttack();
+                    } else {
+                        this.spawnMinions();
+                    }
+                }
+
+                this.handleLaserLogic(dt);
+            }
+
+            updatePhase3(dt) {
+                if (this.attackTimer > 0.7) {
+                    this.attackTimer = 0;
+                    this.fireSpiralMilkBarrage();
+                    if (Math.random() < 0.4) {
+                        this.fireMilkHomingBoba();
+                    }
+                    if (Math.random() < 0.35) {
+                        this.fireQuoteAttack();
+                    }
+                }
+            }
+
+            fireQuoteAttack() {
+                soundFX.playLaser();
+                const quotes = [
+                    "你不能這麼對奶蛙呀",
+                    "被這麼對待奶蛙的小腦袋就會特別暈",
+                    "奶蛙就會生氣呀",
+                    "你欺負奶蛙的話，奶蛙會哭的"
+                ];
+                const text = quotes[Math.floor(Math.random() * quotes.length)];
+                
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                const speed = 230;
+                bossBullets.push(new BossBullet(
+                    this.x, 
+                    this.y + 30, 
+                    Math.cos(angle) * speed, 
+                    Math.sin(angle) * speed, 
+                    '#ff5599', 
+                    20, 
+                    false, 
+                    'quote', 
+                    text
+                ));
+            }
+
+            fireQuestionMarkBullets(count, speed) {
+                soundFX.playShoot();
+                const startAngle = Math.PI / 4;
+                const endAngle = (3 * Math.PI) / 4;
+                const step = (endAngle - startAngle) / (count - 1);
+
+                for (let i = 0; i < count; i++) {
+                    const angle = startAngle + step * i;
+                    bossBullets.push(new BossBullet(this.x, this.y + 40, Math.cos(angle) * speed, Math.sin(angle) * speed, '#ffea00', 8, false, '?'));
+                }
+            }
+
+            fireBobaRingBarrage(count, speed) {
+                soundFX.playLaser();
+                const step = (Math.PI * 2) / count;
+                for (let i = 0; i < count; i++) {
+                    const angle = i * step;
+                    bossBullets.push(new BossBullet(this.x, this.y + 30, Math.cos(angle) * speed, Math.sin(angle) * speed, '#332211', 8, false, 'boba'));
+                }
+            }
+
+            fireSpiralMilkBarrage() {
+                soundFX.playShoot();
+                this.letSpiralAngle = (this.letSpiralAngle || 0) + 0.35;
+                for (let i = 0; i < 4; i++) {
+                    const angle = this.letSpiralAngle + (i * Math.PI * 2) / 4;
+                    bossBullets.push(new BossBullet(this.x, this.y + 30, Math.cos(angle) * 340, Math.sin(angle) * 340, '#fff5be', 9, false, 'milk'));
+                }
+            }
+
+            fireMilkHomingBoba() {
+                soundFX.playMissile();
+                bossBullets.push(new BossBullet(this.x - 50, this.y, -140, 100, '#ff9900', 10, true, 'boba'));
+                bossBullets.push(new BossBullet(this.x + 50, this.y, 140, 100, '#ff9900', 10, true, 'boba'));
+            }
+
+            triggerLaserAttack() {
+                this.laserWarning = true;
+                this.laserTimer = 1.0;
+                soundFX.playLaser();
+            }
+
+            handleLaserLogic(dt) {
+                if (this.laserWarning) {
+                    this.laserTimer -= dt;
+                    if (this.laserTimer <= 0) {
+                        this.laserWarning = false;
+                        this.laserActive = true;
+                        this.laserTimer = 1.6;
+                    }
+                } else if (this.laserActive) {
+                    this.laserTimer -= dt;
+                    if (Math.abs(player.x - this.x) < 45 && player.y > this.y) {
+                        player.takeDamage(1.8);
+                    }
+                    if (this.laserTimer <= 0) {
+                        this.laserActive = false;
+                    }
+                }
+            }
+
+            spawnMinions() {
+                soundFX.playPhaseUp();
+                minions.push(new Minion(this.x - 110, this.y + 40));
+                minions.push(new Minion(this.x + 110, this.y + 40));
+            }
+
+            takeDamage(amount) {
+                this.hp -= amount;
+                floatingTexts.push(new FloatingText(this.x + (Math.random() - 0.5) * 80, this.y + (Math.random() - 0.5) * 50, Math.round(amount)));
+
+                if (this.phase === 1 && this.hp <= this.maxHp * 0.66) {
+                    this.phase = 2;
+                    soundFX.playPhaseUp();
+                    screenShake = 20;
+                    triggerUpgradeMenu();
+                } else if (this.phase === 2 && this.hp <= this.maxHp * 0.33) {
+                    this.phase = 3;
+                    soundFX.playPhaseUp();
+                    screenShake = 25;
+                    triggerUpgradeMenu();
+                }
+
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    this.active = false;
+                    triggerVictory();
+                }
+            }
+
+            draw(ctx) {
+                if (!this.active) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.phase === 3) {
+                    ctx.shadowBlur = 35;
+                    ctx.shadowColor = '#ffcc00';
+                } else {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = 'rgba(255, 230, 0, 0.5)';
+                }
+
+                ctx.fillStyle = this.phase === 3 ? '#ffe100' : '#fcdc12';
+                ctx.beginPath();
+                ctx.moveTo(-5, -65);
+                ctx.bezierCurveTo(45, -60, 65, -20, 60, 25);
+                ctx.bezierCurveTo(55, 60, 35, 65, 0, 65);
+                ctx.bezierCurveTo(-35, 65, -55, 55, -55, 20);
+                ctx.bezierCurveTo(-55, -25, -45, -60, -5, -65);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#fffae0';
+                ctx.beginPath();
+                ctx.moveTo(-20, 10);
+                ctx.bezierCurveTo(15, 10, 35, 25, 30, 58);
+                ctx.bezierCurveTo(10, 64, -20, 64, -30, 52);
+                ctx.bezierCurveTo(-35, 30, -25, 10, -20, 10);
+                ctx.closePath();
+                ctx.fill();
+
+                const handYOffset = Math.sin(this.thinkAnimTimer) * 2;
+                ctx.fillStyle = '#7a6a58';
+                ctx.beginPath();
+                ctx.moveTo(-25, 40);
+                ctx.bezierCurveTo(-35, 30, -32, 10, -22, 5 + handYOffset);
+                ctx.bezierCurveTo(-15, 0, -10, 8, -18, 12 + handYOffset);
+                ctx.bezierCurveTo(-22, 25, -15, 35, -20, 42);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#62d962';
+                ctx.beginPath();
+                ctx.arc(-22, -35, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0a0a';
+                ctx.beginPath();
+                ctx.arc(-25, -35, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#62d962';
+                ctx.beginPath();
+                ctx.arc(14, -35, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0a0a';
+                ctx.beginPath();
+                ctx.arc(14, -35, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-27, -38, 3, 0, Math.PI * 2);
+                ctx.arc(12, -38, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#4a3f31';
+                ctx.lineWidth = 3.5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(-16, -12);
+                ctx.lineTo(8, -10);
+                ctx.stroke();
+
+                if (this.phase === 1) {
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.font = '900 26px Orbitron';
+                    ctx.fillText('?', 28, -55 + Math.sin(this.thinkAnimTimer) * 4);
+                }
+
+                ctx.restore();
+
+                if (this.laserWarning) {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255, 230, 0, 0.6)';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([8, 8]);
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + 50);
+                    ctx.lineTo(this.x, screenHeight);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (this.laserActive) {
+                    ctx.save();
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = '#fff5be';
+                    ctx.fillStyle = '#fff5be';
+                    ctx.fillRect(this.x - 30, this.y + 50, 60, screenHeight);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x - 12, this.y + 50, 24, screenHeight);
+                    ctx.restore();
+                }
+            }
+        }
+
+        class BossBullet {
+            constructor(x, y, vx, vy, color = '#ffea00', radius = 6, isHoming = false, type = 'normal', text = '') {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.text = text;
+                this.type = type;
+                this.radius = type === 'quote' ? Math.max(22, text.length * 6.5) : radius;
+                this.isHoming = isHoming;
+                this.active = true;
+                this.damage = type === 'quote' ? 18 : 12;
+            }
+
+            update(dt) {
+                if (this.isHoming && player) {
+                    const dx = player.x - this.x;
+                    const dy = player.y - this.y;
+                    this.vx += dx * 1.5 * dt;
+                    this.vy += dy * 1.5 * dt;
+                }
+
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                if (this.y > screenHeight + 30 || this.x < -30 || this.x > screenWidth + 30) {
+                    this.active = false;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                if (this.type === 'quote') {
+                    ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
+                    const textWidth = ctx.measureText(this.text).width;
+                    const pw = textWidth + 24;
+                    const ph = 30;
+                    const px = this.x - pw / 2;
+                    const py = this.y - ph / 2;
+
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff3388';
+                    ctx.fillStyle = 'rgba(255, 40, 120, 0.9)';
+                    
+                    if (ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(px, py, pw, ph, 15);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(px, py, pw, ph);
+                    }
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#000000';
+                    ctx.fillText(this.text, this.x, this.y);
+                } else if (this.type === '?') {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ffea00';
+                    ctx.fillStyle = '#ffea00';
+                    ctx.font = '900 18px Orbitron';
+                    ctx.fillText('?', this.x - 5, this.y + 5);
+                } else if (this.type === 'boba') {
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = '#ffaa00';
+                    ctx.fillStyle = '#331a00';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.beginPath();
+                    ctx.arc(this.x - 2, this.y - 2, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = this.color;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Minion {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.hp = 130;
+                this.active = true;
+                this.shootTimer = 0;
+            }
+
+            update(dt) {
+                this.shootTimer += dt;
+                if (this.shootTimer > 1.8) {
+                    this.shootTimer = 0;
+                    bossBullets.push(new BossBullet(this.x, this.y, 0, 310, '#ffcc00', 5));
+                }
+                this.y += 12 * dt;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffe100';
+                
+                ctx.fillStyle = '#fcdc12';
+                ctx.beginPath();
+                ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#62d962';
+                ctx.beginPath();
+                ctx.arc(-6, -3, 4, 0, Math.PI * 2);
+                ctx.arc(6, -3, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class PlayerBullet {
+            constructor(x, y, vx, vy, damage, angle) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.damage = damage;
+                this.angle = angle;
+                this.radius = 6;
+                this.active = true;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                if (this.y < -30 || this.y > screenHeight + 30 || this.x < -30 || this.x > screenWidth + 30) {
+                    this.active = false;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ffffff';
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 8, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffd1a3';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class HomingMissile {
+            constructor(x, y, vx, vy, text = '牛來！') {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.text = text;
+                this.damage = 60;
+                this.speed = 720;
+                this.active = true;
+                this.life = 3.5;
+            }
+
+            update(dt) {
+                this.life -= dt;
+                if (this.life <= 0) {
+                    this.active = false;
+                    return;
+                }
+
+                let target = boss && boss.active ? boss : null;
+                if (target) {
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const angle = Math.atan2(dy, dx);
+                    
+                    this.vx += Math.cos(angle) * 1400 * dt;
+                    this.vy += Math.sin(angle) * 1400 * dt;
+
+                    const currentSpeed = Math.hypot(this.vx, this.vy);
+                    if (currentSpeed > this.speed) {
+                        this.vx = (this.vx / currentSpeed) * this.speed;
+                        this.vy = (this.vy / currentSpeed) * this.speed;
+                    }
+                }
+
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                if (Math.random() < 0.6) {
+                    particles.push(new Particle(this.x, this.y, '#ffaa00', (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.25, 4));
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                ctx.font = '900 18px "Noto Sans TC", Orbitron, sans-serif';
+                const textWidth = ctx.measureText(this.text).width;
+                const pw = textWidth + 24;
+                const ph = 32;
+                const px = -pw / 2;
+                const py = -ph / 2;
+
+                ctx.shadowBlur = 18;
+                ctx.shadowColor = '#ff8800';
+
+                const grad = ctx.createLinearGradient(px, py, px + pw, py + ph);
+                grad.addColorStop(0, '#ff6600');
+                grad.addColorStop(1, '#ffaa00');
+                ctx.fillStyle = grad;
+
+                if (ctx.roundRect) {
+                    ctx.beginPath();
+                    ctx.roundRect(px, py, pw, ph, 16);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(px, py, pw, ph);
+                }
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#000000';
+                ctx.fillText(this.text, 0, 1);
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, vx, vy, life = 0.5, size = 4) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = life;
+                this.maxLife = life;
+                this.size = size;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.life -= dt;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function createDashParticle(x, y) {
+            particles.push(new Particle(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, '#e86b23', 0, 0, 0.25, 4));
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color = '#ffcc00') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 0.6;
+                this.maxLife = 0.6;
+            }
+
+            update(dt) {
+                this.y -= 40 * dt;
+                this.life -= dt;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+                ctx.font = '900 16px Orbitron';
+                ctx.fillStyle = this.color;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        let player = new Player();
+        let boss = new Boss();
+        let bullets = [];
+        let missiles = [];
+        let bossBullets = [];
+        let minions = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        const ALL_UPGRADES = [
+            {
+                title: "濃奶速射",
+                desc: "大幅提高橘小牛子彈發射速度 (+30% 射速)",
+                icon: "fa-bolt",
+                apply: () => { player.fireRate *= 0.7; }
+            },
+            {
+                title: "雙重牛奶炮",
+                desc: "普通發射變為雙重平行發射，威力倍增",
+                icon: "fa-angles-up",
+                apply: () => { player.doubleShot = true; }
+            },
+            {
+                title: "強壯牛隻",
+                desc: "提高最大血量 +30，並立即恢復滿血",
+                icon: "fa-shield-halved",
+                apply: () => { player.maxHp += 30; player.hp = player.maxHp; }
+            },
+            {
+                title: "奶瓶快充",
+                desc: "能量 (MP) 恢復速度加倍，鮮奶導彈更頻繁",
+                icon: "fa-battery-charging",
+                apply: () => { player.mpRegen *= 1.8; }
+            },
+            {
+                title: "重裝哞哞彈",
+                desc: "增加基礎牛奶子彈傷害 +35%",
+                icon: "fa-explosion",
+                apply: () => { player.bulletDamage *= 1.35; }
+            },
+            {
+                title: "鮮奶吸血",
+                desc: "造成傷害時有概率為橘小牛修復血量",
+                icon: "fa-heart-pulse",
+                apply: () => { player.lifesteal += 0.05; }
+            }
+        ];
+
+        function triggerUpgradeMenu() {
+            gameState = 'UPGRADE';
+            const container = document.getElementById('upgradeOptionsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const shuffled = [...ALL_UPGRADES].sort(() => 0.5 - Math.random()).slice(0, 3);
+
+            shuffled.forEach(upg => {
+                const card = document.createElement('div');
+                card.className = "btn-arcade glass-panel p-5 rounded-2xl flex flex-col items-center justify-between text-center cursor-pointer border border-orange-500/30 hover:border-yellow-400 hover:shadow-[0_0_25px_rgba(255,165,0,0.3)] transition-all";
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-400/40 flex items-center justify-center text-orange-400 text-xl mb-3">
+                        <i class="fa-solid ${upg.icon}"></i>
+                    </div>
+                    <div class="font-bold text-white mb-1 text-base">${upg.title}</div>
+                    <div class="text-xs text-gray-300 leading-relaxed">${upg.desc}</div>
+                `;
+                card.onclick = () => {
+                    upg.apply();
+                    document.getElementById('upgradeModal')?.classList.add('hidden');
+                    gameState = 'PLAYING';
+                };
+                container.appendChild(card);
+            });
+
+            document.getElementById('upgradeModal')?.classList.remove('hidden');
+        }
+
+        function checkCollisions() {
+            bullets.forEach(b => {
+                if (!b.active || !boss.active) return;
+                const dist = Math.hypot(b.x - boss.x, b.y - boss.y);
+                if (dist < 60) {
+                    b.active = false;
+                    boss.takeDamage(b.damage);
+                    score += 50;
+
+                    if (player.lifesteal > 0 && Math.random() < player.lifesteal) {
+                        player.hp = Math.min(player.maxHp, player.hp + 2);
+                    }
+
+                    for (let i = 0; i < 3; i++) {
+                        particles.push(new Particle(b.x, b.y, '#ffffff', (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, 0.2));
+                    }
+                }
+            });
+
+            missiles.forEach(m => {
+                if (!m.active || !boss.active) return;
+                const dist = Math.hypot(m.x - boss.x, m.y - boss.y);
+                if (dist < 60) {
+                    m.active = false;
+                    boss.takeDamage(m.damage);
+                    score += 150;
+                    soundFX.playExplosion(false);
+
+                    for (let i = 0; i < 15; i++) {
+                        particles.push(new Particle(m.x, m.y, '#ffe082', (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, 0.4, 5));
+                    }
+                }
+            });
+
+            bullets.forEach(b => {
+                minions.forEach(m => {
+                    if (!b.active || !m.active) return;
+                    if (Math.hypot(b.x - m.x, b.y - m.y) < 20) {
+                        b.active = false;
+                        m.hp -= b.damage;
+                        if (m.hp <= 0) {
+                            m.active = false;
+                            score += 300;
+                            soundFX.playExplosion(false);
+                        }
+                    }
+                });
+            });
+
+            bossBullets.forEach(bb => {
+                if (!bb.active) return;
+                const dist = Math.hypot(bb.x - player.x, bb.y - player.y);
+                if (dist < bb.radius + 15) {
+                    bb.active = false;
+                    player.takeDamage(bb.damage);
+                }
+            });
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            if (gameState === 'PLAYING') {
+                gameTime += dt;
+                update(dt);
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            player.update(dt);
+            boss.update(dt);
+
+            bullets.forEach(b => b.update(dt));
+            missiles.forEach(m => m.update(dt));
+            bossBullets.forEach(bb => bb.update(dt));
+            minions.forEach(m => m.update(dt));
+            particles.forEach(p => p.update(dt));
+            floatingTexts.forEach(ft => ft.update(dt));
+
+            bullets = bullets.filter(b => b.active);
+            missiles = missiles.filter(m => m.active);
+            bossBullets = bossBullets.filter(bb => bb.active);
+            minions = minions.filter(m => m.active);
+            particles = particles.filter(p => p.life > 0);
+            floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+
+            checkCollisions();
+            updateHUD();
+
+            if (screenShake > 0) screenShake -= dt * 30;
+        }
+
+        function render() {
+            ctx.save();
+
+            if (screenShake > 0) {
+                const rx = (Math.random() - 0.5) * screenShake;
+                const ry = (Math.random() - 0.5) * screenShake;
+                ctx.translate(rx, ry);
+            }
+
+            ctx.fillStyle = '#05050a';
+            ctx.fillRect(0, 0, screenWidth, screenHeight);
+
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            const offsetY = (gameTime * 40) % gridSize;
+
+            for (let x = 0; x < screenWidth; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, screenHeight);
+                ctx.stroke();
+            }
+            for (let y = offsetY; y < screenHeight; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(screenWidth, y);
+                ctx.stroke();
+            }
+
+            boss.draw(ctx);
+            minions.forEach(m => m.draw(ctx));
+            player.draw(ctx);
+            bullets.forEach(b => b.draw(ctx));
+            missiles.forEach(m => m.draw(ctx));
+            bossBullets.forEach(bb => bb.draw(ctx));
+            particles.forEach(p => p.draw(ctx));
+            floatingTexts.forEach(ft => ft.draw(ctx));
+
+            ctx.restore();
+        }
+
+        function updateHUD() {
+            const scoreEl = document.getElementById('scoreText');
+            if (scoreEl) scoreEl.innerText = String(score).padStart(6, '0');
+            
+            const hpEl = document.getElementById('hpText');
+            if (hpEl) hpEl.innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+            
+            const playerHpFill = document.getElementById('playerHpFill');
+            if (playerHpFill) playerHpFill.style.width = `${(player.hp / player.maxHp) * 100}%`;
+
+            const mpEl = document.getElementById('mpText');
+            if (mpEl) mpEl.innerText = `${Math.ceil(player.mp)} / ${player.maxMp}`;
+
+            const playerMpFill = document.getElementById('playerMpFill');
+            if (playerMpFill) playerMpFill.style.width = `${(player.mp / player.maxMp) * 100}%`;
+
+            if (boss.active) {
+                document.getElementById('bossHud')?.classList.remove('opacity-0', '-translate-y-4');
+                const bossHpFill = document.getElementById('bossHpFill');
+                if (bossHpFill) bossHpFill.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+                const bossPhaseText = document.getElementById('bossPhaseText');
+                if (bossPhaseText) bossPhaseText.innerText = `PHASE ${boss.phase} / 3`;
+            }
+
+            const dashCdRatio = player.dashCdTimer > 0 ? (player.dashCdTimer / player.dashCooldown) : 0;
+            const cdDashMask = document.getElementById('cdDashMask');
+            if (cdDashMask) cdDashMask.style.height = `${dashCdRatio * 100}%`;
+
+            const skillCdRatio = player.skillCdTimer > 0 ? (player.skillCdTimer / player.skillCd) : 0;
+            const cdSkillMask = document.getElementById('cdSkillMask');
+            if (cdSkillMask) cdSkillMask.style.height = `${skillCdRatio * 100}%`;
+        }
+
+        function startGame() {
+            soundFX.init();
+            resizeCanvas();
+            score = 0;
+            gameTime = 0;
+            player.reset();
+            boss = new Boss();
+            bullets = [];
+            missiles = [];
+            bossBullets = [];
+            minions = [];
+            particles = [];
+            floatingTexts = [];
+
+            document.getElementById('startModal')?.classList.add('hidden');
+            document.getElementById('endModal')?.classList.add('hidden');
+            document.getElementById('pauseModal')?.classList.add('hidden');
+            gameState = 'PLAYING';
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            soundFX.playExplosion(true);
+            const endBadge = document.getElementById('endBadge');
+            if (endBadge) {
+                endBadge.innerText = 'GAME OVER';
+                endBadge.className = 'text-xs font-black px-3 py-1 rounded-full mb-3 uppercase tracking-widest bg-red-950 text-red-400 border border-red-500/40';
+            }
+            const endTitle = document.getElementById('endTitle');
+            if (endTitle) {
+                endTitle.innerText = 'MISSION FAILED';
+                endTitle.className = 'text-4xl font-black mb-2 italic text-red-500 neon-text-pink';
+            }
+            const endSubtitle = document.getElementById('endSubtitle');
+            if (endSubtitle) endSubtitle.innerText = '橘小牛被擊倒了，奶龍 Overlord 依舊掌控一切...';
+            
+            const endScore = document.getElementById('endScore');
+            if (endScore) endScore.innerText = String(score).padStart(6, '0');
+            
+            const endTime = document.getElementById('endTime');
+            if (endTime) endTime.innerText = formatTime(gameTime);
+            
+            document.getElementById('endModal')?.classList.remove('hidden');
+        }
+
+        function triggerVictory() {
+            gameState = 'VICTORY';
+            soundFX.playExplosion(true);
+            const endBadge = document.getElementById('endBadge');
+            if (endBadge) {
+                endBadge.innerText = 'VICTORY';
+                endBadge.className = 'text-xs font-black px-3 py-1 rounded-full mb-3 uppercase tracking-widest bg-cyan-950 text-cyan-400 border border-cyan-500/40';
+            }
+            const endTitle = document.getElementById('endTitle');
+            if (endTitle) {
+                endTitle.innerText = 'MISSION ACCOMPLISHED';
+                endTitle.className = 'text-4xl font-black mb-2 italic text-cyan-300 neon-text-cyan';
+            }
+            const endSubtitle = document.getElementById('endSubtitle');
+            if (endSubtitle) endSubtitle.innerText = '恭喜！橘小牛成功擊敗了奶龍 Overlord！';
+            
+            const endScore = document.getElementById('endScore');
+            if (endScore) endScore.innerText = String(score).padStart(6, '0');
+
+            const endTime = document.getElementById('endTime');
+            if (endTime) endTime.innerText = formatTime(gameTime);
+
+            document.getElementById('endModal')?.classList.remove('hidden');
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function bindClick(id, handler) {
+            const el = document.getElementById(id);
+            if (el) el.onclick = handler;
+        }
+
+        bindClick('startGameBtn', startGame);
+        bindClick('restartEndBtn', startGame);
+        bindClick('restartPauseBtn', startGame);
+
+        bindClick('pauseBtn', () => {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pauseModal')?.classList.remove('hidden');
+            }
+        });
+
+        bindClick('resumeBtn', () => {
+            if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('pauseModal')?.classList.add('hidden');
+            }
+        });
+
+        window.onload = () => {
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

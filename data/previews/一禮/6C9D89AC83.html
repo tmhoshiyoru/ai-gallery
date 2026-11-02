@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記憶大冒險 - 40張牌挑戰</title>
+    <!-- 引入圓潤可愛字體 Sniglet 與 Fredoka -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Sniglet:wght@800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            /* 改為優雅藍綠色漸層背景 */
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            background: linear-gradient(135deg, #70e1f5 0%, #ffd194 100%);
+            background: linear-gradient(135deg, #81e6d9 0%, #90cdf4 50%, #b2f5ea 100%);
+            color: #2c5282;
+            font-family: 'Fredoka', cursive, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 藍綠色清爽風格容器 */
+        .kawaii-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 6px solid #ffffff;
+            box-shadow: 0 20px 40px rgba(72, 187, 120, 0.25), inset 0 0 15px rgba(255, 255, 255, 0.9);
+            border-radius: 32px;
+        }
+
+        /* 藍綠色按鈕 */
+        .kawaii-btn {
+            background: linear-gradient(180deg, #4fd1c5 0%, #319795 100%);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(44, 122, 123, 0.5);
+            border: 3px solid #fff;
+            box-shadow: 0 6px 0px #234e52, 0 10px 15px rgba(49, 151, 149, 0.3);
+            border-radius: 20px;
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-family: 'Sniglet', cursive;
+        }
+        .kawaii-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0px #234e52, 0 12px 20px rgba(49, 151, 149, 0.4);
+            filter: brightness(1.05);
+        }
+        .kawaii-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0px #234e52, 0 4px 6px rgba(49, 151, 149, 0.2);
+        }
+
+        /* 3D 翻牌 3D-Flip Container */
+        .card-perspective {
+            perspective: 1000px;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* 配對成功消失動畫 */
+        .card-inner.matched {
+            transform: rotateY(180deg) scale(1.15);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease-out, visibility 0.5s ease-out;
+            filter: drop-shadow(0 0 15px #38b2ac);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 12px rgba(149, 157, 165, 0.15);
+            border: 3px solid #fff;
+        }
+
+        /* 卡牌背面藍綠風格 */
+        .card-back {
+            background: linear-gradient(135deg, #81e6d9 0%, #4fd1c5 50%, #319795 100%);
+            background-size: 200% 200%;
+        }
+        .card-back:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 18px rgba(79, 209, 197, 0.4);
+            border-color: #e6fffa;
+        }
+
+        /* 卡牌正面風格 */
+        .card-front {
+            background: #ffffff;
+            transform: rotateY(180deg);
+            box-shadow: inset 0 0 10px rgba(79, 209, 197, 0.2);
+        }
+
+        /* 脈動亮光提示 */
+        @keyframes floatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .float-bounce {
+            animation: floatBounce 2s infinite ease-in-out;
+        }
+
+        /* 背景飄浮雲朵 */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 貓爪游標樣式 transition 優化 */
+        #catPaw {
+            position: absolute;
+            z-index: 50;
+            pointer-events: none;
+            user-select: none;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));
+        }
+        /* 預覽模式時開啟平滑移動 transition */
+        #catPaw.preview-mode {
+            transition: left 0.8s ease-in-out, top 0.8s ease-in-out, width 0.4s ease, height 0.4s ease, transform 0.8s ease;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        /* 滑鼠跟隨模式時縮短 latency */
+        #catPaw.cursor-mode {
+            transition: width 0.4s ease, height 0.4s ease, transform 0.1s ease-out;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 relative">
+
+    <div class="cloud w-32 h-12 top-10 left-10 opacity-70 float-bounce"></div>
+    <div class="cloud w-48 h-16 bottom-12 right-12 opacity-60 float-bounce" style="animation-delay: 1s;"></div>
+
+    <!-- 主遊戲區域外殼 -->
+    <div class="kawaii-container flex flex-col items-center p-3 sm:p-6 w-full max-w-5xl relative z-10 my-auto">
+        
+        <!-- 頂部標題與狀態資訊欄 -->
+        <div class="w-full flex flex-wrap justify-between items-center text-xs sm:text-base mb-2 pb-2.5 border-b-2 border-teal-200/80 text-teal-800 font-bold gap-2">
+            <div class="flex items-center gap-1.5 bg-teal-100/90 px-3 py-1 rounded-full">
+                <span>🍀 配對:</span>
+                <span id="pairsText" class="text-teal-600">0/20</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-cyan-100/90 px-3 py-1 rounded-full">
+                <span>✨ 步數:</span>
+                <span id="movesText" class="text-cyan-600">0</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-amber-100/90 px-3 py-1 rounded-full">
+                <span>⏱️ 時間:</span>
+                <span id="timerText" class="text-amber-600">00:00</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-emerald-100/90 px-3 py-1 rounded-full">
+                <span>🔥 連擊:</span>
+                <span id="comboText" class="text-emerald-600">x0</span>
+            </div>
+        </div>
+
+        <!-- 5秒預覽記憶提示橫幅 -->
+        <div id="previewBanner" class="hidden w-full py-2 mb-2 bg-gradient-to-r from-teal-200 via-cyan-100 to-teal-200 border-2 border-white rounded-2xl text-center z-30 shadow-sm">
+            <span class="text-xs sm:text-base text-teal-800 font-bold float-bounce inline-block">
+                🧠 40張牌超強記憶時間！倒數：<span id="previewCountdown" class="text-teal-600 text-lg sm:text-2xl font-extrabold mx-1">5</span> 秒
+            </span>
+        </div>
+
+        <!-- 粒子特效層 Canvas -->
+        <canvas id="particleCanvas" class="absolute inset-0 pointer-events-none z-20 w-full h-full rounded-3xl"></canvas>
+
+        <!-- 貓爪 (動態調整大小與跟隨滑鼠) -->
+        <div id="catPaw" class="preview-mode" style="top: 20%; left: 40%; width: 150px; height: 150px;" title="點擊貓爪！">
+            <svg viewBox="0 0 100 100" class="w-full h-full">
+                <!-- 掌心肉墊 (改為蒂芙尼綠/藍綠肉墊) -->
+                <ellipse cx="50" cy="62" rx="28" ry="22" fill="#4fd1c5" />
+                <!-- 趾墊 -->
+                <circle cx="22" cy="32" r="10" fill="#4fd1c5" />
+                <circle cx="41" cy="22" r="11" fill="#4fd1c5" />
+                <circle cx="61" cy="22" r="11" fill="#4fd1c5" />
+                <circle cx="80" cy="32" r="10" fill="#4fd1c5" />
+                <!-- 手掌外框邊緣 -->
+                <path d="M 10 60 Q 20 95 50 95 Q 80 95 90 60 Q 95 40 85 30 A 12 12 0 0 0 68 28 A 12 12 0 0 0 50 25 A 12 12 0 0 0 32 28 A 12 12 0 0 0 15 30 Q 5 40 10 60 Z" fill="#ffffff" style="z-index:-1;" />
+                <ellipse cx="50" cy="62" rx="24" ry="18" fill="#319795" opacity="0.85" />
+                <circle cx="22" cy="32" r="8" fill="#319795" opacity="0.85" />
+                <circle cx="41" cy="22" r="9" fill="#319795" opacity="0.85" />
+                <circle cx="61" cy="22" r="9" fill="#319795" opacity="0.85" />
+                <circle cx="80" cy="32" r="8" fill="#319795" opacity="0.85" />
+            </svg>
+        </div>
+
+        <div id="cardGrid" class="grid grid-cols-5 sm:grid-cols-8 gap-2 sm:gap-3 w-full my-1.5 relative z-10">
+            <!-- 卡牌由 JS 動態生成 40 張 -->
+        </div>
+
+        <!-- 底部選單控制區 -->
+        <div class="w-full flex flex-wrap justify-between items-center mt-3 pt-2.5 border-t-2 border-teal-200/80 text-xs sm:text-sm font-semibold text-teal-700 gap-2">
+            <div class="flex items-center gap-4">
+                <button id="soundToggleBtn" class="hover:text-teal-900 transition flex items-center gap-1.5 bg-white/80 px-3 py-1 rounded-full shadow-sm">
+                    🔊 <span id="soundStatus">音效: 開</span>
+                </button>
+            </div>
+            <button id="restartBtn" class="kawaii-btn px-4 py-2 text-xs sm:text-sm">
+                重新開始 (RESET)
+            </button>
+        </div>
+
+        <!-- 遊戲開始 / 勝利結算 Modal 遮罩 -->
+        <div id="overlayUI" class="absolute inset-0 bg-white/95 backdrop-blur-md rounded-3xl flex flex-col justify-center items-center text-center p-6 z-40">
+            <div class="text-5xl mb-2 float-bounce">🐾✨</div>
+            <h1 id="uiTitle" class="text-3xl sm:text-4xl font-extrabold text-teal-600 mb-2 tracking-wide font-['Sniglet'] drop-shadow-sm">
+                記憶大冒險
+            </h1>
+            <p id="uiSubtitle" class="text-sm sm:text-base text-cyan-600 mb-6 font-semibold">
+                全新 40 張牌大挑戰！開局 5 秒預覽，大貓爪遮擋考驗記憶！
+            </p>
+            <div id="statsSummary" class="hidden text-left text-sm sm:text-base text-teal-800 space-y-2 mb-6 bg-teal-50/90 p-5 rounded-2xl border-2 border-teal-200 w-full max-w-md shadow-inner">
+                <p>⏱️ 通關花費時間：<span id="finalTime" class="text-amber-500 font-bold">00:00</span></p>
+                <p>🎯 翻牌總步數：<span id="finalMoves" class="text-cyan-600 font-bold">0</span></p>
+                <p>🔥 最高連擊數：<span id="finalCombo" class="text-emerald-600 font-bold">0</span></p>
+                <p>✨ 記憶準確率：<span id="finalAccuracy" class="text-teal-600 font-bold">100%</span></p>
+            </div>
+            <button id="startBtn" class="kawaii-btn px-10 py-4 text-lg font-bold">
+                開 始 討 伐 🌿
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 可愛風音效產生器 (Web Audio API)
+         */
+        class KawaiiSoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playTone(freq, type, duration, startVol = 0.12, endVol = 0.001) {
+                if (!this.enabled) return;
+                this.init();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(Math.max(endVol, 0.0001), this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            flip() {
+                if (!this.enabled) return;
+                this.playTone(600, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(850, 'sine', 0.08, 0.1), 30);
+            }
+
+            match(combo = 1) {
+                if (!this.enabled) return;
+                const baseFreq = 523.25 + (combo * 40);
+                const notes = [baseFreq, baseFreq * 1.25, baseFreq * 1.5, baseFreq * 2];
+                notes.forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sine', 0.2, 0.15), i * 70);
+                });
+            }
+
+            mismatch() {
+                if (!this.enabled) return;
+                this.playTone(320, 'triangle', 0.1, 0.1);
+                setTimeout(() => this.playTone(280, 'triangle', 0.15, 0.1), 80);
+            }
+
+            tick() {
+                if (!this.enabled) return;
+                this.playTone(700, 'sine', 0.05, 0.08);
+            }
+
+            go() {
+                if (!this.enabled) return;
+                this.playTone(523.25, 'sine', 0.1, 0.15);
+                setTimeout(() => this.playTone(659.25, 'sine', 0.1, 0.15), 80);
+                setTimeout(() => this.playTone(783.99, 'sine', 0.2, 0.2), 160);
+            }
+
+            win() {
+                if (!this.enabled) return;
+                const melody = [523.25, 659.25, 783.99, 1046.50, 880, 1046.50];
+                melody.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'triangle', 0.25, 0.2), i * 110);
+                });
+            }
+        }
+
+        const sfx = new KawaiiSoundFX();
+
+        /**
+         * 20 種可愛風格圖案 Canvas 繪製器 (對應 40 張牌，20 對)
+         */
+        const KAWAII_ICONS = [
+            // 1. 可愛小熊
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#d7ccc8';
+                ctx.beginPath(); ctx.arc(c - 14, c - 12, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 14, c - 12, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#efebe9';
+                ctx.beginPath(); ctx.arc(c, c + 2, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c + 6, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#5d4037';
+                ctx.beginPath(); ctx.arc(c, c + 3, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c - 7, c - 1, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 7, c - 1, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.arc(c - 11, c + 5, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 11, c + 5, 3, 0, Math.PI * 2); ctx.fill();
+            },
+            // 2. 貓咪粉紅肉墊
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.ellipse(c, c + 5, 12, 9, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c - 12, c - 8, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c - 4, c - 12, 4.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 4, c - 12, 4.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 12, c - 8, 4, 0, Math.PI * 2); ctx.fill();
+            },
+            // 3. 長耳兔兔
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(c - 8, c - 14, 5, 12, -0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(c + 8, c - 14, 5, 12, 0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.ellipse(c - 8, c - 14, 2.5, 7, -0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(c + 8, c - 14, 2.5, 7, 0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c + 4, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#424242';
+                ctx.beginPath(); ctx.arc(c - 6, c + 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 6, c + 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff4081';
+                ctx.beginPath(); ctx.arc(c, c + 6, 2, 0, Math.PI * 2); ctx.fill();
+            },
+            // 4. 珍珠奶茶
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffe0b2';
+                ctx.beginPath(); ctx.roundRect(c - 12, c - 10, 24, 26, 6); ctx.fill();
+                ctx.fillStyle = '#b2ebf2';
+                ctx.beginPath(); ctx.roundRect(c - 14, c - 14, 28, 6, 3); ctx.fill();
+                ctx.fillStyle = '#ff4081';
+                ctx.fillRect(c - 2, c - 20, 4, 10);
+                ctx.fillStyle = '#4e342e';
+                ctx.beginPath(); ctx.arc(c - 6, c + 8, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c, c + 10, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 6, c + 7, 2.5, 0, Math.PI * 2); ctx.fill();
+            },
+            // 5. 草莓蛋糕
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#fff8e1';
+                ctx.beginPath(); ctx.fillRect(c - 16, c - 2, 32, 16); ctx.fill();
+                ctx.fillStyle = '#ff4081';
+                ctx.fillRect(c - 16, c + 4, 32, 4);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c - 10, c - 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c, c - 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 10, c - 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff1744';
+                ctx.beginPath(); ctx.arc(c, c - 10, 7, 0, Math.PI * 2); ctx.fill();
+            },
+            // 6. 繽紛甜甜圈
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffcc80';
+                ctx.beginPath(); ctx.arc(c, c, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.arc(c, c, 13, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffff00'; ctx.fillRect(c - 7, c - 5, 3, 2);
+                ctx.fillStyle = '#00e676'; ctx.fillRect(c + 4, c - 6, 3, 2);
+                ctx.fillStyle = '#00b0ff'; ctx.fillRect(c + 3, c + 5, 2, 3);
+            },
+            // 7. 夢幻彩虹
+            (ctx, size) => {
+                const c = size / 2;
+                const colors = ['#ff5252', '#ff4081', '#ffd700', '#69f0ae', '#40c4ff'];
+                colors.forEach((col, i) => {
+                    ctx.strokeStyle = col;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(c, c + 8, 18 - (i * 3), Math.PI, 0);
+                    ctx.stroke();
+                });
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c - 16, c + 8, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 16, c + 8, 6, 0, Math.PI * 2); ctx.fill();
+            },
+            // 8. 胖胖小鳥
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#80d8ff';
+                ctx.beginPath(); ctx.arc(c, c + 2, 15, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c + 6, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#37474f';
+                ctx.beginPath(); ctx.arc(c + 5, c - 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff9100';
+                ctx.beginPath(); ctx.arc(c + 12, c, 3, 0, Math.PI * 2); ctx.fill();
+            },
+            // 9. 粉紅愛心
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ff4081';
+                ctx.beginPath();
+                ctx.moveTo(c, c + 14);
+                ctx.bezierCurveTo(c - 20, c, c - 16, c - 16, c, c - 6);
+                ctx.bezierCurveTo(c + 16, c - 16, c + 20, c, c, c + 14);
+                ctx.fill();
+            },
+            // 10. 可愛飯糰
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(c, c - 14);
+                ctx.lineTo(c + 16, c + 12);
+                ctx.lineTo(c - 16, c + 12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#263238';
+                ctx.fillRect(c - 6, c + 2, 12, 10);
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.arc(c - 6, c + 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 6, c + 2, 2, 0, Math.PI * 2); ctx.fill();
+            },
+            // 11. 閃亮星星
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffd600';
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 16 + c, -Math.sin((18 + i * 72) * Math.PI / 180) * 16 + c);
+                    ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 7 + c, -Math.sin((54 + i * 72) * Math.PI / 180) * 7 + c);
+                }
+                ctx.closePath();
+                ctx.fill();
+            },
+            // 12. 貓爪冰棒
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffe0b2';
+                ctx.fillRect(c - 3, c + 6, 6, 12);
+                ctx.fillStyle = '#a7ffeb';
+                ctx.beginPath(); ctx.roundRect(c - 10, c - 14, 20, 22, 8); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c - 3, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c - 5, c - 9, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c, c - 11, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 5, c - 9, 2, 0, Math.PI * 2); ctx.fill();
+            },
+            // 13. 可愛仙人掌
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffab91';
+                ctx.beginPath(); ctx.moveTo(c - 10, c + 2); ctx.lineTo(c + 10, c + 2); ctx.lineTo(c + 8, c + 14); ctx.lineTo(c - 8, c + 14); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#69f0ae';
+                ctx.beginPath(); ctx.arc(c, c - 4, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff4081';
+                ctx.beginPath(); ctx.arc(c, c - 14, 3, 0, Math.PI * 2); ctx.fill();
+            },
+            // 14. 富士山
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#64b5f6';
+                ctx.beginPath(); ctx.moveTo(c, c - 14); ctx.lineTo(c + 18, c + 12); ctx.lineTo(c - 18, c + 12); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.moveTo(c, c - 14); ctx.lineTo(c + 7, c - 4); ctx.lineTo(c + 3, c - 2); ctx.lineTo(c, c - 5); ctx.lineTo(c - 3, c - 2); ctx.lineTo(c - 7, c - 4); ctx.closePath(); ctx.fill();
+            },
+            // 15. 黃色小雞
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffee58';
+                ctx.beginPath(); ctx.ellipse(c, c + 2, 14, 16, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#37474f';
+                ctx.beginPath(); ctx.arc(c - 5, c - 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 5, c - 2, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff9100';
+                ctx.beginPath(); ctx.arc(c, c + 2, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.arc(c - 8, c + 3, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(c + 8, c + 3, 2.5, 0, Math.PI * 2); ctx.fill();
+            },
+            // 16. 兔子珍珠布丁 (新增)
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#fff9c4';
+                ctx.beginPath(); ctx.ellipse(c, c + 4, 15, 10, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#8d6e63';
+                ctx.beginPath(); ctx.ellipse(c, c - 3, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff4081';
+                ctx.beginPath(); ctx.arc(c, c - 7, 3, 0, Math.PI * 2); ctx.fill();
+            },
+            // 17. 夢幻水母 (新增)
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#e1bee7';
+                ctx.beginPath(); ctx.arc(c, c - 4, 14, Math.PI, 0); ctx.fill();
+                ctx.strokeStyle = '#ba68c8'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(c - 8, c - 4); ctx.lineTo(c - 8, c + 10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(c, c - 4); ctx.lineTo(c, c + 12); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(c + 8, c - 4); ctx.lineTo(c + 8, c + 10); ctx.stroke();
+            },
+            // 18. 浪漫櫻花 (新增)
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#f8bbd0';
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 72) * Math.PI / 180;
+                    ctx.beginPath();
+                    ctx.arc(c + Math.cos(angle) * 8, c + Math.sin(angle) * 8, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#ff80ab';
+                ctx.beginPath(); ctx.arc(c, c, 4, 0, Math.PI * 2); ctx.fill();
+            },
+            // 19. 幸運四葉草 (新增)
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#b9f6ca';
+                const pos = [[-6,-6], [6,-6], [-6,6], [6,6]];
+                pos.forEach(([px, py]) => {
+                    ctx.beginPath(); ctx.arc(c + px, c + py, 7, 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.strokeStyle = '#00c853'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(c, c + 6); ctx.lineTo(c, c + 16); ctx.stroke();
+            },
+            // 20. 珍珠蚌殼 (新增)
+            (ctx, size) => {
+                const c = size / 2;
+                ctx.fillStyle = '#ffecb3';
+                ctx.beginPath(); ctx.arc(c, c + 2, 14, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(c, c, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#e0f7fa';
+                ctx.beginPath(); ctx.arc(c - 1, c - 1, 2, 0, Math.PI * 2); ctx.fill();
+            }
+        ];
+
+        // 參數設定：40張卡牌 (20對), 8欄 x 5列
+        const TOTAL_PAIRS = 20;
+        const PREVIEW_TIME = 5;
+        const GRID_COLS = 8;
+        const GRID_ROWS = 5;
+
+        let cardsData = [];
+        let flippedCards = [];
+        let matchedCount = 0;
+        let moves = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let timerInterval = null;
+        let previewInterval = null;
+        let secondsElapsed = 0;
+        let isLockBoard = true;
+        let isPreviewPhase = false;
+
+        // UI 引用
+        const cardGrid = document.getElementById('cardGrid');
+        const pairsText = document.getElementById('pairsText');
+        const movesText = document.getElementById('movesText');
+        const timerText = document.getElementById('timerText');
+        const comboText = document.getElementById('comboText');
+        const previewBanner = document.getElementById('previewBanner');
+        const previewCountdown = document.getElementById('previewCountdown');
+        const catPaw = document.getElementById('catPaw');
+        
+        const overlayUI = document.getElementById('overlayUI');
+        const uiTitle = document.getElementById('uiTitle');
+        const uiSubtitle = document.getElementById('uiSubtitle');
+        const statsSummary = document.getElementById('statsSummary');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundStatusText = document.getElementById('soundStatus');
+
+        /* --------------------------------------
+           貓爪大小與模式控制 (預覽大爪 / 遊戲滑鼠跟隨)
+        -------------------------------------- */
+        let catPawMoveTimer = null;
+
+        // 計算預覽時「足以遮住 1.5 張牌」的貓爪尺寸
+        function getLargePawSize() {
+            const firstCard = cardGrid.querySelector('.card-perspective');
+            if (firstCard) {
+                const rect = firstCard.getBoundingClientRect();
+                return Math.round(rect.width * 1.55);
+            }
+            return 140; // 預設值
+        }
+
+        function setCatPawPreviewMode() {
+            isPreviewPhase = true;
+            catPaw.classList.remove('cursor-mode');
+            catPaw.classList.add('preview-mode');
+
+            // 放大貓爪（可遮擋約 1.5 張牌）
+            const size = getLargePawSize();
+            catPaw.style.width = `${size}px`;
+            catPaw.style.height = `${size}px`;
+
+            startCatPawAI();
+        }
+
+        function setCatPawCursorMode() {
+            isPreviewPhase = false;
+            if (catPawMoveTimer) clearTimeout(catPawMoveTimer);
+
+            catPaw.classList.remove('preview-mode');
+            catPaw.classList.add('cursor-mode');
+
+            // 變回正常小巧尺寸
+            const normalSize = 50;
+            catPaw.style.width = `${normalSize}px`;
+            catPaw.style.height = `${normalSize}px`;
+            catPaw.style.transform = `rotate(0deg)`;
+        }
+
+        function moveCatPawRandomly() {
+            if (!isPreviewPhase || !catPaw) return;
+            const container = document.querySelector('.kawaii-container');
+            if (!container) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const pawSize = parseInt(catPaw.style.width) || 140;
+
+            const maxX = Math.max(0, containerRect.width - pawSize - 20);
+            const maxY = Math.max(0, containerRect.height - pawSize - 40);
+
+            const randomX = Math.floor(Math.random() * maxX) + 10;
+            const randomY = Math.floor(Math.random() * maxY) + 20;
+
+            const randomRotation = (Math.random() - 0.5) * 50;
+
+            catPaw.style.left = `${randomX}px`;
+            catPaw.style.top = `${randomY}px`;
+            catPaw.style.transform = `rotate(${randomRotation}deg)`;
+        }
+
+        function startCatPawAI() {
+            if (!isPreviewPhase) return;
+            moveCatPawRandomly();
+            const nextInterval = Math.floor(Math.random() * 800) + 900;
+            catPawMoveTimer = setTimeout(startCatPawAI, nextInterval);
+        }
+
+        // 滑鼠與觸控移動跟隨邏輯
+        document.addEventListener('mousemove', (e) => {
+            if (isPreviewPhase) return; // 預覽期間貓爪自主移動
+            const container = document.querySelector('.kawaii-container');
+            if (!container) return;
+            const containerRect = container.getBoundingClientRect();
+
+            // 相對於容器的座標，並扣除貓爪中心偏置
+            const x = e.clientX - containerRect.left - 25;
+            const y = e.clientY - containerRect.top - 25;
+
+            catPaw.style.left = `${x}px`;
+            catPaw.style.top = `${y}px`;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (isPreviewPhase || !e.touches[0]) return;
+            const container = document.querySelector('.kawaii-container');
+            if (!container) return;
+            const containerRect = container.getBoundingClientRect();
+
+            const x = e.touches[0].clientX - containerRect.left - 25;
+            const y = e.touches[0].clientY - containerRect.top - 25;
+
+            catPaw.style.left = `${x}px`;
+            catPaw.style.top = `${y}px`;
+        });
+
+        function startPreviewPhase() {
+            let count = PREVIEW_TIME;
+            previewBanner.classList.remove('hidden');
+            previewCountdown.innerText = count;
+
+            setCatPawPreviewMode();
+            sfx.tick();
+
+            previewInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    previewCountdown.innerText = count;
+                    sfx.tick();
+                } else {
+                    clearInterval(previewInterval);
+                    previewBanner.classList.add('hidden');
+                    
+                    coverAllCards();
+                    isLockBoard = false;
+                    
+                    // 觀看時間結束，貓爪變回小尺寸並隨鼠標移動
+                    setCatPawCursorMode();
+
+                    sfx.go();
+                    startTimer();
+                }
+            }, 1000);
+        }
+
+        function coverAllCards() {
+            cardsData.forEach((card) => {
+                if (!card.isMatched) {
+                    card.isFlipped = false;
+                }
+            });
+
+            const cardInners = cardGrid.querySelectorAll('.card-inner');
+            cardInners.forEach((inner) => {
+                inner.classList.remove('flipped');
+            });
+        }
+
+        function renderCards() {
+            cardGrid.innerHTML = '';
+
+            cardsData.forEach((card) => {
+                const cardWrap = document.createElement('div');
+                cardWrap.className = 'card-perspective w-full aspect-square';
+
+                const cardInner = document.createElement('div');
+                cardInner.className = 'card-inner';
+                if (card.isFlipped) cardInner.classList.add('flipped');
+                cardInner.dataset.id = card.id;
+
+                // 背面
+                const cardBack = document.createElement('div');
+                cardBack.className = 'card-back';
+                const star = document.createElement('span');
+                star.className = 'text-white text-sm sm:text-xl opacity-60';
+                star.innerText = '🌸';
+                cardBack.appendChild(star);
+
+                // 正面 (Canvas可愛圖示)
+                const cardFront = document.createElement('div');
+                cardFront.className = 'card-front';
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                canvas.className = 'w-4/5 h-4/5';
+                const ctx = canvas.getContext('2d');
+
+                KAWAII_ICONS[card.iconIndex](ctx, 64);
+                cardFront.appendChild(canvas);
+
+                cardInner.appendChild(cardBack);
+                cardInner.appendChild(cardFront);
+                cardWrap.appendChild(cardInner);
+
+                cardWrap.addEventListener('click', () => handleCardClick(card, cardInner));
+
+                cardGrid.appendChild(cardWrap);
+            });
+        }
+
+        function handleCardClick(card, cardInner) {
+            if (isLockBoard) return;
+            if (card.isFlipped || card.isMatched) return;
+
+            sfx.flip();
+
+            card.isFlipped = true;
+            cardInner.classList.add('flipped');
+            flippedCards.push({ card, cardInner });
+
+            if (flippedCards.length === 2) {
+                moves++;
+                updateHUD();
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            isLockBoard = true;
+            const [{ card: card1, cardInner: inner1 }, { card: card2, cardInner: inner2 }] = flippedCards;
+
+            if (card1.iconIndex === card2.iconIndex) {
+                card1.isMatched = true;
+                card2.isMatched = true;
+                matchedCount++;
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                sfx.match(combo);
+
+                setTimeout(() => {
+                    inner1.classList.add('matched');
+                    inner2.classList.add('matched');
+
+                    const rect1 = inner1.getBoundingClientRect();
+                    const rect2 = inner2.getBoundingClientRect();
+                    createParticles(rect1.left + rect1.width/2, rect1.top + rect1.height/2);
+                    createParticles(rect2.left + rect2.width/2, rect2.top + rect2.height/2);
+
+                    flippedCards = [];
+                    isLockBoard = false;
+
+                    updateHUD();
+
+                    if (matchedCount === TOTAL_PAIRS) {
+                        handleVictory();
+                    }
+                }, 300);
+
+            } else {
+                combo = 0;
+                sfx.mismatch();
+
+                setTimeout(() => {
+                    card1.isFlipped = false;
+                    card2.isFlipped = false;
+                    inner1.classList.remove('flipped');
+                    inner2.classList.remove('flipped');
+
+                    flippedCards = [];
+                    isLockBoard = false;
+
+                    updateHUD();
+                }, 850);
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateHUD();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function updateHUD() {
+            pairsText.innerText = `${matchedCount}/${TOTAL_PAIRS}`;
+            movesText.innerText = moves;
+            timerText.innerText = formatTime(secondsElapsed);
+            comboText.innerText = `x${combo}`;
+        }
+
+        function handleVictory() {
+            stopTimer();
+            sfx.win();
+
+            const accuracy = Math.round((TOTAL_PAIRS / Math.max(moves, TOTAL_PAIRS)) * 100);
+
+            setTimeout(() => {
+                uiTitle.innerHTML = '40張牌通關成功！🎉<br><span class="text-base sm:text-xl text-purple-400">QUEST CLEAR</span>';
+                uiSubtitle.innerText = '太神了！完美攻克 40 張牌超級記憶關卡！';
+                
+                document.getElementById('finalTime').innerText = formatTime(secondsElapsed);
+                document.getElementById('finalMoves').innerText = moves;
+                document.getElementById('finalCombo').innerText = `x${maxCombo}`;
+                document.getElementById('finalAccuracy').innerText = `${accuracy}%`;
+
+                statsSummary.classList.remove('hidden');
+                startBtn.innerText = '再次挑戰 💖';
+                overlayUI.classList.remove('hidden');
+            }, 600);
+        }
+
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            pCanvas.width = pCanvas.offsetWidth;
+            pCanvas.height = pCanvas.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createParticles(x, y) {
+            const containerRect = pCanvas.getBoundingClientRect();
+            const posX = x - containerRect.left;
+            const posY = y - containerRect.top;
+
+            const colors = ['#ff80ab', '#ff4081', '#ffd54f', '#80d8ff', '#b9f6ca'];
+
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: posX,
+                    y: posY,
+                    dx: (Math.random() - 0.5) * 7,
+                    dy: (Math.random() - 0.5) * 7 - 1,
+                    size: Math.random() * 6 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 1.0,
+                    decay: Math.random() * 0.025 + 0.015
+                });
+            }
+        }
+
+        function updateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life -= p.decay;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                pCtx.fillStyle = p.color;
+                pCtx.globalAlpha = p.life;
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+                pCtx.fill();
+                pCtx.globalAlpha = 1.0;
+            }
+
+            requestAnimationFrame(updateParticles);
+        }
+        requestAnimationFrame(updateParticles);
+
+        startBtn.addEventListener('click', () => {
+            sfx.init();
+            overlayUI.classList.add('hidden');
+            initGame();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            sfx.init();
+            initGame();
+        });
+
+        soundToggleBtn.addEventListener('click', () => {
+            sfx.enabled = !sfx.enabled;
+            soundStatusText.innerText = `音效: ${sfx.enabled ? '開' : '關'}`;
+        });
+
+        /* --------------------------------------
+           貓爪隨機移動與點擊互動邏輯
+        -------------------------------------- */
+        // 點擊貓爪互動
+        catPaw.addEventListener('click', (e) => {
+            sfx.flip();
+            const rect = catPaw.getBoundingClientRect();
+            createParticles(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            if (isPreviewPhase) {
+                moveCatPawRandomly();
+            }
+        });
+
+        /* --------------------------------------
+           遊戲初始化邏輯
+        -------------------------------------- */
+        function generateNonAdjacentBoard() {
+            let placedSuccessfully = false;
+            let board = [];
+
+            while (!placedSuccessfully) {
+                let deck = [];
+                for (let i = 0; i < TOTAL_PAIRS; i++) {
+                    deck.push(i);
+                    deck.push(i);
+                }
+                
+                // Shuffle deck
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+
+                board = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(null));
+                let possible = true;
+
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    for (let c = 0; c < GRID_COLS; c++) {
+                        let validIndices = [];
+                        for (let dIdx = 0; dIdx < deck.length; dIdx++) {
+                            let val = deck[dIdx];
+                            let leftSame = (c > 0 && board[r][c - 1] === val);
+                            let topSame = (r > 0 && board[r - 1][c] === val);
+                            if (!leftSame && !topSame) {
+                                validIndices.push(dIdx);
+                            }
+                        }
+
+                        if (validIndices.length === 0) {
+                            possible = false;
+                            break;
+                        }
+
+                        let pickIdx = validIndices[Math.floor(Math.random() * validIndices.length)];
+                        board[r][c] = deck[pickIdx];
+                        deck.splice(pickIdx, 1);
+                    }
+                    if (!possible) break;
+                }
+
+                if (possible) {
+                    placedSuccessfully = true;
+                }
+            }
+
+            let flattened = [];
+            let cardId = 0;
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    flattened.push({
+                        id: cardId++,
+                        iconIndex: board[r][c],
+                        isFlipped: true,
+                        isMatched: false
+                    });
+                }
+            }
+            return flattened;
+        }
+
+        function initGame() {
+            stopTimer();
+            if (previewInterval) clearInterval(previewInterval);
+
+            matchedCount = 0;
+            moves = 0;
+            combo = 0;
+            maxCombo = 0;
+            secondsElapsed = 0;
+            flippedCards = [];
+            isLockBoard = true;
+
+            updateHUD();
+
+            cardsData = generateNonAdjacentBoard();
+            renderCards();
+
+            startPreviewPhase();
+        }
+
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

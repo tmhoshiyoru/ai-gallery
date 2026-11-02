@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-900 text-slate-100">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中生原文書選書指南 ReadNext</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white">
+
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="p-2 bg-brand-600 rounded-xl text-white shadow-lg shadow-brand-500/30">
+                    <i data-lucide="book-open-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                        ReadNext High School
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">高中生中英文原文書選書助手</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="bookmarkTabBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+                    <i data-lucide="bookmark" class="w-4 h-4 text-amber-400"></i>
+                    <span class="hidden sm:inline">想讀</span>書單
+                    <span id="savedCountBadge" class="bg-brand-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+                <button id="readTabBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="hidden sm:inline">已讀</span>完畢
+                    <span id="readCountBadge" class="bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+                <button id="recommendTabBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-500/30 text-xs sm:text-sm font-medium flex items-center gap-1.5 transition text-amber-300">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                    <span>專屬推薦</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Sidebar Filters -->
+        <aside id="sidebarFilter" class="lg:col-span-4 xl:col-span-3 space-y-6">
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 sticky top-20 shadow-xl space-y-5">
+                <div class="flex items-center justify-between mb-1">
+                    <h2 class="font-bold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i>
+                        條件篩選 (Filters)
+                    </h2>
+                    <button id="resetFiltersBtn" class="text-xs text-slate-400 hover:text-brand-400 transition flex items-center gap-1">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> 重設
+                    </button>
+                </div>
+
+                <form id="filterForm" class="space-y-5" onsubmit="event.preventDefault();">
+                    <!-- Language Option -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">書籍語言 (Language)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="language" value="all" class="peer hidden" checked>
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">全部</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="language" value="en" class="peer hidden">
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-indigo-600 peer-checked:border-indigo-500 peer-checked:text-white transition">英文原書</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="language" value="zh" class="peer hidden">
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-teal-600 peer-checked:border-teal-500 peer-checked:text-white transition">中文原書</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Difficulty Level -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">閱讀難易度 (Difficulty)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="difficulty" value="all" class="peer hidden" checked>
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">全部</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="difficulty" value="Easy" class="peer hidden">
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-emerald-600 peer-checked:border-emerald-500 peer-checked:text-white transition">入門</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="difficulty" value="Medium" class="peer hidden">
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-amber-600 peer-checked:border-amber-500 peer-checked:text-white transition">中級</span>
+                            </label>
+                            <label class="cursor-pointer col-span-3">
+                                <input type="radio" name="difficulty" value="Hard" class="peer hidden">
+                                <span class="block text-center py-2 px-1 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-rose-600 peer-checked:border-rose-500 peer-checked:text-white transition">進階挑戰</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Genre Category (Multi-select) -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">作品類型 (Genres - 可多選)</label>
+                        <div id="genreContainer" class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Dystopian/Sci-Fi" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">科幻 / 反烏托邦</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Contemporary/Coming-of-Age" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">成長 / 青春小說</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Mystery/Thriller" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">懸疑 / 奇幻推理</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Classic Literature" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">經典文學</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Non-Fiction/Memoir" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">非文學 / 勵志哲理</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="genre" value="Fantasy" class="peer hidden" checked>
+                                <span class="block text-center py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-brand-600 peer-checked:border-brand-500 peer-checked:text-white transition">奇幻冒險</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Page Length -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">頁數長度 (Page Count)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="pages" value="short" class="peer hidden" checked>
+                                <span class="block text-center py-2 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-slate-700 peer-checked:border-brand-500 peer-checked:text-brand-400 transition">&lt; 250 頁 (短篇)</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="pages" value="medium" class="peer hidden" checked>
+                                <span class="block text-center py-2 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-slate-700 peer-checked:border-brand-500 peer-checked:text-brand-400 transition">250 - 400 頁</span>
+                            </label>
+                            <label class="cursor-pointer col-span-2">
+                                <input type="checkbox" name="pages" value="long" class="peer hidden" checked>
+                                <span class="block text-center py-2 px-2 rounded-xl text-xs font-medium bg-slate-800 border border-slate-700 peer-checked:bg-slate-700 peer-checked:border-brand-500 peer-checked:text-brand-400 transition">&gt; 400 頁 (長篇巨作)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Keyword Search -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">關鍵字搜尋 (Keywords)</label>
+                        <div class="relative">
+                            <input type="text" id="searchInput" placeholder="搜尋書名、作者、系列..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </aside>
+
+        <section id="mainContentSection" class="lg:col-span-8 xl:col-span-9 space-y-6">
+
+            <!-- Mode Switch Tabs -->
+            <div id="modeSwitchContainer" class="flex flex-wrap items-center justify-between gap-4 glass-panel p-2 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl">
+                    <button id="modeGridBtn" class="px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-brand-600 text-white shadow">
+                        <i data-lucide="grid" class="w-4 h-4"></i> 書庫列表
+                    </button>
+                    <button id="modeSpinBtn" class="px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-slate-400 hover:text-white">
+                        <i data-lucide="disc" class="w-4 h-4"></i> 命運轉盤
+                    </button>
+                </div>
+
+                <div class="text-xs text-slate-400 px-3">
+                    顯示符合條件的書籍：<span id="matchingCount" class="font-bold text-brand-400 text-sm">0</span> 本
+                </div>
+            </div>
+
+            <!-- VIEW 1: Book Cards Grid -->
+            <div id="gridSection" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <!-- Cards render dynamically -->
+            </div>
+
+            <!-- VIEW 2: Spinner Wheel Section -->
+            <div id="spinSection" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-8 relative overflow-hidden">
+                <div class="text-center max-w-md mx-auto space-y-2">
+                    <h3 class="text-xl font-bold text-slate-100">交給命運決定！</h3>
+                    <p class="text-xs text-slate-400">點擊中央旋轉按鈕，隨機抽選書籍；您也可以在下方自訂編輯轉盤內容。</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <!-- Wheel Area -->
+                    <div class="lg:col-span-7 flex flex-col items-center relative">
+                        <!-- Wheel Pointer -->
+                        <div class="absolute top-0 z-20 -translate-y-2 text-rose-500 filter drop-shadow">
+                            <i data-lucide="triangle" class="w-8 h-8 fill-rose-500 rotate-180"></i>
+                        </div>
+
+                        <!-- Canvas Wheel Container -->
+                        <div class="relative w-72 h-72 sm:w-80 sm:h-80 my-2">
+                            <canvas id="wheelCanvas" width="320" height="320" class="w-full h-full rounded-full shadow-2xl border-4 border-slate-700"></canvas>
+                            <button id="spinActionBtn" class="absolute inset-0 m-auto w-20 h-20 bg-brand-600 hover:bg-brand-500 text-white font-extrabold rounded-full border-4 border-slate-900 shadow-xl flex flex-col items-center justify-center transform active:scale-95 transition z-10">
+                                <span>SPIN</span>
+                                <span class="text-[9px] font-normal opacity-80">旋轉</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Wheel Options Manager -->
+                    <div class="lg:col-span-5 bg-slate-900/80 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="list-checks" class="w-4 h-4 text-brand-400"></i>
+                                編輯轉盤選項
+                            </h4>
+                            <button id="resetWheelItemsBtn" class="text-[11px] text-brand-400 hover:underline">
+                                還原篩選
+                            </button>
+                        </div>
+
+                        <!-- Add Custom Option -->
+                        <div class="flex gap-2">
+                            <input type="text" id="customOptionInput" placeholder="新增轉盤自訂選項..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+                            <button id="addCustomOptionBtn" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition">
+                                新增
+                            </button>
+                        </div>
+
+                        <!-- Items List -->
+                        <div id="wheelItemsContainer" class="max-h-60 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spin Result Card Container -->
+                <div id="spinResultContainer" class="hidden pt-6 border-t border-slate-800 text-center">
+                    <span class="inline-block px-3.5 py-1 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-full text-xs font-bold mb-4">
+                        🎉 命運為你選擇了：
+                    </span>
+                    <div id="spinResultContent" class="max-w-md mx-auto text-left">
+                        <!-- Result injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: My Saved Books Section -->
+            <div id="savedSection" class="hidden space-y-4">
+                <div class="flex items-center justify-between glass-panel p-4 rounded-2xl border border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="bookmark-check" class="w-5 h-5 text-amber-400"></i>
+                        <h3 class="font-bold text-slate-200">我收藏的待讀書單 (My Reading List)</h3>
+                    </div>
+                    <button id="clearSavedBtn" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 清空書單
+                    </button>
+                </div>
+
+                <div id="savedBooksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <!-- Saved books render here -->
+                </div>
+            </div>
+
+            <!-- VIEW 4: Completed Read Books Section -->
+            <div id="readSection" class="hidden space-y-4">
+                <div class="flex items-center justify-between glass-panel p-4 rounded-2xl border border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+                        <h3 class="font-bold text-slate-200">我已閱讀完畢的書單 (Completed Books)</h3>
+                    </div>
+                    <button id="clearReadBtn" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 清空已讀
+                    </button>
+                </div>
+
+                <div id="readBooksGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <!-- Read books render here -->
+                </div>
+            </div>
+
+            <!-- VIEW 5: Smart Recommendation Engine Section -->
+            <div id="recommendSection" class="hidden space-y-6">
+                <div class="glass-panel p-6 rounded-2xl border border-amber-500/30 space-y-3 bg-gradient-to-r from-amber-950/20 to-slate-900">
+                    <div class="flex items-center gap-2.5">
+                        <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-lg">智慧個人化推薦 (Smart Recommendations)</h3>
+                            <p class="text-xs text-slate-400">根據您已標記「已閱讀完畢」的偏好（類型、難易度、作者系列）精準為您推薦下一本書！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="recommendationContent">
+                    <!-- Dynamic recommendations will render here -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Detail Modal Dialog -->
+    <div id="bookModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button id="closeModalBtn" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/80 hover:bg-slate-700 transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div id="modalContent" class="p-6 sm:p-8 space-y-6">
+                <!-- Modal details injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BOOKS_DATA = [
+            // --- ENGLISH BOOKS ---
+            {
+                id: "b1",
+                lang: "en",
+                title: "The Giver",
+                author: "Lois Lowry",
+                difficulty: "Easy",
+                lexile: "760L",
+                pages: 240,
+                genre: "Dystopian/Sci-Fi",
+                series: "The Giver Quartet (#1)",
+                sequels: ["Gathering Blue (#2)", "Messenger (#3)", "Son (#4)"],
+                summary: "In a seemingly ideal society without pain, war, or choice, twelve-year-old Jonas is chosen to be the Receiver of Memory. As he learns the truth about the world's past from the old Receiver, he must decide whether to stay in safe conformity or seek true human emotion.",
+                whyRead: "Perfect for high school students starting their English reading journey! The syntax is clear and straight to the point, while the plot sparks profound discussions on individual freedom vs. social conformity.",
+                quote: "The worst part of holding the memories is not the pain. It's the loneliness of it. Memories need to be shared."
+            },
+            {
+                id: "b2",
+                lang: "en",
+                title: "The Hunger Games",
+                author: "Suzanne Collins",
+                difficulty: "Medium",
+                lexile: "810L",
+                pages: 374,
+                genre: "Dystopian/Sci-Fi",
+                series: "The Hunger Games Series (#1)",
+                sequels: ["Catching Fire (#2)", "Mockingjay (#3)", "The Ballad of Songbirds and Snakes (Prequel)"],
+                summary: "In the ruins of what was once North America, the nation of Panem forces each of its twelve districts to send a teenage boy and girl to compete in the annual Hunger Games—a televised fight to the death. Katniss Everdeen volunteers to take her younger sister's place.",
+                whyRead: "Written in the first-person present tense, this book maintains an intense pace with almost no dull moments. An ideal pick for building reading momentum and expanding active action vocabulary.",
+                quote: "May the odds be ever in your favor."
+            },
+            {
+                id: "b3",
+                lang: "en",
+                title: "Wonder",
+                author: "R.J. Palacio",
+                difficulty: "Easy",
+                lexile: "790L",
+                pages: 315,
+                genre: "Contemporary/Coming-of-Age",
+                series: "Wonder Series",
+                sequels: ["Auggie & Me (Companion)", "365 Days of Wonder"],
+                summary: "August Pullman was born with a facial difference that prevented him from going to a mainstream school. Starting fifth grade at Beecher Prep, he wants nothing more than to be treated as an ordinary kid, but his classmates can't get past his extraordinary face.",
+                whyRead: "Uses natural, conversational English across multiple character perspectives. Great for learning authentic modern idioms and teenage dialogue in everyday contexts.",
+                quote: "When given the choice between being right or being kind, choose kind."
+            },
+            {
+                id: "b4",
+                lang: "en",
+                title: "To Kill a Mockingbird",
+                author: "Harper Lee",
+                difficulty: "Hard",
+                lexile: "870L",
+                pages: 336,
+                genre: "Classic Literature",
+                series: "Standalone / Related",
+                sequels: ["Go Set a Watchman (First Draft / Related Story)"],
+                summary: "Set in a small Alabama town during the Great Depression, the story follows young Scout Finch whose lawyer father, Atticus, defends a Black man falsely accused of a crime.",
+                whyRead: "A fundamental cornerstone of American literature. Excellent for advanced high school students preparing for SAT, TOEFL, or university admissions essays.",
+                quote: "You never really understand a person until you consider things from his point of view... until you climb into his skin and walk around in it."
+            },
+            {
+                id: "b5",
+                lang: "en",
+                title: "Percy Jackson & the Olympians: The Lightning Thief",
+                author: "Rick Riordan",
+                difficulty: "Medium",
+                lexile: "740L",
+                pages: 375,
+                genre: "Fantasy",
+                series: "Percy Jackson & the Olympians (#1)",
+                sequels: ["The Sea of Monsters (#2)", "The Titan's Curse (#3)", "The Battle of the Labyrinth (#4)", "The Last Olympian (#5)"],
+                summary: "12-year-old Percy Jackson discovers he is a demigod, the son of Poseidon. When Zeus's master lightning bolt is stolen, Percy is accused and must embark on a quest across the United States to find the real thief.",
+                whyRead: "Blends ancient Greek mythology with modern teenage humor. An entertaining way to learn mythological terminology and engaging narrative structures.",
+                quote: "If my life is going to mean anything, I have to live it myself."
+            },
+            {
+                id: "b6",
+                lang: "en",
+                title: "Harry Potter and the Sorcerer's Stone",
+                author: "J.K. Rowling",
+                difficulty: "Medium",
+                lexile: "880L",
+                pages: 309,
+                genre: "Fantasy",
+                series: "Harry Potter Series (#1)",
+                sequels: ["The Chamber of Secrets (#2)", "The Prisoner of Azkaban (#3)", "The Goblet of Fire (#4)", "The Order of the Phoenix (#5)", "The Half-Blood Prince (#6)", "The Deathly Hallows (#7)"],
+                summary: "An orphaned boy learns on his eleventh birthday that he is the orphaned son of two powerful wizards and possesses magical powers of his own. He is summoned to attend Hogwarts School of Witchcraft and Wizardry.",
+                whyRead: "Rich descriptive vocabulary and world-building that progressively becomes more sophisticated with each book in the series.",
+                quote: "It does not do to dwell on dreams and forget to live."
+            },
+            {
+                id: "b7",
+                lang: "en",
+                title: "One of Us Is Lying",
+                author: "Karen M. McManus",
+                difficulty: "Medium",
+                lexile: "770L",
+                pages: 361,
+                genre: "Mystery/Thriller",
+                series: "Bayview High Series (#1)",
+                sequels: ["One of Us Is Next (#2)", "One of Us Is Back (#3)"],
+                summary: "Five students walk into detention at Bayview High, but only four walk out alive. Simon, creator of a notorious school gossip app, dies mysteriously, making the remaining four primary suspects.",
+                whyRead: "Suspenseful, multi-POV high school murder mystery that keeps you hooked while mastering colloquial conversation and modern suspense tropes.",
+                quote: "There are some secrets you can't keep hidden forever."
+            },
+            {
+                id: "b8",
+                lang: "en",
+                title: "Animal Farm",
+                author: "George Orwell",
+                difficulty: "Medium",
+                lexile: "1170L",
+                pages: 112,
+                genre: "Classic Literature",
+                series: "Standalone",
+                sequels: [],
+                summary: "A group of farm animals overthrow their human owner to create an equal society. However, a corrupt elite of pigs slowly takes control, eventually creating a dictatorship worse than before.",
+                whyRead: "A masterclass in satire and political allegory. Concise in length, offering immense value for critical thinking, vocabulary, and argument building.",
+                quote: "All animals are equal, but some animals are more equal than others."
+            },
+            {
+                id: "b9",
+                lang: "en",
+                title: "Tuesdays with Morrie",
+                author: "Mitch Albom",
+                difficulty: "Easy",
+                lexile: "830L",
+                pages: 192,
+                genre: "Non-Fiction/Memoir",
+                series: "Standalone",
+                sequels: [],
+                summary: "Mitch Albom reconnects with his former college professor, Morrie Schwartz, during the final months of Morrie's life. Their weekly Tuesday meetings become a masterclass on living, loving, and letting go.",
+                whyRead: "Short, accessible chapters filled with deep philosophical insights. Ideal for readers looking for short non-fiction with clean sentence structures.",
+                quote: "Death ends a life, not a relationship."
+            },
+            {
+                id: "b10",
+                lang: "en",
+                title: "Fahrenheit 451",
+                author: "Ray Bradbury",
+                difficulty: "Hard",
+                lexile: "890L",
+                pages: 256,
+                genre: "Dystopian/Sci-Fi",
+                series: "Standalone",
+                sequels: [],
+                summary: "Guy Montag is a fireman in a futuristic society where books are banned and 'firemen' burn any that are found. After meeting an eccentric young neighbor, Montag begins to question everything he has ever known.",
+                whyRead: "Ray Bradbury's poetic prose is rich with metaphors and descriptive imagery, making it fantastic for expanding high-level vocabulary and rhetorical skills.",
+                quote: "It was a pleasure to burn."
+            },
+
+            // --- CHINESE BOOKS ---
+            {
+                id: "cb1",
+                lang: "zh",
+                title: "三體 (Three-Body Problem)",
+                author: "劉慈欣",
+                difficulty: "Hard",
+                lexile: "進階思考",
+                pages: 302,
+                genre: "Dystopian/Sci-Fi",
+                series: "地球往事三部曲 (#1)",
+                sequels: ["三體II：黑暗森林 (#2)", "三體III：死神永生 (#3)"],
+                summary: "文化大革命期間，軍方探尋外星文明的「紅岸工程」取得突破性進展。下鄉物理學家葉文潔向宇宙發射了訊號，被面臨滅亡的「三體文明」接收，徹底改變了人類與地球的命運。",
+                whyRead: "華語科幻巨擘之作！構思宏大，融合理工科學、哲學與人性思考，非常能拓寬高中生的宏觀視野與思維層次。",
+                quote: "給歲月以文明，而不是給文明以歲月。"
+            },
+            {
+                id: "cb2",
+                lang: "zh",
+                title: "解憂雜貨店",
+                author: "東野圭吾",
+                difficulty: "Easy",
+                lexile: "入門推薦",
+                pages: 350,
+                genre: "Mystery/Thriller",
+                series: "獨立單行本",
+                sequels: [],
+                summary: "三個僻靜小鎮上的偷竊少年，躲進一間廢棄的浪矢雜貨店。深夜，投信口突如其來掉落了一封穿越三十年時光的諮詢信，交織出一段段溫暖又扣人心弦的奇蹟故事。",
+                whyRead: "結構嚴密卻溫馨感人，將懸疑推理與人性關懷完美結合。文字流暢易讀，適合想體驗長篇小說魅力的學生。",
+                quote: "地圖是一張白紙，正因如此，你才可以畫出任何你想要的圖案。"
+            },
+            {
+                id: "cb3",
+                lang: "zh",
+                title: "原子習慣",
+                author: "詹姆斯·克利爾 (James Clear)",
+                difficulty: "Medium",
+                lexile: "實用勵志",
+                pages: 304,
+                genre: "Non-Fiction/Memoir",
+                series: "獨立單行本",
+                sequels: [],
+                summary: "每天進步1%，一年後你會進步37倍。本書說明如何運用「提示、渴望、回應、獎賞」四大法則，輕鬆建立好習慣、戒除壞習慣，達成自我突破。",
+                whyRead: "高中生面對學業與升學壓力時的終極指南，系統化提供建立學習節奏與時間管理的科學實用方法。",
+                quote: "造就成功的，是日常習慣，而不是一次性的重大轉變。"
+            },
+            {
+                id: "cb4",
+                lang: "zh",
+                title: "少年Pi的奇幻漂流",
+                author: "楊·馬泰爾 (Yann Martel)",
+                difficulty: "Medium",
+                lexile: "中級挑戰",
+                pages: 350,
+                genre: "Contemporary/Coming-of-Age",
+                series: "獨立單行本",
+                sequels: [],
+                summary: "少年Pi與家人帶著動物園的動物搭船前往加拿大，遭遇船難。Pi與一隻名叫理查·帕克的孟加拉虎，在一艘救生艇上共度了長達227天的海上漂流歷程。",
+                whyRead: "充滿豐富象徵意義與哲理的小說。透過信仰、生存與恐懼的探討，帶領讀者思考現實與故事背後的深刻真相。",
+                quote: "人生就是不斷放下，但最遺憾的是，我們終究未能好好道別。"
+            },
+            {
+                id: "cb5",
+                lang: "zh",
+                title: "房思琪的初戀樂園",
+                author: "林奕含",
+                difficulty: "Hard",
+                lexile: "深度文學",
+                pages: 250,
+                genre: "Classic Literature",
+                series: "獨立單行本",
+                sequels: [],
+                summary: "這是一部描繪權勢性侵與社會傷痕的當代中文文學作品。以精緻細膩的語言，刻畫青春少女在面對誘姦、傷害與心理崩解時的掙扎與痛苦。",
+                whyRead: "文字極具文學感染力與張力。引導學生嚴肅審視社會議題、權力關係與情感保護，具備極高的批判思維價值。",
+                quote: "忍耐不是美德，把忍耐當成美德是這個偽善的世界維持它秩序的變態心理。"
+            },
+            {
+                id: "cb6",
+                lang: "zh",
+                title: "被討厭的勇氣",
+                author: "岸見一郎、古賀史健",
+                difficulty: "Easy",
+                lexile: "哲學思辨",
+                pages: 300,
+                genre: "Non-Fiction/Memoir",
+                series: "被討厭的勇氣系列 (#1)",
+                sequels: ["被討厭的勇氣 二部曲完結篇"],
+                summary: "以一名煩惱的青年與阿德勒心理學哲學家的對話形式，探討「人如何獲得真正的自由與幸福」，提出「課題分離」與「勇敢做自己」的觀點。",
+                whyRead: "對話體裁易於理解，能大幅緩解青少年的人際關係焦慮與自我認同困境，培養獨立思考能力。",
+                quote: "所謂的自由，就是被別人討厭。"
+            }
+        ];
+
+        // State variables
+        let filteredBooks = [...BOOKS_DATA];
+        let savedBookIds = JSON.parse(window.__galleryStorage.getItem('readnext_saved_books') || '[]');
+        let readBookIds = JSON.parse(window.__galleryStorage.getItem('readnext_read_books') || '[]');
+        let currentMode = 'grid';
+        let isSpinning = false;
+        let currentWheelRotation = 0;
+        let activeWheelItems = [];
+
+        // DOM elements
+        const filterForm = document.getElementById('filterForm');
+        const searchInput = document.getElementById('searchInput');
+        const matchingCount = document.getElementById('matchingCount');
+        const gridSection = document.getElementById('gridSection');
+        const spinSection = document.getElementById('spinSection');
+        const savedSection = document.getElementById('savedSection');
+        const readSection = document.getElementById('readSection');
+        const recommendSection = document.getElementById('recommendSection');
+        const savedBooksGrid = document.getElementById('savedBooksGrid');
+        const readBooksGrid = document.getElementById('readBooksGrid');
+        const recommendationContent = document.getElementById('recommendationContent');
+        
+        const savedCountBadge = document.getElementById('savedCountBadge');
+        const readCountBadge = document.getElementById('readCountBadge');
+
+        const sidebarFilter = document.getElementById('sidebarFilter');
+        const modeSwitchContainer = document.getElementById('modeSwitchContainer');
+
+        const bookModal = document.getElementById('bookModal');
+        const modalContent = document.getElementById('modalContent');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        const modeGridBtn = document.getElementById('modeGridBtn');
+        const modeSpinBtn = document.getElementById('modeSpinBtn');
+        const bookmarkTabBtn = document.getElementById('bookmarkTabBtn');
+        const readTabBtn = document.getElementById('readTabBtn');
+        const recommendTabBtn = document.getElementById('recommendTabBtn');
+        const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const wheelCtx = wheelCanvas.getContext('2d');
+        const wheelItemsContainer = document.getElementById('wheelItemsContainer');
+        const customOptionInput = document.getElementById('customOptionInput');
+        const addCustomOptionBtn = document.getElementById('addCustomOptionBtn');
+        const resetWheelItemsBtn = document.getElementById('resetWheelItemsBtn');
+
+        const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4', '#6366f1', '#f97316', '#14b8a6', '#a855f7'];
+
+        function getDifficultyBadge(diff) {
+            if (diff === 'Easy') return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">入門</span>';
+            if (diff === 'Medium') return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">中級</span>';
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">進階</span>';
+        }
+
+        function getLangBadge(lang) {
+            if (lang === 'zh') return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">中文原書</span>';
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">英文原書</span>';
+        }
+
+        function updateBadges() {
+            savedCountBadge.textContent = savedBookIds.length;
+            readCountBadge.textContent = readBookIds.length;
+        }
+
+        function toggleSaveBook(bookId, e) {
+            if (e) e.stopPropagation();
+            const index = savedBookIds.indexOf(bookId);
+            if (index > -1) {
+                savedBookIds.splice(index, 1);
+            } else {
+                savedBookIds.push(bookId);
+            }
+            window.__galleryStorage.setItem('readnext_saved_books', JSON.stringify(savedBookIds));
+            updateBadges();
+            renderCurrentView();
+        }
+
+        function toggleReadBook(bookId, e) {
+            if (e) e.stopPropagation();
+            const index = readBookIds.indexOf(bookId);
+            if (index > -1) {
+                readBookIds.splice(index, 1);
+            } else {
+                readBookIds.push(bookId);
+                // If marked as read, automatically remove from saved/want-to-read list if present
+                const savedIndex = savedBookIds.indexOf(bookId);
+                if (savedIndex > -1) {
+                    savedBookIds.splice(savedIndex, 1);
+                    window.__galleryStorage.setItem('readnext_saved_books', JSON.stringify(savedBookIds));
+                }
+            }
+            window.__galleryStorage.setItem('readnext_read_books', JSON.stringify(readBookIds));
+            updateBadges();
+            renderCurrentView();
+        }
+
+        function applyFilters() {
+            const lang = filterForm.querySelector('input[name="language"]:checked').value;
+            const difficulty = filterForm.querySelector('input[name="difficulty"]:checked').value;
+            const selectedGenres = Array.from(filterForm.querySelectorAll('input[name="genre"]:checked')).map(cb => cb.value);
+            const searchKeyword = searchInput.value.toLowerCase().trim();
+            const selectedPageRanges = Array.from(filterForm.querySelectorAll('input[name="pages"]:checked')).map(cb => cb.value);
+
+            filteredBooks = BOOKS_DATA.filter(book => {
+                if (lang !== 'all' && book.lang !== lang) return false;
+                if (difficulty !== 'all' && book.difficulty !== difficulty) return false;
+                if (selectedGenres.length > 0 && !selectedGenres.includes(book.genre)) return false;
+
+                let matchesPage = false;
+                if (selectedPageRanges.length === 0) matchesPage = true;
+                if (selectedPageRanges.includes('short') && book.pages < 250) matchesPage = true;
+                if (selectedPageRanges.includes('medium') && book.pages >= 250 && book.pages <= 400) matchesPage = true;
+                if (selectedPageRanges.includes('long') && book.pages > 400) matchesPage = true;
+                if (!matchesPage) return false;
+
+                if (searchKeyword) {
+                    const matchTitle = book.title.toLowerCase().includes(searchKeyword);
+                    const matchAuthor = book.author.toLowerCase().includes(searchKeyword);
+                    const matchSummary = book.summary.toLowerCase().includes(searchKeyword);
+                    const matchSeries = book.series ? book.series.toLowerCase().includes(searchKeyword) : false;
+                    if (!matchTitle && !matchAuthor && !matchSummary && !matchSeries) return false;
+                }
+
+                return true;
+            });
+
+            matchingCount.textContent = filteredBooks.length;
+            syncWheelItemsWithFilteredBooks();
+            renderCurrentView();
+        }
+
+        function syncWheelItemsWithFilteredBooks() {
+            activeWheelItems = filteredBooks.map(b => ({
+                id: b.id,
+                label: b.title,
+                isBook: true,
+                bookRef: b,
+                enabled: true
+            }));
+        }
+
+        function renderBookCardHtml(book, extraReason = null) {
+            const isSaved = savedBookIds.includes(book.id);
+            const isRead = readBookIds.includes(book.id);
+
+            return `
+                <div onclick="openBookModal('${book.id}')" class="glass-panel rounded-2xl p-5 border ${isRead ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800'} hover:border-slate-700 hover:scale-[1.02] transition cursor-pointer flex flex-col justify-between group relative overflow-hidden">
+                    ${extraReason ? `<div class="mb-2 text-[11px] font-semibold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> ${extraReason}</div>` : ''}
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="text-[11px] font-semibold text-brand-400 bg-brand-500/10 px-2.5 py-0.5 rounded-lg border border-brand-500/20">${book.genre}</span>
+                            <div class="flex items-center gap-1.5">
+                                ${getLangBadge(book.lang)}
+                                <button title="${isRead ? '已完成閱讀' : '標記為已讀'}" onclick="toggleReadBook('${book.id}', event)" class="p-1.5 rounded-lg ${isRead ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/50' : 'bg-slate-800/80 hover:bg-slate-700 text-slate-400'} transition">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4 ${isRead ? 'fill-emerald-400/20' : ''}"></i>
+                                </button>
+                                <button title="${isSaved ? '已在待讀清單' : '加入待讀清單'}" onclick="toggleSaveBook('${book.id}', event)" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition">
+                                    <i data-lucide="bookmark" class="w-4 h-4 ${isSaved ? 'fill-amber-400 text-amber-400' : ''}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-base text-slate-100 group-hover:text-brand-400 transition line-clamp-1">${book.title}</h3>
+                        <p class="text-xs text-slate-400 mb-2">By ${book.author}</p>
+                        ${book.series ? `<div class="inline-block text-[10px] text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded mb-3 border border-amber-500/20 font-medium">📚 ${book.series}</div>` : ''}
+                        <p class="text-xs text-slate-300 line-clamp-3 mb-4 leading-relaxed">${book.summary}</p>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        ${getDifficultyBadge(book.difficulty)}
+                        <span class="text-slate-400 font-mono text-[11px]">${book.pages} pages</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGrid() {
+            if (filteredBooks.length === 0) {
+                gridSection.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-500 space-y-3">
+                        <i data-lucide="book-x" class="w-12 h-12 mx-auto stroke-1"></i>
+                        <p class="text-sm">沒有符合當前條件的書籍，請嘗試放寬篩選條件。</p>
+                    </div>
+                `;
+            } else {
+                gridSection.innerHTML = filteredBooks.map(b => renderBookCardHtml(b)).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderSavedBooks() {
+            const savedList = BOOKS_DATA.filter(b => savedBookIds.includes(b.id));
+            if (savedList.length === 0) {
+                savedBooksGrid.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-500 space-y-3">
+                        <i data-lucide="bookmark" class="w-12 h-12 mx-auto stroke-1"></i>
+                        <p class="text-sm">您尚未收藏任何待讀書籍，點擊書卡上的書籤圖示即可加入！</p>
+                    </div>
+                `;
+            } else {
+                savedBooksGrid.innerHTML = savedList.map(b => renderBookCardHtml(b)).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderReadBooks() {
+            const readList = BOOKS_DATA.filter(b => readBookIds.includes(b.id));
+            if (readList.length === 0) {
+                readBooksGrid.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-500 space-y-3">
+                        <i data-lucide="check-circle-2" class="w-12 h-12 mx-auto stroke-1 text-slate-600"></i>
+                        <p class="text-sm">您尚未標記任何已讀書籍。點擊書卡右上角的打勾按鈕，系統將自動分析您的喜好並推薦新書！</p>
+                    </div>
+                `;
+            } else {
+                readBooksGrid.innerHTML = readList.map(b => renderBookCardHtml(b)).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function renderRecommendations() {
+            const readBooks = BOOKS_DATA.filter(b => readBookIds.includes(b.id));
+
+            if (readBooks.length === 0) {
+                recommendationContent.innerHTML = `
+                    <div class="glass-panel p-12 text-center rounded-2xl border border-slate-800 space-y-4">
+                        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-2xl w-fit mx-auto border border-amber-500/20">
+                            <i data-lucide="sparkles" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-slate-200">還沒有足夠的閱讀紀錄喔！</h4>
+                        <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                            請先在「書庫列表」中將您曾經讀過的書籍標記為 <span class="text-emerald-400 font-semibold"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 inline"></i> 已閱讀完畢</span>。智慧推薦引擎將會分析您的喜好類型、語言與閱讀難度，為您精準推播！
+                        </p>
+                        <button onclick="switchMode('grid')" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold transition inline-flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-4 h-4"></i> 前往書庫挑選標記
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            // Calculate reading preferences based on read books
+            const genreScores = {};
+            const langScores = {};
+            const difficultyScores = {};
+            const readAuthors = new Set();
+
+            readBooks.forEach(b => {
+                genreScores[b.genre] = (genreScores[b.genre] || 0) + 1;
+                langScores[b.lang] = (langScores[b.lang] || 0) + 1;
+                difficultyScores[b.difficulty] = (difficultyScores[b.difficulty] || 0) + 1;
+                readAuthors.add(b.author);
+            });
+
+            // Find unread books and score them
+            const unreadBooks = BOOKS_DATA.filter(b => !readBookIds.includes(b.id));
+
+            const scoredRecommendations = unreadBooks.map(b => {
+                let score = 0;
+                let reasons = [];
+
+                // Genre Match
+                if (genreScores[b.genre]) {
+                    score += genreScores[b.genre] * 3;
+                    reasons.push(`偏好類型：${b.genre}`);
+                }
+
+                // Author Match
+                if (readAuthors.has(b.author)) {
+                    score += 5;
+                    reasons.push(`同作者：${b.author}`);
+                }
+
+                // Language Match
+                if (langScores[b.lang]) {
+                    score += langScores[b.lang] * 1.5;
+                }
+
+                // Difficulty Level Match
+                if (difficultyScores[b.difficulty]) {
+                    score += difficultyScores[b.difficulty] * 1;
+                }
+
+                return {
+                    book: b,
+                    score,
+                    reason: reasons.length > 0 ? reasons.join(' · ') : '熱門好書推薦'
+                };
+            });
+
+            // Sort by recommendation score descending
+            scoredRecommendations.sort((a, b) => b.score - a.score);
+
+            if (scoredRecommendations.length === 0) {
+                recommendationContent.innerHTML = `
+                    <div class="glass-panel p-12 text-center rounded-2xl border border-slate-800 space-y-3">
+                        <i data-lucide="trophy" class="w-12 h-12 text-amber-400 mx-auto stroke-1"></i>
+                        <h4 class="text-base font-bold text-slate-200">太厲害了！您已讀完書庫中的所有書籍！</h4>
+                        <p class="text-xs text-slate-400">目前沒有其他可推薦的未讀新書囉。</p>
+                    </div>
+                `;
+            } else {
+                recommendationContent.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                        ${scoredRecommendations.map(item => renderBookCardHtml(item.book, item.reason)).join('')}
+                    </div>
+                `;
+            }
+
+            lucide.createIcons();
+        }
+
+        function renderCurrentView() {
+            if (currentMode === 'grid') renderGrid();
+            else if (currentMode === 'spin') setupWheel();
+            else if (currentMode === 'saved') renderSavedBooks();
+            else if (currentMode === 'read') renderReadBooks();
+            else if (currentMode === 'recommend') renderRecommendations();
+        }
+
+        function setupWheel() {
+            const enabledItems = activeWheelItems.filter(item => item.enabled);
+            renderWheelItemList();
+
+            wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+            const centerX = wheelCanvas.width / 2;
+            const centerY = wheelCanvas.height / 2;
+            const radius = wheelCanvas.width / 2 - 5;
+
+            if (enabledItems.length === 0) {
+                wheelCtx.beginPath();
+                wheelCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                wheelCtx.fillStyle = '#1e293b';
+                wheelCtx.fill();
+                wheelCtx.fillStyle = '#94a3b8';
+                wheelCtx.font = '12px sans-serif';
+                wheelCtx.textAlign = 'center';
+                wheelCtx.fillText('請至少勾選一項選項', centerX, centerY);
+                return;
+            }
+
+            const sliceAngle = (2 * Math.PI) / enabledItems.length;
+
+            enabledItems.forEach((item, idx) => {
+                const angle = idx * sliceAngle;
+                wheelCtx.beginPath();
+                wheelCtx.moveTo(centerX, centerY);
+                wheelCtx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
+                wheelCtx.closePath();
+                wheelCtx.fillStyle = colors[idx % colors.length];
+                wheelCtx.fill();
+                wheelCtx.strokeStyle = '#0f172a';
+                wheelCtx.lineWidth = 2;
+                wheelCtx.stroke();
+
+                // Draw Text label
+                wheelCtx.save();
+                wheelCtx.translate(centerX, centerY);
+                wheelCtx.rotate(angle + sliceAngle / 2);
+                wheelCtx.textAlign = 'right';
+                wheelCtx.fillStyle = '#ffffff';
+                wheelCtx.font = 'bold 11px sans-serif';
+                const label = item.label.length > 14 ? item.label.substring(0, 12) + '...' : item.label;
+                wheelCtx.fillText(label, radius - 15, 4);
+                wheelCtx.restore();
+            });
+        }
+
+        function renderWheelItemList() {
+            wheelItemsContainer.innerHTML = activeWheelItems.map((item, idx) => `
+                <div class="flex items-center justify-between gap-2 bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
+                    <label class="flex items-center gap-2 cursor-pointer truncate flex-1">
+                        <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleWheelItem(${idx})" class="rounded border-slate-600 bg-slate-900 text-brand-600 focus:ring-0">
+                        <span class="truncate font-medium text-slate-200 ${!item.enabled ? 'line-through text-slate-500' : ''}">${item.label}</span>
+                    </label>
+                    <button onclick="removeWheelItem(${idx})" class="text-slate-500 hover:text-rose-400 p-0.5">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function toggleWheelItem(index) {
+            activeWheelItems[index].enabled = !activeWheelItems[index].enabled;
+            setupWheel();
+        }
+
+        function removeWheelItem(index) {
+            activeWheelItems.splice(index, 1);
+            setupWheel();
+        }
+
+        function spinWheel() {
+            if (isSpinning) return;
+            const enabledItems = activeWheelItems.filter(item => item.enabled);
+            if (enabledItems.length === 0) return;
+
+            isSpinning = true;
+            document.getElementById('spinResultContainer').classList.add('hidden');
+
+            const selectedIndex = Math.floor(Math.random() * enabledItems.length);
+            const sliceAngle = 360 / enabledItems.length;
+            const targetSliceCenter = selectedIndex * sliceAngle + sliceAngle / 2;
+
+            const degreesToRotate = 360 * 5 + (270 - targetSliceCenter);
+            currentWheelRotation += degreesToRotate;
+
+            wheelCanvas.style.transition = 'transform 4s cubic-bezier(0.15, 0.99, 0.18, 1)';
+            wheelCanvas.style.transform = `rotate(${currentWheelRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                const chosenItem = enabledItems[selectedIndex];
+                const resultContainer = document.getElementById('spinResultContainer');
+                const resultContent = document.getElementById('spinResultContent');
+
+                if (chosenItem.isBook && chosenItem.bookRef) {
+                    resultContent.innerHTML = renderBookCardHtml(chosenItem.bookRef);
+                } else {
+                    resultContent.innerHTML = `
+                        <div class="glass-panel p-6 rounded-2xl border border-brand-500/40 text-center space-y-2">
+                            <h4 class="text-xl font-bold text-white">${chosenItem.label}</h4>
+                            <p class="text-xs text-slate-400">這是您自訂的轉盤結果！準備好開始這個好點子了嗎？</p>
+                        </div>
+                    `;
+                }
+
+                resultContainer.classList.remove('hidden');
+                lucide.createIcons();
+            }, 4000);
+        }
+
+        function openBookModal(bookId) {
+            const book = BOOKS_DATA.find(b => b.id === bookId);
+            if (!book) return;
+
+            const isSaved = savedBookIds.includes(book.id);
+            const isRead = readBookIds.includes(book.id);
+
+            modalContent.innerHTML = `
+                <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                                ${book.genre}
+                            </span>
+                            ${getLangBadge(book.lang)}
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white mt-2">${book.title}</h2>
+                        <p class="text-sm text-slate-400 font-medium">By ${book.author}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleReadBook('${book.id}', event); openBookModal('${book.id}');" class="p-2.5 rounded-xl ${isRead ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/50' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'} transition flex items-center gap-1.5 text-xs font-bold">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 ${isRead ? 'fill-emerald-400/20' : ''}"></i>
+                            <span>${isRead ? '已讀完' : '標為已讀'}</span>
+                        </button>
+                        <button onclick="toggleSaveBook('${book.id}', event); openBookModal('${book.id}');" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <i data-lucide="bookmark" class="w-5 h-5 ${isSaved ? 'fill-amber-400 text-amber-400' : ''}"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 text-center">
+                    <div>
+                        <span class="block text-[10px] text-slate-500 uppercase">${book.lang === 'zh' ? '閱讀難易度' : 'Difficulty'}</span>
+                        <span class="text-xs font-bold text-slate-200">${book.difficulty}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-slate-500 uppercase">${book.lang === 'zh' ? '閱讀分級建議' : 'Lexile / Level'}</span>
+                        <span class="text-xs font-bold text-slate-200 font-mono">${book.lexile}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-slate-500 uppercase">${book.lang === 'zh' ? '全書頁數' : 'Page Count'}</span>
+                        <span class="text-xs font-bold text-slate-200">${book.pages} pages</span>
+                    </div>
+                </div>
+
+                ${book.series ? `
+                    <div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 space-y-1.5">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <i data-lucide="layers" class="w-4 h-4"></i> ${book.lang === 'zh' ? '作品系列與續集 (Series & Sequels)' : 'Series & Sequel Books'}
+                        </h4>
+                        <p class="text-xs font-bold text-slate-200">${book.series}</p>
+                        ${book.sequels && book.sequels.length > 0 ? `
+                            <ul class="text-xs text-slate-300 list-disc list-inside space-y-0.5 pt-1">
+                                ${book.sequels.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        ` : '<p class="text-xs text-slate-400 italic">本作品為獨立單行本</p>'}
+                    </div>
+                ` : ''}
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="w-4 h-4 text-brand-400"></i> ${book.lang === 'zh' ? '書籍內容簡介' : 'Plot Summary'}
+                    </h4>
+                    <p class="text-sm text-slate-300 leading-relaxed font-sans">${book.summary}</p>
+                </div>
+
+                <div class="space-y-2 bg-brand-950/30 p-4 rounded-xl border border-brand-800/40">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-brand-300 flex items-center gap-1.5">
+                        <i data-lucide="graduation-cap" class="w-4 h-4 text-brand-400"></i> ${book.lang === 'zh' ? '為什麼適合高中生閱讀' : 'Why It\'s Great for High School Students'}
+                    </h4>
+                    <p class="text-xs text-slate-300 leading-relaxed font-sans">${book.whyRead}</p>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="quote" class="w-4 h-4 text-amber-400"></i> ${book.lang === 'zh' ? '經典名言佳句' : 'Famous Quote'}
+                    </h4>
+                    <blockquote class="text-xs italic text-slate-200 bg-slate-950 p-3.5 rounded-xl border-l-4 border-amber-400">
+                        "${book.quote}"
+                    </blockquote>
+                </div>
+            `;
+
+            bookModal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function switchMode(newMode) {
+            currentMode = newMode;
+
+            [modeGridBtn, modeSpinBtn, bookmarkTabBtn, readTabBtn, recommendTabBtn].forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white', 'shadow', 'bg-emerald-600', 'bg-amber-600');
+                btn.classList.add('text-slate-400');
+            });
+
+            gridSection.classList.add('hidden');
+            spinSection.classList.add('hidden');
+            savedSection.classList.add('hidden');
+            readSection.classList.add('hidden');
+            recommendSection.classList.add('hidden');
+
+            // Toggle sidebar filter visibility (only useful in grid or spin)
+            if (newMode === 'grid' || newMode === 'spin') {
+                sidebarFilter.classList.remove('hidden');
+                modeSwitchContainer.classList.remove('hidden');
+            } else {
+                sidebarFilter.classList.add('hidden');
+                modeSwitchContainer.classList.add('hidden');
+            }
+
+            if (newMode === 'grid') {
+                modeGridBtn.classList.add('bg-brand-600', 'text-white', 'shadow');
+                modeGridBtn.classList.remove('text-slate-400');
+                gridSection.classList.remove('hidden');
+            } else if (newMode === 'spin') {
+                modeSpinBtn.classList.add('bg-brand-600', 'text-white', 'shadow');
+                modeSpinBtn.classList.remove('text-slate-400');
+                spinSection.classList.remove('hidden');
+            } else if (newMode === 'saved') {
+                bookmarkTabBtn.classList.add('bg-brand-600', 'text-white', 'shadow');
+                bookmarkTabBtn.classList.remove('text-slate-400');
+                savedSection.classList.remove('hidden');
+            } else if (newMode === 'read') {
+                readTabBtn.classList.add('bg-emerald-600', 'text-white', 'shadow');
+                readTabBtn.classList.remove('text-slate-400');
+                readSection.classList.remove('hidden');
+            } else if (newMode === 'recommend') {
+                recommendTabBtn.classList.add('bg-amber-600', 'text-white', 'shadow');
+                recommendTabBtn.classList.remove('text-slate-400');
+                recommendSection.classList.remove('hidden');
+            }
+
+            renderCurrentView();
+        }
+
+        modeGridBtn.addEventListener('click', () => switchMode('grid'));
+        modeSpinBtn.addEventListener('click', () => switchMode('spin'));
+        bookmarkTabBtn.addEventListener('click', () => switchMode('saved'));
+        readTabBtn.addEventListener('click', () => switchMode('read'));
+        recommendTabBtn.addEventListener('click', () => switchMode('recommend'));
+
+        filterForm.addEventListener('change', applyFilters);
+        searchInput.addEventListener('input', applyFilters);
+
+        resetFiltersBtn.addEventListener('click', () => {
+            filterForm.reset();
+            filterForm.querySelectorAll('input[name="genre"]').forEach(cb => cb.checked = true);
+            filterForm.querySelectorAll('input[name="pages"]').forEach(cb => cb.checked = true);
+            searchInput.value = '';
+            applyFilters();
+        });
+
+        document.getElementById('spinActionBtn').addEventListener('click', spinWheel);
+
+        addCustomOptionBtn.addEventListener('click', () => {
+            const val = customOptionInput.value.trim();
+            if (val) {
+                activeWheelItems.push({
+                    id: 'custom_' + Date.now(),
+                    label: val,
+                    isBook: false,
+                    enabled: true
+                });
+                customOptionInput.value = '';
+                setupWheel();
+            }
+        });
+
+        resetWheelItemsBtn.addEventListener('click', () => {
+            syncWheelItemsWithFilteredBooks();
+            setupWheel();
+        });
+
+        closeModalBtn.addEventListener('click', () => bookModal.classList.add('hidden'));
+        bookModal.addEventListener('click', (e) => {
+            if (e.target === bookModal) bookModal.classList.add('hidden');
+        });
+
+        document.getElementById('clearSavedBtn').addEventListener('click', () => {
+            savedBookIds = [];
+            window.__galleryStorage.removeItem('readnext_saved_books');
+            updateBadges();
+            renderSavedBooks();
+        });
+
+        document.getElementById('clearReadBtn').addEventListener('click', () => {
+            readBookIds = [];
+            window.__galleryStorage.removeItem('readnext_read_books');
+            updateBadges();
+            renderReadBooks();
+        });
+
+        window.onload = function() {
+            lucide.createIcons();
+            updateBadges();
+            applyFilters();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日穿搭幸運轉盤 - Outfit Wheel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 50%, #d1d5db 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Wheel Container & Canvas */
+        .wheel-container {
+            position: relative;
+            width: 100%;
+            max-width: 250px;
+            aspect-ratio: 1;
+            margin: 0 auto;
+        }
+
+        .wheel-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            transition: filter 0.3s ease;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-top: 22px solid #ef4444;
+            filter: drop-shadow(0 4px 5px rgba(0,0,0,0.4));
+            z-index: 10;
+            transform-origin: 50% 0%;
+            transition: transform 0.05s ease-out;
+        }
+
+        .wheel-pointer.tick {
+            transform: translateX(-50%) rotate(-18deg);
+        }
+
+        .wheel-spinning {
+            filter: blur(1px) brightness(1.1);
+            animation: wheelGlow 1.2s infinite alternate;
+        }
+
+        @keyframes wheelGlow {
+            0% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+            100% { box-shadow: 0 0 35px rgba(236, 72, 153, 0.8); }
+        }
+
+        /* Result reveal pop animation */
+        @keyframes resultPop {
+            0% { transform: scale(0.92); opacity: 0.8; }
+            50% { transform: scale(1.06); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-result-pop {
+            animation: resultPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .wheel-center-cap {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 42px;
+            height: 42px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+
+        /* Gacha SSR Card Modal Animations */
+        @keyframes cardGlowRay {
+            0% { transform: rotate(0deg) scale(1); opacity: 0.8; }
+            50% { transform: rotate(180deg) scale(1.1); opacity: 1; }
+            100% { transform: rotate(360deg) scale(1); opacity: 0.8; }
+        }
+
+        .bg-rays {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: conic-gradient(from 0deg, rgba(255,215,0,0.3), transparent 20deg, rgba(255,105,180,0.3) 40deg, transparent 60deg, rgba(147,112,219,0.3) 80deg, transparent 100deg, rgba(255,215,0,0.3) 120deg);
+            border-radius: 50%;
+            animation: cardGlowRay 12s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes ssrEntrance {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; filter: brightness(2) blur(10px); }
+            70% { transform: scale(1.08) rotate(2deg); opacity: 1; filter: brightness(1.3) blur(0px); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+        }
+
+        .animate-ssr-card {
+            animation: ssrEntrance 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Rainbow Border Shimmer */
+        .rainbow-border {
+            border: 3px solid transparent;
+            background-image: linear-gradient(#1e1b4b, #0f172a), linear-gradient(135deg, #f59e0b, #ec4899, #8b5cf6, #3b82f6);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+        }
+
+        /* Sparkle float elements */
+        @keyframes sparkleFloat {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+            50% { transform: translateY(-10px) scale(1.3); opacity: 1; }
+        }
+
+        .sparkle-icon {
+            animation: sparkleFloat 2s ease-in-out infinite;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased p-3 sm:p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <div class="inline-flex items-center justify-center p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-md mb-2 border border-white">
+                <i class="fa-solid font-bold text-2xl text-indigo-600 fa-wand-magic-sparkles mr-3 animate-bounce"></i>
+                <h1 class="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
+                    今日穿搭幸運轉盤
+                </h1>
+            </div>
+            <p class="text-slate-600 text-sm sm:text-base font-medium">✨ 選擇場合事件 ➔ 一鍵抽出閃亮 SSR 夢幻 OOTD 全套造型！</p>
+        </header>
+
+        <!-- Event / Location Selection Bar -->
+        <div class="bg-white/90 backdrop-blur-md rounded-3xl p-5 shadow-xl border border-white/80 mb-8 max-w-5xl mx-auto">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-indigo-500 animate-ping"></span>
+                    <h2 class="font-extrabold text-slate-800 text-base sm:text-lg">步驟 1：選擇今日出門場合 / 地點</h2>
+                </div>
+                <span id="activeOccasionBadge" class="px-3 py-1 bg-indigo-100 text-indigo-700 font-bold text-xs rounded-full border border-indigo-200">
+                    📍 學校上課
+                </span>
+            </div>
+
+            <!-- Occasion Buttons Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 mb-5">
+                <button id="btn-school" onclick="selectOccasion('school')" class="occasion-btn active px-3 py-2.5 rounded-xl border border-indigo-500 bg-indigo-600 text-white font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-graduation-cap text-lg"></i>
+                    <span>學校上課</span>
+                </button>
+                <button id="btn-hangout" onclick="selectOccasion('hangout')" class="occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-bag-shopping text-lg text-pink-500"></i>
+                    <span>假日逛街</span>
+                </button>
+                <button id="btn-library" onclick="selectOccasion('library')" class="occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-book-open text-lg text-blue-500"></i>
+                    <span>圖書館/K書</span>
+                </button>
+                <button id="btn-date" onclick="selectOccasion('date')" class="occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-heart text-lg text-rose-500"></i>
+                    <span>約會/聚會</span>
+                </button>
+                <button id="btn-sports" onclick="selectOccasion('sports')" class="occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-volleyball text-lg text-amber-500"></i>
+                    <span>社團/運動</span>
+                </button>
+                <button id="btn-home" onclick="selectOccasion('home')" class="occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm">
+                    <i class="fa-solid fa-house-user text-lg text-emerald-500"></i>
+                    <span>在家/買飯</span>
+                </button>
+            </div>
+
+            <!-- Big Spin Button -->
+            <div class="text-center pt-2 border-t border-slate-100">
+                <button onclick="spinBothWheels()" class="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-600 text-white font-extrabold rounded-2xl shadow-xl hover:shadow-pink-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-base sm:text-lg inline-flex items-center justify-center gap-3 group">
+                    <i class="fa-solid fa-sparkles text-yellow-300 text-xl group-hover:rotate-12 transition-transform"></i>
+                    一鍵抽取全套 OOTD 穿搭！
+                    <i class="fa-solid fa-dice text-xl animate-spin-slow"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content Grid: 3 Wheels -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            
+            <!-- Wheel 1: Outfit -->
+            <div class="bg-white/90 backdrop-blur-md rounded-3xl p-5 shadow-xl border border-white/60 flex flex-col items-center relative overflow-hidden">
+                <div class="w-full flex justify-between items-center mb-2">
+                    <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold text-xs uppercase rounded-full border border-indigo-100">
+                        <i class="fa-solid fa-shirt mr-1"></i> 服裝轉盤
+                    </span>
+                    <button onclick="spinWheel('outfit')" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> 單獨轉動
+                    </button>
+                </div>
+
+                <div class="wheel-container my-3">
+                    <div id="outfitPointer" class="wheel-pointer"></div>
+                    <canvas id="outfitCanvas" class="wheel-canvas" width="400" height="400"></canvas>
+                    <div class="wheel-center-cap">
+                        <i class="fa-solid fa-shirt text-indigo-500 text-lg"></i>
+                    </div>
+                </div>
+
+                <div id="outfitBox" class="w-full mt-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-center transition-all duration-300">
+                    <div class="text-[11px] text-slate-400 font-medium mb-0.5">抽中服裝</div>
+                    <div id="outfitResult" class="text-sm font-bold text-slate-700 min-h-[40px] flex items-center justify-center">點擊上方一鍵抽取！</div>
+                </div>
+            </div>
+
+            <!-- Wheel 2: Hairstyle -->
+            <div class="bg-white/90 backdrop-blur-md rounded-3xl p-5 shadow-xl border border-white/60 flex flex-col items-center relative overflow-hidden">
+                <div class="w-full flex justify-between items-center mb-2">
+                    <span class="px-3 py-1 bg-purple-50 text-purple-700 font-bold text-xs uppercase rounded-full border border-purple-100">
+                        <i class="fa-solid fa-scissors mr-1"></i> 髮型轉盤
+                    </span>
+                    <button onclick="spinWheel('hair')" class="text-xs text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> 單獨轉動
+                    </button>
+                </div>
+
+                <div class="wheel-container my-3">
+                    <div id="hairPointer" class="wheel-pointer"></div>
+                    <canvas id="hairCanvas" class="wheel-canvas" width="400" height="400"></canvas>
+                    <div class="wheel-center-cap">
+                        <i class="fa-solid fa-scissors text-purple-500 text-lg"></i>
+                    </div>
+                </div>
+
+                <div id="hairBox" class="w-full mt-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-center transition-all duration-300">
+                    <div class="text-[11px] text-slate-400 font-medium mb-0.5">抽中髮型</div>
+                    <div id="hairResult" class="text-sm font-bold text-slate-700 min-h-[40px] flex items-center justify-center">點擊上方一鍵抽取！</div>
+                </div>
+            </div>
+
+            <!-- Wheel 3: Accessories -->
+            <div class="bg-white/90 backdrop-blur-md rounded-3xl p-5 shadow-xl border border-white/60 flex flex-col items-center relative overflow-hidden">
+                <div class="w-full flex justify-between items-center mb-2">
+                    <span class="px-3 py-1 bg-pink-50 text-pink-700 font-bold text-xs uppercase rounded-full border border-pink-100">
+                        <i class="fa-solid fa-gem mr-1"></i> 配件轉盤
+                    </span>
+                    <button onclick="spinWheel('accessory')" class="text-xs text-pink-600 hover:text-pink-800 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> 單獨轉動
+                    </button>
+                </div>
+
+                <div class="wheel-container my-3">
+                    <div id="accessoryPointer" class="wheel-pointer"></div>
+                    <canvas id="accessoryCanvas" class="wheel-canvas" width="400" height="400"></canvas>
+                    <div class="wheel-center-cap">
+                        <i class="fa-solid fa-glasses text-pink-500 text-lg"></i>
+                    </div>
+                </div>
+
+                <div id="accessoryBox" class="w-full mt-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-center transition-all duration-300">
+                    <div class="text-[11px] text-slate-400 font-medium mb-0.5">抽中配件</div>
+                    <div id="accessoryResult" class="text-sm font-bold text-slate-700 min-h-[40px] flex items-center justify-center">點擊上方一鍵抽取！</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Total Match Banner -->
+        <div id="totalMatchCard" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-2xl mb-10 transition-all transform duration-500 relative overflow-hidden">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div class="space-y-2 text-center md:text-left">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-semibold border border-indigo-500/30">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 今日推薦組合
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight" id="combinedOutfitTitle">選好場合後點擊「一鍵抽取」！</h2>
+                    <p class="text-slate-300 text-sm sm:text-base max-w-xl" id="combinedOutfitDesc">系統將為您抽取今日專屬的完整 OOTD 服裝、髮型與配件推薦！</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="saveOutfitBtn" disabled onclick="saveCurrentMatch()" class="px-6 py-3.5 bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-white/10 text-white font-medium rounded-xl border border-white/20 backdrop-blur-sm transition-all flex items-center gap-2">
+                        <i class="fa-regular fa-bookmark"></i> 收藏此組合
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Section: Customization & History -->
+        <div class="bg-white/80 backdrop-blur-md rounded-3xl p-6 shadow-lg border border-white/60 mb-10">
+            <!-- Tab Navigation -->
+            <div class="flex border-b border-slate-200 mb-6 gap-6">
+                <button id="tabBtn-settings" onclick="toggleTab('settings')" class="pb-3 font-bold text-sm border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> 自訂清單
+                </button>
+                <button id="tabBtn-saved" onclick="toggleTab('saved')" class="pb-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2">
+                    <i class="fa-solid fa-heart"></i> 已收藏的穿搭 (<span id="savedCount">0</span>)
+                </button>
+            </div>
+
+            <!-- Tab 1: Custom Items -->
+            <div id="tabContent-settings" class="space-y-6">
+                <p class="text-xs text-slate-500">💡 當前編輯場合：<span id="editingOccasionLabel" class="font-bold text-indigo-600">學校上課</span></p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Outfit List Manager -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                            <span><i class="fa-solid fa-shirt text-indigo-500 mr-2"></i>服裝組合清單</span>
+                        </h3>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="newOutfitInput" placeholder="例如: 學校制服 + 百褶裙" class="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button onclick="addItem('outfit')" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all">新增</button>
+                        </div>
+                        <ul id="outfitItemList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></ul>
+                    </div>
+
+                    <!-- Hairstyle List Manager -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                            <span><i class="fa-solid fa-scissors text-purple-500 mr-2"></i>髮型清單</span>
+                        </h3>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="newHairInput" placeholder="例如: 青春活力高馬尾" class="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <button onclick="addItem('hair')" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-all">新增</button>
+                        </div>
+                        <ul id="hairItemList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></ul>
+                    </div>
+
+                    <!-- Accessory List Manager -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                            <span><i class="fa-solid fa-glasses text-pink-500 mr-2"></i>配件清單</span>
+                        </h3>
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="newAccessoryInput" placeholder="例如: 日系雙肩後背包" class="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <button onclick="addItem('accessory')" class="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-semibold transition-all">新增</button>
+                        </div>
+                        <ul id="accessoryItemList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></ul>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center gap-3">
+                    <button onclick="resetToDefault()" class="px-3 py-1.5 text-rose-500 hover:bg-rose-50 text-xs font-medium rounded-lg ml-auto transition-all">重設當前場合預設</button>
+                </div>
+            </div>
+
+            <!-- Tab 2: Saved Outfits -->
+            <div id="tabContent-saved" class="hidden">
+                <div id="savedContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Fullscreen SSR Gacha Reveal Modal -->
+    <div id="gachaModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-lg z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-rays"></div>
+        
+        <div id="ssrCardBody" class="rainbow-border rounded-3xl p-6 sm:p-8 max-w-md w-full text-center text-white relative z-10 shadow-2xl animate-ssr-card">
+            
+            <!-- Sparkle decorative icons -->
+            <i class="fa-solid fa-star text-amber-300 text-xl absolute top-4 left-5 sparkle-icon"></i>
+            <i class="fa-solid fa-sparkles text-pink-400 text-2xl absolute top-6 right-6 sparkle-icon" style="animation-delay: 0.5s;"></i>
+            
+            <div class="inline-block px-4 py-1 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 text-slate-950 font-black text-xs uppercase tracking-widest rounded-full shadow-lg mb-4" id="modalRarityBadge">
+                ✨ SSR 夢幻天花板穿搭 ✨
+            </div>
+
+            <div class="text-xs text-amber-300 font-bold tracking-wider mb-1" id="modalOccasionTag">📍 學校上課專屬 OOTD</div>
+            <h2 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-white to-pink-200 mb-6" id="modalTitle">
+                今日閃亮登場造型
+            </h2>
+
+            <!-- Cards breakdown -->
+            <div class="space-y-3 mb-6 text-left">
+                <div class="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 shrink-0 rounded-xl bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-lg">
+                            <i class="fa-solid fa-shirt"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">服裝匹配</div>
+                            <div class="text-sm font-bold text-white truncate" id="modalOutfit">日系制服襯衫 + 百褶裙</div>
+                        </div>
+                    </div>
+                    <button onclick="rerollFromModal('outfit')" class="shrink-0 px-3 py-1.5 bg-indigo-500/30 hover:bg-indigo-500/50 text-indigo-200 hover:text-white rounded-xl text-xs font-semibold border border-indigo-400/30 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-dice text-indigo-300"></i>
+                        <span>換一個</span>
+                    </button>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 shrink-0 rounded-xl bg-purple-500/30 flex items-center justify-center text-purple-300 text-lg">
+                            <i class="fa-solid fa-scissors"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">推薦髮型</div>
+                            <div class="text-sm font-bold text-purple-200 truncate" id="modalHair">青春活力高馬尾</div>
+                        </div>
+                    </div>
+                    <button onclick="rerollFromModal('hair')" class="shrink-0 px-3 py-1.5 bg-purple-500/30 hover:bg-purple-500/50 text-purple-200 hover:text-white rounded-xl text-xs font-semibold border border-purple-400/30 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-dice text-purple-300"></i>
+                        <span>換一個</span>
+                    </button>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 shrink-0 rounded-xl bg-pink-500/30 flex items-center justify-center text-pink-300 text-lg">
+                            <i class="fa-solid fa-gem"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">亮點配件</div>
+                            <div class="text-sm font-bold text-pink-200 truncate" id="modalAccessory">日系雙肩後背包</div>
+                        </div>
+                    </div>
+                    <button onclick="rerollFromModal('accessory')" class="shrink-0 px-3 py-1.5 bg-pink-500/30 hover:bg-pink-500/50 text-pink-200 hover:text-white rounded-xl text-xs font-semibold border border-pink-400/30 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-dice text-pink-300"></i>
+                        <span>換一個</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeGachaModal()" class="flex-1 py-3.5 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check"></i> 太棒了！收下今日穿搭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-3 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">通知訊息</span>
+    </div>
+
+    <script>
+        // Web Audio API Sound Synthesizer
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTickSound() {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.03);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.03);
+            } catch (e) {}
+        }
+
+        function playFanfareSound() {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const startTime = audioCtx.currentTime + (idx * 0.08);
+                    gain.gain.setValueAtTime(0.25, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.4);
+                });
+            } catch (e) {}
+        }
+
+        // High School Female Student Occasion Wardrobe Database
+        const occasionData = {
+            school: {
+                name: "學校上課",
+                outfits: [
+                    "日系制服襯衫 + 針織背心 + 百褶裙",
+                    "學校運動服外套 + 運動長褲",
+                    "學校體育短T + 運動短褲",
+                    "學院風V領毛衣 + 格紋短裙",
+                    "白襯衫 + 黑色百褶裙 + 領結",
+                    "大尺碼校服帽T + 黑色直筒褲",
+                    "班服T恤 + 牛仔寬褲"
+                ],
+                hairs: [
+                    "青春活力高馬尾",
+                    "日系減齡雙麻花辮",
+                    "甜美半紮公主頭",
+                    "清爽蓬鬆高丸子頭",
+                    "自然順直長髮 (齊劉海)",
+                    "低調溫柔低馬尾",
+                    "俏皮短髮/波波頭"
+                ],
+                accessories: [
+                    "日系雙肩後背包",
+                    "高筒小白鞋 + 彩襪",
+                    "運動手錶",
+                    "可愛髮夾/蝴蝶結髮飾",
+                    "日系黑框/金絲眼鏡",
+                    "隨身水壺 + 帆布手提袋"
+                ]
+            },
+            hangout: {
+                name: "假日逛街",
+                outfits: [
+                    "短版帽T + 格紋百褶裙",
+                    "白T + 高腰牛仔寬褲",
+                    "韓系針織外套 + 黑色直筒褲",
+                    "微甜印花T + 牛仔長裙",
+                    "聯名帽T + 工裝寬褲",
+                    "條紋長袖 + 吊帶牛仔褲",
+                    "娃娃領襯衫 + 細肩帶洋裝"
+                ],
+                hairs: [
+                    "韓系浪漫波浪大捲髮",
+                    "日系雙馬尾造型",
+                    "慵懶韓系低包頭",
+                    "俏皮半紮丸子頭",
+                    "氣質側編髮",
+                    "自然隨性披肩發"
+                ],
+                accessories: [
+                    "帆布斜背包",
+                    "漁夫帽 / 棒球帽",
+                    "老爹鞋 + 高筒彩襪",
+                    "愛心簡約鎖骨鍊",
+                    "復古墨鏡",
+                    "可愛髮箍"
+                ]
+            },
+            library: {
+                name: "圖書館 / K書",
+                outfits: [
+                    "寬鬆大學T + 瑜伽緊身褲",
+                    "舒適條紋T + 卡其寬褲",
+                    "柔軟針織衫 + 直筒牛仔褲",
+                    "連帽外套 + 舒適休閒長褲",
+                    "落肩長袖T + 針織長裙"
+                ],
+                hairs: [
+                    "隨性簡約低馬尾",
+                    "大號鯊魚夾隨意盤髮",
+                    "軟萌劉海 + 披肩直髮",
+                    "低麻花雙辮",
+                    "蓬鬆半丸子頭"
+                ],
+                accessories: [
+                    "抗藍光眼鏡",
+                    "保溫瓶 + 帆布手提袋",
+                    "棒球帽",
+                    "舒適帆布鞋",
+                    "鯊魚夾髮飾"
+                ]
+            },
+            date: {
+                name: "約會 / 聚會",
+                outfits: [
+                    "溫柔系雪紡上衣 + A字短裙",
+                    "法式泡泡袖上衣 + 牛仔裙",
+                    "微甜針織罩衫 + 細肩帶洋裝",
+                    "蕾絲邊領上衣 + 高腰短裙",
+                    "小碎花洋裝 + 薄針織外套"
+                ],
+                hairs: [
+                    "溫柔法式微捲髮",
+                    "精緻氣質編髮公主頭",
+                    "浪漫韓系大波浪",
+                    "蓬鬆低包頭 + 蝴蝶結",
+                    "甜美雙丸子頭"
+                ],
+                accessories: [
+                    "氣質精緻項鍊",
+                    "小香風手提側背包",
+                    "珍珠髮夾/蝴蝶結",
+                    "瑪莉珍鞋",
+                    "精緻小耳環"
+                ]
+            },
+            sports: {
+                name: "社團 / 運動",
+                outfits: [
+                    "吸汗運動T恤 + 運動短褲",
+                    "短版運動背心 + 瑜伽長褲",
+                    "聯名運動帽T + 束口防風褲",
+                    "寬鬆排汗衫 + 慢跑褲"
+                ],
+                hairs: [
+                    "清爽超高紮馬尾",
+                    "酷帥雙拳擊編髮",
+                    "超緊實運動丸子頭",
+                    "俐落短髮/運動髮帶"
+                ],
+                accessories: [
+                    "吸汗運動頭帶",
+                    "專業跑鞋 / 板鞋",
+                    "運動大水壺",
+                    "棒球帽",
+                    "運動後背包"
+                ]
+            },
+            home: {
+                name: "在家 / 買飯",
+                outfits: [
+                    "超大尺碼T恤 + 運動棉短褲",
+                    "居家棉質連身裙",
+                    "舒適連帽衫 + 睡褲",
+                    "簡單白T + 休閒短褲"
+                ],
+                hairs: [
+                    "隨意鯊魚夾盤髮",
+                    "居家噴泉蘋果頭",
+                    "舒適極簡低馬尾",
+                    "蓬鬆亂糟糟丸子頭"
+                ],
+                accessories: [
+                    "毛毛拖鞋 / 洞洞鞋",
+                    "可愛鯊魚夾",
+                    "粗框居家眼鏡",
+                    "大容量帆布袋"
+                ]
+            }
+        };
+
+        let currentOccasion = 'school';
+        let outfitItems = [];
+        let hairItems = [];
+        let accessoryItems = [];
+        let savedMatches = [];
+        
+        let currentResults = { outfit: null, hair: null, accessory: null };
+        let angles = { outfit: 0, hair: 0, accessory: 0 };
+        let isSpinning = { outfit: false, hair: false, accessory: false };
+
+        const palette = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#10b981", "#06b6d4", "#3b82f6", "#f59e0b"];
+
+        // Initialize App
+        window.onload = function() {
+            loadFromLocalStorage();
+            loadOccasionData(currentOccasion);
+            renderSavedMatches();
+        };
+
+        function selectOccasion(key) {
+            if (isSpinning.outfit || isSpinning.hair || isSpinning.accessory) return;
+
+            currentOccasion = key;
+
+            document.querySelectorAll('.occasion-btn').forEach(btn => {
+                btn.className = "occasion-btn px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm";
+            });
+
+            const activeBtn = document.getElementById(`btn-${key}`);
+            if (activeBtn) {
+                activeBtn.className = "occasion-btn active px-3 py-2.5 rounded-xl border border-indigo-500 bg-indigo-600 text-white font-semibold text-xs sm:text-sm flex flex-col items-center gap-1.5 transition-all shadow-sm";
+            }
+
+            document.getElementById("activeOccasionBadge").textContent = `📍 ${occasionData[key].name}`;
+            document.getElementById("editingOccasionLabel").textContent = occasionData[key].name;
+
+            currentResults.outfit = null;
+            currentResults.hair = null;
+            currentResults.accessory = null;
+
+            document.getElementById("outfitResult").textContent = "點擊上方一鍵抽取！";
+            document.getElementById("hairResult").textContent = "點擊上方一鍵抽取！";
+            document.getElementById("accessoryResult").textContent = "點擊上方一鍵抽取！";
+
+            document.getElementById("combinedOutfitTitle").textContent = `[${occasionData[key].name}] 選好場合後點擊抽取！`;
+            document.getElementById("combinedOutfitDesc").textContent = `系統將為您推薦專屬的服裝、髮型造型與配件。`;
+            document.getElementById("saveOutfitBtn").disabled = true;
+
+            loadOccasionData(key);
+            showToast(`已切換至：${occasionData[key].name}`);
+        }
+
+        function loadOccasionData(key) {
+            const savedCustom = localStorage.getItem(`occasion_${key}`);
+            if (savedCustom) {
+                const parsed = JSON.parse(savedCustom);
+                outfitItems = parsed.outfits || [...occasionData[key].outfits];
+                hairItems = parsed.hairs || [...occasionData[key].hairs];
+                accessoryItems = parsed.accessories || [...occasionData[key].accessories];
+            } else {
+                outfitItems = [...occasionData[key].outfits];
+                hairItems = [...occasionData[key].hairs];
+                accessoryItems = [...occasionData[key].accessories];
+            }
+
+            drawWheel("outfitCanvas", outfitItems, angles.outfit);
+            drawWheel("hairCanvas", hairItems, angles.hair);
+            drawWheel("accessoryCanvas", accessoryItems, angles.accessory);
+            renderLists();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem(`occasion_${currentOccasion}`, JSON.stringify({
+                outfits: outfitItems,
+                hairs: hairItems,
+                accessories: accessoryItems
+            }));
+            localStorage.setItem('saved_matches', JSON.stringify(savedMatches));
+        }
+
+        function loadFromLocalStorage() {
+            const savedM = localStorage.getItem('saved_matches');
+            if (savedM) savedMatches = JSON.parse(savedM);
+        }
+
+        // Draw Canvas Wheel
+        function drawWheel(canvasId, items, currentAngle) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const width = canvas.width;
+            const height = canvas.height;
+            const radius = width / 2;
+            const numItems = items.length;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (numItems === 0) {
+                ctx.fillStyle = "#cbd5e1";
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                return;
+            }
+
+            const sliceAngle = (2 * Math.PI) / numItems;
+
+            ctx.save();
+            ctx.translate(radius, radius);
+            ctx.rotate(currentAngle);
+
+            for (let i = 0; i < numItems; i++) {
+                const angle = i * sliceAngle;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, angle, angle + sliceAngle);
+                ctx.fillStyle = palette[i % palette.length];
+                ctx.fill();
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.save();
+                ctx.rotate(angle + sliceAngle / 2);
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = numItems > 8 ? "bold 12px sans-serif" : "bold 14px sans-serif";
+
+                let text = items[i];
+                if (text.length > 11) text = text.substring(0, 10) + "..";
+                ctx.fillText(text, radius - 20, 0);
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        // Spin Single Wheel
+        function spinWheel(type) {
+            if (isSpinning[type]) return;
+
+            let items = type === 'outfit' ? outfitItems : (type === 'hair' ? hairItems : accessoryItems);
+            if (items.length === 0) {
+                showToast("請先新增至少一個項目！", "fa-triangle-exclamation text-amber-400");
+                return;
+            }
+
+            initAudio();
+            isSpinning[type] = true;
+            
+            const canvas = document.getElementById(`${type}Canvas`);
+            const pointer = document.getElementById(`${type}Pointer`);
+            const resultElem = document.getElementById(`${type}Result`);
+            const boxElem = document.getElementById(`${type}Box`);
+
+            canvas.classList.add('wheel-spinning');
+            boxElem.classList.remove('animate-result-pop');
+            resultElem.textContent = "旋轉中...";
+
+            const numItems = items.length;
+            const extraRounds = 5 + Math.floor(Math.random() * 3);
+            const randomSector = Math.floor(Math.random() * numItems);
+            const sliceAngle = (2 * Math.PI) / numItems;
+            const targetAngle = (2 * Math.PI * extraRounds) + ((numItems - randomSector) * sliceAngle) - (sliceAngle / 2) - (Math.PI / 2);
+
+            let startTime = null;
+            const duration = 3800;
+            const startAngle = angles[type] % (2 * Math.PI);
+            let lastSectorIndex = -1;
+
+            function animateSpin(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3.8);
+                angles[type] = startAngle + (targetAngle - startAngle) * easeOut;
+
+                drawWheel(`${type}Canvas`, items, angles[type]);
+
+                const currentNormalizedAngle = (2 * Math.PI) - (angles[type] % (2 * Math.PI));
+                const currentSector = Math.floor(((currentNormalizedAngle + Math.PI / 2) % (2 * Math.PI)) / sliceAngle) % numItems;
+
+                if (currentSector !== lastSectorIndex) {
+                    lastSectorIndex = currentSector;
+                    playTickSound();
+                    if (pointer) {
+                        pointer.classList.add('tick');
+                        setTimeout(() => pointer.classList.remove('tick'), 40);
+                    }
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    isSpinning[type] = false;
+                    canvas.classList.remove('wheel-spinning');
+
+                    currentResults[type] = items[randomSector];
+                    resultElem.textContent = currentResults[type];
+                    boxElem.classList.add('animate-result-pop');
+
+                    checkFullResult();
+                }
+            }
+
+            requestAnimationFrame(animateSpin);
+        }
+
+        function spinBothWheels() {
+            if (isSpinning.outfit || isSpinning.hair || isSpinning.accessory) return;
+
+            spinWheel('outfit');
+            setTimeout(() => spinWheel('hair'), 200);
+            setTimeout(() => spinWheel('accessory'), 400);
+        }
+
+        // Check if all 3 wheels done, trigger SSR Card Reveal Popup
+        function checkFullResult() {
+            if (currentResults.outfit && currentResults.hair && currentResults.accessory) {
+                document.getElementById("combinedOutfitTitle").textContent = `${currentResults.outfit}`;
+                document.getElementById("combinedOutfitDesc").innerHTML = `
+                    💇‍♀️ <b>髮型：</b>${currentResults.hair}<br>
+                    ✨ <b>配件：</b>${currentResults.accessory}<br>
+                    <span class="text-indigo-300 text-xs mt-1 block">【${occasionData[currentOccasion].name}】今日風格全套配對成功！✨</span>
+                `;
+                document.getElementById("saveOutfitBtn").disabled = false;
+
+                // Open SSR Gacha Reveal Modal after a slight delay
+                setTimeout(() => {
+                    openGachaModal();
+                }, 400);
+            }
+        }
+
+        function openGachaModal() {
+            const modal = document.getElementById("gachaModal");
+            const modalOutfit = document.getElementById("modalOutfit");
+            const modalHair = document.getElementById("modalHair");
+            const modalAccessory = document.getElementById("modalAccessory");
+            const modalOccasionTag = document.getElementById("modalOccasionTag");
+
+            modalOutfit.textContent = currentResults.outfit;
+            modalHair.textContent = currentResults.hair;
+            modalAccessory.textContent = currentResults.accessory;
+            modalOccasionTag.textContent = `📍 ${occasionData[currentOccasion].name} 專屬 OOTD`;
+
+            // Random rarity titles for fun
+            const rarities = ["✨ SSR 絕美天花板 OOTD ✨", "👑 UR 夢幻青春學院風 👑", "💖 SR 心動百分百穿搭 💖"];
+            document.getElementById("modalRarityBadge").textContent = rarities[Math.floor(Math.random() * rarities.length)];
+
+            modal.classList.remove("opacity-0", "pointer-events-none");
+            playFanfareSound();
+
+            // Explosive Confetti
+            confetti({
+                particleCount: 120,
+                spread: 100,
+                origin: { y: 0.5 },
+                colors: ['#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#ffffff']
+            });
+        }
+
+        function closeGachaModal() {
+            const modal = document.getElementById("gachaModal");
+            modal.classList.add("opacity-0", "pointer-events-none");
+        }
+
+        // Reroll single item directly from modal
+        function rerollFromModal(type) {
+            let items = type === 'outfit' ? outfitItems : (type === 'hair' ? hairItems : accessoryItems);
+            if (!items || items.length === 0) return;
+
+            // Pick a random index, ensuring a refresh if there are multiple choices
+            let currentVal = currentResults[type];
+            let filtered = items.filter(item => item !== currentVal);
+            let pool = filtered.length > 0 ? filtered : items;
+            let newItem = pool[Math.floor(Math.random() * pool.length)];
+
+            // Update state
+            currentResults[type] = newItem;
+
+            // Trigger UI update in background wheel box and modal
+            document.getElementById(`${type}Result`).textContent = newItem;
+            
+            const modalElem = type === 'outfit' ? document.getElementById("modalOutfit") : 
+                             (type === 'hair' ? document.getElementById("modalHair") : document.getElementById("modalAccessory"));
+            
+            if (modalElem) {
+                modalElem.classList.add("animate-pulse");
+                modalElem.textContent = newItem;
+                setTimeout(() => modalElem.classList.remove("animate-pulse"), 400);
+            }
+
+            // Update main bottom result description
+            document.getElementById("combinedOutfitTitle").textContent = `${currentResults.outfit}`;
+            document.getElementById("combinedOutfitDesc").innerHTML = `
+                💇‍♀️ <b>髮型：</b>${currentResults.hair}<br>
+                ✨ <b>配件：</b>${currentResults.accessory}<br>
+                <span class="text-indigo-300 text-xs mt-1 block">【${occasionData[currentOccasion].name}】今日風格全套配對成功！✨</span>
+            `;
+
+            playTickSound();
+            showToast(`已替換${type === 'outfit' ? '服裝' : (type === 'hair' ? '髮型' : '配件')}！`, "fa-solid fa-rotate text-indigo-400");
+        }
+
+        function saveCurrentMatch() {
+            if (!currentResults.outfit || !currentResults.hair || !currentResults.accessory) return;
+
+            const newSaved = {
+                id: Date.now(),
+                occasion: occasionData[currentOccasion].name,
+                outfit: currentResults.outfit,
+                hair: currentResults.hair,
+                accessory: currentResults.accessory,
+                date: new Date().toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
+            };
+
+            savedMatches.unshift(newSaved);
+            saveToLocalStorage();
+            renderSavedMatches();
+            showToast("成功收藏今日完整穿搭組合！", "fa-circle-check text-emerald-400");
+        }
+
+        function deleteSavedMatch(id) {
+            savedMatches = savedMatches.filter(item => item.id !== id);
+            saveToLocalStorage();
+            renderSavedMatches();
+            showToast("已從收藏庫移除", "fa-trash text-rose-400");
+        }
+
+        function renderSavedMatches() {
+            const container = document.getElementById("savedContainer");
+            const countElem = document.getElementById("savedCount");
+            if (countElem) countElem.textContent = savedMatches.length;
+
+            if (savedMatches.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400">
+                        <i class="fa-regular fa-bookmark text-4xl mb-3 block"></i>
+                        <p class="text-sm">尚未收藏任何穿搭組合，點擊「收藏此組合」來記錄吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = savedMatches.map(item => `
+                <div class="bg-slate-50 border border-slate-200/80 p-4 rounded-2xl relative group hover:shadow-md transition-all">
+                    <button onclick="deleteSavedMatch(${item.id})" class="absolute top-3 right-3 text-slate-300 hover:text-rose-500 transition-colors">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full">${item.occasion || '一般'}</span>
+                        <span class="text-xs text-slate-400 font-medium">${item.date}</span>
+                    </div>
+                    <div class="font-bold text-slate-700 text-sm mb-1.5"><i class="fa-solid fa-shirt text-indigo-500 mr-1.5"></i>${item.outfit}</div>
+                    <div class="text-xs text-purple-600 font-semibold mb-1"><i class="fa-solid fa-scissors mr-1.5"></i>${item.hair}</div>
+                    <div class="text-xs text-pink-600 font-semibold"><i class="fa-solid fa-gem mr-1.5"></i>${item.accessory}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderLists() {
+            renderListItems('outfit', outfitItems, 'outfitItemList');
+            renderListItems('hair', hairItems, 'hairItemList');
+            renderListItems('accessory', accessoryItems, 'accessoryItemList');
+        }
+
+        function renderListItems(type, array, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = array.map((item, index) => `
+                <li class="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100 text-sm">
+                    <span class="text-slate-700 font-medium text-xs sm:text-sm">${item}</span>
+                    <button onclick="removeItem('${type}', ${index})" class="text-slate-300 hover:text-rose-500 text-xs p-1 transition-colors">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        function addItem(type) {
+            const inputId = type === 'outfit' ? 'newOutfitInput' : (type === 'hair' ? 'newHairInput' : 'newAccessoryInput');
+            const inputElem = document.getElementById(inputId);
+            const value = inputElem.value.trim();
+            if (!value) return;
+
+            if (type === 'outfit') outfitItems.push(value);
+            else if (type === 'hair') hairItems.push(value);
+            else accessoryItems.push(value);
+
+            inputElem.value = '';
+            saveToLocalStorage();
+            renderLists();
+            
+            const targetArray = type === 'outfit' ? outfitItems : (type === 'hair' ? hairItems : accessoryItems);
+            drawWheel(`${type}Canvas`, targetArray, angles[type]);
+            showToast("成功新增項目！");
+        }
+
+        function removeItem(type, index) {
+            if (type === 'outfit') outfitItems.splice(index, 1);
+            else if (type === 'hair') hairItems.splice(index, 1);
+            else accessoryItems.splice(index, 1);
+
+            saveToLocalStorage();
+            renderLists();
+            
+            const targetArray = type === 'outfit' ? outfitItems : (type === 'hair' ? hairItems : accessoryItems);
+            drawWheel(`${type}Canvas`, targetArray, angles[type]);
+        }
+
+        function resetToDefault() {
+            outfitItems = [...occasionData[currentOccasion].outfits];
+            hairItems = [...occasionData[currentOccasion].hairs];
+            accessoryItems = [...occasionData[currentOccasion].accessories];
+
+            saveToLocalStorage();
+            renderLists();
+            drawWheel("outfitCanvas", outfitItems, angles.outfit);
+            drawWheel("hairCanvas", hairItems, angles.hair);
+            drawWheel("accessoryCanvas", accessoryItems, angles.accessory);
+            showToast(`已重置【${occasionData[currentOccasion].name}】為預設選項`);
+        }
+
+        function toggleTab(tab) {
+            const settingsBtn = document.getElementById("tabBtn-settings");
+            const savedBtn = document.getElementById("tabBtn-saved");
+            const settingsContent = document.getElementById("tabContent-settings");
+            const savedContent = document.getElementById("tabContent-saved");
+
+            if (tab === 'settings') {
+                settingsBtn.className = "pb-3 font-bold text-sm border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2";
+                savedBtn.className = "pb-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2";
+                settingsContent.classList.remove("hidden");
+                savedContent.classList.add("hidden");
+            } else {
+                savedBtn.className = "pb-3 font-bold text-sm border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2";
+                settingsBtn.className = "pb-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2";
+                savedContent.classList.remove("hidden");
+                settingsContent.classList.add("hidden");
+            }
+        }
+
+        function showToast(msg, iconClass = "fa-circle-check text-emerald-400") {
+            const toast = document.getElementById("toast");
+            const toastMsg = document.getElementById("toastMsg");
+            const toastIcon = document.getElementById("toastIcon");
+
+            toastMsg.textContent = msg;
+            toastIcon.className = `fa-solid ${iconClass}`;
+            toast.classList.remove("opacity-0", "pointer-events-none");
+            
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "pointer-events-none");
+            }, 2500);
+        }
+    </script>
+</body>
+</html>

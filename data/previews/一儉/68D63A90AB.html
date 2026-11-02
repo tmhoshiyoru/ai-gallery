@@ -1,0 +1,2370 @@
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>夢幻烘焙工作坊 Bakery Atelier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #fdf6ec 0%, #fae8d8 50%, #f7d5c3 100%);
+            touch-action: manipulation;
+        }
+        /* 人偶動畫與緊張倒數動畫 */
+        @keyframes chefActionArm {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-35deg) translateY(-4px); }
+            100% { transform: rotate(0deg); }
+        }
+        .chef-busy-arm {
+            animation: chefActionArm 0.18s ease-in-out infinite;
+            transform-origin: top left;
+        }
+        @keyframes chefPanicBob {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-4px) rotate(-3deg); }
+            75% { transform: translateY(2px) rotate(3deg); }
+        }
+        .chef-panic {
+            animation: chefPanicBob 0.25s infinite;
+        }
+        @keyframes urgentBlink {
+            0%, 100% { background-color: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.6); }
+            50% { background-color: rgba(239, 68, 68, 0.35); border-color: rgba(239, 68, 68, 0.95); }
+        }
+        .urgent-glow {
+            animation: urgentBlink 0.5s infinite;
+        }
+
+        /* 法式甜點店精品玻璃展櫃與木質層架樣式 */
+        .bakery-awning {
+            background: repeating-linear-gradient(
+                45deg,
+                #b45309,
+                #b45309 20px,
+                #fef3c7 20px,
+                #fef3c7 40px
+            );
+        }
+        .showcase-shelf {
+            background: linear-gradient(180deg, #d97706 0%, #b45309 35%, #78350f 100%);
+            box-shadow: 0 10px 25px -5px rgba(120, 53, 15, 0.4), inset 0 2px 3px rgba(254, 243, 199, 0.6);
+        }
+        .shelf-glass {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.35) 100%);
+            backdrop-filter: blur(8px);
+            border-top: 2px solid rgba(255, 255, 255, 0.95);
+            border-bottom: 3px solid rgba(180, 83, 9, 0.25);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+        .ceramic-plate {
+            background: radial-gradient(circle, #ffffff 60%, #fef3c7 100%);
+            box-shadow: 0 6px 12px -2px rgba(120, 53, 15, 0.18), inset 0 0 0 2px #fde68a, inset 0 0 0 4px #ffffff;
+        }
+        .brass-plaque {
+            background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #b45309 100%);
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 5px rgba(120, 53, 15, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+        }
+        .spotlight-beam {
+            background: radial-gradient(ellipse at top, rgba(254, 240, 138, 0.45) 0%, rgba(254, 240, 138, 0.05) 60%, transparent 80%);
+        }
+        @keyframes plateFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+        .dessert-showcase-item:hover .plate-dish {
+            animation: plateFloat 1.2s ease-in-out infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Top Navigation & Stats Bar -->
+    <header class="bg-white/85 backdrop-blur-md shadow-sm sticky top-0 z-50 px-4 py-2.5 border-b border-amber-100">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goToMenu()">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 text-white flex items-center justify-center text-xl shadow-md btn-bounce">
+                    <i class="fa-solid fa-cookie-bite"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-fredoka text-xl text-amber-800 tracking-wide leading-none">Bakery Atelier</h1>
+                        <span id="chef-level-badge" class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-300">Lv.1 甜點學徒</span>
+                    </div>
+                    <p class="text-[11px] text-amber-600 font-medium">夢幻烘焙工作坊 • 限時手作工坊</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Sound & BGM Controllers -->
+                <button id="bgm-toggle-btn" onclick="toggleBGM()" class="bg-amber-100/80 hover:bg-amber-200 text-amber-800 px-2.5 py-1.5 rounded-xl text-xs font-bold transition btn-bounce flex items-center gap-1">
+                    <i id="bgm-icon" class="fa-solid fa-music text-amber-600"></i>
+                    <span id="bgm-text" class="hidden sm:inline">緊張音樂 Off</span>
+                </button>
+                <button id="sfx-toggle-btn" onclick="toggleSFX()" class="bg-amber-100/80 hover:bg-amber-200 text-amber-800 px-2.5 py-1.5 rounded-xl text-xs font-bold transition btn-bounce flex items-center gap-1">
+                    <i id="sfx-icon" class="fa-solid fa-volume-high text-amber-600"></i>
+                    <span id="sfx-text" class="hidden sm:inline">音效 On</span>
+                </button>
+
+                <!-- Coins Display -->
+                <div class="bg-amber-50 border border-amber-300/80 px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold text-amber-900 text-xs sm:text-sm shadow-inner">
+                    <i class="fa-solid fa-coins text-amber-500 text-sm"></i>
+                    <span id="coin-count">120</span>
+                </div>
+
+                <!-- Open Bakery Shop Button -->
+                <button onclick="openShopModal()" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:from-amber-600 hover:to-orange-600 transition btn-bounce flex items-center gap-1.5">
+                    <i class="fa-solid fa-store"></i> <span class="hidden sm:inline">工坊商店</span>
+                </button>
+
+                <!-- Back to Menu button -->
+                <button id="home-btn" onclick="goToMenu()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition btn-bounce flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-left"></i> 選單
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl w-full mx-auto p-4 flex-grow flex flex-col justify-center">
+
+        <!-- SCREEN 1: Dessert Menu & Filter -->
+        <section id="screen-menu" class="space-y-5">
+            <!-- Boutique Showcase Header Banner -->
+            <div class="relative rounded-3xl overflow-hidden shadow-xl border-4 border-amber-900/30 bg-amber-950 text-white">
+                <!-- Parisian Shop Awning Canopy -->
+                <div class="h-6 w-full bakery-awning border-b-2 border-amber-900 shadow-sm"></div>
+                
+                <div class="p-4 sm:p-6 text-center space-y-2 relative">
+                    <div class="spotlight-beam absolute inset-0 pointer-events-none"></div>
+                    <div class="inline-flex items-center gap-2 bg-amber-500/30 border border-amber-400/50 text-amber-200 text-xs font-black px-4 py-1 rounded-full shadow-inner backdrop-blur-sm">
+                        <i class="fa-solid fa-bell-concierge text-amber-300"></i>
+                        <span>ATELIER VITRINE • 今日現做主廚櫥窗</span>
+                        <i class="fa-solid fa-stopwatch text-red-400 animate-pulse ml-1"></i>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-amber-100 tracking-wide font-fredoka flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cake-candles text-amber-400 text-xl sm:text-2xl"></i>
+                        <span>甜點陳列櫃</span>
+                        <i class="fa-solid fa-cake-candles text-amber-400 text-xl sm:text-2xl"></i>
+                    </h2>
+                    <p class="text-amber-200/90 text-xs sm:text-sm max-w-lg mx-auto font-medium">
+                        宛如置身巴黎街角甜點沙龍！請自暖金玻璃層架點選甜點，開啟極限手速挑戰！
+                    </p>
+
+                    <!-- Showcase Category Tabs -->
+                    <div class="flex justify-center gap-2 pt-2 flex-wrap text-xs font-bold relative z-10">
+                        <button onclick="filterCategory('all')" class="cat-filter-btn active-filter px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md border border-amber-300/40">
+                            <i class="fa-solid fa-table-cells-large mr-1"></i> 全櫥窗陳列
+                        </button>
+                        <button onclick="filterCategory('cake')" class="cat-filter-btn px-4 py-1.5 rounded-full bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-700/60 transition">
+                            <i class="fa-solid fa-cake-candles mr-1"></i> 頂層 • 蛋糕塔派
+                        </button>
+                        <button onclick="filterCategory('bread')" class="cat-filter-btn px-4 py-1.5 rounded-full bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-700/60 transition">
+                            <i class="fa-solid fa-bread-slice mr-1"></i> 中層 • 手工麵包
+                        </button>
+                        <button onclick="filterCategory('french')" class="cat-filter-btn px-4 py-1.5 rounded-full bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-700/60 transition">
+                            <i class="fa-solid fa-cookie mr-1"></i> 底層 • 法式常溫
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Showcase Glass Frame Top Line -->
+                <div class="h-2 w-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-700 opacity-90 shadow-sm"></div>
+            </div>
+
+            <!-- The Deluxe Bakery Boutique Showcase Case -->
+            <div id="boutique-showcase" class="relative rounded-3xl p-3 sm:p-5 shadow-2xl border-4 border-amber-900/40 bg-gradient-to-b from-amber-100/70 via-stone-100/90 to-amber-200/60 backdrop-blur-md">
+                <!-- Ambient Spotlights from top ceiling -->
+                <div class="absolute inset-x-0 top-0 h-28 spotlight-beam pointer-events-none rounded-t-3xl"></div>
+
+                <!-- Shelf Content Injected Here by JS -->
+                <div id="showcase-shelves-container" class="space-y-6 sm:space-y-8 relative z-10">
+                    <!-- Shelves and pastries injected via JS -->
+                </div>
+
+                <!-- Cabinet Base Frame -->
+                <div class="mt-6 pt-3 border-t-4 border-amber-800/40 flex justify-between items-center text-[11px] font-black text-amber-900 px-2 sm:px-4">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-temperature-arrow-up text-orange-600"></i> 恆溫恆濕保鮮櫥窗 (16°C ~ 18°C)
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-award text-amber-600"></i> Chef's Daily Selection 15 款限定
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: Recipe Detail & Master Preparation -->
+        <section id="screen-recipe" class="hidden space-y-5">
+            <div class="glass-panel rounded-3xl p-6 sm:p-7 shadow-xl border border-white">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div id="recipe-img-bg" class="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-amber-100 flex items-center justify-center text-6xl text-amber-600 shadow-inner shrink-0 relative overflow-hidden">
+                        <i id="recipe-icon" class="fa-solid fa-cake-candles animate-float"></i>
+                    </div>
+                    <div class="space-y-3 text-center md:text-left flex-grow">
+                        <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                            <h2 id="recipe-name" class="text-2xl sm:text-3xl font-black text-slate-800">點心名稱</h2>
+                            <span id="recipe-difficulty" class="bg-amber-100 border border-amber-300 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">難易度: ★★☆</span>
+                            <span id="recipe-cat-badge" class="bg-orange-100 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full">法式經典</span>
+                        </div>
+                        <p id="recipe-desc" class="text-slate-600 text-xs sm:text-sm leading-relaxed">甜點簡介描述...</p>
+                        <div class="flex flex-wrap justify-center md:justify-start gap-3 sm:gap-5 text-xs font-bold text-slate-500 pt-1">
+                            <span class="flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-lg border border-red-200"><i class="fa-solid fa-stopwatch text-red-500"></i> 每步倒數 10~15 秒</span>
+                            <span class="flex items-center gap-1.5 bg-white/70 px-2.5 py-1 rounded-lg border border-slate-200"><i class="fa-solid fa-fire text-orange-500"></i> <span id="recipe-temp">180°C</span></span>
+                            <span class="flex items-center gap-1.5 bg-white/70 px-2.5 py-1 rounded-lg border border-slate-200"><i class="fa-solid fa-utensils text-emerald-500"></i> <span id="recipe-servings">4 人份</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-5 border-slate-200/80">
+
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-700 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-kitchen-set text-amber-500"></i> 主廚嚴選食材 (Chef's Ingredients)
+                        </h3>
+                        <span class="text-[11px] text-amber-700 font-semibold bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">均已精準稱量備妥</span>
+                    </div>
+                    <div id="recipe-ingredients-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                        <!-- Chips injected via JS -->
+                    </div>
+                </div>
+
+                <div class="mt-7 flex justify-end gap-3">
+                    <button onclick="goToMenu()" class="px-5 py-2.5 rounded-xl bg-slate-200/90 text-slate-700 font-bold hover:bg-slate-300 transition btn-bounce text-sm">
+                        返回選單
+                    </button>
+                    <button onclick="startBakingWorkflow()" class="px-7 py-2.5 rounded-xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white font-extrabold shadow-lg hover:from-red-600 hover:to-orange-600 transition btn-bounce flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-stopwatch"></i> 啟動計時挑戰！
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 3: Interactive Stage (The Magic Atelier Kitchen) -->
+        <section id="screen-game" class="hidden space-y-4">
+            <!-- Progress & Step Indicator Header + Urgent Countdown Bar -->
+            <div id="timer-banner-box" class="glass-panel rounded-2xl p-4 shadow-sm border border-white flex flex-col gap-2 transition-colors duration-300">
+                <div class="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-700">
+                    <span id="step-indicator" class="text-amber-700 flex items-center gap-1.5 font-extrabold">
+                        <i class="fa-solid fa-sparkles text-amber-500"></i> 步驟 1 / 6
+                    </span>
+                    <!-- Urgent Countdown Display -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500">剩餘時間：</span>
+                        <span id="step-countdown-text" class="font-fredoka text-lg sm:text-xl text-red-600 font-black tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-stopwatch text-sm animate-pulse"></i> <span id="time-left-num">12</span>s
+                        </span>
+                    </div>
+                    <span id="step-name-badge" class="bg-amber-100 text-amber-900 border border-amber-300 text-[11px] sm:text-xs px-3 py-0.5 rounded-full max-w-[180px] truncate">
+                        準備步驟
+                    </span>
+                </div>
+                <!-- Step progress bar -->
+                <div class="w-full bg-slate-200/80 rounded-full h-2.5 overflow-hidden p-0.5 shadow-inner">
+                    <div id="game-progress-bar" class="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 h-1.5 rounded-full transition-all duration-300 w-1/6 shadow"></div>
+                </div>
+                <!-- Step timer bar -->
+                <div class="w-full bg-red-100 rounded-full h-2 overflow-hidden shadow-inner border border-red-200">
+                    <div id="step-timer-bar" class="bg-gradient-to-r from-green-500 via-amber-500 to-red-500 h-full w-full transition-all duration-100"></div>
+                </div>
+            </div>
+
+            <!-- Central Cooking Bench -->
+            <div id="workspace" class="glass-panel rounded-3xl p-5 sm:p-6 shadow-xl min-h-[440px] flex flex-col justify-between items-center relative overflow-hidden border border-white">
+                <!-- Guidance Message Banner -->
+                <div id="instruction-box" class="w-full bg-amber-500/10 border border-amber-400/40 rounded-2xl p-2.5 text-center text-amber-950 font-bold text-xs sm:text-sm shadow-sm">
+                    按指示操作完成點心！
+                </div>
+
+                <!-- Animated Puppet Chef & Kitchen Stage -->
+                <div class="w-full flex flex-col sm:flex-row items-center justify-around gap-4 my-auto py-2">
+                    
+                    <!-- 2D Animated Puppet Chef -->
+                    <div id="puppet-chef-container" class="flex flex-col items-center select-none shrink-0">
+                        <div id="puppet-chef" class="relative w-28 h-40 flex flex-col items-center">
+                            <!-- Chef Hat -->
+                            <div id="chef-hat" class="relative z-20 flex flex-col items-center transition-transform">
+                                <div class="w-12 h-10 bg-white rounded-t-3xl border-2 border-slate-300 shadow-md flex items-center justify-center">
+                                    <div class="w-7 h-5 border-t-2 border-slate-200 rounded-t-full"></div>
+                                </div>
+                                <div class="w-14 h-3 bg-red-500 rounded-md border border-red-600 shadow-sm -mt-1"></div>
+                            </div>
+
+                            <!-- Chef Head & Face -->
+                            <div id="chef-head" class="w-14 h-13 bg-amber-100 rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col items-center justify-center -mt-1 relative z-10">
+                                <!-- Sweat drop for panic mode -->
+                                <div id="chef-sweat" class="absolute -top-1 -right-2 text-sky-400 text-xs hidden">
+                                    <i class="fa-solid fa-droplet animate-bounce"></i>
+                                </div>
+                                <!-- Eyes -->
+                                <div class="flex items-center gap-3 mt-1" id="chef-eyes">
+                                    <div class="w-2 h-2.5 bg-slate-800 rounded-full"></div>
+                                    <div class="w-2 h-2.5 bg-slate-800 rounded-full"></div>
+                                </div>
+                                <!-- Blushing cheeks -->
+                                <div class="flex items-center gap-5 -mt-0.5">
+                                    <div class="w-2 h-1 bg-rose-300 rounded-full"></div>
+                                    <div class="w-2 h-1 bg-rose-300 rounded-full"></div>
+                                </div>
+                                <!-- Mouth -->
+                                <div id="chef-mouth" class="w-3 h-1.5 bg-amber-700 rounded-b-full mt-0.5"></div>
+                            </div>
+
+                            <!-- Chef Body & Apron -->
+                            <div class="relative w-16 h-16 bg-white rounded-2xl border-2 border-slate-300 shadow-md flex flex-col items-center -mt-2 z-10 overflow-hidden">
+                                <!-- Apron straps -->
+                                <div class="w-10 h-3 bg-amber-500 border-b border-amber-600"></div>
+                                <div class="w-12 h-10 bg-amber-50 rounded-b-xl border border-amber-300 flex items-center justify-center">
+                                    <i class="fa-solid fa-cookie-bite text-amber-500 text-xs"></i>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Arms holding tool -->
+                            <div id="chef-arm-left" class="absolute top-16 -left-3 w-4 h-12 bg-amber-100 rounded-full border-2 border-amber-300 shadow transform -rotate-12 origin-top"></div>
+                            <div id="chef-arm-right" class="absolute top-16 -right-3 w-5 h-12 bg-amber-100 rounded-full border-2 border-amber-300 shadow transform rotate-12 origin-top flex flex-col items-center justify-end">
+                                <div id="chef-tool-icon" class="text-amber-800 text-xl -mr-3 mb-1">
+                                    <i class="fa-solid fa-blender"></i>
+                                </div>
+                            </div>
+
+                            <!-- Legs -->
+                            <div class="flex gap-3 -mt-1 z-0">
+                                <div class="w-3 h-6 bg-slate-700 rounded-b-lg"></div>
+                                <div class="w-3 h-6 bg-slate-700 rounded-b-lg"></div>
+                            </div>
+                        </div>
+                        <span id="chef-status-bubble" class="mt-1 text-[11px] font-black text-amber-900 bg-white/90 px-2.5 py-0.5 rounded-full border border-amber-200 shadow-sm">
+                            主廚全力手作中！
+                        </span>
+                    </div>
+
+                    <!-- Interactive Game Play Stage -->
+                    <div id="visual-stage" class="py-2 w-full max-w-sm flex flex-col items-center justify-center relative min-h-[200px]">
+                        <!-- Mini-game components dynamically injected here -->
+                    </div>
+                </div>
+
+                <!-- Action Controls Bar -->
+                <div id="action-controls" class="w-full flex flex-wrap justify-center items-center gap-3 pt-2">
+                    <!-- Buttons & Controls -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 4: Results & Scoring -->
+        <section id="screen-result" class="hidden text-center space-y-5 animate-fade-in">
+            <div class="glass-panel rounded-3xl p-7 sm:p-9 shadow-2xl space-y-5 max-w-md mx-auto relative overflow-hidden border-2 border-amber-300">
+                <!-- Stamp Badge -->
+                <div class="inline-block p-5 bg-gradient-to-tr from-amber-400 to-orange-400 rounded-3xl text-white text-5xl shadow-lg animate-bounce">
+                    <i id="result-badge-icon" class="fa-solid fa-award"></i>
+                </div>
+
+                <div>
+                    <span id="result-sub-badge" class="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">SPEED BAKED</span>
+                    <h2 id="result-title" class="text-2xl sm:text-3xl font-black text-slate-800 mt-2">完美出爐！</h2>
+                    <p id="result-desc" class="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">香氣撲鼻、色澤迷人！</p>
+                </div>
+
+                <!-- Star Rating -->
+                <div id="result-stars" class="flex justify-center items-center gap-2 text-2xl text-amber-400">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                </div>
+
+                <!-- Score & Rewards Panel -->
+                <div class="bg-amber-50/90 rounded-2xl p-4 border border-amber-200/80 flex justify-around items-center text-sm font-bold shadow-sm">
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-medium">獲得金幣</p>
+                        <p class="text-amber-600 text-lg sm:text-xl font-black">+<span id="earned-coins">50</span> <i class="fa-solid fa-coins text-xs"></i></p>
+                    </div>
+                    <div class="h-9 w-px bg-amber-200"></div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-medium">主廚評級</p>
+                        <p id="result-grade" class="text-orange-500 text-lg sm:text-xl font-black">S 級特優</p>
+                    </div>
+                    <div class="h-9 w-px bg-amber-200"></div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-medium">烘焙經驗</p>
+                        <p class="text-emerald-600 text-lg sm:text-xl font-black">+<span id="earned-exp">100</span> EXP</p>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex gap-3 pt-2">
+                    <button onclick="goToMenu()" class="flex-1 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold transition btn-bounce text-sm">
+                        選其他甜點
+                    </button>
+                    <button onclick="startBakingWorkflow()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold shadow-lg hover:from-amber-600 hover:to-orange-600 transition btn-bounce text-sm">
+                        再挑戰一次
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 5: Game Over Timeout Screen -->
+        <section id="screen-fail" class="hidden text-center space-y-5 animate-fade-in">
+            <div class="glass-panel rounded-3xl p-7 sm:p-9 shadow-2xl space-y-5 max-w-md mx-auto relative overflow-hidden border-2 border-red-300 bg-red-50/90">
+                <div class="inline-block p-5 bg-gradient-to-tr from-red-500 to-orange-600 rounded-3xl text-white text-5xl shadow-lg animate-wiggle">
+                    <i class="fa-solid fa-fire-burner"></i>
+                </div>
+
+                <div>
+                    <span class="text-xs font-black uppercase tracking-widest text-red-600 bg-red-100 px-3 py-1 rounded-full border border-red-300">TIME OVER 逾時失敗</span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-red-950 mt-2">烘焙失敗...慘遭消泡！</h2>
+                    <p id="fail-reason" class="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
+                        未能及時在時限內完成手作動作，溫度失控或消泡報銷！
+                    </p>
+                </div>
+
+                <div class="bg-white/90 rounded-2xl p-4 border border-red-200 flex justify-center items-center text-sm font-bold shadow-inner">
+                    <p class="text-red-700 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                        別灰心，加快手速重振旗鼓！
+                    </p>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="goToMenu()" class="flex-1 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold transition btn-bounce text-sm">
+                        返回選單
+                    </button>
+                    <button onclick="startBakingWorkflow()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-500 to-amber-600 text-white font-extrabold shadow-lg hover:from-red-600 hover:to-amber-700 transition btn-bounce text-sm">
+                        立刻重新挑戰
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bakery Shop & Equipment Modal -->
+    <div id="shop-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-amber-300 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-amber-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-store text-amber-500 text-xl"></i>
+                    <h3 class="font-black text-lg text-slate-800">工坊主廚道具屋</h3>
+                </div>
+                <button onclick="closeShopModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-sm transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="shop-items-container" class="space-y-3">
+                <!-- Shop items rendered via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio & Game Engine Logic -->
+    <script>
+        /* ================= 音效合成系統 (Tone.js & Web Audio 安全容錯) ================= */
+        let bgmPlaying = false;
+        let sfxEnabled = true;
+        let bgmLoop = null;
+        let audioInitialized = false;
+
+        let sfxSynth = null;
+        let bassSynth = null;
+        let panicSynth = null;
+
+        // 原生 Web Audio API 備援方案（若 CDN 載入失敗時無縫接管，避免任何報錯）
+        let fallbackAudioCtx = null;
+
+        function getFallbackAudioContext() {
+            if (!fallbackAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
+                try {
+                    fallbackAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {}
+            }
+            if (fallbackAudioCtx && fallbackAudioCtx.state === 'suspended') {
+                fallbackAudioCtx.resume();
+            }
+            return fallbackAudioCtx;
+        }
+
+        function playFallbackBeep(freq = 440, type = 'sine', duration = 0.1) {
+            if (!sfxEnabled) return;
+            const ctx = getFallbackAudioContext();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        // 安全懶加載 Tone.js 音源
+        function initToneAudio() {
+            if (audioInitialized) return;
+            if (typeof Tone === 'undefined') {
+                console.warn("Tone.js 尚未加載完成或載入失敗，已自動啟用原生音訊備援。");
+                return;
+            }
+
+            try {
+                Tone.start();
+
+                // SFX PolySynth
+                sfxSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.25 }
+                }).toDestination();
+                sfxSynth.volume.value = -3;
+
+                // Intense Urgent BGM Synth (心跳低音 Bass + 緊張快節奏琶音)
+                bassSynth = new Tone.MonoSynth({
+                    oscillator: { type: "sawtooth" },
+                    envelope: { attack: 0.02, decay: 0.15, sustain: 0.2, release: 0.3 },
+                    filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2, baseFrequency: 200, octaves: 2.5 }
+                }).toDestination();
+                bassSynth.volume.value = -12;
+
+                panicSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "square" },
+                    envelope: { attack: 0.01, decay: 0.08, sustain: 0.05, release: 0.1 }
+                }).toDestination();
+                panicSynth.volume.value = -16;
+
+                audioInitialized = true;
+            } catch(e) {
+                console.warn("初始化 Tone.js 遇到錯誤:", e);
+            }
+        }
+
+        function playToneNote(note, dur = "8n") {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    sfxSynth.triggerAttackRelease(note, dur);
+                    return;
+                } catch(e) {}
+            }
+            // 備援播放
+            playFallbackBeep(523.25, 'triangle', 0.12);
+        }
+
+        function playClickSFX() {
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    sfxSynth.triggerAttackRelease("C5", "16n");
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(600, 'sine', 0.05);
+        }
+
+        function playStirSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    const notes = ["E4", "G4", "C5", "F5"];
+                    const rNote = notes[Math.floor(Math.random() * notes.length)];
+                    sfxSynth.triggerAttackRelease(rNote, "32n");
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(350 + Math.random() * 200, 'triangle', 0.04);
+        }
+
+        function playTickSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    sfxSynth.triggerAttackRelease("A5", "64n");
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(880, 'sine', 0.03);
+        }
+
+        function playUrgentSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    sfxSynth.triggerAttackRelease("F5", "32n");
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(700, 'sawtooth', 0.05);
+        }
+
+        function playSuccessSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    const now = Tone.now();
+                    sfxSynth.triggerAttackRelease("C5", "16n", now);
+                    sfxSynth.triggerAttackRelease("E5", "16n", now + 0.08);
+                    sfxSynth.triggerAttackRelease("G5", "16n", now + 0.16);
+                    sfxSynth.triggerAttackRelease("C6", "8n", now + 0.24);
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(523, 'triangle', 0.1);
+            setTimeout(() => playFallbackBeep(659, 'triangle', 0.1), 80);
+            setTimeout(() => playFallbackBeep(784, 'triangle', 0.15), 160);
+        }
+
+        function playFailSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    const now = Tone.now();
+                    sfxSynth.triggerAttackRelease("F4", "8n", now);
+                    sfxSynth.triggerAttackRelease("D4", "8n", now + 0.15);
+                    sfxSynth.triggerAttackRelease("B3", "4n", now + 0.3);
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(349, 'sawtooth', 0.12);
+            setTimeout(() => playFallbackBeep(293, 'sawtooth', 0.15), 120);
+        }
+
+        function playCoinSFX() {
+            if (!sfxEnabled) return;
+            initToneAudio();
+            if (typeof Tone !== 'undefined' && sfxSynth && audioInitialized) {
+                try {
+                    const now = Tone.now();
+                    sfxSynth.triggerAttackRelease("B5", "32n", now);
+                    sfxSynth.triggerAttackRelease("E6", "16n", now + 0.07);
+                    return;
+                } catch(e) {}
+            }
+            playFallbackBeep(987, 'sine', 0.05);
+            setTimeout(() => playFallbackBeep(1318, 'sine', 0.08), 60);
+        }
+
+        function toggleBGM() {
+            initToneAudio();
+            bgmPlaying = !bgmPlaying;
+            const bgmIcon = document.getElementById('bgm-icon');
+            const bgmText = document.getElementById('bgm-text');
+
+            if (bgmPlaying) {
+                bgmIcon.className = "fa-solid fa-volume-high text-red-600 animate-pulse";
+                bgmText.innerText = "緊張音樂 On";
+                startIntenseBGMLoop();
+            } else {
+                bgmIcon.className = "fa-solid fa-music text-amber-600";
+                bgmText.innerText = "緊張音樂 Off";
+                if (typeof Tone !== 'undefined' && bgmLoop) {
+                    try { bgmLoop.stop(); } catch(e) {}
+                }
+            }
+        }
+
+        function toggleSFX() {
+            sfxEnabled = !sfxEnabled;
+            const sfxIcon = document.getElementById('sfx-icon');
+            const sfxText = document.getElementById('sfx-text');
+
+            if (sfxEnabled) {
+                sfxIcon.className = "fa-solid fa-volume-high text-amber-600";
+                sfxText.innerText = "音效 On";
+                playClickSFX();
+            } else {
+                sfxIcon.className = "fa-solid fa-volume-xmark text-slate-400";
+                sfxText.innerText = "音效 Off";
+            }
+        }
+
+        function startIntenseBGMLoop() {
+            if (typeof Tone === 'undefined') return;
+            initToneAudio();
+            if (!bassSynth || !panicSynth) return;
+
+            try {
+                // 急促緊張的廚房快節奏 (BPM: 136)
+                const bassLine = ["C2", "C2", "Eb2", "F2", "G2", "G2", "Bb2", "B2"];
+                const arpLine = ["C4", "Eb4", "G4", "C5", "G4", "Eb4", "F4", "Ab4"];
+                let step = 0;
+                if (bgmLoop) bgmLoop.stop();
+
+                bgmLoop = new Tone.Loop(time => {
+                    if (!bgmPlaying) return;
+                    const bNote = bassLine[step % bassLine.length];
+                    const aNote = arpLine[step % arpLine.length];
+
+                    if (bassSynth) bassSynth.triggerAttackRelease(bNote, "16n", time);
+                    if (step % 2 === 0 && panicSynth) {
+                        panicSynth.triggerAttackRelease(aNote, "32n", time + 0.08);
+                    }
+                    step++;
+                }, "8n").start(0);
+
+                Tone.Transport.bpm.value = 136;
+                Tone.Transport.start();
+            } catch(e) {
+                console.warn("啟動 BGM 時出錯:", e);
+            }
+        }
+
+        /* ================= 遊戲核心數據庫 (15款經典甜點) ================= */
+        const dessertsData = [
+            {
+                id: 'basque',
+                category: 'cake',
+                name: '巴斯克乳酪蛋糕',
+                enName: 'Basque Burnt Cheesecake',
+                icon: 'fa-cheese',
+                color: 'bg-gradient-to-tr from-amber-600 to-yellow-600',
+                lightBg: 'bg-amber-100',
+                difficulty: '★★☆',
+                temp: '220°C',
+                servings: '6 吋 1 個',
+                desc: '西班牙巴斯克經典流心！粗獷揉紙入模，高溫瞬間炙烤焦糖化深黑外殼，鎖住布丁般 Jiggle 半熟流心。',
+                ingredients: [
+                    { name: '菲力奶油乳酪 (250g)', icon: 'fa-cheese' },
+                    { name: '細砂糖 (55g)', icon: 'fa-spoon' },
+                    { name: '全蛋2顆+蛋黃1顆', icon: 'fa-egg' },
+                    { name: '動物性鮮奶油 (160g)', icon: 'fa-bottle-droplet' },
+                    { name: '低筋麵粉 (6g)', icon: 'fa-wheat-awn' },
+                    { name: '香草精 (1小匙)', icon: 'fa-flask' },
+                    { name: '檸檬汁 (5ml)', icon: 'fa-lemon' }
+                ],
+                steps: [
+                    '鋪設烤紙與預熱 220°C：粗獷揉紙貼入 6 吋烤模',
+                    '乳酪攪打至滑順泛白乳霜狀，溶化細砂糖',
+                    '分 3 次乳化加入蛋液與檸檬汁防分離',
+                    '倒入動物性鮮奶油與低筋麵粉，細網過篩濾除顆粒',
+                    '220°C 高溫炙烤 22 分鐘，輕晃確認 Jiggle 半熟出爐！'
+                ]
+            },
+            {
+                id: 'mont_blanc',
+                category: 'cake',
+                name: '蒙布朗栗子塔',
+                enName: 'Mont Blanc Tart',
+                icon: 'fa-mountain',
+                color: 'bg-gradient-to-tr from-amber-800 to-yellow-900',
+                lightBg: 'bg-amber-50',
+                difficulty: '★★★',
+                temp: '180°C',
+                servings: '4 個',
+                desc: '以白朗峰為靈感的法式巨作！甜酥塔皮盛裝杏仁奶油餡雙烤，堆疊鮮奶油山丘與多孔花嘴細密栗子泥。',
+                ingredients: [
+                    { name: '甜酥塔皮 (Pâte Sucrée)', icon: 'fa-cookie' },
+                    { name: '杏仁奶油餡 (80g)', icon: 'fa-bowl-rice' },
+                    { name: '糖漬甘栗 (4-6顆)', icon: 'fa-circle' },
+                    { name: '香緹鮮奶油 (120ml)', icon: 'fa-cloud' },
+                    { name: '滑順栗子泥 (160g)', icon: 'fa-seedling' },
+                    { name: '蘭姆酒 (少許)', icon: 'fa-wine-bottle' },
+                    { name: '防潮糖粉 (適量)', icon: 'fa-snowflake' }
+                ],
+                steps: [
+                    '製作甜酥塔皮：切拌無鹽奶油與杏仁粉，入模壓石盲烤',
+                    '填入杏仁奶油餡，175°C 雙重烘烤至金黃放涼',
+                    '香緹鮮奶油加入細砂糖打發至 8~9 分堅挺小山丘',
+                    '栗子泥過篩混合軟化奶油與少許蘭姆酒',
+                    '多孔草坪花嘴由下往上繞圈拉線包裹，撒上防潮糖粉！'
+                ]
+            },
+            {
+                id: 'macaron',
+                category: 'french',
+                name: '法式馬卡龍',
+                enName: 'French Macaron',
+                icon: 'fa-circle-notch',
+                color: 'bg-gradient-to-tr from-pink-500 to-rose-400',
+                lightBg: 'bg-pink-50',
+                difficulty: '★★★',
+                temp: '140°C',
+                servings: '12 對',
+                desc: '少女的酥胸！室溫老蛋白打發硬性尖角，精準 Macaronage 壓拌排氣，結皮烘烤出夢幻蕾絲裙邊。',
+                ingredients: [
+                    { name: '超細杏仁粉 (60g)', icon: 'fa-bowl-rice' },
+                    { name: '純糖粉 (60g)', icon: 'fa-snowflake' },
+                    { name: '室溫老蛋白 (50g)', icon: 'fa-egg' },
+                    { name: '細砂糖 (45g)', icon: 'fa-spoon' },
+                    { name: '檸檬汁 (2-3滴)', icon: 'fa-lemon' },
+                    { name: '巧克力甘納許 (80g)', icon: 'fa-cube' }
+                ],
+                steps: [
+                    '超細杏仁粉與純糖粉混合雙重細篩',
+                    '老蛋白加檸檬汁，分三次加糖打至直立尖銳硬性發泡',
+                    '關鍵 Macaronage：貼盆抹開刮起排氣至飄帶狀',
+                    '垂直向下擠出 3.5cm 圓形，敲盤震出氣泡',
+                    '通風結皮至指觸不黏手，140°C 烤出蕾絲裙邊並夾心！'
+                ]
+            },
+            {
+                id: 'croissant',
+                category: 'bread',
+                name: '法式可頌',
+                enName: 'French Croissant',
+                icon: 'fa-moon',
+                color: 'bg-gradient-to-tr from-amber-600 to-yellow-500',
+                lightBg: 'bg-amber-100',
+                difficulty: '★★★',
+                temp: '200°C',
+                servings: '8 個',
+                desc: '層層疊疊的法國發酵奶油與麵糰交織！精準裹油兩次 3 折，200°C 高溫綻放酥脆金黃蜂窩組織。',
+                ingredients: [
+                    { name: '法國發酵奶油 (125g)', icon: 'fa-cube' },
+                    { name: '高筋麵粉 (175g)', icon: 'fa-wheat-awn' },
+                    { name: '低筋麵粉 (75g)', icon: 'fa-wheat-awn' },
+                    { name: '乾酵母 (5g)', icon: 'fa-flask' },
+                    { name: '冰牛奶 (130ml)', icon: 'fa-bottle-droplet' },
+                    { name: '刷面蛋黃液 (適量)', icon: 'fa-brush' }
+                ],
+                steps: [
+                    '揉製光滑麵團包保鮮膜低溫冷藏隔夜熟成',
+                    '敲打擀製 15x15cm 正方形軟韌發酵奶油片',
+                    '麵團菱形包裹奶油片捏緊接縫防漏油',
+                    '第一次 3 折長條信紙折疊，送入冷藏鬆弛',
+                    '旋轉 90 度完成第二次 3 折並冷藏定型',
+                    '均勻擀薄裁切等腰三角形，底邊切口向外捲起',
+                    '200°C 高溫炙烤膨脹，綻放極致金黃蜂窩組織！'
+                ]
+            },
+            {
+                id: 'scone',
+                category: 'french',
+                name: '英式司康',
+                enName: 'Classic English Scone',
+                icon: 'fa-cookie',
+                color: 'bg-gradient-to-tr from-amber-500 to-orange-400',
+                lightBg: 'bg-amber-50',
+                difficulty: '★☆☆',
+                temp: '180°C',
+                servings: '6 個',
+                desc: '外酥內鬆軟的英倫午茶經典！冰涼奶油快速搓砂切拌，烘烤裂出美麗狼牙笑口。',
+                ingredients: [
+                    { name: '中筋麵粉 (260g)', icon: 'fa-wheat-awn' },
+                    { name: '冰無鹽奶油 (75g切丁)', icon: 'fa-cube' },
+                    { name: '泡打粉 (10g)', icon: 'fa-flask' },
+                    { name: '細砂糖 (50g)', icon: 'fa-spoon' },
+                    { name: '全蛋液 (1顆)', icon: 'fa-egg' },
+                    { name: '冰鮮奶 (60ml)', icon: 'fa-bottle-droplet' }
+                ],
+                steps: [
+                    '麵粉、糖與泡打粉混勻，加入冰奶油丁迅速搓砂',
+                    '倒入蛋液與牛奶切拌成團，切勿過度揉捏防出筋',
+                    '輕壓至 3cm 厚度，壓模切出圓形刷上蛋液',
+                    '180°C 烤約 16 分鐘至金黃狼牙裂紋綻放！'
+                ]
+            },
+            {
+                id: 'cinnamon_roll',
+                category: 'bread',
+                name: '美式肉桂捲',
+                enName: 'Cinnamon Roll',
+                icon: 'fa-scroll',
+                color: 'bg-gradient-to-tr from-amber-700 to-amber-900',
+                lightBg: 'bg-amber-100',
+                difficulty: '★★☆',
+                temp: '180°C',
+                servings: '8 卷',
+                desc: '濃郁黑糖肉桂香氣！鬆軟拉絲麵包體捲入厚厚肉桂奶油，淋上絲滑奶油乳酪醬。',
+                ingredients: [
+                    { name: '高筋麵粉 (300g)', icon: 'fa-wheat-awn' },
+                    { name: '黑糖 (70g)', icon: 'fa-cubes' },
+                    { name: '錫蘭肉桂粉 (10g)', icon: 'fa-mortar-pestle' },
+                    { name: '軟化奶油 (60g)', icon: 'fa-cube' },
+                    { name: '奶油乳酪 (50g淋醬用)', icon: 'fa-cheese' },
+                    { name: '純糖粉 (40g)', icon: 'fa-snowflake' }
+                ],
+                steps: [
+                    '揉麵發酵至兩倍大，拍氣擀開成長方形大片',
+                    '均勻抹上膏狀奶油，撒滿厚厚黑糖肉桂粉',
+                    '緊密捲起切成等份，進行二次發酵至圓潤',
+                    '180°C 烘烤 22 分鐘，出爐淋上奶油乳酪淋醬！'
+                ]
+            },
+            {
+                id: 'lemon_tart',
+                category: 'cake',
+                name: '法式檸檬塔',
+                enName: 'French Lemon Tart',
+                icon: 'fa-lemon',
+                color: 'bg-gradient-to-tr from-yellow-400 to-amber-500',
+                lightBg: 'bg-yellow-50',
+                difficulty: '★★★',
+                temp: '180°C',
+                servings: '6 吋 1 個',
+                desc: '酥脆金黃杏仁塔皮，填入新鮮手壓檸檬凝乳（Lemon Curd），酸甜清爽、入口即化。',
+                ingredients: [
+                    { name: '塔皮奶油+低粉 (60g/110g)', icon: 'fa-cube' },
+                    { name: '新鮮檸檬汁 (75ml)', icon: 'fa-lemon' },
+                    { name: '細磨檸檬皮屑 (2顆量)', icon: 'fa-seedling' },
+                    { name: '全蛋液 (2顆)', icon: 'fa-egg' },
+                    { name: '凝乳無鹽奶油 (85g)', icon: 'fa-cube' },
+                    { name: '細砂糖 (75g)', icon: 'fa-spoon' }
+                ],
+                steps: [
+                    '揉捏塔皮鋪模盲烤，烘烤至金黃香脆放涼',
+                    '糖搓檸檬皮屑釋放香氣，拌入檸檬汁與蛋液',
+                    '隔水加熱慢煮至濃稠凝乳狀，降溫分次融入奶油',
+                    '倒入塔皮抹平冷藏 4 小時凝固，灑皮屑裝飾！'
+                ]
+            },
+            {
+                id: 'brownie',
+                category: 'cake',
+                name: '美式布朗尼',
+                enName: 'Fudge Brownie',
+                icon: 'fa-square',
+                color: 'bg-gradient-to-tr from-stone-800 to-amber-950',
+                lightBg: 'bg-stone-100',
+                difficulty: '★☆☆',
+                temp: '175°C',
+                servings: '8 塊',
+                desc: '濃郁 70% 苦甜巧克力與烤香核桃！外層酥脆薄糖皮，中心濕潤濃郁紮實。',
+                ingredients: [
+                    { name: '苦甜黑巧克力 (115g)', icon: 'fa-box' },
+                    { name: '無鹽奶油 (110g)', icon: 'fa-cube' },
+                    { name: '細砂糖 (100g)', icon: 'fa-spoon' },
+                    { name: '全蛋 (2顆常溫)', icon: 'fa-egg' },
+                    { name: '無糖可可粉 (25g)', icon: 'fa-border-all' },
+                    { name: '烤香核桃 (50g)', icon: 'fa-seedling' }
+                ],
+                steps: [
+                    '黑巧克力與無鹽奶油隔水加熱融化拌勻',
+                    '常溫雞蛋與砂糖充分攪打至微融泛白',
+                    '巧克力液與蛋液混合，篩入可可粉與麵粉切拌',
+                    '拌入烤香核桃，倒入方模抹平',
+                    '175°C 烤 22 分鐘出爐，中心濕潤軟心！'
+                ]
+            },
+            {
+                id: 'pudding',
+                category: 'cake',
+                name: '焦糖雞蛋布丁',
+                enName: 'Caramel Pudding',
+                icon: 'fa-glass-water',
+                color: 'bg-gradient-to-tr from-amber-400 to-orange-400',
+                lightBg: 'bg-amber-50',
+                difficulty: '★★☆',
+                temp: '150°C',
+                servings: '4 杯',
+                desc: '深琥珀色微苦焦糖，搭配全脂鮮奶與雙蛋黃調配的極致細滑布丁液，水浴溫控慢烤。',
+                ingredients: [
+                    { name: '熬焦糖細砂糖 (60g)', icon: 'fa-spoon' },
+                    { name: '全脂鮮奶 (350ml)', icon: 'fa-bottle-droplet' },
+                    { name: '全蛋2顆+蛋黃2顆', icon: 'fa-egg' },
+                    { name: '布丁細砂糖 (40g)', icon: 'fa-spoon' },
+                    { name: '天然香草精 (1小匙)', icon: 'fa-flask' }
+                ],
+                steps: [
+                    '細砂糖小火熬煮至深琥珀色，加沸水化開注入杯底',
+                    '鮮奶與砂糖溫熱溶解，緩緩倒入蛋黃液中輕拌',
+                    '布丁液細網過篩 3 次濾除筋絡與大氣泡',
+                    '注入模具水浴法 150°C 慢烤 45 分鐘出爐冷藏！'
+                ]
+            },
+            {
+                id: 'puff',
+                category: 'french',
+                name: '脆皮泡芙',
+                enName: 'Crispy Cream Puff',
+                icon: 'fa-cloud',
+                color: 'bg-gradient-to-tr from-amber-400 to-yellow-500',
+                lightBg: 'bg-yellow-50',
+                difficulty: '★★★',
+                temp: '200°C',
+                servings: '6 顆',
+                desc: '頂層菠蘿酥皮，麵糊高溫爆發性膨脹中空，填入滿滿冰涼滑順香草卡士達醬。',
+                ingredients: [
+                    { name: '無鹽奶油 (45g)', icon: 'fa-cube' },
+                    { name: '低筋麵粉 (55g)', icon: 'fa-wheat-awn' },
+                    { name: '常溫全蛋液 (105g)', icon: 'fa-egg' },
+                    { name: '菠蘿脆皮麵團 (一份)', icon: 'fa-cookie' },
+                    { name: '香草卡士達醬 (200g)', icon: 'fa-droplet' }
+                ],
+                steps: [
+                    '水與奶油大火煮沸，倒粉快速燙麵炒出鍋底白膜',
+                    '降溫分次加蛋液，拉出光滑倒三角麵糊',
+                    '烤盤垂直擠圓，頂部蓋上冷凍菠蘿脆皮片',
+                    '200°C 劇烈膨脹定型，降溫烘乾水分出爐灌餡！'
+                ]
+            },
+            {
+                id: 'madeleine',
+                category: 'french',
+                name: '法式瑪德蓮',
+                enName: 'Madeleine',
+                icon: 'fa-fan',
+                color: 'bg-gradient-to-tr from-yellow-400 to-amber-400',
+                lightBg: 'bg-amber-50',
+                difficulty: '★★☆',
+                temp: '190°C',
+                servings: '8 個',
+                desc: '法式經典貝殼小蛋糕！加入檸檬皮屑與天然蜂蜜，冷藏熟成後高溫烘烤出經典可愛小肚臍。',
+                ingredients: [
+                    { name: '低筋麵粉 (100g)', icon: 'fa-wheat-awn' },
+                    { name: '細砂糖 (70g)', icon: 'fa-spoon' },
+                    { name: '天然蜂蜜 (15g)', icon: 'fa-bottle-droplet' },
+                    { name: '融化無鹽奶油 (100g)', icon: 'fa-cube' },
+                    { name: '檸檬皮屑 (1顆量)', icon: 'fa-lemon' },
+                    { name: '泡打粉 (3g)', icon: 'fa-flask' }
+                ],
+                steps: [
+                    '蛋糖拌勻加入檸檬皮屑與蜂蜜，篩入麵粉泡打粉',
+                    '分次融入微溫奶油，貼面冷藏熟成 2 小時',
+                    '貝殼模塗油撒粉，擠入 8 分滿熟成麵糊',
+                    '190°C 高溫烘烤，溫差刺激中央膨起迷人小肚臍！'
+                ]
+            },
+            {
+                id: 'dacquoise',
+                category: 'french',
+                name: '法式達克瓦茲',
+                enName: 'Dacquoise',
+                icon: 'fa-capsules',
+                color: 'bg-gradient-to-tr from-stone-400 to-amber-600',
+                lightBg: 'bg-stone-50',
+                difficulty: '★★★',
+                temp: '180°C',
+                servings: '8 對',
+                desc: '杏仁粉與堅挺蛋白霜的浪漫結合！模具定型撒雙層糖粉，烤出珍珠糖霜脆殼，夾入濃郁焦糖奶油。',
+                ingredients: [
+                    { name: '純杏仁粉 (50g)', icon: 'fa-bowl-rice' },
+                    { name: '純糖粉 (40g)', icon: 'fa-snowflake' },
+                    { name: '冰蛋白 (70g)', icon: 'fa-egg' },
+                    { name: '焦糖奶油內餡 (80g)', icon: 'fa-droplet' },
+                    { name: '防潮糖粉 (適量)', icon: 'fa-sparkles' }
+                ],
+                steps: [
+                    '杏仁粉與純糖粉混合細篩備用',
+                    '蛋白打至堅挺硬性發泡，分兩次輕柔切拌乾粉',
+                    '擠入橢圓模具刮平提起，均勻灑兩次糖粉出糖珠',
+                    '180°C 烤出珍珠脆殼，放涼擠入焦糖奶油霜冷藏！'
+                ]
+            },
+            {
+                id: 'swiss_roll',
+                category: 'cake',
+                name: '日式生乳捲',
+                enName: 'Japanese Cream Roll',
+                icon: 'fa-dharmachakra',
+                color: 'bg-gradient-to-tr from-amber-300 to-orange-400',
+                lightBg: 'bg-orange-50',
+                difficulty: '★★☆',
+                temp: '170°C',
+                servings: '6 人份',
+                desc: '獨特燙麵法鎖住水分！如雲朵般柔軟的棉花糖蛋糕體，捲入加入煉乳打發的 35% 濃郁動物性生乳餡。',
+                ingredients: [
+                    { name: '燙麵植物油+低粉 (40g/50g)', icon: 'fa-bottle-droplet' },
+                    { name: '全脂鮮奶 (50ml)', icon: 'fa-bottle-droplet' },
+                    { name: '蛋黃4顆+蛋白4顆', icon: 'fa-egg' },
+                    { name: '動物鮮奶油 35% (250g)', icon: 'fa-bottle-droplet' },
+                    { name: '濃郁煉乳 (10g)', icon: 'fa-cubes' }
+                ],
+                steps: [
+                    '65°C 油溫燙麵糊化，加入牛奶與蛋黃拌勻',
+                    '冰蛋白打發至彈性彎鉤，J字形輕柔翻拌混合',
+                    '平盤 170°C 烘烤 18 分鐘出爐撕紙防乾放涼',
+                    '鮮奶油加煉乳打至堅挺九分發，堆疊山丘順勢捲緊！'
+                ]
+            },
+            {
+                id: 'redbean_mochi_bread',
+                category: 'bread',
+                name: '紅豆麻糬麵包',
+                enName: 'Red Bean Mochi Bread',
+                icon: 'fa-bread-slice',
+                color: 'bg-gradient-to-tr from-rose-700 to-amber-800',
+                lightBg: 'bg-rose-50',
+                difficulty: '★★☆',
+                temp: '180°C',
+                servings: '6 個',
+                desc: '日式鬆軟麵包體包裹香甜紅豆沙與自製拉絲軟糯麻糬，雙烤盤壓烤出平整復古日系外觀。',
+                ingredients: [
+                    { name: '高筋麵粉 (200g)', icon: 'fa-wheat-awn' },
+                    { name: '糯米粉 (50g麻糬用)', icon: 'fa-bowl-rice' },
+                    { name: '紅豆沙 (150g分成6份)', icon: 'fa-cookie' },
+                    { name: '無鹽奶油 (20g)', icon: 'fa-cube' },
+                    { name: '黑白芝麻 (適量)', icon: 'fa-ellipsis' }
+                ],
+                steps: [
+                    '糯米粉與牛奶蒸熟，趁熱揉入奶油製成拉絲麻糬',
+                    '主麵團揉出薄膜初次發酵 1 小時',
+                    '分團包入紅豆沙與麻糬球，捏緊收口二次發酵',
+                    '撒黑芝麻，壓上空烤盤 180°C 壓平烘烤 16 分鐘！'
+                ]
+            },
+            {
+                id: 'angel_cake',
+                category: 'cake',
+                name: '純白天使蛋糕',
+                enName: 'Angel Food Cake',
+                icon: 'fa-cake-candles',
+                color: 'bg-gradient-to-tr from-sky-400 to-indigo-400',
+                lightBg: 'bg-sky-50',
+                difficulty: '★★☆',
+                temp: '190°C',
+                servings: '4 人份',
+                desc: '純白無油低脂的夢幻雲朵蛋糕！純蛋白打發至濕性彎鉤，輕柔切拌保留大氣泡，口感細膩清盈無負擔。',
+                ingredients: [
+                    { name: '新鮮常溫蛋白 (2顆)', icon: 'fa-egg' },
+                    { name: '細砂糖 (40g)', icon: 'fa-spoon' },
+                    { name: '常溫牛奶 (20ml)', icon: 'fa-bottle-droplet' },
+                    { name: '低筋麵粉 (15g)', icon: 'fa-wheat-awn' },
+                    { name: '玉米澱粉 (15g)', icon: 'fa-cubes' }
+                ],
+                steps: [
+                    '蛋白分三次加糖打至輕盈有彈性的小彎鉤',
+                    '倒入牛奶輕柔混合均勻',
+                    '篩入低筋麵粉與玉米粉，快速切拌防消泡',
+                    '倒入不抹油專用模，190°C 烘烤 20 分鐘倒扣放涼！'
+                ]
+            }
+        ];
+
+        /* ================= 遊戲狀態、倒數計時與人偶控制 ================= */
+        let currentDessert = null;
+        let currentStepIndex = 0;
+        let currentCategory = 'all';
+        let totalCoins = 180;
+        let chefExp = 0;
+        let chefLevel = 1;
+        let miniGameProgress = 0;
+        let miniGameTarget = 10;
+        let ovenTimer = null;
+        let miniGameTimer = null;
+
+        // 倒數計時器核心變數
+        let stepTimeLeft = 12; // 秒
+        let stepMaxTime = 12;
+        let stepCountDownInterval = null;
+
+        // Shop items database
+        const shopItems = [
+            { id: 'whisk_gold', name: '鍍金頂級打蛋器', desc: '攪拌速度提升 30%，每道甜點金幣 +15', price: 100, icon: 'fa-wand-sparkles', bought: false },
+            { id: 'marble_board', name: '義大利大理石揉麵板', desc: '麵團不易黏附，獲取經驗 +20%', price: 160, icon: 'fa-chess-board', bought: false },
+            { id: 'pro_oven', name: '夢幻蒸氣石板烤箱', desc: '烘烤時間縮短，甜點評級全線保底 A 級', price: 250, icon: 'fa-temperature-arrow-up', bought: false },
+            { id: 'master_apron', name: '藍帶星級主廚圍裙', desc: '彰顯專業風範，所有甜點金幣收益 +50%', price: 400, icon: 'fa-shirt', bought: false }
+        ];
+
+        window.onload = function() {
+            renderDessertMenu();
+            updateChefStats();
+            renderShopItems();
+        };
+
+        /* 觸發人偶動作 (Puppet Chef Animation) */
+        function triggerChefAction(toolIconClass = null) {
+            const rightArm = document.getElementById('chef-arm-right');
+            const tool = document.getElementById('chef-tool-icon');
+            const chefPuppet = document.getElementById('puppet-chef');
+            const mouth = document.getElementById('chef-mouth');
+            const eyes = document.getElementById('chef-eyes');
+
+            if (toolIconClass && tool) {
+                tool.innerHTML = `<i class="fa-solid ${toolIconClass}"></i>`;
+            }
+
+            if (rightArm) {
+                rightArm.classList.remove('chef-busy-arm');
+                void rightArm.offsetWidth; // reflow
+                rightArm.classList.add('chef-busy-arm');
+                setTimeout(() => {
+                    rightArm.classList.remove('chef-busy-arm');
+                }, 400);
+            }
+
+            if (chefPuppet) {
+                chefPuppet.style.transform = "scale(1.04) translateY(-2px)";
+                setTimeout(() => {
+                    chefPuppet.style.transform = "scale(1) translateY(0)";
+                }, 120);
+            }
+
+            // 口型張開
+            if (mouth) {
+                mouth.className = "w-3 h-3 bg-red-600 rounded-full mt-0.5";
+                setTimeout(() => {
+                    mouth.className = "w-3 h-1.5 bg-amber-700 rounded-b-full mt-0.5";
+                }, 200);
+            }
+        }
+
+        function setChefPanicState(isPanic) {
+            const chefPuppet = document.getElementById('puppet-chef');
+            const sweat = document.getElementById('chef-sweat');
+            const bubble = document.getElementById('chef-status-bubble');
+            const banner = document.getElementById('timer-banner-box');
+
+            if (isPanic) {
+                if (chefPuppet) chefPuppet.classList.add('chef-panic');
+                if (sweat) sweat.classList.remove('hidden');
+                if (bubble) {
+                    bubble.innerText = "😱 快沒時間啦！快動手！";
+                    bubble.className = "mt-1 text-[11px] font-black text-red-600 bg-red-100 px-2.5 py-0.5 rounded-full border border-red-300 shadow-sm animate-pulse";
+                }
+                if (banner) banner.classList.add('urgent-glow');
+            } else {
+                if (chefPuppet) chefPuppet.classList.remove('chef-panic');
+                if (sweat) sweat.classList.add('hidden');
+                if (bubble) {
+                    bubble.innerText = "主廚全力手作中！";
+                    bubble.className = "mt-1 text-[11px] font-black text-amber-900 bg-white/90 px-2.5 py-0.5 rounded-full border border-amber-200 shadow-sm";
+                }
+                if (banner) banner.classList.remove('urgent-glow');
+            }
+        }
+
+        /* 啟動每一步驟的倒數計時 */
+        function startStepTimer(allocatedSeconds = 12) {
+            clearInterval(stepCountDownInterval);
+            stepMaxTime = allocatedSeconds;
+            stepTimeLeft = allocatedSeconds;
+
+            setChefPanicState(false);
+            updateTimerDisplay();
+
+            stepCountDownInterval = setInterval(() => {
+                stepTimeLeft--;
+                updateTimerDisplay();
+
+                if (stepTimeLeft <= 4 && stepTimeLeft > 0) {
+                    playUrgentSFX();
+                    setChefPanicState(true);
+                } else if (stepTimeLeft > 4) {
+                    playTickSFX();
+                }
+
+                if (stepTimeLeft <= 0) {
+                    clearInterval(stepCountDownInterval);
+                    handleStepTimeout();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const timeNum = document.getElementById('time-left-num');
+            const timerBar = document.getElementById('step-timer-bar');
+
+            if (timeNum) timeNum.innerText = stepTimeLeft;
+            if (timerBar) {
+                const pct = Math.max(0, (stepTimeLeft / stepMaxTime) * 100);
+                timerBar.style.width = `${pct}%`;
+                if (stepTimeLeft <= 4) {
+                    timerBar.className = "bg-red-600 h-full transition-all duration-200 animate-pulse";
+                } else {
+                    timerBar.className = "bg-gradient-to-r from-green-500 via-amber-500 to-red-500 h-full transition-all duration-200";
+                }
+            }
+        }
+
+        function handleStepTimeout() {
+            if (ovenTimer) clearInterval(ovenTimer);
+            if (miniGameTimer) clearInterval(miniGameTimer);
+
+            playFailSFX();
+            setChefPanicState(false);
+
+            const failReason = document.getElementById('fail-reason');
+            if (failReason && currentDessert) {
+                const stepText = currentDessert.steps[currentStepIndex] || '當前工序';
+                failReason.innerText = `在「${stepText}」環節耗盡時間！麵團塌陷或溫度失控，烘焙遺憾告終！`;
+            }
+
+            showScreen('screen-fail');
+        }
+
+        function filterCategory(cat) {
+            playClickSFX();
+            currentCategory = cat;
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                btn.className = 'cat-filter-btn px-4 py-1.5 rounded-full bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-700/60 transition btn-bounce';
+            });
+            event.target.className = 'cat-filter-btn active-filter px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md border border-amber-300/40 transition btn-bounce';
+            renderDessertMenu();
+        }
+
+        function renderDessertMenu() {
+            const container = document.getElementById('showcase-shelves-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // 定義貨架層架結構與主題
+            const shelfConfigs = [
+                {
+                    cat: 'cake',
+                    title: '頂層 • 華麗蛋糕與精緻塔派 (Gâteaux & Tartes)',
+                    icon: 'fa-cake-candles',
+                    badge: '冷藏恆溫層'
+                },
+                {
+                    cat: 'bread',
+                    title: '中層 • 經典現烤手作麵包 (Boulangerie Tradition)',
+                    icon: 'fa-bread-slice',
+                    badge: '金黃酥脆層'
+                },
+                {
+                    cat: 'french',
+                    title: '底層 • 巴黎沙龍常溫點心 (Pâtisserie de Salon)',
+                    icon: 'fa-cookie',
+                    badge: '法式伴手禮'
+                }
+            ];
+
+            // 根據目前分類決定要展示哪些層架
+            const activeShelves = currentCategory === 'all'
+                ? shelfConfigs
+                : shelfConfigs.filter(s => s.cat === currentCategory);
+
+            activeShelves.forEach(shelf => {
+                const shelfItems = dessertsData.filter(d => d.category === shelf.cat);
+                if (shelfItems.length === 0) return;
+
+                const shelfBlock = document.createElement('div');
+                shelfBlock.className = 'space-y-3';
+
+                // Shelf Header
+                shelfBlock.innerHTML = `
+                    <div class="flex items-center justify-between px-2 sm:px-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-amber-800 text-amber-200 flex items-center justify-center text-xs shadow-sm">
+                                <i class="fa-solid ${shelf.icon}"></i>
+                            </span>
+                            <h3 class="font-black text-amber-950 text-xs sm:text-sm tracking-wide">${shelf.title}</h3>
+                        </div>
+                        <span class="text-[10px] font-bold bg-amber-200/80 text-amber-900 border border-amber-400/50 px-2.5 py-0.5 rounded-full">
+                            ${shelf.badge}
+                        </span>
+                    </div>
+                `;
+
+                // Glass Display Shelf Floor
+                const shelfSurface = document.createElement('div');
+                shelfSurface.className = 'relative shelf-glass rounded-2xl p-3 sm:p-4 shadow-md';
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5 sm:gap-4 relative z-10';
+
+                shelfItems.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'dessert-showcase-item flex flex-col items-center justify-between text-center cursor-pointer group btn-bounce select-none relative';
+                    card.onclick = () => selectDessert(item);
+
+                    // 點心呈現：立體陶瓷盤 + 甜點圖示 + 黃銅銘牌 + 倒數警示標籤
+                    card.innerHTML = `
+                        <!-- Glass Cloche Cover Hint on hover -->
+                        <div class="absolute -top-3 w-16 h-12 bg-white/20 rounded-t-full border border-white/50 opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-none"></div>
+
+                        <!-- Ceramic Plate & Pastry Model -->
+                        <div class="plate-dish relative w-20 h-20 sm:w-24 sm:h-24 ceramic-plate rounded-full flex items-center justify-center shadow-lg transition duration-300 group-hover:scale-105 mb-2.5">
+                            <!-- Lace paper lining -->
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-dashed border-amber-300/80 bg-white/70 flex items-center justify-center">
+                                <!-- Pastry Core Sphere / Icon -->
+                                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${item.color} text-white flex items-center justify-center text-2xl shadow-md transition-transform duration-300 group-hover:rotate-6">
+                                    <i class="fa-solid ${item.icon}"></i>
+                                </div>
+                            </div>
+
+                            <!-- Showcase Temperature Tag -->
+                            <div class="absolute -bottom-1 -right-1 bg-amber-900 text-amber-200 text-[9px] font-black px-1.5 py-0.5 rounded-md shadow border border-amber-700">
+                                ${item.temp}
+                            </div>
+                        </div>
+
+                        <!-- Brass Nameplate / Price Tag -->
+                        <div class="w-full brass-plaque rounded-xl p-1.5 sm:p-2 border border-amber-700/50 shadow-md flex flex-col items-center">
+                            <h4 class="font-black text-amber-950 text-xs sm:text-[13px] leading-tight line-clamp-1">${item.name}</h4>
+                            <span class="text-[9px] text-amber-900/80 font-bold leading-tight">${item.enName}</span>
+                            
+                            <div class="mt-1 flex items-center justify-between w-full text-[10px] pt-1 border-t border-amber-900/20 px-1 font-bold">
+                                <span class="text-amber-900">${item.difficulty}</span>
+                                <span class="text-red-700 flex items-center gap-0.5 bg-red-100/90 px-1.5 py-0.2 rounded-full font-black text-[9px]">
+                                    <i class="fa-solid fa-stopwatch text-[8px] animate-pulse"></i> 限時
+                                </span>
+                            </div>
+                        </div>
+                    `;
+
+                    grid.appendChild(card);
+                });
+
+                shelfSurface.appendChild(grid);
+
+                // Heavy Polished Wood Shelf Floor Bar
+                const woodenBar = document.createElement('div');
+                woodenBar.className = 'showcase-shelf h-4 w-full rounded-b-xl -mt-1 shadow-md border-t border-amber-400/40 flex items-center justify-between px-3';
+                woodenBar.innerHTML = `
+                    <div class="w-2 h-2 rounded-full bg-amber-300/80 shadow"></div>
+                    <div class="text-[9px] font-extrabold text-amber-200/90 tracking-widest uppercase">ARTISAN SHOWCASE</div>
+                    <div class="w-2 h-2 rounded-full bg-amber-300/80 shadow"></div>
+                `;
+
+                shelfBlock.appendChild(shelfSurface);
+                shelfBlock.appendChild(woodenBar);
+                container.appendChild(shelfBlock);
+            });
+        }
+
+        function showScreen(screenId) {
+            ['screen-menu', 'screen-recipe', 'screen-game', 'screen-result', 'screen-fail'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(screenId);
+            if (target) target.classList.remove('hidden');
+
+            const homeBtn = document.getElementById('home-btn');
+            if (screenId === 'screen-menu') {
+                homeBtn.classList.add('hidden');
+            } else {
+                homeBtn.classList.remove('hidden');
+            }
+        }
+
+        function goToMenu() {
+            if (ovenTimer) clearInterval(ovenTimer);
+            if (miniGameTimer) clearInterval(miniGameTimer);
+            if (stepCountDownInterval) clearInterval(stepCountDownInterval);
+            playClickSFX();
+            showScreen('screen-menu');
+        }
+
+        function selectDessert(dessert) {
+            playClickSFX();
+            currentDessert = dessert;
+            
+            document.getElementById('recipe-name').innerText = dessert.name;
+            document.getElementById('recipe-difficulty').innerText = `難易度: ${dessert.difficulty}`;
+            document.getElementById('recipe-desc').innerText = dessert.desc;
+            document.getElementById('recipe-temp').innerText = dessert.temp;
+            document.getElementById('recipe-servings').innerText = dessert.servings || '4 人份';
+            
+            const catMap = { 'cake': '蛋糕塔派', 'bread': '經典麵包', 'french': '法式常溫' };
+            document.getElementById('recipe-cat-badge').innerText = catMap[dessert.category] || '手作甜點';
+
+            const iconElem = document.getElementById('recipe-icon');
+            iconElem.className = `fa-solid ${dessert.icon} animate-float`;
+
+            const bgElem = document.getElementById('recipe-img-bg');
+            bgElem.className = `w-32 h-32 md:w-40 md:h-40 rounded-3xl ${dessert.lightBg} flex items-center justify-center text-6xl text-amber-600 shadow-inner shrink-0 relative overflow-hidden`;
+
+            const ingList = document.getElementById('recipe-ingredients-list');
+            ingList.innerHTML = '';
+            dessert.ingredients.forEach(ing => {
+                const chip = document.createElement('div');
+                chip.className = 'bg-white/85 p-2 rounded-xl border border-slate-200/80 flex items-center gap-2 text-[11px] sm:text-xs font-bold text-slate-700 shadow-sm';
+                chip.innerHTML = `
+                    <i class="fa-solid ${ing.icon} text-amber-500 text-sm"></i>
+                    <span class="truncate">${ing.name}</span>
+                `;
+                ingList.appendChild(chip);
+            });
+
+            showScreen('screen-recipe');
+        }
+
+        function startBakingWorkflow() {
+            playClickSFX();
+            currentStepIndex = 0;
+            showScreen('screen-game');
+            loadGameStep(currentStepIndex);
+        }
+
+        function advanceStep() {
+            if (!currentDessert) return;
+            if (ovenTimer) clearInterval(ovenTimer);
+            if (miniGameTimer) clearInterval(miniGameTimer);
+            clearInterval(stepCountDownInterval);
+
+            currentStepIndex++;
+            if (currentStepIndex >= currentDessert.steps.length) {
+                playSuccessSFX();
+                showResultScreen();
+            } else {
+                playClickSFX();
+                loadGameStep(currentStepIndex);
+            }
+        }
+
+        /* ================= 互動小遊戲引擎 (Interactive Mini-Games) ================= */
+        function loadGameStep(stepIdx) {
+            const totalSteps = currentDessert.steps.length;
+            const progressPct = ((stepIdx + 1) / totalSteps) * 100;
+            
+            document.getElementById('game-progress-bar').style.width = `${progressPct}%`;
+            document.getElementById('step-indicator').innerHTML = `<i class="fa-solid fa-sparkles text-amber-500 mr-1"></i> 步驟 ${stepIdx + 1} / ${totalSteps}`;
+            
+            const rawStepDesc = currentDessert.steps[stepIdx];
+            document.getElementById('step-name-badge').innerText = rawStepDesc;
+
+            const visualStage = document.getElementById('visual-stage');
+            const actionControls = document.getElementById('action-controls');
+            const instructionBox = document.getElementById('instruction-box');
+
+            visualStage.innerHTML = '';
+            actionControls.innerHTML = '';
+
+            // 根據步驟類型分配倒數時間並啟動倒數
+            let allocatedSeconds = 12;
+            if (rawStepDesc.includes('烤') || rawStepDesc.includes('°C')) {
+                allocatedSeconds = 10;
+            } else if (rawStepDesc.includes('打發') || rawStepDesc.includes('揉') || rawStepDesc.includes('折')) {
+                allocatedSeconds = 13;
+            } else {
+                allocatedSeconds = 11;
+            }
+            startStepTimer(allocatedSeconds);
+
+            // Detect appropriate mini-game by step keywords or dessert id
+            if (currentDessert.id === 'basque') {
+                setupBasqueCustomStep(stepIdx, visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (currentDessert.id === 'mont_blanc') {
+                setupMontBlancCustomStep(stepIdx, visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (currentDessert.id === 'macaron') {
+                setupMacaronCustomStep(stepIdx, visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (rawStepDesc.includes('烤') || rawStepDesc.includes('°C')) {
+                setupBakingOvenGame(visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (rawStepDesc.includes('打發') || rawStepDesc.includes('打蛋') || rawStepDesc.includes('拌勻') || rawStepDesc.includes('攪拌') || rawStepDesc.includes('搓砂')) {
+                setupMixingWhipGame(visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (rawStepDesc.includes('擀') || rawStepDesc.includes('揉') || rawStepDesc.includes('折')) {
+                setupKneadRollGame(visualStage, actionControls, instructionBox, rawStepDesc);
+            } else if (rawStepDesc.includes('擠') || rawStepDesc.includes('淋') || rawStepDesc.includes('裝飾') || rawStepDesc.includes('撒')) {
+                setupPipingDecorationGame(visualStage, actionControls, instructionBox, rawStepDesc);
+            } else {
+                setupTapProgressGame(visualStage, actionControls, instructionBox, rawStepDesc);
+            }
+        }
+
+        /* 西班牙巴斯克乳酪蛋糕專屬手作互動步驟 (Basque Atelier Stages) */
+        function setupBasqueCustomStep(stepIdx, stage, controls, instruct, text) {
+            instruct.innerText = text;
+
+            if (stepIdx === 0) {
+                // 1. 鋪設烤紙與預熱 220°C
+                instruct.innerText = `【步驟 1: 限時粗獷揉紙】時間有限！點擊將烘焙紙抓揉成團貼模，打造經典摺痕！`;
+                let paperWrinkled = false;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div id="mold-box" class="w-40 h-36 bg-stone-100 rounded-3xl border-4 border-amber-300 shadow-xl flex flex-col items-center justify-center p-3 relative cursor-pointer">
+                            <div id="paper-visual" class="w-20 h-20 bg-amber-200/90 rounded-2xl border-2 border-dashed border-amber-600 flex flex-col items-center justify-center transition-all duration-300 shadow">
+                                <i id="paper-icon" class="fa-solid fa-scroll text-amber-800 text-2xl"></i>
+                                <span id="paper-text" class="text-[9px] font-black text-amber-900 mt-1">平整烘焙紙</span>
+                            </div>
+                            <span id="mold-note" class="text-[10px] font-extrabold text-amber-900 mt-2">點擊揉紙鋪模</span>
+                        </div>
+                    </div>
+                `;
+
+                const wrinkleBtn = document.createElement('button');
+                wrinkleBtn.className = 'px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                wrinkleBtn.innerHTML = `<i class="fa-solid fa-hand-fist"></i> 揉成一團再展開鋪模`;
+
+                const doWrinkle = () => {
+                    if (!paperWrinkled) {
+                        paperWrinkled = true;
+                        triggerChefAction('fa-hand-fist');
+                        playToneNote("D5", "16n");
+                        const vis = document.getElementById('paper-visual');
+                        const icon = document.getElementById('paper-icon');
+                        const txt = document.getElementById('paper-text');
+                        const note = document.getElementById('mold-note');
+
+                        if (vis) vis.className = "w-28 h-28 bg-amber-100 rounded-3xl border-4 border-amber-600/60 shadow-inner flex flex-col items-center justify-center animate-wiggle";
+                        if (icon) icon.className = "fa-solid fa-certificate text-amber-700 text-3xl";
+                        if (txt) txt.innerText = "自然粗獷摺痕";
+                        if (note) note.innerText = "✨ 完美貼模！";
+
+                        wrinkleBtn.disabled = true;
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+
+                wrinkleBtn.onclick = doWrinkle;
+                document.getElementById('mold-box').onclick = doWrinkle;
+                controls.appendChild(wrinkleBtn);
+            } else if (stepIdx === 1) {
+                // 2. 乳酪打至滑順與加糖
+                instruct.innerText = `【步驟 2: 限時極速攪打】在倒數結束前快速點擊攪打奶油乳酪與砂糖！`;
+                let whipCount = 0;
+                const targetWhip = 5;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div id="creamcheese-bowl" class="w-40 h-32 bg-amber-100/90 rounded-b-full border-4 border-amber-400 shadow-xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer">
+                            <div id="cheese-texture" class="w-16 h-16 bg-yellow-200 rounded-full border-2 border-amber-300 shadow flex items-center justify-center text-[10px] font-black text-amber-900 transition-all duration-300">
+                                軟化乳酪塊
+                            </div>
+                            <span id="cheese-status" class="text-[9px] font-black text-amber-900 mt-1">攪打中 (0 / 5)</span>
+                        </div>
+                        <div class="w-40 bg-slate-200 h-2 rounded-full mt-2 overflow-hidden border border-slate-300">
+                            <div id="cheese-bar" class="bg-amber-500 h-full w-0 transition-all duration-200"></div>
+                        </div>
+                    </div>
+                `;
+
+                const whipCheeseBtn = document.createElement('button');
+                whipCheeseBtn.className = 'px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                whipCheeseBtn.innerHTML = `<i class="fa-solid fa-blender"></i> 快速攪打乳酪與細砂糖`;
+
+                const doWhipCheese = () => {
+                    whipCount++;
+                    triggerChefAction('fa-blender');
+                    playStirSFX();
+                    const pct = Math.min(100, Math.round((whipCount / targetWhip) * 100));
+                    const bar = document.getElementById('cheese-bar');
+                    const tex = document.getElementById('cheese-texture');
+                    const stat = document.getElementById('cheese-status');
+
+                    if (bar) bar.style.width = `${pct}%`;
+                    if (tex) {
+                        tex.style.transform = `scale(${1 + whipCount * 0.05}) rotate(${whipCount * 25}deg)`;
+                        if (whipCount >= 3) tex.style.backgroundColor = '#fef08a';
+                    }
+                    if (stat) stat.innerText = `細緻乳霜化 (${whipCount} / ${targetWhip})`;
+
+                    if (whipCount >= targetWhip) {
+                        whipCheeseBtn.disabled = true;
+                        if (stat) stat.innerText = "✨ 細緻絲滑！砂糖完全溶解！";
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+
+                whipCheeseBtn.onclick = doWhipCheese;
+                document.getElementById('creamcheese-bowl').onclick = doWhipCheese;
+                controls.appendChild(whipCheeseBtn);
+            } else if (stepIdx === 2) {
+                // 3. 分次加入蛋液
+                instruct.innerText = `【步驟 3: 分次乳化加蛋】把握時間分 3 次加入蛋液防分離！`;
+                let eggStage = 0;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="w-40 h-32 bg-amber-100 rounded-b-full border-4 border-amber-400 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                            <div id="emulsion-core" class="w-20 h-20 bg-yellow-300 rounded-full border-2 border-amber-400 shadow flex flex-col items-center justify-center transition-all duration-300">
+                                <i class="fa-solid fa-egg text-amber-700 text-xl"></i>
+                                <span id="emulsion-label" class="text-[9px] font-black text-amber-900 mt-1">初次蛋液</span>
+                            </div>
+                            <span id="emulsion-status" class="text-[9px] font-black text-amber-900 mt-1">分次吸收防油水分離</span>
+                        </div>
+                    </div>
+                `;
+
+                const addEggBtn = document.createElement('button');
+                addEggBtn.className = 'px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                addEggBtn.innerHTML = `<i class="fa-solid fa-egg"></i> 分次加入蛋液 (1/3)`;
+
+                addEggBtn.onclick = () => {
+                    eggStage++;
+                    triggerChefAction('fa-egg');
+                    playToneNote(eggStage === 1 ? "C5" : (eggStage === 2 ? "E5" : "G5"), "16n");
+
+                    const lbl = document.getElementById('emulsion-label');
+                    const stat = document.getElementById('emulsion-status');
+                    const core = document.getElementById('emulsion-core');
+
+                    if (eggStage === 1) {
+                        addEggBtn.innerHTML = `<i class="fa-solid fa-egg"></i> 加入第二次蛋液 (2/3)`;
+                        if (lbl) lbl.innerText = "完全乳化 1/3";
+                        if (stat) stat.innerText = "徹底吸收，質地緊密！";
+                    } else if (eggStage === 2) {
+                        addEggBtn.innerHTML = `<i class="fa-solid fa-lemon"></i> 加最後蛋液與檸檬汁 (3/3)`;
+                        if (lbl) lbl.innerText = "完全乳化 2/3";
+                        if (stat) stat.innerText = "蛋黃比例提升膏狀香氣！";
+                    } else if (eggStage >= 3) {
+                        addEggBtn.disabled = true;
+                        if (lbl) lbl.innerText = "香濃金黃乳酪蛋糊";
+                        if (stat) stat.innerText = "✨ 完美乳化無分離！";
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+                controls.appendChild(addEggBtn);
+            } else if (stepIdx === 3) {
+                // 4. 混合鮮奶油與過篩
+                instruct.innerText = `【步驟 4: 快速過篩】時間倒數中！點擊細網快速過篩 1~2 次濾除顆粒！`;
+                let sifted = false;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div id="basque-sift-box" class="w-40 h-32 bg-amber-50 rounded-3xl border-2 border-dashed border-amber-400 shadow-md flex flex-col items-center justify-center p-3 relative cursor-pointer">
+                            <i id="sift-mesh-icon" class="fa-solid fa-filter text-amber-600 text-3xl mb-1 transition-transform"></i>
+                            <div class="w-24 h-8 bg-yellow-100 rounded-xl border border-amber-300 flex items-center justify-center text-[9px] font-black text-amber-900" id="sift-batter-text">
+                                拌勻鮮奶油與麵粉
+                            </div>
+                            <span id="sift-batter-note" class="text-[9px] font-black text-amber-900 mt-1">點擊過篩</span>
+                        </div>
+                    </div>
+                `;
+
+                const siftBatterBtn = document.createElement('button');
+                siftBatterBtn.className = 'px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                siftBatterBtn.innerHTML = `<i class="fa-solid fa-filter"></i> 細網過篩並敲盤震泡`;
+
+                const doSiftBatter = () => {
+                    if (!sifted) {
+                        sifted = true;
+                        triggerChefAction('fa-filter');
+                        playToneNote("A5", "16n");
+                        const icon = document.getElementById('sift-mesh-icon');
+                        const txt = document.getElementById('sift-batter-text');
+                        const note = document.getElementById('sift-batter-note');
+
+                        if (icon) icon.style.transform = "scale(1.2) translateY(5px)";
+                        if (txt) {
+                            txt.innerText = "絲綢般細膩滑順";
+                            txt.style.backgroundColor = "#fef08a";
+                        }
+                        if (note) note.innerText = "✨ 濾除顆粒完成！";
+
+                        siftBatterBtn.disabled = true;
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+
+                siftBatterBtn.onclick = doSiftBatter;
+                document.getElementById('basque-sift-box').onclick = doSiftBatter;
+                controls.appendChild(siftBatterBtn);
+            } else if (stepIdx === 4) {
+                // 5. 烘烤與 Jiggle 布丁晃動
+                instruct.innerText = `【步驟 5: 220°C 極速炙烤】點擊啟動烤箱，並在倒數結束前確認 Jiggle 晃動感出爐！`;
+                let bakePct = 0;
+
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="relative w-44 h-32 bg-stone-900 rounded-3xl border-4 border-amber-600 shadow-2xl flex flex-col items-center justify-center overflow-hidden">
+                            <div class="w-32 h-16 bg-stone-800/90 rounded-2xl border-2 border-amber-700/80 flex flex-col items-center justify-center relative overflow-hidden">
+                                <div id="basque-cake-visual" class="w-16 h-12 bg-yellow-200 rounded-t-2xl border border-amber-400 shadow-inner flex flex-col items-center justify-center transition-all duration-300">
+                                    <div id="burnt-crust" class="w-full h-2.5 bg-amber-400/40 rounded-t-xl transition-all duration-500"></div>
+                                    <span id="jiggle-label" class="text-[8px] font-black text-amber-950 mt-0.5">熟化中</span>
+                                </div>
+                                <div class="absolute inset-0 bg-orange-600/20 pointer-events-none animate-pulse"></div>
+                            </div>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <i class="fa-solid fa-fire text-orange-500 text-xs animate-bounce"></i>
+                                <span class="text-xs font-black text-amber-300">220°C 極致炙烤</span>
+                            </div>
+                            <div class="absolute inset-x-0 bottom-0 bg-amber-500/30 transition-all duration-150" id="basque-bake-fill" style="height: 0%"></div>
+                        </div>
+                        <span id="basque-bake-note" class="text-xs font-bold text-amber-900 mt-2">點擊啟動高溫炙烤</span>
+                    </div>
+                `;
+
+                const bakeBasqueBtn = document.createElement('button');
+                bakeBasqueBtn.className = 'px-8 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg transition btn-bounce flex items-center gap-2 text-xs';
+                bakeBasqueBtn.innerHTML = `<i class="fa-solid fa-fire"></i> 啟動 220°C 炙烤`;
+
+                bakeBasqueBtn.onclick = () => {
+                    bakeBasqueBtn.disabled = true;
+                    triggerChefAction('fa-fire');
+                    if (ovenTimer) clearInterval(ovenTimer);
+
+                    ovenTimer = setInterval(() => {
+                        bakePct += 25;
+                        playToneNote("C4", "32n");
+
+                        const fill = document.getElementById('basque-bake-fill');
+                        const note = document.getElementById('basque-bake-note');
+                        const crust = document.getElementById('burnt-crust');
+                        const jiggleLbl = document.getElementById('jiggle-label');
+                        const cake = document.getElementById('basque-cake-visual');
+
+                        if (fill) fill.style.height = `${bakePct}%`;
+
+                        if (bakePct >= 50 && crust) crust.style.backgroundColor = "#78350f";
+                        if (bakePct >= 80 && crust) {
+                            crust.style.backgroundColor = "#292524";
+                            if (cake) cake.style.backgroundColor = "#fbbf24";
+                        }
+
+                        if (bakePct >= 100) {
+                            clearInterval(ovenTimer);
+                            if (note) note.innerText = "💫 烤出焦黑！快確認 Jiggle 出爐！";
+                            if (jiggleLbl) jiggleLbl.innerText = "微晃 Jiggle";
+                            if (cake) cake.classList.add('animate-wiggle');
+
+                            bakeBasqueBtn.disabled = false;
+                            bakeBasqueBtn.className = "px-8 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 font-black rounded-2xl shadow-lg transition btn-bounce flex items-center gap-2 text-xs animate-pulse";
+                            bakeBasqueBtn.innerHTML = `<i class="fa-solid fa-hand-holding-hand"></i> 輕晃確認 Jiggle 半熟出爐！`;
+
+                            bakeBasqueBtn.onclick = () => {
+                                bakeBasqueBtn.disabled = true;
+                                triggerChefAction('fa-star');
+                                playSuccessSFX();
+                                setTimeout(advanceStep, 600);
+                            };
+                        }
+                    }, 280);
+                };
+                controls.appendChild(bakeBasqueBtn);
+            }
+        }
+
+        /* 蒙布朗專屬手作互動步驟 (Mont Blanc Stages) */
+        function setupMontBlancCustomStep(stepIdx, stage, controls, instruct, text) {
+            instruct.innerText = text;
+            if (stepIdx === 0) {
+                instruct.innerText = `【步驟 1: 盲烤壓石】點擊壓入烘焙石，防止甜酥塔皮在烘烤時中央鼓起！`;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div id="tart-mold" class="w-40 h-32 bg-amber-100 rounded-3xl border-4 border-amber-400 shadow-md flex flex-col items-center justify-center relative cursor-pointer">
+                            <i class="fa-solid fa-cookie text-amber-600 text-3xl mb-1"></i>
+                            <span id="tart-mold-status" class="text-xs font-black text-amber-900">未鋪烘焙石</span>
+                        </div>
+                    </div>
+                `;
+                const blindBakeBtn = document.createElement('button');
+                blindBakeBtn.className = 'px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                blindBakeBtn.innerHTML = `<i class="fa-solid fa-gem"></i> 鋪入烘焙石並進爐盲烤`;
+                blindBakeBtn.onclick = () => {
+                    blindBakeBtn.disabled = true;
+                    triggerChefAction('fa-gem');
+                    playToneNote("E5", "16n");
+                    const status = document.getElementById('tart-mold-status');
+                    if (status) status.innerText = "✨ 盲烤定型酥脆！";
+                    playSuccessSFX();
+                    setTimeout(advanceStep, 600);
+                };
+                controls.appendChild(blindBakeBtn);
+            } else if (stepIdx === 4) {
+                instruct.innerText = `【步驟 5: 栗子泥多孔拉線】點擊為鮮奶油山丘繞圈擠上細密栗子線條外衣！`;
+                let linesCount = 0;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="w-40 h-40 bg-amber-50 rounded-full border-4 border-amber-300 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                            <div class="w-20 h-20 bg-white rounded-full border-2 border-slate-200 shadow-inner flex items-center justify-center relative">
+                                <span class="w-5 h-5 bg-amber-800 rounded-full"></span>
+                                <div id="chestnut-threads" class="absolute inset-0 rounded-full border-4 border-amber-700 opacity-20 transition-all duration-300"></div>
+                            </div>
+                            <span id="mont-threads-stat" class="text-[10px] font-black text-amber-900 mt-2">拉線圈數 (0 / 4)</span>
+                        </div>
+                    </div>
+                `;
+                const pipeThreadBtn = document.createElement('button');
+                pipeThreadBtn.className = 'px-6 py-2.5 bg-gradient-to-r from-amber-700 to-amber-800 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                pipeThreadBtn.innerHTML = `<i class="fa-solid fa-mountain"></i> 繞圈擠出蒙布朗細線`;
+                pipeThreadBtn.onclick = () => {
+                    linesCount++;
+                    triggerChefAction('fa-mountain');
+                    playToneNote("G4", "16n");
+                    const threads = document.getElementById('chestnut-threads');
+                    const stat = document.getElementById('mont-threads-stat');
+                    if (threads) {
+                        threads.style.opacity = `${0.25 + linesCount * 0.25}`;
+                        threads.style.borderWidth = `${4 + linesCount * 3}px`;
+                    }
+                    if (stat) stat.innerText = `細密線條 (${linesCount} / 4)`;
+                    if (linesCount >= 4) {
+                        pipeThreadBtn.disabled = true;
+                        if (stat) stat.innerText = "✨ 蒙布朗雪山線條完美包覆！";
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+                controls.appendChild(pipeThreadBtn);
+            } else {
+                setupTapProgressGame(stage, controls, instruct, text);
+            }
+        }
+
+        /* 馬卡龍專屬手作互動步驟 (Macaron Stages) */
+        function setupMacaronCustomStep(stepIdx, stage, controls, instruct, text) {
+            instruct.innerText = text;
+            if (stepIdx === 2) {
+                instruct.innerText = `【步驟 3: 靈魂 Macaronage】倒數計時！貼盆壁抹開再刮起排氣，達到絲帶狀飄落！`;
+                let macaronageCount = 0;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="w-40 h-36 bg-pink-100 rounded-b-full border-4 border-pink-300 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                            <div id="macaron-batter" class="w-24 h-16 bg-pink-300 rounded-2xl border border-pink-400 shadow-inner flex items-center justify-center text-[10px] font-black text-pink-900 transition-all duration-300">
+                                稠厚粗糙麵糊
+                            </div>
+                            <span id="macaron-stat" class="text-[9px] font-black text-pink-900 mt-1">壓拌次數 (0 / 5)</span>
+                        </div>
+                    </div>
+                `;
+                const macaronageBtn = document.createElement('button');
+                macaronageBtn.className = 'px-6 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                macaronageBtn.innerHTML = `<i class="fa-solid fa-paintbrush"></i> 貼壁抹開排氣 (Macaronage)`;
+                macaronageBtn.onclick = () => {
+                    macaronageCount++;
+                    triggerChefAction('fa-paintbrush');
+                    playToneNote("C5", "16n");
+                    const bat = document.getElementById('macaron-batter');
+                    const stat = document.getElementById('macaron-stat');
+                    if (bat) {
+                        bat.style.transform = `scale(${1 + macaronageCount * 0.05}) rotate(${macaronageCount * 15}deg)`;
+                        if (macaronageCount >= 3) {
+                            bat.innerText = "絲帶光澤飄帶狀";
+                            bat.style.backgroundColor = "#f472b6";
+                        }
+                    }
+                    if (stat) stat.innerText = `壓拌均勻度 (${macaronageCount} / 5)`;
+                    if (macaronageCount >= 5) {
+                        macaronageBtn.disabled = true;
+                        if (stat) stat.innerText = "✨ 絲帶狀流動，10秒平整達標！";
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                };
+                controls.appendChild(macaronageBtn);
+            } else if (stepIdx === 4) {
+                instruct.innerText = `【步驟 5: 結皮硬殼與裙邊】觸摸檢查霧面不黏手，送入烤箱爆發美麗蕾絲裙邊！`;
+                stage.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="w-40 h-32 bg-stone-900 rounded-2xl border-4 border-pink-400 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                            <div class="w-20 h-10 bg-pink-400 rounded-t-full border-b-4 border-dashed border-pink-200 animate-pulse flex items-center justify-center text-[9px] font-black text-white">
+                                蕾絲裙邊 (Feet)
+                            </div>
+                            <span class="text-[10px] text-pink-300 font-bold mt-1">140°C 定溫綻放中</span>
+                        </div>
+                    </div>
+                `;
+                const finishMacaronBtn = document.createElement('button');
+                finishMacaronBtn.className = 'px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-extrabold rounded-2xl shadow-lg transition btn-bounce flex items-center gap-1.5 text-xs';
+                finishMacaronBtn.innerHTML = `<i class="fa-solid fa-cookie-bite"></i> 裙邊成形！夾入甘納許出爐`;
+                finishMacaronBtn.onclick = () => {
+                    finishMacaronBtn.disabled = true;
+                    triggerChefAction('fa-star');
+                    playSuccessSFX();
+                    setTimeout(advanceStep, 600);
+                };
+                controls.appendChild(finishMacaronBtn);
+            } else {
+                setupTapProgressGame(stage, controls, instruct, text);
+            }
+        }
+
+        /* 小遊戲 1: 攪拌與打發 (Whisk & Whip) */
+        function setupMixingWhipGame(stage, controls, instruct, text) {
+            instruct.innerText = `【限時攪拌打發】把握倒數時間！連續點擊打蛋器完成攪拌！`;
+            miniGameProgress = 0;
+            miniGameTarget = 10;
+
+            const hasGoldWhisk = shopItems.find(i => i.id === 'whisk_gold').bought;
+            if (hasGoldWhisk) miniGameTarget = 7;
+
+            stage.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <div id="mixing-bowl" class="w-40 h-36 bg-gradient-to-b from-stone-100 to-amber-100/90 rounded-b-full border-4 border-amber-300 shadow-xl relative flex items-center justify-center overflow-hidden cursor-pointer">
+                        <div id="liquid-fill" class="absolute inset-x-0 bottom-0 bg-amber-300/80 transition-all duration-200" style="height: 35%;"></div>
+                        <div id="whisk-tool" class="text-3xl text-amber-700 z-10 transition-transform duration-100">
+                            <i class="fa-solid fa-blender"></i>
+                        </div>
+                    </div>
+                    <div class="w-40 bg-slate-200 h-2 rounded-full mt-3 overflow-hidden border border-slate-300">
+                        <div id="mini-bar" class="bg-amber-500 h-full w-0 transition-all duration-150"></div>
+                    </div>
+                    <span id="mini-status" class="text-xs font-bold text-slate-600 mt-1">攪拌進度: 0%</span>
+                </div>
+            `;
+
+            const stirBtn = document.createElement('button');
+            stirBtn.className = 'px-7 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold rounded-2xl shadow-lg hover:from-amber-600 hover:to-orange-600 transition btn-bounce flex items-center gap-2 text-sm';
+            stirBtn.innerHTML = `<i class="fa-solid fa-rotate"></i> 快速連點攪拌 (${miniGameTarget} 次)`;
+            
+            const doStir = () => {
+                miniGameProgress++;
+                triggerChefAction('fa-blender');
+                playStirSFX();
+
+                const whisk = document.getElementById('whisk-tool');
+                if (whisk) {
+                    whisk.style.transform = `rotate(${miniGameProgress * 30}deg) scale(1.15)`;
+                    setTimeout(() => { if (whisk) whisk.style.transform = `rotate(0deg) scale(1)`; }, 80);
+                }
+
+                const pct = Math.min(100, Math.round((miniGameProgress / miniGameTarget) * 100));
+                const bar = document.getElementById('mini-bar');
+                const status = document.getElementById('mini-status');
+                const liquid = document.getElementById('liquid-fill');
+
+                if (bar) bar.style.width = `${pct}%`;
+                if (status) status.innerText = `攪拌進度: ${pct}%`;
+                if (liquid) liquid.style.height = `${35 + (pct * 0.45)}%`;
+
+                if (miniGameProgress >= miniGameTarget) {
+                    stirBtn.disabled = true;
+                    stirBtn.classList.add('opacity-50');
+                    if (status) status.innerText = `✨ 完美混合！`;
+                    playSuccessSFX();
+                    setTimeout(advanceStep, 600);
+                }
+            };
+
+            stirBtn.onclick = doStir;
+            document.getElementById('mixing-bowl').onclick = doStir;
+            controls.appendChild(stirBtn);
+        }
+
+        /* 小遊戲 2: 揉麵與擀平 (Knead & Roll) */
+        function setupKneadRollGame(stage, controls, instruct, text) {
+            instruct.innerText = `【限時擀壓塑形】倒數計時中！迅速點擊擀麵棍擀開麵團！`;
+            miniGameProgress = 0;
+            miniGameTarget = 8;
+
+            stage.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <div id="dough-board" class="w-48 h-32 bg-amber-50 rounded-2xl border-4 border-amber-200 shadow-inner relative flex items-center justify-center overflow-hidden cursor-pointer">
+                        <div id="dough-shape" class="w-20 h-20 bg-amber-300 rounded-full border-2 border-amber-400 shadow-md transition-all duration-300 flex items-center justify-center font-bold text-amber-900 text-[10px]">
+                            金黃麵團
+                        </div>
+                        <div id="rolling-pin" class="absolute text-3xl text-amber-800 pointer-events-none transition-all duration-150">
+                            <i class="fa-solid fa-grip-lines"></i>
+                        </div>
+                    </div>
+                    <div class="w-48 bg-slate-200 h-2 rounded-full mt-2.5 overflow-hidden border border-slate-300">
+                        <div id="mini-bar" class="bg-amber-600 h-full w-0 transition-all duration-150"></div>
+                    </div>
+                    <span id="mini-status" class="text-xs font-bold text-slate-600 mt-1">延展度: 0%</span>
+                </div>
+            `;
+
+            const rollBtn = document.createElement('button');
+            rollBtn.className = 'px-6 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 text-white font-extrabold rounded-2xl shadow-lg hover:from-amber-700 hover:to-amber-800 transition btn-bounce flex items-center gap-2 text-sm';
+            rollBtn.innerHTML = `<i class="fa-solid fa-scroll"></i> 迅速擀壓延展`;
+
+            const doRoll = () => {
+                miniGameProgress++;
+                triggerChefAction('fa-grip-lines');
+                playToneNote("D4", "16n");
+
+                const dough = document.getElementById('dough-shape');
+                const pct = Math.min(100, Math.round((miniGameProgress / miniGameTarget) * 100));
+                
+                if (dough) {
+                    dough.style.width = `${80 + (miniGameProgress * 10)}px`;
+                    dough.style.height = `${80 - (miniGameProgress * 3)}px`;
+                    dough.style.borderRadius = `${25 + (miniGameProgress * 4)}px`;
+                }
+
+                const bar = document.getElementById('mini-bar');
+                const status = document.getElementById('mini-status');
+                if (bar) bar.style.width = `${pct}%`;
+                if (status) status.innerText = `延展度: ${pct}%`;
+
+                if (miniGameProgress >= miniGameTarget) {
+                    rollBtn.disabled = true;
+                    rollBtn.classList.add('opacity-50');
+                    if (status) status.innerText = `✨ 延展厚度均勻！`;
+                    playSuccessSFX();
+                    setTimeout(advanceStep, 600);
+                }
+            };
+
+            rollBtn.onclick = doRoll;
+            document.getElementById('dough-board').onclick = doRoll;
+            controls.appendChild(rollBtn);
+        }
+
+        /* 小遊戲 3: 擠花與裝飾 (Piping & Dressing) */
+        function setupPipingDecorationGame(stage, controls, instruct, text) {
+            instruct.innerText = `【精準擠花】倒數計時！快速點擊全部虛線目標點完成裝飾！`;
+            miniGameProgress = 0;
+            miniGameTarget = 4;
+
+            stage.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <div id="piping-plate" class="w-52 h-32 bg-white/90 rounded-3xl border-4 border-amber-200 shadow-md flex items-center justify-around px-3 relative">
+                        <div class="pipe-target w-9 h-9 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition" onclick="hitPipeTarget(this)">
+                            <i class="fa-solid fa-plus text-amber-400 text-xs"></i>
+                        </div>
+                        <div class="pipe-target w-9 h-9 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition" onclick="hitPipeTarget(this)">
+                            <i class="fa-solid fa-plus text-amber-400 text-xs"></i>
+                        </div>
+                        <div class="pipe-target w-9 h-9 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition" onclick="hitPipeTarget(this)">
+                            <i class="fa-solid fa-plus text-amber-400 text-xs"></i>
+                        </div>
+                        <div class="pipe-target w-9 h-9 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center cursor-pointer hover:bg-amber-100 transition" onclick="hitPipeTarget(this)">
+                            <i class="fa-solid fa-plus text-amber-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <span id="piping-status" class="text-xs font-bold text-amber-800 mt-2">點擊虛線圈注入奶油</span>
+                </div>
+            `;
+
+            window.hitPipeTarget = function(elem) {
+                if (elem.dataset.done) return;
+                elem.dataset.done = "true";
+                elem.className = "w-9 h-9 rounded-full bg-amber-400 border-2 border-amber-500 flex items-center justify-center text-white text-sm shadow-sm sparkle-pop";
+                elem.innerHTML = `<i class="fa-solid fa-droplet"></i>`;
+                
+                miniGameProgress++;
+                triggerChefAction('fa-droplet');
+                playToneNote("G5", "16n");
+
+                if (miniGameProgress >= miniGameTarget) {
+                    document.getElementById('piping-status').innerText = `✨ 擠花裝飾完美完成！`;
+                    playSuccessSFX();
+                    setTimeout(advanceStep, 600);
+                }
+            };
+        }
+
+        /* 小遊戲 4: 智慧烤箱烘烤 (Master Oven) */
+        function setupBakingOvenGame(stage, controls, instruct, text) {
+            instruct.innerText = `【精準控溫】石板烤箱預熱！點擊開始烘烤，注意倒數時限！`;
+            let bakePct = 0;
+
+            const hasProOven = shopItems.find(i => i.id === 'pro_oven').bought;
+            const bakeStepTime = hasProOven ? 150 : 220;
+
+            stage.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <div class="relative w-44 h-32 bg-stone-900 rounded-3xl border-4 border-amber-600 shadow-2xl flex flex-col items-center justify-center overflow-hidden">
+                        <div class="w-32 h-16 bg-stone-800/90 rounded-2xl border-2 border-amber-700/80 flex flex-col items-center justify-center relative overflow-hidden">
+                            <i class="fa-solid ${currentDessert.icon} text-2xl text-amber-400 animate-float transition-all duration-300" id="oven-dessert"></i>
+                            <div class="absolute inset-0 bg-orange-500/20 pointer-events-none animate-pulse"></div>
+                            <div class="absolute top-1 flex gap-3 opacity-0 transition-opacity" id="steam-container">
+                                <span class="w-2 h-2 rounded-full bg-white/70 steam-circle"></span>
+                                <span class="w-2 h-2 rounded-full bg-white/70 steam-circle" style="animation-delay: 0.3s"></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <i class="fa-solid fa-fire text-orange-500 text-xs animate-bounce"></i>
+                            <span class="text-xs font-black text-amber-300">${currentDessert.temp} 恆溫</span>
+                        </div>
+                        <div class="absolute inset-x-0 bottom-0 bg-amber-500/30 transition-all duration-150" id="bake-fill" style="height: 0%"></div>
+                    </div>
+                    <span id="bake-label" class="text-xs font-bold text-amber-900 mt-2">點擊啟動烤箱</span>
+                </div>
+            `;
+
+            const bakeBtn = document.createElement('button');
+            bakeBtn.className = 'px-8 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg hover:from-orange-600 hover:to-amber-700 transition btn-bounce flex items-center gap-2 text-sm';
+            bakeBtn.innerHTML = `<i class="fa-solid fa-fire"></i> 啟動烘烤`;
+
+            bakeBtn.onclick = () => {
+                bakeBtn.disabled = true;
+                bakeBtn.classList.add('opacity-50');
+                triggerChefAction('fa-fire');
+                document.getElementById('steam-container').style.opacity = '1';
+                
+                if (ovenTimer) clearInterval(ovenTimer);
+                ovenTimer = setInterval(() => {
+                    bakePct += 15;
+                    playToneNote("C4", "32n");
+
+                    const fill = document.getElementById('bake-fill');
+                    const label = document.getElementById('bake-label');
+                    const dIcon = document.getElementById('oven-dessert');
+
+                    if (fill) fill.style.height = `${bakePct}%`;
+                    if (label) label.innerText = `烘烤焦糖化... ${bakePct}%`;
+                    if (dIcon && bakePct >= 60) {
+                        dIcon.style.color = '#f59e0b';
+                    }
+
+                    if (bakePct >= 100) {
+                        clearInterval(ovenTimer);
+                        if (label) label.innerText = `叮！出爐完成！`;
+                        playSuccessSFX();
+                        setTimeout(advanceStep, 600);
+                    }
+                }, bakeStepTime);
+            };
+
+            controls.appendChild(bakeBtn);
+        }
+
+        /* 小遊戲 5: 點擊進度確認 (Step Check) */
+        function setupTapProgressGame(stage, controls, instruct, text) {
+            instruct.innerText = `【工藝細節】${text}`;
+
+            stage.innerHTML = `
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-20 h-20 rounded-2xl ${currentDessert.color} text-white flex items-center justify-center text-3xl shadow-xl animate-float">
+                        <i class="fa-solid ${currentDessert.icon}"></i>
+                    </div>
+                    <p class="text-xs font-bold text-slate-700 max-w-xs text-center leading-relaxed">${text}</p>
+                </div>
+            `;
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'px-7 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-2xl shadow-md transition btn-bounce flex items-center gap-2 text-sm';
+            confirmBtn.innerHTML = `快速完成工序 <i class="fa-solid fa-arrow-right"></i>`;
+            confirmBtn.onclick = () => {
+                triggerChefAction('fa-check');
+                playClickSFX();
+                advanceStep();
+            };
+            controls.appendChild(confirmBtn);
+        }
+
+        /* ================= 結算評分與獎勵系統 ================= */
+        function showResultScreen() {
+            let baseCoins = 60;
+            let earnedExp = 150;
+
+            const hasApron = shopItems.find(i => i.id === 'master_apron').bought;
+            const hasWhisk = shopItems.find(i => i.id === 'whisk_gold').bought;
+            const hasBoard = shopItems.find(i => i.id === 'marble_board').bought;
+
+            if (hasApron) baseCoins = Math.round(baseCoins * 1.5);
+            if (hasWhisk) baseCoins += 15;
+            if (hasBoard) earnedExp = Math.round(earnedExp * 1.2);
+
+            totalCoins += baseCoins;
+            chefExp += earnedExp;
+
+            // 最高等級限制為 Lv.10
+            const MAX_LEVEL = 10;
+            while (chefLevel < MAX_LEVEL && chefExp >= chefLevel * 200) {
+                chefExp -= chefLevel * 200;
+                chefLevel++;
+                playSuccessSFX();
+            }
+            if (chefLevel >= MAX_LEVEL) {
+                chefLevel = MAX_LEVEL;
+            }
+
+            updateChefStats();
+
+            document.getElementById('earned-coins').innerText = baseCoins;
+            document.getElementById('earned-exp').innerText = earnedExp;
+            document.getElementById('result-title').innerText = `${currentDessert.name} 限時挑戰成功！`;
+            document.getElementById('result-desc').innerText = `手速極快！在緊張倒數下依然精準掌控主廚火候與完美比例！`;
+            document.getElementById('result-grade').innerText = 'S 級神速廚師';
+
+            playCoinSFX();
+            showScreen('screen-result');
+        }
+
+        function updateChefStats() {
+            document.getElementById('coin-count').innerText = totalCoins;
+            // 完整 10 階稱號體系（最高 Lv.10）
+            const titles = [
+                '甜點學徒',       // Lv.1
+                '初級烘焙師',     // Lv.2
+                '熟練烘焙師',     // Lv.3
+                '資深甜點師',     // Lv.4
+                '菁英工坊掌門',   // Lv.5
+                '藍帶烘焙大廚',   // Lv.6
+                '法式甜點主廚',   // Lv.7
+                '國際星級名廚',   // Lv.8
+                '米其林烘焙巨匠', // Lv.9
+                '傳奇甜點神匠 👑' // Lv.10 (MAX)
+            ];
+            const titleIdx = Math.min(titles.length - 1, Math.max(0, chefLevel - 1));
+            const badge = document.getElementById('chef-level-badge');
+            if (badge) {
+                if (chefLevel >= 10) {
+                    badge.className = "bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-yellow-500 shadow-sm animate-pulse";
+                    badge.innerText = `Lv.10 ${titles[titleIdx]}`;
+                } else {
+                    badge.className = "bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-300";
+                    badge.innerText = `Lv.${chefLevel} ${titles[titleIdx]}`;
+                }
+            }
+        }
+
+        /* ================= 工坊商店邏輯 ================= */
+        function openShopModal() {
+            playClickSFX();
+            renderShopItems();
+            document.getElementById('shop-modal').classList.remove('hidden');
+        }
+
+        function closeShopModal() {
+            playClickSFX();
+            document.getElementById('shop-modal').classList.add('hidden');
+        }
+
+        function renderShopItems() {
+            const container = document.getElementById('shop-items-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            shopItems.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'glass-card p-3 rounded-2xl flex items-center justify-between gap-3 border border-white';
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl ${item.bought ? 'bg-emerald-500' : 'bg-amber-500'} text-white flex items-center justify-center text-lg shadow shrink-0">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-extrabold text-slate-800 text-xs sm:text-sm">${item.name}</h4>
+                                ${item.bought ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">已擁有</span>' : ''}
+                            </div>
+                            <p class="text-[11px] text-slate-500 leading-tight">${item.desc}</p>
+                        </div>
+                    </div>
+                    <div>
+                        ${item.bought ? 
+                            '<button disabled class="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-400 font-bold text-xs">已配備</button>' : 
+                            `<button onclick="buyShopItem('${item.id}')" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow transition btn-bounce flex items-center gap-1">
+                                ${item.price} <i class="fa-solid fa-coins text-[10px]"></i>
+                            </button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function buyShopItem(itemId) {
+            const item = shopItems.find(i => i.id === itemId);
+            if (!item || item.bought) return;
+
+            if (totalCoins >= item.price) {
+                totalCoins -= item.price;
+                item.bought = true;
+                playSuccessSFX();
+                updateChefStats();
+                renderShopItems();
+            } else {
+                playToneNote("C3", "8n");
+            }
+        }
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

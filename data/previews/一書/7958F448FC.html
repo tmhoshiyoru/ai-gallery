@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="dark">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hogwarts Sorting Ceremony & Potterhead Quiz</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                        },
+                        gryffindor: '#740001',
+                        slytherin: '#1a472a',
+                        ravenclaw: '#0e1a40',
+                        hufflepuff: '#ecb939',
+                        darkBg: '#08090d',
+                        panelBg: '#12141d',
+                    },
+                    fontFamily: {
+                        cinzel: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #08090d;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .title-font {
+            font-family: 'Cinzel', serif;
+        }
+
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #fff3a1 0%, #d4af37 50%, #aa7c11 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .magical-card {
+            background: rgba(18, 20, 29, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.75), 0 0 25px rgba(212, 175, 55, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .option-btn {
+            background: rgba(28, 33, 48, 0.85);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            transition: all 0.25s ease;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: rgba(212, 175, 55, 0.85);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25);
+        }
+
+        .option-btn.selected {
+            background: rgba(212, 175, 55, 0.32) !important;
+            border-color: #facc15 !important;
+            box-shadow: 0 0 18px rgba(250, 204, 21, 0.45);
+        }
+
+        #particleCanvas, #cursorCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #cursorCanvas {
+            z-index: 9999;
+        }
+
+        .spell-cast-popup {
+            animation: spellPop 1.2s ease-out forwards;
+        }
+
+        @keyframes spellPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0c10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ca8a04;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="relative min-h-screen flex flex-col justify-between items-center p-4 md:p-8">
+
+    <canvas id="particleCanvas"></canvas>
+    <canvas id="cursorCanvas"></canvas>
+
+    <!-- Header Controls -->
+    <header class="w-full max-w-4xl flex flex-wrap justify-between items-center gap-4 z-10 mb-6">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="returnToWelcome()">
+            <i class="fa-solid font-bold text-2xl md:text-3xl text-amber-400 fa-hat-wizard animate-pulse"></i>
+            <span class="title-font text-xl md:text-2xl font-bold tracking-wider gold-gradient-text">SORTING CEREMONY</span>
+        </div>
+
+        <div class="flex items-center space-x-3 bg-slate-900/90 p-2 rounded-xl border border-amber-500/30 backdrop-blur-md shadow-lg">
+            <button id="soundToggleBtn" onclick="toggleSound()" class="p-2 w-10 h-10 rounded-lg bg-slate-800 text-amber-400 hover:bg-slate-700 transition flex items-center justify-center" title="Toggle Audio">
+                <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+            </button>
+
+            <div class="relative flex items-center">
+                <i class="fa-solid fa-globe text-amber-400 ml-2 mr-1"></i>
+                <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-800 text-amber-200 text-sm font-medium rounded-lg focus:ring-amber-500 focus:border-amber-500 p-2 border border-amber-500/30 outline-none cursor-pointer">
+                    <option value="en">English 🇬🇧</option>
+                    <option value="zh" selected>繁體中文 🇹🇼</option>
+                    <option value="fr">Français 🇫🇷</option>
+                    <option value="es">Español 🇪🇸</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-2xl z-10 flex-grow flex flex-col justify-center">
+
+        <!-- 1. WELCOME SCREEN -->
+        <div id="welcomeScreen" class="magical-card rounded-2xl p-6 md:p-10 text-center relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="mb-6 inline-block p-4 rounded-full bg-amber-500/10 border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                <i class="fa-solid fa-hat-wizard text-6xl text-amber-400 animate-bounce"></i>
+            </div>
+
+            <h1 id="welcomeTitle" class="title-font text-3xl md:text-4xl font-extrabold gold-gradient-text mb-4">
+                霍格華茲分院儀式與魔法會考
+            </h1>
+            
+            <p id="welcomeDesc" class="text-slate-300 mb-8 leading-relaxed text-sm md:text-base max-w-lg mx-auto">
+                戴上分類帽！回答一系列性格抉擇與魔法問答，分類帽將根據你的選擇，為你決定你屬於葛來分多、史萊哲林、雷文克勞還是赫夫帕夫！
+            </p>
+
+            <div class="bg-slate-900/80 p-4 rounded-xl border border-amber-500/20 max-w-md mx-auto mb-8 text-xs md:text-sm text-slate-300 flex items-center justify-around">
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-xl mb-1"></i>
+                    <span id="badgeQuestCount">8 道魔法試題</span>
+                </div>
+                <div class="w-px h-8 bg-amber-500/20"></div>
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-shuffle text-amber-400 text-xl mb-1"></i>
+                    <span id="badgeRandom">每次隨機題庫</span>
+                </div>
+                <div class="w-px h-8 bg-amber-500/20"></div>
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-shield-halved text-amber-400 text-xl mb-1"></i>
+                    <span id="badgeResult">分析學院契合度</span>
+                </div>
+            </div>
+
+            <!-- Start Game Button -->
+            <button id="startBtn" onclick="startGame()" class="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold text-lg rounded-xl shadow-lg shadow-amber-500/25 transition duration-300 transform hover:-translate-y-1 active:translate-y-0 title-font tracking-wider">
+                <i class="fa-solid fa-hat-wizard mr-2"></i>戴上分類帽開始測驗
+            </button>
+        </div>
+
+        <!-- 2. QUIZ PLAYING SCREEN -->
+        <div id="quizScreen" class="magical-card rounded-2xl p-6 md:p-8 hidden relative">
+            
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-amber-500/20">
+                <div class="flex items-center space-x-2">
+                    <span id="questionCountText" class="text-xs md:text-sm font-semibold uppercase text-amber-400 tracking-wider">問題 1 / 8</span>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-1 text-amber-400 text-xs md:text-sm font-bold bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                        <i class="fa-solid fa-wand-sparkles text-yellow-400"></i>
+                        <span id="scoreText">魔法能量: 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 mb-6 overflow-hidden border border-amber-500/20">
+                <div id="progressBar" class="bg-gradient-to-r from-amber-600 to-yellow-400 h-2.5 rounded-full transition-all duration-300" style="width: 12.5%"></div>
+            </div>
+
+            <!-- Question Card Title -->
+            <div class="min-h-[90px] flex items-center justify-center mb-6">
+                <h2 id="questionTitle" class="text-lg md:text-xl font-bold text-slate-100 text-center leading-relaxed">
+                    載入分類帽問題中...
+                </h2>
+            </div>
+
+            <!-- Options Container -->
+            <div id="optionsContainer" class="grid grid-cols-1 gap-3 md:gap-4 mb-6"></div>
+
+            <!-- Bottom Control Bar -->
+            <div class="flex justify-between items-center pt-4 border-t border-amber-500/20">
+                <div class="flex items-center space-x-2 text-slate-300 text-sm">
+                    <i class="fa-regular fa-clock text-amber-400 text-lg"></i>
+                    <span><strong id="timerText" class="text-amber-400 font-bold text-base">20</strong>s</span>
+                </div>
+
+                <button id="hintBtn" onclick="useHint()" class="text-xs md:text-sm px-3.5 py-2 rounded-lg bg-indigo-950/60 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/60 transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-lightbulb text-yellow-400"></i>
+                    <span id="hintBtnText">排除二錯 (50/50)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. SORTING RESULT SCREEN -->
+        <div id="resultScreen" class="magical-card rounded-2xl p-6 md:p-8 text-center hidden relative overflow-hidden">
+            <div id="houseBadgeBg" class="w-24 h-24 mx-auto mb-4 rounded-full bg-amber-500/10 border-2 border-amber-400 flex items-center justify-center shadow-xl shadow-amber-500/20 transition-all">
+                <i id="houseBadgeIcon" class="fa-solid fa-shield-cat text-4xl text-amber-400"></i>
+            </div>
+
+            <p id="sortingResultLabel" class="text-amber-400 text-xs font-bold tracking-widest uppercase mb-1">分類帽宣布結果</p>
+            <h2 id="resultHouseTitle" class="title-font text-3xl md:text-4xl font-extrabold gold-gradient-text mb-2">葛來分多 (GRYFFINDOR)</h2>
+            <p id="houseMottoText" class="text-slate-300 text-sm italic mb-6 max-w-md mx-auto">「勇敢、騎士精神與大膽無畏」</p>
+
+            <!-- House Match Percentages Breakdown -->
+            <div class="bg-slate-900/80 rounded-xl p-4 border border-amber-500/20 mb-6 max-w-md mx-auto space-y-3">
+                <p id="breakdownTitle" class="text-xs uppercase tracking-wider text-amber-300 font-bold text-left mb-2">四大學院契合度分析</p>
+                
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-red-400"><i class="fa-solid fa-shield-cat mr-1"></i> <span id="labelGryffindor">葛來分多</span></span>
+                        <span id="percentGryffindor" class="text-red-300">35%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="barGryffindor" class="bg-red-600 h-2 rounded-full transition-all duration-500" style="width: 35%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-emerald-400"><i class="fa-solid fa-staff-snake mr-1"></i> <span id="labelSlytherin">史萊哲林</span></span>
+                        <span id="percentSlytherin" class="text-emerald-300">25%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="barSlytherin" class="bg-emerald-600 h-2 rounded-full transition-all duration-500" style="width: 25%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-blue-400"><i class="fa-solid fa-crow mr-1"></i> <span id="labelRavenclaw">雷文克勞</span></span>
+                        <span id="percentRavenclaw" class="text-blue-300">20%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="barRavenclaw" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 20%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-amber-400"><i class="fa-solid fa-paw mr-1"></i> <span id="labelHufflepuff">赫夫帕夫</span></span>
+                        <span id="percentHufflepuff" class="text-amber-300">20%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="barHufflepuff" class="bg-amber-500 h-2 rounded-full transition-all duration-500" style="width: 20%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <p id="resultHouseDesc" class="text-slate-300 text-sm md:text-base mb-6 max-w-md mx-auto leading-relaxed">
+                你懷抱著無畏的勇氣與正義感，重視騎士精神與誠實，這正是葛來分多最看重的精神！
+            </p>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+                <button id="reviewBtn" onclick="showReviewModal()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-semibold rounded-xl transition text-sm">
+                    <i class="fa-solid fa-book-open mr-2"></i><span id="reviewBtnText">答案與解析</span>
+                </button>
+                <button id="restartBtn" onclick="restartQuiz()" class="px-6 py-3 bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-bold rounded-xl shadow-lg hover:from-amber-500 hover:to-yellow-400 transition title-font text-sm">
+                    <i class="fa-solid fa-rotate-right mr-2"></i><span id="restartBtnText">重新分院測驗</span>
+                </button>
+                <button id="homeBtn" onclick="returnToWelcome()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-semibold rounded-xl transition text-sm">
+                    <i class="fa-solid fa-house mr-2"></i><span id="homeBtnText">返回首頁</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Review Answers Modal -->
+    <div id="reviewModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="magical-card w-full max-w-2xl max-h-[85vh] rounded-2xl flex flex-col overflow-hidden">
+            <div class="p-4 md:p-6 border-b border-amber-500/20 flex justify-between items-center">
+                <h3 id="reviewModalTitle" class="title-font text-xl font-bold text-amber-400">測驗與分院解析</h3>
+                <button onclick="closeReviewModal()" class="text-slate-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="reviewList" class="p-4 md:p-6 overflow-y-auto space-y-4 flex-grow"></div>
+            <div class="p-4 border-t border-amber-500/20 text-right">
+                <button onclick="closeReviewModal()" class="px-5 py-2 bg-slate-800 text-amber-400 border border-amber-500/30 rounded-lg text-sm hover:bg-slate-700">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spell Cast Overlay Popup -->
+    <div id="spellEffectOverlay" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 hidden">
+        <span id="spellNameText" class="title-font text-3xl md:text-5xl font-extrabold gold-gradient-text drop-shadow-[0_0_20px_rgba(234,179,8,0.8)] tracking-widest spell-cast-popup block text-center">
+            EXPECTO PATRONUM!
+        </span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-4xl text-center text-xs text-slate-500 mt-8 z-10">
+        <p>Hogwarts House Sorting & Potterhead Quiz • Powered by Magic & JavaScript</p>
+    </footer>
+
+    <script>
+        // Internationalization Dictionary
+        const i18n = {
+            zh: {
+                welcomeTitle: "霍格華茲分院儀式與魔法會考",
+                welcomeDesc: "戴上分類帽！回答一系列性格抉擇與魔法問答，分類帽將根據你的選擇，為你決定你屬於葛來分多、史萊哲林、雷文克勞還是赫夫帕夫！",
+                badgeQuestCount: "8 道魔法試題",
+                badgeRandom: "每次隨機題庫",
+                badgeResult: "分析學院契合度",
+                houseGryffindor: "葛來分多",
+                houseSlytherin: "史萊哲林",
+                houseRavenclaw: "雷文克勞",
+                houseHufflepuff: "赫夫帕夫",
+                startBtn: "戴上分類帽開始測驗",
+                questionCount: "問題",
+                scoreText: "魔法能量",
+                hintBtn: "排除二錯 (50/50)",
+                sortingResultLabel: "分類帽宣布結果",
+                breakdownTitle: "四大學院契合度分析",
+                reviewBtn: "答案與解析",
+                restartBtn: "重新分院測驗",
+                homeBtn: "返回首頁",
+                reviewModalTitle: "測驗與分院解析",
+                timeUp: "時間到！",
+                yourChoice: "你的選擇",
+                mottoGryffindor: "「勇敢、騎士精神與大膽無畏」",
+                mottoSlytherin: "「野心、精明與強者意志」",
+                mottoRavenclaw: "「智慧、博學與睿智好奇」",
+                mottoHufflepuff: "「忠誠、勤奮與正義善良」",
+                descGryffindor: "你懷抱著無畏的勇氣與正義感，重視騎士精神與誠實，這正是葛來分多最看重的精神！",
+                descSlytherin: "你充滿野心、機智且富有策略，知道如何運用資源達成目標，這是偉大史萊哲林的特質！",
+                descRavenclaw: "你渴望追求知識、充滿好奇心與獨特創意，你的智慧將成為雷文克勞的傲驕！",
+                descHufflepuff: "你忠誠、堅毅且重視團隊與公平，真誠待人且腳踏實地，是赫夫帕夫最珍貴的靈魂！"
+            },
+            en: {
+                welcomeTitle: "Hogwarts Sorting Ceremony & Quiz",
+                welcomeDesc: "Put on the Sorting Hat! Answer wizarding dilemmas and magical scenarios. The Hat will sort you into Gryffindor, Slytherin, Ravenclaw, or Hufflepuff!",
+                badgeQuestCount: "8 Magic Questions",
+                badgeRandom: "Randomized Questions",
+                badgeResult: "Full Affinity Analysis",
+                houseGryffindor: "Gryffindor",
+                houseSlytherin: "Slytherin",
+                houseRavenclaw: "Ravenclaw",
+                houseHufflepuff: "Hufflepuff",
+                startBtn: "Put On The Sorting Hat",
+                questionCount: "Question",
+                scoreText: "Magic Power",
+                hintBtn: "50/50 Hint",
+                sortingResultLabel: "The Sorting Hat Has Decided",
+                breakdownTitle: "House Affinity Breakdown",
+                reviewBtn: "Review & Explanations",
+                restartBtn: "Retake Sorting Quiz",
+                homeBtn: "Back to Home",
+                reviewModalTitle: "Quiz & Sorting Breakdown",
+                timeUp: "Time's Up!",
+                yourChoice: "Your Choice",
+                mottoGryffindor: "'Bravery, Chivalry and Daring'",
+                mottoSlytherin: "'Ambition, Cunning and Resourcefulness'",
+                mottoRavenclaw: "'Wit, Wisdom and Learning'",
+                mottoHufflepuff: "'Loyalty, Patience and Hard Work'",
+                descGryffindor: "You possess daring courage, chivalry, and a fierce sense of justice. Gryffindor welcomes you!",
+                descSlytherin: "You are ambitious, resourceful, and cunning, destined for greatness in Slytherin!",
+                descRavenclaw: "Your sharp intellect, curiosity, and creativity mark you as a true member of Ravenclaw!",
+                descHufflepuff: "Your loyalty, dedication, and kindness make you a cherished member of Hufflepuff!"
+            },
+            fr: {
+                welcomeTitle: "Cérémonie de Répartition & Quiz",
+                welcomeDesc: "Mettez le Choixpeau magique ! Répondez aux dilemmes et aux scénarios magiques pour découvrir quelle maison de Poudlard vous correspond !",
+                badgeQuestCount: "8 Questions Magiques",
+                badgeRandom: "Questions Aléatoires",
+                badgeResult: "Analyse d'Affinité",
+                houseGryffindor: "Griffondor",
+                houseSlytherin: "Serpentard",
+                houseRavenclaw: "Serdaigle",
+                houseHufflepuff: "Poufsouffle",
+                startBtn: "Mettre le Choixpeau",
+                questionCount: "Question",
+                scoreText: "Puissance Magique",
+                hintBtn: "Indice (50/50)",
+                sortingResultLabel: "Le Choixpeau a Décidé",
+                breakdownTitle: "Analyse d'Affinité des Maisons",
+                reviewBtn: "Explications",
+                restartBtn: "Recommencer la Répartition",
+                homeBtn: "Retour à l'accueil",
+                reviewModalTitle: "Analyse de la Répartition",
+                timeUp: "Temps Écoulé !",
+                yourChoice: "Votre Choix",
+                mottoGryffindor: "'Courage, Chevalerie et Audace'",
+                mottoSlytherin: "'Ambition, Ruse et Détermination'",
+                mottoRavenclaw: "'Sagesse, Esprit et Erudition'",
+                mottoHufflepuff: "'Loyauté, Patience et Travail'",
+                descGryffindor: "Vous faites preuve d'un grand courage et d'une noblesse d'esprit. Bienvenue à Griffondor !",
+                descSlytherin: "Votre ambition et votre ruse vous mèneront vers la grandeur à Serpentard !",
+                descRavenclaw: "Votre soif de connaissance et votre créativité font de vous un vrai Serdaigle !",
+                descHufflepuff: "Votre loyauté sans faille et votre gentillesse font honneur à Poufsouffle !"
+            },
+            es: {
+                welcomeTitle: "Ceremonia de Selección & Quiz",
+                welcomeDesc: "¡Ponte el Sombrero Seleccionador! Responde preguntas de dilemas mágicos y el Sombrero decidirá si perteneces a Gryffindor, Slytherin, Ravenclaw o Hufflepuff.",
+                badgeQuestCount: "8 Preguntas Mágicas",
+                badgeRandom: "Preguntas Aleatorias",
+                badgeResult: "Análisis de Afinidad",
+                houseGryffindor: "Gryffindor",
+                houseSlytherin: "Slytherin",
+                houseRavenclaw: "Ravenclaw",
+                houseHufflepuff: "Hufflepuff",
+                startBtn: "Ponerse el Sombrero",
+                questionCount: "Pregunta",
+                scoreText: "Poder Mágico",
+                hintBtn: "Pista (50/50)",
+                sortingResultLabel: "El Sombrero ha Decidido",
+                breakdownTitle: "Desglose de Afinidad de Casa",
+                reviewBtn: "Explicaciones",
+                restartBtn: "Volver a Intentar",
+                homeBtn: "Volver al Inicio",
+                reviewModalTitle: "Desglose del Examen",
+                timeUp: "¡Tiempo agotado!",
+                yourChoice: "Tu Elección",
+                mottoGryffindor: "'Valor, Caballerosidad y Audacia'",
+                mottoSlytherin: "'Ambición, Astucia y Determinación'",
+                mottoRavenclaw: "'Sabiduría, Inteligencia y Creatividad'",
+                mottoHufflepuff: "'Lealtad, Paciencia y Trabajo Duro'",
+                descGryffindor: "¡Posees un valor indomable y un gran sentido de justicia! ¡Bienvenido a Gryffindor!",
+                descSlytherin: "¡Tu ambición y astucia te llevarán a lograr grandes cosas en Slytherin!",
+                descRavenclaw: "¡Tu agudo ingenio y curiosidad te convierten en un auténtico miembro de Ravenclaw!",
+                descHufflepuff: "¡Tu lealtad, amabilidad y trabajo duro te convierten en el orgullo de Hufflepuff!"
+            }
+        };
+
+        // Master Question Bank with House Points Mapping
+        const masterQuestionsBank = [
+            {
+                id: 1,
+                spell: "EXPELLIARMUS!",
+                houseMapping: ['gryffindor', 'ravenclaw', 'slytherin', 'hufflepuff'],
+                zh: {
+                    question: "在深夜面對黑巫師襲擊時，你的第一反應是？",
+                    options: ["勇敢正面迎擊並施展繳械咒 (Expelliarmus)", "冷靜觀察敵人的弱點再智取", "巧妙佈置陷阱給予致命打擊", "先保護身邊的同伴確保全員安全"],
+                    explanation: "哈利·波特標誌性的繳械咒體現了葛來分多的光明與勇氣。"
+                },
+                en: {
+                    question: "When attacked by a Dark Wizard at night, what is your reaction?",
+                    options: ["Face them directly with Expelliarmus!", "Observe their weaknesses and outsmart them", "Set a cunning trap to strike back", "Protect your allies to ensure everyone is safe"],
+                    explanation: "Facing danger directly reflects Gryffindor bravery."
+                },
+                fr: {
+                    question: "Face à un Mage Noir la nuit, quelle est votre première réaction ?",
+                    options: ["L'affronter directement avec Expelliarmus !", "Observer ses faiblesses et l'analyser", "Tendre un piège astucieux", "Protéger vos alliés pour assurer leur sécurité"],
+                    explanation: "Affronter le danger avec le sort de désarmement symbolise le courage."
+                },
+                es: {
+                    question: "Al ser atacado por un Mago Oscuro en la noche, ¿qué haces primero?",
+                    options: ["¡Enfrentarlo cara a cara con Expelliarmus!", "Observar sus debilidades y usar la inteligencia", "Preparar una trampa astuta para vencerlo", "Proteger a tus aliados para mantenerlos a salvo"],
+                    explanation: "Enfrentar el peligro con Expelliarmus refleja la valentía de Gryffindor."
+                }
+            },
+            {
+                id: 2,
+                spell: "EXPECTO PATRONUM!",
+                houseMapping: ['ravenclaw', 'gryffindor', 'slytherin', 'hufflepuff'],
+                zh: {
+                    question: "召喚護法 (Patronus) 需要最強烈的快樂回憶，你的能量來自？",
+                    options: ["解開複雜難題時的突破成就感", "與摯友冒險克服重重考驗的記憶", "實現野心登上榮譽頂峰的時刻", "與家人朋友溫馨相聚的平凡美好"],
+                    explanation: "護法咒 (Expecto Patronum) 是最高階防禦魔法，需要極具力量的心靈記憶。"
+                },
+                en: {
+                    question: "Casting a Patronus requires a happy memory. What powers yours?",
+                    options: ["The achievement of solving a complex mystery", "Overcoming dangerous trials alongside best friends", "The moment you achieve ambition and glory", "Warm and peaceful moments with family and friends"],
+                    explanation: "Expecto Patronum creates a silver guardian powered by deep positive emotion."
+                },
+                fr: {
+                    question: "Le Sortilège du Patronus exige un souvenir heureux. D'où vient le vôtre ?",
+                    options: ["La satisfaction de résoudre une énigme complexe", "Surmonter de grands dangers avec vos amis", "Le moment où vous atteignez la gloire et le succès", "Les moments chaleureux partagés avec vos proches"],
+                    explanation: "Expecto Patronum invoque un protecteur fondé sur la joie pure."
+                },
+                es: {
+                    question: "Invocar un Patronus requiere tu recuerdo más feliz. ¿De dónde proviene?",
+                    options: ["El logro de resolver un gran misterio", "Superar pruebas peligrosas con tus mejores amigos", "Alcanzar la gloria y tus ambiciones", "Momentos cálidos y sencillos con seres queridos"],
+                    explanation: "Expecto Patronum crea un guardián plateado impulsado por la alegría."
+                }
+            },
+            {
+                id: 3,
+                spell: "FELIX FELICIS!",
+                houseMapping: ['slytherin', 'gryffindor', 'ravenclaw', 'hufflepuff'],
+                zh: {
+                    question: "如果你獲得了一瓶幸運水 (Felix Felicis)，你會用在何處？",
+                    options: ["在攸關前途的關鍵競爭中確保必勝", "勇闖危險的禁忌森林尋找失落寶藏", "進入限制區圖書館解開世紀魔法謎團", "留給最需要運氣幫助的朋友"],
+                    explanation: "幸運藥水能帶來強大的幸運與清晰的直覺判斷。"
+                },
+                en: {
+                    question: "If you had a vial of Liquid Luck (Felix Felicis), how would you use it?",
+                    options: ["Ensure total victory in a major competition", "Venture into the Forbidden Forest for treasure", "Explore the Restricted Library Section for secrets", "Give it to a friend who truly needs a lucky break"],
+                    explanation: "Felix Felicis enhances luck and strategic decision making."
+                },
+                fr: {
+                    question: "Si vous aviez de la Chance Liquide (Felix Felicis), qu'en feriez-vous ?",
+                    options: ["Garantir le succès dans un grand concours", "Explorer la Forêt Interdite pour un trésor", "Entrer dans la Réserve de la Bibliothèque", "La donner à un ami qui en a vraiment besoin"],
+                    explanation: "La Felix Felicis procure une chance prodigieuse à son utilisateur."
+                },
+                es: {
+                    question: "Si tuvieras Suerte Líquida (Felix Felicis), ¿cómo la usarías?",
+                    options: ["Asegurar la victoria en una gran competencia", "Explorar el Bosque Prohibido en busca de tesoros", "Investigar la Sección Prohibida de la Biblioteca", "Regalársela a un amigo que necesite ayuda"],
+                    explanation: "La Felix Felicis otorga una suerte increíble al usuario."
+                }
+            },
+            {
+                id: 4,
+                spell: "ALOHOMORA!",
+                houseMapping: ['ravenclaw', 'slytherin', 'hufflepuff', 'gryffindor'],
+                zh: {
+                    question: "深夜你在霍格華茲走廊發現一扇被嚴密封鎖的木門，你會？",
+                    options: ["仔細研究門上的古代符文與解鎖機制", "低調運用開鎖咒 (Alohomora) 進去探查", "主動通報教授，遵守學校規定", "毫不猶豫推開門直接進去一探究竟"],
+                    explanation: "Alohomora 是常用的開鎖咒，常用於開啟神秘關卡。"
+                },
+                en: {
+                    question: "You find a locked mysterious door in a quiet corridor at night. What do you do?",
+                    options: ["Examine the ancient runes and mechanical lock", "Discreetly cast Alohomora and slip inside", "Report it to a professor to follow school rules", "Open it without hesitation and step right in"],
+                    explanation: "Alohomora is the Unlocking Charm used to open locked doors."
+                },
+                fr: {
+                    question: "Vous découvrez une porte verrouillée mystérieuse la nuit. Que faites-vous ?",
+                    options: ["Étudier les runes anciennes et le mécanisme", "Lancer discrètement Alohomora et vous glisser dedans", "Informer un professeur pour respecter le règlement", "Ouvrir la porte sans hésiter pour explorer"],
+                    explanation: "Alohomora permet de déverrouiller les portes ordinaires."
+                },
+                es: {
+                    question: "Encuentras una puerta misteriosa en un pasillo por la noche. ¿Qué haces?",
+                    options: ["Examinar las runas antiguas y su cerradura", "Lanzar Alohomora con discreción y entrar", "Avisar a un profesor respetando las normas", "Abrir la puerta sin dudarlo para curiosear"],
+                    explanation: "Alohomora es el encantamiento desbloqueador por excelencia."
+                }
+            },
+            {
+                id: 5,
+                spell: "LUMOS!",
+                houseMapping: ['hufflepuff', 'ravenclaw', 'gryffindor', 'slytherin'],
+                zh: {
+                    question: "你希望未來的魔法界如何銘記你？",
+                    options: ["「一位值得無條件信任、踏實善良的好友」", "「一位博學睿智、解開無數謎團的大師」", "「一位無所畏懼、挺身對抗黑暗的英雄」", "「一位具有遠大影響力與崇高成就的偉人」"],
+                    explanation: "赫夫帕夫最珍視忠誠、踏實與對同伴的善良照顧。"
+                },
+                en: {
+                    question: "How would you like history to remember you?",
+                    options: ["'A trustworthy, deeply loyal, and kind friend'", "'A wise master who unraveled ancient mysteries'", "'A fearless hero who stood up against darkness'", "'A legendary wizard of immense power and influence'"],
+                    explanation: "Hufflepuff values loyalty, patience, and kindness above all."
+                },
+                fr: {
+                    question: "Comment aimeriez-vous qu'on se souvienne de vous ?",
+                    options: ["'Un ami fidèle, généreux et digne de confiance'", "'Un grand esprit ayant résolu d'immenses mystères'", "'Un héros courageux affrontant les ténébres'", "'Un sorcier légendaire d'une puissance impressionnante'"],
+                    explanation: "Poufsouffle privilégie la loyauté, la bonté et l'effort."
+                },
+                es: {
+                    question: "¿Cómo te gustaría ser recordado en la historia?",
+                    options: ["'Un amigo leal, confiable y generoso'", "'Un sabio que resolvió los misterios más profundos'", "'Un héroe valiente que nunca retrocedió'", "'Un mago poderoso e influyente en el mundo'"],
+                    explanation: "Hufflepuff valora la lealtad y el trabajo incansable."
+                }
+            },
+            {
+                id: 6,
+                spell: "WINGARDIUM LEVIOSA!",
+                houseMapping: ['gryffindor', 'ravenclaw', 'slytherin', 'hufflepuff'],
+                zh: {
+                    question: "三巫鬥法大賽中面對守護金蛋的巨龍，你的奪蛋策略是？",
+                    options: ["騎乘飛天掃帚展現高超飛行技巧正面奪取", "運用精準的召喚咒或變形術智取金蛋", "施展隱身咒避開巨龍視野，伺機偷取", "仔細觀察巨龍習性，等待最安全的時機"],
+                    explanation: "羽加迪姆勒維奧薩是漂浮咒，技巧與冷靜同樣重要。"
+                },
+                en: {
+                    question: "In the Triwizard Tournament, how would you retrieve the Golden Egg from a dragon?",
+                    options: ["Fly courageously on a broomstick to outmaneuver it", "Use clever charms to trick the dragon", "Use a Disillusionment Charm to sneak past quietly", "Observe the dragon carefully to act at the safest time"],
+                    explanation: "Courage and quick thinking are essential for Triwizard champions."
+                },
+                fr: {
+                    question: "Lors du Tournoi des Trois Sorciers, comment récupérez-vous l'Œuf d'Or ?",
+                    options: ["Voler audacieusement sur un balai pour le sommer", "Utiliser des sorts intelligents comme Accio", "Utiliser un sort de Désillusion pour vous faufiler", "Observer le dragon pour choisir le moment le plus sûr"],
+                    explanation: "Associer courage et ruse est la clé du Tournoi."
+                },
+                es: {
+                    question: "En el Torneo de los Tres Magos, ¿cómo conseguirías el Huevo de Oro del dragón?",
+                    options: ["Volar con valentía en la escoba para esquivarlo", "Usar encantamientos astutos como Accio", "Usar un encantamiento desilusionador para pasar desapercibido", "Observar al dragón para actuar en el momento más seguro"],
+                    explanation: "El valor y la estrategia definen a un verdadero campeón."
+                }
+            },
+            {
+                id: 7,
+                spell: "RIDDIKULUS!",
+                houseMapping: ['hufflepuff', 'slytherin', 'ravenclaw', 'gryffindor'],
+                zh: {
+                    question: "當你面對變幻成你心中最恐懼事物的博格特 (Boggart) 時，你會？",
+                    options: ["用幽默與歡笑化解恐懼 (Riddikulus)", "保持冷靜分析恐懼背後的心理成因", "設法掌控場面，不讓別人看見自己的弱點", "毫不退縮地大聲迎面喝止它"],
+                    explanation: "滑稽咒 (Riddikulus) 運用幽默感擊退博格特。"
+                },
+                en: {
+                    question: "When facing a Boggart that turns into your worst fear, what is your approach?",
+                    options: ["Turn it into something funny with Riddikulus!", "Analyze the logic behind your fears to remain calm", "Control the situation so no one sees your weakness", "Stand tall and confront it head-on with courage"],
+                    explanation: "Riddikulus relies on humor and positivity to defeat fear."
+                },
+                fr: {
+                    question: "Face à un Épouvantard incarnant votre pire peur, que faites-vous ?",
+                    options: ["Transformer la peur en rire avec Riddikulus !", "Analyser calmement la logique de votre peur", "Garder le contrôle pour ne pas montrer de faiblesse", "L'affronter avec audace et détermination"],
+                    explanation: "Riddikulus transforme la peur en rire magique."
+                },
+                es: {
+                    question: "Al enfrentarte a un Boggart con tu peor temor, ¿cómo reaccionas?",
+                    options: ["¡Transformarlo en algo cómico con Riddikulus!", "Analizar lógicamente el miedo para mantener la calma", "Tomar el control para ocultar tu debilidad", "Enfrentarlo cara a cara con firmeza y valor"],
+                    explanation: "Riddikulus combate el temor usando la risa y el humor."
+                }
+            },
+            {
+                id: 8,
+                spell: "ACCIO!",
+                houseMapping: ['ravenclaw', 'gryffindor', 'hufflepuff', 'slytherin'],
+                zh: {
+                    question: "如果有機會選擇一樣傳奇魔法物品，你最渴望擁有？",
+                    options: ["能看穿萬物真相的睿智之鏡", "能帶來隱形與自由冒險的隱形斗篷", "能復活死者與維繫情誼的重生石", "能掌握強大力量與至高榮耀的老魔杖"],
+                    explanation: "死神聖物代表著對知識、勇氣、愛與力量的不同追尋。"
+                },
+                en: {
+                    question: "If you could possess one legendary magical artifact, which would you choose?",
+                    options: ["A mirror that reveals the deepest truth and wisdom", "The Invisibility Cloak for daring, free exploration", "The Resurrection Stone to keep loved ones close", "The Elder Wand to command ultimate power and influence"],
+                    explanation: "The Artifacts reflect core values: wisdom, courage, love, and power."
+                },
+                fr: {
+                    question: "Si vous pouviez posséder un objet magique légendaire, lequel choisiriez-vous ?",
+                    options: ["Un miroir révélant la vérité et la sagesse", "La Cape d'Invisibilité pour explorer librement", "La Pierre de Résurrection pour retrouver ses proches", "La Baguette de Sureau pour maîtriser une grande puissance"],
+                    explanation: "Ces objets représentent la sagesse, l'audace, l'amour et la puissance."
+                },
+                es: {
+                    question: "Si pudieras poseer un objeto mágico legendario, ¿cuál elegirías?",
+                    options: ["Un espejo que revela la verdad y sabiduría", "La Capa de Invisibilidad para aventurarte sin límites", "La Piedra de la Resurrección para estar con tus seres amados", "La Varita de Saúco para poseer gran poder e influencia"],
+                    explanation: "Los objetos legendarios reflejan sabiduría, valor, amor o poder."
+                }
+            }
+        ];
+
+        let currentLang = 'zh';
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+        let timer = null;
+        let timeLeft = 20;
+        let soundEnabled = true;
+        let isAnswered = false;
+        let activeQuestions = [];
+
+        let houseScores = {
+            gryffindor: 0,
+            slytherin: 0,
+            ravenclaw: 0,
+            hufflepuff: 0
+        };
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+
+                if (type === 'spell') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(1100, now + 0.35);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'fanfare') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        gain.gain.setValueAtTime(0.25, now + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.1);
+                        osc.stop(now + idx * 0.1 + 0.4);
+                    });
+                }
+            } catch (e) {
+                console.log("Audio synthesis error:", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            const dict = i18n[lang];
+
+            // Welcome screen
+            document.getElementById('welcomeTitle').innerText = dict.welcomeTitle;
+            document.getElementById('welcomeDesc').innerText = dict.welcomeDesc;
+            document.getElementById('badgeQuestCount').innerText = dict.badgeQuestCount;
+            document.getElementById('badgeRandom').innerText = dict.badgeRandom;
+            document.getElementById('badgeResult').innerText = dict.badgeResult;
+            document.getElementById('startBtn').innerHTML = `<i class="fa-solid fa-hat-wizard mr-2"></i> ${dict.startBtn}`;
+            
+            // Quiz UI
+            document.getElementById('hintBtnText').innerText = dict.hintBtn;
+
+            // Result UI
+            document.getElementById('sortingResultLabel').innerText = dict.sortingResultLabel;
+            document.getElementById('breakdownTitle').innerText = dict.breakdownTitle;
+            document.getElementById('labelGryffindor').innerText = dict.houseGryffindor;
+            document.getElementById('labelSlytherin').innerText = dict.houseSlytherin;
+            document.getElementById('labelRavenclaw').innerText = dict.houseRavenclaw;
+            document.getElementById('labelHufflepuff').innerText = dict.houseHufflepuff;
+            document.getElementById('reviewBtnText').innerText = dict.reviewBtn;
+            document.getElementById('restartBtnText').innerText = dict.restartBtn;
+            document.getElementById('homeBtnText').innerText = dict.homeBtn;
+            document.getElementById('reviewModalTitle').innerText = dict.reviewModalTitle;
+
+            // Active view re-render
+            if (!document.getElementById('quizScreen').classList.contains('hidden')) {
+                renderQuestion();
+            } else if (!document.getElementById('resultScreen').classList.contains('hidden')) {
+                updateResultDisplay();
+            }
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startGame() {
+            score = 0;
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            houseScores = { gryffindor: 0, slytherin: 0, ravenclaw: 0, hufflepuff: 0 };
+
+            // Select and randomize questions
+            activeQuestions = shuffleArray(masterQuestionsBank).map(q => {
+                const optionIndices = [0, 1, 2, 3];
+                const shuffledIndices = shuffleArray(optionIndices);
+                return {
+                    ...q,
+                    shuffledIndices: shuffledIndices
+                };
+            });
+
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('quizScreen').classList.remove('hidden');
+
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            isAnswered = false;
+            clearInterval(timer);
+
+            const q = activeQuestions[currentQuestionIndex];
+            const qData = q[currentLang];
+            const dict = i18n[currentLang];
+
+            document.getElementById('questionCountText').innerText = `${dict.questionCount} ${currentQuestionIndex + 1} / ${activeQuestions.length}`;
+            document.getElementById('scoreText').innerText = `${dict.scoreText}: ${score}`;
+            
+            const progressPercent = ((currentQuestionIndex + 1) / activeQuestions.length) * 100;
+            document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+            document.getElementById('questionTitle').innerText = qData.question;
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            q.shuffledIndices.forEach((origIdx, displayIdx) => {
+                const optText = qData.options[origIdx];
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full p-4 rounded-xl text-left font-medium text-slate-200 hover:text-amber-300 transition flex items-center justify-between group';
+                btn.onclick = () => handleAnswer(origIdx, displayIdx);
+                btn.id = `option-${displayIdx}`;
+                btn.innerHTML = `
+                    <span><strong class="text-amber-400/80 mr-2">${String.fromCharCode(65 + displayIdx)}.</strong> ${optText}</span>
+                    <i class="fa-regular fa-circle text-slate-500 group-hover:text-amber-400 transition"></i>
+                `;
+                container.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            timeLeft = 20;
+            document.getElementById('timerText').innerText = timeLeft;
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerText').innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    handleAnswer(-1, -1);
+                }
+            }, 1000);
+        }
+
+        function handleAnswer(origOptionIndex, displayIndex) {
+            if (isAnswered) return;
+            isAnswered = true;
+            clearInterval(timer);
+
+            const q = activeQuestions[currentQuestionIndex];
+
+            if (origOptionIndex >= 0) {
+                const targetHouse = q.houseMapping[origOptionIndex];
+                if (targetHouse && houseScores.hasOwnProperty(targetHouse)) {
+                    houseScores[targetHouse] += 25;
+                }
+                score += 10 + timeLeft;
+            }
+
+            userAnswers.push({
+                questionObj: q,
+                chosenOrigIndex: origOptionIndex
+            });
+
+            if (displayIndex >= 0) {
+                const selectedBtn = document.getElementById(`option-${displayIndex}`);
+                if (selectedBtn) {
+                    selectedBtn.classList.add('selected');
+                    selectedBtn.querySelector('i').className = 'fa-solid fa-circle-check text-amber-400';
+                }
+            }
+
+            playSound('spell');
+            triggerSpellEffect(q.spell);
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < activeQuestions.length) {
+                    renderQuestion();
+                } else {
+                    finishQuiz();
+                }
+            }, 1300);
+        }
+
+        function useHint() {
+            if (isAnswered) return;
+            
+            const indicesToHide = [0, 1, 2, 3].sort(() => 0.5 - Math.random()).slice(0, 2);
+            indicesToHide.forEach(idx => {
+                const btn = document.getElementById(`option-${idx}`);
+                if (btn) {
+                    btn.style.opacity = '0.25';
+                    btn.disabled = true;
+                }
+            });
+
+            const hintBtn = document.getElementById('hintBtn');
+            hintBtn.disabled = true;
+            hintBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            playSound('spell');
+        }
+
+        function triggerSpellEffect(spellName) {
+            const overlay = document.getElementById('spellEffectOverlay');
+            const spellText = document.getElementById('spellNameText');
+            spellText.innerText = spellName;
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 1100);
+        }
+
+        function finishQuiz() {
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            playSound('fanfare');
+            updateResultDisplay();
+        }
+
+        function updateResultDisplay() {
+            const dict = i18n[currentLang];
+            const totalPoints = Object.values(houseScores).reduce((a, b) => a + b, 0) || 1;
+
+            const pGryffindor = Math.round((houseScores.gryffindor / totalPoints) * 100);
+            const pSlytherin = Math.round((houseScores.slytherin / totalPoints) * 100);
+            const pRavenclaw = Math.round((houseScores.ravenclaw / totalPoints) * 100);
+            const pHufflepuff = Math.max(0, 100 - (pGryffindor + pSlytherin + pRavenclaw));
+
+            document.getElementById('percentGryffindor').innerText = `${pGryffindor}%`;
+            document.getElementById('barGryffindor').style.width = `${pGryffindor}%`;
+
+            document.getElementById('percentSlytherin').innerText = `${pSlytherin}%`;
+            document.getElementById('barSlytherin').style.width = `${pSlytherin}%`;
+
+            document.getElementById('percentRavenclaw').innerText = `${pRavenclaw}%`;
+            document.getElementById('barRavenclaw').style.width = `${pRavenclaw}%`;
+
+            document.getElementById('percentHufflepuff').innerText = `${pHufflepuff}%`;
+            document.getElementById('barHufflepuff').style.width = `${pHufflepuff}%`;
+
+            let winner = 'gryffindor';
+            let maxScore = -1;
+            for (const [house, hScore] of Object.entries(houseScores)) {
+                if (hScore > maxScore) {
+                    maxScore = hScore;
+                    winner = house;
+                }
+            }
+
+            const badgeBg = document.getElementById('houseBadgeBg');
+            const badgeIcon = document.getElementById('houseBadgeIcon');
+            const houseTitle = document.getElementById('resultHouseTitle');
+            const mottoText = document.getElementById('houseMottoText');
+            const houseDesc = document.getElementById('resultHouseDesc');
+
+            if (winner === 'gryffindor') {
+                houseTitle.innerText = `${dict.houseGryffindor} (GRYFFINDOR)`;
+                badgeIcon.className = 'fa-solid fa-shield-cat text-4xl text-red-500';
+                badgeBg.className = 'w-24 h-24 mx-auto mb-4 rounded-full bg-red-950/40 border-2 border-red-500 flex items-center justify-center shadow-xl shadow-red-500/30';
+                mottoText.innerText = dict.mottoGryffindor;
+                houseDesc.innerText = dict.descGryffindor;
+            } else if (winner === 'slytherin') {
+                houseTitle.innerText = `${dict.houseSlytherin} (SLYTHERIN)`;
+                badgeIcon.className = 'fa-solid fa-staff-snake text-4xl text-emerald-500';
+                badgeBg.className = 'w-24 h-24 mx-auto mb-4 rounded-full bg-emerald-950/40 border-2 border-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-500/30';
+                mottoText.innerText = dict.mottoSlytherin;
+                houseDesc.innerText = dict.descSlytherin;
+            } else if (winner === 'ravenclaw') {
+                houseTitle.innerText = `${dict.houseRavenclaw} (RAVENCLAW)`;
+                badgeIcon.className = 'fa-solid fa-crow text-4xl text-blue-400';
+                badgeBg.className = 'w-24 h-24 mx-auto mb-4 rounded-full bg-blue-950/40 border-2 border-blue-500 flex items-center justify-center shadow-xl shadow-blue-500/30';
+                mottoText.innerText = dict.mottoRavenclaw;
+                houseDesc.innerText = dict.descRavenclaw;
+            } else {
+                houseTitle.innerText = `${dict.houseHufflepuff} (HUFFLEPUFF)`;
+                badgeIcon.className = 'fa-solid fa-paw text-4xl text-amber-400';
+                badgeBg.className = 'w-24 h-24 mx-auto mb-4 rounded-full bg-amber-950/40 border-2 border-amber-500 flex items-center justify-center shadow-xl shadow-amber-500/30';
+                mottoText.innerText = dict.mottoHufflepuff;
+                houseDesc.innerText = dict.descHufflepuff;
+            }
+        }
+
+        function restartQuiz() {
+            const hintBtn = document.getElementById('hintBtn');
+            hintBtn.disabled = false;
+            hintBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            startGame();
+        }
+
+        function returnToWelcome() {
+            clearInterval(timer);
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+            const hintBtn = document.getElementById('hintBtn');
+            hintBtn.disabled = false;
+            hintBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function showReviewModal() {
+            const listContainer = document.getElementById('reviewList');
+            listContainer.innerHTML = '';
+            const dict = i18n[currentLang];
+
+            userAnswers.forEach((ans, idx) => {
+                const qData = ans.questionObj[currentLang];
+                const choiceText = ans.chosenOrigIndex >= 0 ? qData.options[ans.chosenOrigIndex] : dict.timeUp;
+                const targetHouseKey = ans.chosenOrigIndex >= 0 ? ans.questionObj.houseMapping[ans.chosenOrigIndex] : 'gryffindor';
+                const houseName = dict[`house${targetHouseKey.charAt(0).toUpperCase() + targetHouseKey.slice(1)}`];
+
+                const item = document.createElement('div');
+                item.className = 'p-4 rounded-xl border bg-slate-900/60 border-amber-500/30';
+
+                item.innerHTML = `
+                    <p class="font-bold text-slate-200 mb-2">${idx + 1}. ${qData.question}</p>
+                    <p class="text-xs text-amber-300 mb-1">
+                        <strong>${dict.yourChoice}:</strong> ${choiceText} 
+                        <span class="ml-2 text-slate-400">(${houseName})</span>
+                    </p>
+                    <p class="text-xs text-slate-400 mt-2 bg-slate-950/60 p-2.5 rounded border border-slate-800">💡 ${qData.explanation}</p>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+        }
+
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursorCanvas = document.getElementById('cursorCanvas');
+        const cursorCtx = cursorCanvas.getContext('2d');
+
+        let particles = [];
+        let cursorParticles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            cursorCanvas.width = window.innerWidth;
+            cursorCanvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedY = -(Math.random() * 0.5 + 0.2);
+                this.alpha = Math.random() * 0.8 + 0.2;
+            }
+            update() {
+                this.y += this.speedY;
+                if (this.y < 0) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = `rgba(234, 179, 8, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 55; i++) {
+            particles.push(new Particle());
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            for (let i = 0; i < 2; i++) {
+                cursorParticles.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * 3 + 1,
+                    alpha: 1,
+                    color: Math.random() > 0.5 ? '#fde047' : '#eab308'
+                });
+            }
+        });
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+            cursorParticles.forEach((cp, idx) => {
+                cp.x += cp.vx;
+                cp.y += cp.vy;
+                cp.alpha -= 0.03;
+                
+                if (cp.alpha <= 0) {
+                    cursorParticles.splice(idx, 1);
+                } else {
+                    cursorCtx.fillStyle = cp.color;
+                    cursorCtx.globalAlpha = cp.alpha;
+                    cursorCtx.beginPath();
+                    cursorCtx.arc(cp.x, cp.y, cp.size, 0, Math.PI * 2);
+                    cursorCtx.fill();
+                }
+            });
+
+            requestAnimationFrame(animateCanvas);
+        }
+
+        window.onload = function() {
+            animateCanvas();
+            changeLanguage('zh');
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神大亂鬥：提瓦特星際對決</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@600;800;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            background-color: #090d16;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        canvas {
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(129, 140, 248, 0.2);
+            border: 3px solid #3b82f6;
+            background: linear-gradient(to bottom, #050b14, #111827);
+        }
+
+        .game-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .game-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+        .game-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 元素爆發閃光特效 */
+        @keyframes burstGlow {
+            0% { box-shadow: 0 0 10px #f59e0b; }
+            50% { box-shadow: 0 0 35px #fbbf24, 0 0 50px #ef4444; }
+            100% { box-shadow: 0 0 10px #f59e0b; }
+        }
+
+        .burst-ready {
+            animation: burstGlow 1.5s infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-2 relative">
+
+    <header class="w-full max-w-5xl flex justify-between items-center mb-2 px-5 py-2.5 bg-slate-900/90 rounded-2xl border border-indigo-500/30 backdrop-blur-md shadow-lg">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-500 flex items-center justify-center text-xl text-white shadow-md">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-wider bg-gradient-to-r from-amber-300 via-rose-400 to-cyan-300 bg-clip-text text-transparent">
+                    GENSHIN BRAWL : 星際大亂鬥
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">原神操作邏輯 ✕ 平台擊飛格鬥</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs font-semibold">
+            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+                <span id="current-mode-badge" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="current-mode-text" class="text-slate-200">單人模式 (VS CPU)</span>
+            </div>
+            <button id="pause-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl transition font-bold flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-pause"></i> 暫停
+            </button>
+        </div>
+    </header>
+
+    <div class="relative w-full max-w-5xl flex flex-col items-center justify-center">
+        
+        <!-- Canvas 主遊戲區域 -->
+        <canvas id="gameCanvas" width="960" height="540" class="rounded-2xl max-w-full h-auto"></canvas>
+
+        <!-- 選角與主選單 Overlay -->
+        <div id="character-select-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-xl rounded-2xl flex flex-col items-center justify-between p-6 z-20 border border-indigo-500/40">
+            <div class="text-center">
+                <h2 class="text-3xl font-black text-amber-300 tracking-wider mb-1">SELECT YOUR ELEMENTAL WARRIOR</h2>
+                <p class="text-xs text-slate-400">使用《原神》操作邏輯：普通攻擊 (J)、元素戰技 (E)、元素爆發大招 (Q)、無敵衝刺 (Shift)</p>
+            </div>
+
+            <!-- 角色選擇列表 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 my-auto w-full max-w-4xl">
+                <!-- 火元素：迪盧克型 -->
+                <div class="char-card bg-gradient-to-b from-slate-900 to-rose-950/50 p-5 rounded-2xl border-2 border-rose-500/50 hover:border-rose-400 transition cursor-pointer flex flex-col items-center text-center relative group">
+                    <div class="w-16 h-16 rounded-2xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center my-2 text-rose-400 text-3xl group-hover:scale-110 transition shadow-lg shadow-rose-950">
+                        <i class="fa-solid fa-fire-flame-curved"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-rose-300">炎獄大劍 (Pyro)</h3>
+                    <p class="text-xs text-rose-200/70 mb-2">火元素 - 高爆發擊飛</p>
+                    <div class="w-full text-xs text-slate-300 space-y-1.5 bg-slate-900/80 p-2.5 rounded-xl text-left border border-slate-800">
+                        <div>🔥 <span class="text-amber-300 font-bold">E 戰技:</span> 烈焰三連斬</div>
+                        <div>💥 <span class="text-amber-300 font-bold">Q 爆發:</span> 黎明火鳳凰 (巨額擊飛)</div>
+                        <div class="text-slate-400 text-[10px]">力量 ★★★★★ | 攻擊範圍 ★★★★☆</div>
+                    </div>
+                </div>
+
+                <!-- 風元素：萬葉型 -->
+                <div class="char-card bg-gradient-to-b from-slate-900 to-emerald-950/50 p-5 rounded-2xl border-2 border-emerald-500/50 hover:border-emerald-400 transition cursor-pointer flex flex-col items-center text-center relative group">
+                    <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center my-2 text-emerald-400 text-3xl group-hover:scale-110 transition shadow-lg shadow-emerald-950">
+                        <i class="fa-solid fa-wind"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-emerald-300">疾風劍客 (Anemo)</h3>
+                    <p class="text-xs text-emerald-200/70 mb-2">風元素 - 機動聚怪型</p>
+                    <div class="w-full text-xs text-slate-300 space-y-1.5 bg-slate-900/80 p-2.5 rounded-xl text-left border border-slate-800">
+                        <div>🍃 <span class="text-amber-300 font-bold">E 戰技:</span> 千羽起風 (二段升空)</div>
+                        <div>🌀 <span class="text-amber-300 font-bold">Q 爆發:</span> 風穴龍捲 (強烈牽引)</div>
+                        <div class="text-slate-400 text-[10px]">速度 ★★★★★ | 靈活度 ★★★★★</div>
+                    </div>
+                </div>
+
+                <!-- 雷元素：將軍型 -->
+                <div class="char-card bg-gradient-to-b from-slate-900 to-purple-950/50 p-5 rounded-2xl border-2 border-purple-500/50 hover:border-purple-400 transition cursor-pointer flex flex-col items-center text-center relative group">
+                    <div class="w-16 h-16 rounded-2xl bg-purple-500/20 border-2 border-purple-500 flex items-center justify-center my-2 text-purple-400 text-3xl group-hover:scale-110 transition shadow-lg shadow-purple-950">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-purple-300">雷電星皇 (Electro)</h3>
+                    <p class="text-xs text-purple-200/70 mb-2">雷元素 - 極速瞬移</p>
+                    <div class="w-full text-xs text-slate-300 space-y-1.5 bg-slate-900/80 p-2.5 rounded-xl text-left border border-slate-800">
+                        <div>⚡ <span class="text-amber-300 font-bold">E 戰技:</span> 雷光瞬斬 (向前突進)</div>
+                        <div>🗡️ <span class="text-amber-300 font-bold">Q 爆發:</span> 無想一刀 (全螢幕打擊)</div>
+                        <div class="text-slate-400 text-[10px]">瞬發 ★★★★★ | 壓制力 ★★★★☆</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模式選擇與開始按鈕 -->
+            <div class="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+                <div class="flex bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                    <button id="mode-ai" class="px-5 py-2 rounded-lg text-sm font-bold bg-indigo-600 text-white transition shadow">P1 vs CPU (電腦)</button>
+                    <button id="mode-pvp" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white transition">P1 vs P2 (雙人)</button>
+                </div>
+                <button id="start-game-btn" class="game-btn bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-600 text-slate-950 font-black px-8 py-3 rounded-xl text-lg tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> 開啟提瓦特決鬥
+                </button>
+            </div>
+        </div>
+
+        <!-- 結算畫面 Overlay -->
+        <div id="game-over-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 z-30">
+            <h2 id="winner-title" class="text-4xl font-black text-amber-300 mb-2 pixel-font animate-bounce">PLAYER 1 WIN!</h2>
+            <p id="winner-desc" class="text-slate-300 text-lg mb-6">成功將對手擊飛至提瓦特星空之外！</p>
+            <button id="restart-btn" class="game-btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-xl text-lg flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> 再戰一局
+            </button>
+        </div>
+
+        <div class="w-full mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <!-- P1 原神控制說明 -->
+            <div class="bg-slate-900/90 p-3.5 rounded-xl border border-rose-500/30 flex justify-between items-center shadow-lg">
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow"></span>
+                    <span class="font-black text-rose-300 text-sm">P1 控制 (原神鍵位)</span>
+                </div>
+                <div class="text-slate-300 space-x-1.5 text-[11px]">
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">A/D</span> 移動
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Space</span> 跳躍
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">J</span> 普攻
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">E</span> 戰技
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-amber-300 font-bold">Q</span> 爆發大招
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Shift</span> 衝刺閃避
+                </div>
+            </div>
+
+            <!-- P2 控制說明 -->
+            <div class="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-500/30 flex justify-between items-center shadow-lg">
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 inline-block shadow"></span>
+                    <span class="font-black text-cyan-300 text-sm">P2 (副玩家 / CPU)</span>
+                </div>
+                <div class="text-slate-300 space-x-1.5 text-[11px]">
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">←/→</span> 移動
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">↑</span> 跳躍
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Numpad 1</span> 普攻
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">Num 2</span> 戰技
+                    <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-amber-300 font-bold">Num 3</span> 爆發大招
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            playHit(freq = 200, type = 'sine', duration = 0.1) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + duration);
+                
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playBurst() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                // 元素爆發重低音震撼聲
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.6);
+
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.6);
+            }
+
+            playDash() {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(1200, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+        }
+
+        const sfx = new SoundFX();
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 核心常數
+        const GRAVITY = 0.42;
+        const FRICTION = 0.86;
+
+        // 遊戲狀態
+        let gameRunning = false;
+        let isAI = true;
+
+        // 鍵盤監聽 (支援 Genshin 鍵位)
+        const keys = {};
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (['Space', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+        });
+
+        // 粒子特效發射器
+        let particles = [];
+        function addParticle(x, y, color, count = 8, speedScale = 1) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (Math.random() * 8 + 2) * speedScale;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 5 + 3,
+                    color,
+                    life: 25 + Math.random() * 15
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.size *= 0.92;
+                p.life--;
+
+                ctx.save();
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        class GenshinCharacter {
+            constructor(x, y, elemType, controls, isCPU = false, name = "P1") {
+                this.startX = x;
+                this.startY = y;
+                this.x = x;
+                this.y = y;
+                this.width = 44;
+                this.height = 64;
+                this.vx = 0;
+                this.vy = 0;
+                this.elemType = elemType; // 'PYRO', 'ANEMO', 'ELECTRO'
+                this.controls = controls;
+                this.isCPU = isCPU;
+                this.name = name;
+
+                // 屬性與數值
+                this.damage = 0; // % 傷害
+                this.stocks = 3;
+                this.isGrounded = false;
+                this.facing = 1;
+                this.jumpsLeft = 2;
+                this.maxJumps = 2;
+
+                // 元素能量與冷卻 (原神大招機制)
+                this.energy = 0;
+                this.maxEnergy = 100;
+                this.skillCD = 0;
+                this.dashCD = 0;
+
+                // 狀態
+                this.isAttacking = false;
+                this.attackTimer = 0;
+                this.attackBox = { x: 0, y: 0, width: 0, height: 0 };
+                this.isDashing = false;
+                this.dashTimer = 0;
+                this.invulnerable = 0;
+                this.hitStun = 0;
+
+                // 特效
+                this.trail = [];
+
+                this.initElemStyle();
+            }
+
+            initElemStyle() {
+                if (this.elemType === 'PYRO') {
+                    this.mainColor = '#f43f5e';
+                    this.elemColor = '#fb923c';
+                } else if (this.elemType === 'ANEMO') {
+                    this.mainColor = '#10b981';
+                    this.elemColor = '#34d399';
+                } else { // ELECTRO
+                    this.mainColor = '#a855f7';
+                    this.elemColor = '#c084fc';
+                }
+            }
+
+            reset(fullReset = false) {
+                this.x = this.startX;
+                this.y = this.startY;
+                this.vx = 0;
+                this.vy = 0;
+                this.damage = 0;
+                this.energy = 30; // 初始給予少量能量
+                this.invulnerable = 60;
+                this.hitStun = 0;
+                if (fullReset) this.stocks = 3;
+            }
+
+            update(platforms, opponent) {
+                if (this.invulnerable > 0) this.invulnerable--;
+                if (this.skillCD > 0) this.skillCD--;
+                if (this.dashCD > 0) this.dashCD--;
+
+                // 殘影特效記錄
+                if (this.isDashing || Math.abs(this.vx) > 8) {
+                    this.trail.push({ x: this.x, y: this.y, alpha: 0.6 });
+                    if (this.trail.length > 5) this.trail.shift();
+                }
+
+                // 被擊飛硬直
+                if (this.hitStun > 0) {
+                    this.hitStun--;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vy += GRAVITY;
+                    this.checkPlatformCollisions(platforms);
+                    return;
+                }
+
+                // 衝刺處理 (Shift 閃避)
+                if (this.isDashing) {
+                    this.dashTimer--;
+                    this.vx = this.facing * 14;
+                    this.vy = 0;
+                    if (this.dashTimer <= 0) {
+                        this.isDashing = false;
+                    }
+                    this.x += this.vx;
+                    this.checkPlatformCollisions(platforms);
+                    return;
+                }
+
+                // 輸入控制
+                if (this.isCPU) {
+                    this.handleAI(opponent, platforms);
+                } else {
+                    this.handleInput();
+                }
+
+                // 物理移動
+                this.vx *= FRICTION;
+                this.vy += GRAVITY;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                this.checkPlatformCollisions(platforms);
+
+                // 攻擊計時
+                if (this.isAttacking) {
+                    this.attackTimer--;
+                    if (this.attackTimer <= 0) this.isAttacking = false;
+                }
+            }
+
+            handleInput() {
+                // 原神 Shift 衝刺/閃避
+                if (keys[this.controls.dash] && this.dashCD === 0) {
+                    this.isDashing = true;
+                    this.dashTimer = 10;
+                    this.dashCD = 40;
+                    this.invulnerable = 12; // 衝刺提供無敵幀 (i-frame)
+                    sfx.playDash();
+                    addParticle(this.x + 22, this.y + 32, this.elemColor, 10);
+                    keys[this.controls.dash] = false;
+                    return;
+                }
+
+                // 移動 (A/D)
+                if (keys[this.controls.left]) {
+                    this.vx -= 0.85;
+                    this.facing = -1;
+                }
+                if (keys[this.controls.right]) {
+                    this.vx += 0.85;
+                    this.facing = 1;
+                }
+
+                // 跳躍 (Space)
+                if (keys[this.controls.jump]) {
+                    if (this.isGrounded) {
+                        this.vy = -11.5;
+                        this.isGrounded = false;
+                        this.jumpsLeft = this.maxJumps - 1;
+                        sfx.playHit(300, 'sine', 0.1);
+                        keys[this.controls.jump] = false;
+                    } else if (this.jumpsLeft > 0) {
+                        this.vy = -10.5;
+                        this.jumpsLeft--;
+                        sfx.playHit(400, 'sine', 0.1);
+                        addParticle(this.x + 22, this.y + 60, '#ffffff', 6);
+                        keys[this.controls.jump] = false;
+                    }
+                }
+
+                // J - 普通攻擊
+                if (keys[this.controls.attack] && !this.isAttacking) {
+                    this.performNormalAttack();
+                    keys[this.controls.attack] = false;
+                }
+
+                // E - 元素戰技 (Skill)
+                if (keys[this.controls.skill] && !this.isAttacking && this.skillCD === 0) {
+                    this.performElementalSkill();
+                    keys[this.controls.skill] = false;
+                }
+
+                // Q - 元素爆發 (Ultimate Burst)
+                if (keys[this.controls.burst] && !this.isAttacking && this.energy >= this.maxEnergy) {
+                    this.performElementalBurst();
+                    keys[this.controls.burst] = false;
+                }
+            }
+
+            handleAI(opponent, platforms) {
+                const dx = opponent.x - this.x;
+                const dy = opponent.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                this.facing = dx > 0 ? 1 : -1;
+
+                if (Math.abs(dx) > 50) {
+                    this.vx += dx > 0 ? 0.65 : -0.65;
+                }
+
+                // 回台機制
+                if (this.y > 370 || this.x < 150 || this.x > 760) {
+                    if (this.isGrounded || this.jumpsLeft > 0) {
+                        this.vy = -12;
+                        if (!this.isGrounded) this.jumpsLeft--;
+                    }
+                    this.vx += this.x < 480 ? 0.9 : -0.9;
+                }
+
+                // AI 招式釋放邏輯
+                if (dist < 65 && !this.isAttacking) {
+                    this.performNormalAttack();
+                } else if (dist < 180 && this.skillCD === 0) {
+                    this.performElementalSkill();
+                } else if (this.energy >= this.maxEnergy && dist < 220) {
+                    this.performElementalBurst();
+                }
+            }
+
+            performNormalAttack() {
+                this.isAttacking = true;
+                this.attackTimer = 10;
+                sfx.playHit(250, 'triangle', 0.08);
+
+                this.attackBox = {
+                    x: this.facing === 1 ? this.x + this.width : this.x - 50,
+                    y: this.y + 10,
+                    width: 50,
+                    height: 45,
+                    damage: 6,
+                    knockbackX: this.facing * 7,
+                    knockbackY: -4
+                };
+            }
+
+            performElementalSkill() {
+                this.isAttacking = true;
+                this.attackTimer = 16;
+                this.skillCD = 120; // 2秒冷卻
+                this.energy = Math.min(this.maxEnergy, this.energy + 25); // 戰技獲得能量
+                sfx.playHit(450, 'sawtooth', 0.15);
+
+                if (this.elemType === 'ANEMO') {
+                    // 風系：向上高跳升空並帶動周圍打擊
+                    this.vy = -12;
+                    addParticle(this.x + 22, this.y + 30, '#34d399', 20, 1.5);
+                } else if (this.elemType === 'ELECTRO') {
+                    // 雷系：極速向前突進打擊
+                    this.vx = this.facing * 12;
+                    addParticle(this.x + 22, this.y + 30, '#c084fc', 20, 1.5);
+                } else {
+                    // 火系：火焰爆炸擊飛
+                    addParticle(this.x + 22, this.y + 30, '#fb923c', 25, 1.8);
+                }
+
+                this.attackBox = {
+                    x: this.facing === 1 ? this.x + this.width : this.x - 70,
+                    y: this.y - 10,
+                    width: 70,
+                    height: 65,
+                    damage: 14,
+                    knockbackX: this.facing * 12,
+                    knockbackY: -8
+                };
+            }
+
+            performElementalBurst() {
+                this.isAttacking = true;
+                this.attackTimer = 25;
+                this.energy = 0; // 消耗所有能量
+                this.invulnerable = 30; // 無敵幀
+                sfx.playBurst();
+
+                addParticle(this.x + 22, this.y + 30, '#f59e0b', 40, 2.5);
+
+                // 全螢幕級巨大打擊判定
+                this.attackBox = {
+                    x: this.facing === 1 ? this.x : this.x - 140,
+                    y: this.y - 40,
+                    width: 180,
+                    height: 110,
+                    damage: 28,
+                    knockbackX: this.facing * 22,
+                    knockbackY: -14
+                };
+            }
+
+            takeDamage(amount, knockbackX, knockbackY) {
+                this.damage += amount;
+                this.energy = Math.min(this.maxEnergy, this.energy + 10); // 受擊獲取少量能量
+
+                const multiplier = (this.damage / 18);
+                this.vx = knockbackX * multiplier;
+                this.vy = knockbackY * multiplier;
+                this.hitStun = Math.min(Math.floor(multiplier * 7), 35);
+                this.isGrounded = false;
+
+                addParticle(this.x + 22, this.y + 32, '#ef4444', 15, 1.2);
+            }
+
+            checkPlatformCollisions(platforms) {
+                this.isGrounded = false;
+                platforms.forEach(plat => {
+                    if (this.x + this.width > plat.x &&
+                        this.x < plat.x + plat.width &&
+                        this.y + this.height >= plat.y &&
+                        this.y + this.height <= plat.y + 16 &&
+                        this.vy >= 0) {
+                        
+                        this.y = plat.y - this.height;
+                        this.vy = 0;
+                        this.isGrounded = true;
+                        this.jumpsLeft = this.maxJumps;
+                    }
+                });
+            }
+
+            draw(ctx) {
+                // 1. 繪製衝刺殘影
+                this.trail.forEach(t => {
+                    ctx.save();
+                    ctx.globalAlpha = t.alpha;
+                    ctx.fillStyle = this.elemColor;
+                    ctx.beginPath();
+                    ctx.roundRect(t.x, t.y, this.width, this.height, 10);
+                    ctx.fill();
+                    ctx.restore();
+                    t.alpha -= 0.1;
+                });
+
+                ctx.save();
+
+                // 無敵閃爍
+                if (this.invulnerable > 0 && Math.floor(Date.now() / 60) % 2 === 0) {
+                    ctx.globalAlpha = 0.4;
+                }
+
+                // 大招蓄滿光效外罩
+                if (this.energy >= this.maxEnergy) {
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(this.x + 22, this.y + 32, 42, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // 2. 角色主體 (原神動漫風格漸層與光圈)
+                const grad = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+                grad.addColorStop(0, this.mainColor);
+                grad.addColorStop(1, '#1e293b');
+
+                ctx.fillStyle = grad;
+                ctx.shadowColor = this.elemColor;
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+
+                // 元素胸章光芒
+                ctx.fillStyle = this.elemColor;
+                ctx.beginPath();
+                ctx.arc(this.x + 22, this.y + 20, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 眼睛 / 朝向
+                ctx.fillStyle = '#ffffff';
+                const eyeX = this.facing === 1 ? this.x + 28 : this.x + 8;
+                ctx.fillRect(eyeX, this.y + 14, 8, 8);
+
+                // 3. 攻擊招式畫面效果
+                if (this.isAttacking) {
+                    ctx.fillStyle = this.elemColor;
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 20;
+                    ctx.beginPath();
+                    ctx.arc(
+                        this.facing === 1 ? this.x + this.width + 20 : this.x - 20,
+                        this.y + 30,
+                        this.attackBox.width / 2, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // 舞台平台定義
+        const stagePlatforms = [
+            { x: 180, y: 390, width: 600, height: 22 }, // 主地塊
+            { x: 250, y: 270, width: 140, height: 12 }, // 左浮空
+            { x: 570, y: 270, width: 140, height: 12 }, // 右浮空
+            { x: 410, y: 175, width: 140, height: 12 }  // 上浮空
+        ];
+
+        // 初始化玩家 (原神鍵位)
+        const p1Controls = { 
+            left: 'KeyA', right: 'KeyD', jump: 'Space', 
+            attack: 'KeyJ', skill: 'KeyE', burst: 'KeyQ', dash: 'ShiftLeft' 
+        };
+        const p2Controls = { 
+            left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', 
+            attack: 'Numpad1', skill: 'Numpad2', burst: 'Numpad3', dash: 'Numpad0' 
+        };
+
+        let player1 = new GenshinCharacter(280, 300, 'PYRO', p1Controls, false, "旅行者 (P1)");
+        let player2 = new GenshinCharacter(640, 300, 'ANEMO', p2Controls, true, "強敵 (CPU)");
+
+        // 背景星空粒子
+        const starBg = Array.from({ length: 60 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2 + 1,
+            alpha: Math.random()
+        }));
+
+        function checkHits() {
+            [player1, player2].forEach((attacker, idx) => {
+                const defender = idx === 0 ? player2 : player1;
+                if (attacker.isAttacking) {
+                    const box = attacker.attackBox;
+                    if (box.x < defender.x + defender.width &&
+                        box.x + box.width > defender.x &&
+                        box.y < defender.y + defender.height &&
+                        box.y + box.height > defender.y) {
+                        
+                        if (defender.invulnerable <= 0) {
+                            defender.takeDamage(box.damage, box.knockbackX, box.knockbackY);
+                            attacker.isAttacking = false;
+                            sfx.playHit(300, 'sawtooth', 0.12);
+                        }
+                    }
+                }
+            });
+        }
+
+        function checkBlastZones(player) {
+            if (player.x < -160 || player.x > canvas.width + 160 || player.y < -160 || player.y > canvas.height + 120) {
+                sfx.playBurst();
+                player.stocks--;
+                addParticle(canvas.width / 2, canvas.height / 2, '#f43f5e', 50, 3);
+
+                if (player.stocks > 0) {
+                    player.reset();
+                } else {
+                    endGame(player === player1 ? "PLAYER 2" : "PLAYER 1");
+                }
+            }
+        }
+
+        function drawEnvironment() {
+            // 背景夜空漸層
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#040914');
+            bgGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 背景星光閃爍
+            starBg.forEach(star => {
+                star.alpha += (Math.random() - 0.5) * 0.05;
+                if (star.alpha < 0.2) star.alpha = 0.2;
+                if (star.alpha > 1) star.alpha = 1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            });
+
+            // 繪製提瓦特星際島嶼底座
+            ctx.fillStyle = '#1e1b4b';
+            ctx.beginPath();
+            ctx.moveTo(180, 390);
+            ctx.lineTo(250, 500);
+            ctx.lineTo(710, 500);
+            ctx.lineTo(780, 390);
+            ctx.fill();
+
+            // 平台發光邊框
+            stagePlatforms.forEach((plat, i) => {
+                if (i === 0) {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillRect(plat.x, plat.y, plat.width, 4);
+                } else {
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(plat.x, plat.y, plat.width, 3);
+                }
+            });
+        }
+
+        function drawHUD() {
+            drawGenshinPlayerHUD(player1, 160, 480);
+            drawGenshinPlayerHUD(player2, 800, 480);
+        }
+
+        function drawGenshinPlayerHUD(player, x, y) {
+            ctx.save();
+            ctx.textAlign = 'center';
+
+            // 角色名稱
+            ctx.font = 'bold 13px "Noto Sans TC"';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(player.name, x, y - 48);
+
+            // 大亂鬥累積百分比 %
+            const percentColor = player.damage > 120 ? '#ef4444' : player.damage > 60 ? '#f59e0b' : '#ffffff';
+            ctx.font = '900 28px "Press Start 2P", monospace';
+            ctx.fillStyle = percentColor;
+            ctx.fillText(`${Math.floor(player.damage)}%`, x, y - 15);
+
+            // 元素爆發能量條 (原神風格圓形/條狀 UI)
+            const energyWidth = 100;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.fillRect(x - energyWidth/2, y + 2, energyWidth, 8);
+
+            const currentEnergyWidth = (player.energy / player.maxEnergy) * energyWidth;
+            ctx.fillStyle = player.energy >= player.maxEnergy ? '#fbbf24' : player.elemColor;
+            ctx.fillRect(x - energyWidth/2, y + 2, currentEnergyWidth, 8);
+
+            // Q 大招就緒提示標示
+            if (player.energy >= player.maxEnergy) {
+                ctx.font = 'bold 10px "Noto Sans TC"';
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillText("READY [Q]", x, y + 24);
+            }
+
+            // 殘機 Stocks 圖示
+            for (let i = 0; i < player.stocks; i++) {
+                ctx.fillStyle = player.mainColor;
+                ctx.beginPath();
+                ctx.arc(x - 24 + i * 24, y - 62, 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // 遊戲主循環 Loop
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 邏輯更新
+            player1.update(stagePlatforms, player2);
+            player2.update(stagePlatforms, player1);
+            checkHits();
+            checkBlastZones(player1);
+            checkBlastZones(player2);
+
+            // 渲染
+            drawEnvironment();
+            updateParticles();
+            player1.draw(ctx);
+            player2.draw(ctx);
+            drawHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            document.getElementById('character-select-overlay').classList.add('hidden');
+            document.getElementById('game-over-overlay').classList.add('hidden');
+
+            player1.reset(true);
+            player2.reset(true);
+            player2.isCPU = isAI;
+
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame(winnerName) {
+            gameRunning = false;
+            const overlay = document.getElementById('game-over-overlay');
+            document.getElementById('winner-title').innerText = `${winnerName} VICTORIOUS!`;
+            overlay.classList.remove('hidden');
+        }
+
+        // 選單按鈕監聽
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        document.getElementById('mode-ai').addEventListener('click', (e) => {
+            isAI = true;
+            e.target.className = "px-5 py-2 rounded-lg text-sm font-bold bg-indigo-600 text-white transition shadow";
+            document.getElementById('mode-pvp').className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white transition";
+            document.getElementById('current-mode-text').innerText = "單人模式 (VS CPU)";
+        });
+
+        document.getElementById('mode-pvp').addEventListener('click', (e) => {
+            isAI = false;
+            e.target.className = "px-5 py-2 rounded-lg text-sm font-bold bg-indigo-600 text-white transition shadow";
+            document.getElementById('mode-ai').className = "px-5 py-2 rounded-lg text-sm font-bold text-slate-400 hover:text-white transition";
+            document.getElementById('current-mode-text').innerText = "雙人模式 (P1 vs P2)";
+        });
+
+        // 初始背景繪製
+        drawEnvironment();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

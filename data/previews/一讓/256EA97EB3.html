@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>可愛薑餅人跑跑大冒險 - Cookie Run: Kingdom Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Noto Sans TC', 'Fredoka One', cursive, sans-serif;
+            background-color: #2b1055;
+            overflow: hidden;
+        }
+        .font-fredoka {
+            font-family: 'Fredoka One', cursive;
+        }
+        .game-btn {
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+        }
+        .game-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+        }
+        .pulse-anim {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 4px solid #fff;
+        }
+        @keyframes gachaGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.8)); }
+            50% { filter: drop-shadow(0 0 22px rgba(250, 204, 21, 1)); }
+        }
+        .gacha-glow {
+            animation: gachaGlow 2s infinite;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff758c;
+            border-radius: 10px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex items-center justify-center p-0 m-0 bg-slate-900 text-slate-800">
+
+    <!-- Main Game Wrapper -->
+    <div id="game-container" class="relative w-full h-full max-w-5xl max-h-[700px] sm:rounded-3xl overflow-hidden shadow-2xl bg-sky-300 border-4 border-amber-300/30 flex flex-col justify-center items-center">
+        
+        <!-- Canvas Viewport -->
+        <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+        <!-- START MENU OVERLAY -->
+        <div id="start-menu" class="absolute inset-0 z-20 flex flex-col items-center justify-between p-6 bg-gradient-to-b from-amber-300/95 via-orange-300/95 to-pink-400/95 backdrop-blur-sm">
+            <div class="text-center mt-3">
+                <div class="inline-block bg-white/90 px-6 py-1.5 rounded-full border-4 border-pink-500 shadow-lg mb-2">
+                    <span class="text-pink-600 font-black tracking-widest text-xs sm:text-sm uppercase"><i class="fa-solid fa-crown text-amber-400 mr-1"></i> 薑餅人王國風格尊享版 <i class="fa-solid fa-crown text-amber-400 ml-1"></i></span>
+                </div>
+                <h1 class="text-4xl sm:text-6xl font-black text-white drop-shadow-[0_5px_5px_rgba(180,40,80,0.8)] tracking-wider">
+                    薑餅人跑跑王國！
+                </h1>
+                <p class="text-amber-950 font-bold text-xs sm:text-base mt-1 drop-shadow-sm">攜手王國餅乾英雄與專屬寵物，大口吃 Jelly 衝向 BONUS TIME！</p>
+            </div>
+
+            <!-- Selected Character Preview -->
+            <div class="flex items-center gap-6 my-2 bg-white/50 p-4 rounded-3xl border-2 border-white/80 shadow-xl w-full max-w-lg justify-around">
+                <div id="hero-display" class="relative flex flex-col items-center">
+                    <div id="hero-avatar-icon" class="w-20 h-20 rounded-2xl bg-gradient-to-b from-amber-100 to-amber-200 border-4 border-amber-500 flex items-center justify-center text-4xl shadow-lg relative">
+                        👦
+                        <span id="pet-preview-badge" class="absolute -top-2 -right-2 text-xl bg-white rounded-full p-1 border-2 border-pink-400 shadow-sm" title="專屬陪伴寵物">🍫</span>
+                    </div>
+                    <span id="hero-name-label" class="font-black text-amber-950 mt-2 text-lg">勇敢薑餅人</span>
+                    <span id="hero-skill-label" class="text-xs bg-pink-500 text-white font-bold px-2.5 py-0.5 rounded-full mt-1 shadow">能力：標準勇敢雙跳</span>
+                </div>
+                <div class="flex flex-col gap-2.5">
+                    <button id="open-char-shop-btn" class="game-btn bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-2xl text-xs sm:text-sm flex items-center gap-2 border-2 border-amber-300">
+                        <i class="fa-solid fa-user-ninja text-base"></i> 餅乾英雄庫 / 寵物
+                    </button>
+                    <button id="open-gacha-btn" class="game-btn bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold px-4 py-2 rounded-2xl text-xs sm:text-sm flex items-center gap-2 border-2 border-pink-300 animate-pulse">
+                        <i class="fa-solid fa-gift text-base"></i> 🎁 王國幸運轉蛋
+                    </button>
+                    <button id="open-upgrades-btn" class="game-btn bg-purple-500 hover:bg-purple-600 text-white font-bold px-4 py-2 rounded-2xl text-xs sm:text-sm flex items-center gap-2 border-2 border-purple-300">
+                        <i class="fa-solid fa-bolt text-base"></i> 糖霜能力升級
+                    </button>
+                </div>
+            </div>
+
+            <!-- Currency Stats -->
+            <div class="flex gap-6 bg-slate-900/50 px-6 py-2 rounded-2xl text-white font-bold text-sm sm:text-base border border-white/20">
+                <div class="flex items-center gap-2"><i class="fa-solid fa-coins text-amber-400"></i> 金幣: <span id="coin-count-display" class="text-amber-300 font-black">0</span></div>
+                <div class="flex items-center gap-2"><i class="fa-solid fa-trophy text-yellow-300"></i> 最高分: <span id="high-score-display" class="text-yellow-200 font-black">0</span></div>
+            </div>
+
+            <!-- Big Start Button -->
+            <button id="start-game-btn" class="game-btn pulse-anim bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-black text-2xl sm:text-3xl px-12 py-3.5 rounded-3xl border-4 border-white shadow-xl tracking-wider mb-2">
+                <i class="fa-solid fa-play mr-2"></i> 出發跑酷！
+            </button>
+        </div>
+
+        <!-- CHARACTER SELECTION & SHOP MODAL -->
+        <div id="shop-modal" class="hidden absolute inset-0 z-30 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-xl rounded-3xl p-5 flex flex-col max-h-[90vh] shadow-2xl">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b-2 border-amber-200">
+                    <h2 class="text-2xl font-black text-amber-950 flex items-center gap-2">
+                        <i class="fa-solid fa-store text-pink-500"></i> 王國餅乾英雄與寵物圖鑑
+                    </h2>
+                    <button id="close-shop-btn" class="text-slate-400 hover:text-slate-700 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200">×</button>
+                </div>
+
+                <div id="characters-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-1 flex-1 mb-3">
+                    <!-- Character items rendered by JS -->
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                    <div class="text-sm font-bold text-slate-700">
+                        擁有金幣: <span id="shop-coin-display" class="text-amber-600 font-black">0</span> 🪙
+                    </div>
+                    <button id="shop-done-btn" class="game-btn bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2 rounded-xl text-sm">確定選擇</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPGRADES MODAL -->
+        <div id="upgrade-modal" class="hidden absolute inset-0 z-30 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-md rounded-3xl p-6 flex flex-col shadow-2xl">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b-2 border-purple-200">
+                    <h2 class="text-2xl font-black text-purple-950 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-600"></i> 糖霜魔法能力強化
+                    </h2>
+                    <button id="close-upgrade-btn" class="text-slate-400 hover:text-slate-700 font-bold text-2xl">×</button>
+                </div>
+
+                <div class="space-y-3.5 my-2">
+                    <div class="bg-purple-50/80 p-3 rounded-2xl border border-purple-200 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-purple-950">❤️ 餅乾體力上限 (Max HP)</div>
+                            <div id="hp-lvl-desc" class="text-xs text-purple-700 font-bold">目前等級: Lv.1</div>
+                        </div>
+                        <button id="upgrade-hp-btn" class="game-btn bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-2 rounded-xl">
+                            升級 (100🪙)
+                        </button>
+                    </div>
+
+                    <div class="bg-purple-50/80 p-3 rounded-2xl border border-purple-200 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-purple-950">🧲 寵物磁力吸附範圍</div>
+                            <div id="magnet-lvl-desc" class="text-xs text-purple-700 font-bold">目前等級: Lv.1</div>
+                        </div>
+                        <button id="upgrade-magnet-btn" class="game-btn bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-2 rounded-xl">
+                            升級 (150🪙)
+                        </button>
+                    </div>
+
+                    <div class="bg-purple-50/80 p-3 rounded-2xl border border-purple-200 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-purple-950">🐻 熊熊果醬高分加成</div>
+                            <div id="jelly-lvl-desc" class="text-xs text-purple-700 font-bold">目前等級: Lv.1</div>
+                        </div>
+                        <button id="upgrade-jelly-btn" class="game-btn bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-2 rounded-xl">
+                            升級 (200🪙)
+                        </button>
+                    </div>
+                </div>
+
+                <button id="upgrade-done-btn" class="mt-4 game-btn bg-purple-600 text-white font-bold py-2 rounded-xl text-sm w-full">完成</button>
+            </div>
+        </div>
+
+        <!-- GACHA / CARD DRAW MODAL -->
+        <div id="gacha-modal" class="hidden absolute inset-0 z-30 bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-xl rounded-3xl p-6 flex flex-col max-h-[92vh] shadow-2xl relative overflow-hidden">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b-2 border-pink-200">
+                    <h2 class="text-2xl font-black text-pink-950 flex items-center gap-2">
+                        <i class="fa-solid fa-gift text-pink-500 animate-bounce"></i> 王國尊享幸運轉蛋機
+                    </h2>
+                    <button id="close-gacha-btn" class="text-slate-400 hover:text-slate-700 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200">×</button>
+                </div>
+
+                <div id="gacha-machine-view" class="flex flex-col items-center justify-center py-6 bg-gradient-to-b from-pink-100 to-purple-100 rounded-2xl border-2 border-pink-300 mb-4 relative overflow-hidden shadow-inner">
+                    <div id="gacha-ball-container" class="relative w-28 h-28 flex items-center justify-center">
+                        <div id="gacha-icon-anim" class="text-7xl transition-transform duration-300">🎁</div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <div class="font-black text-pink-950 text-lg">解鎖王國稀有餅乾英雄與寵物組合！</div>
+                        <div class="text-xs text-pink-800 font-bold mt-1">✨ UR Rainbow (2%) | 🌟 SSR Gold (8%) | 🔮 SR (20%)</div>
+                    </div>
+                </div>
+
+                <div id="gacha-result-view" class="hidden grid grid-cols-2 sm:grid-cols-5 gap-2 overflow-y-auto max-h-56 p-2 bg-slate-100/90 rounded-2xl mb-4 border border-slate-300">
+                    <!-- Dynamic pulled cards rendered here -->
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                    <div class="text-sm font-bold text-slate-700">
+                        擁有金幣: <span id="gacha-coin-display" class="text-amber-600 font-black">0</span> 🪙
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="gacha-single-btn" class="game-btn bg-pink-500 hover:bg-pink-600 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1">
+                            🎲 單抽 (100🪙)
+                        </button>
+                        <button id="gacha-multi-btn" class="game-btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1 shadow-md">
+                            ✨ 十連抽 (900🪙)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST MESSAGE BOX -->
+        <div id="toast-msg" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white font-bold px-6 py-3 rounded-2xl shadow-2xl border-2 border-pink-400 flex items-center gap-2 transition-all transform duration-300 pointer-events-none">
+            <span id="toast-icon">⚠️</span>
+            <span id="toast-text">提示訊息</span>
+        </div>
+
+        <!-- GAMEPLAY HUD OVERLAY -->
+        <div id="game-hud" class="hidden pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-4">
+            <div class="flex flex-col gap-2 w-full">
+                <div class="flex justify-between items-center gap-2">
+                    <div class="flex-1 bg-slate-900/60 p-1.5 rounded-full border-2 border-white/80 shadow-md flex items-center gap-2">
+                        <span class="text-red-500 text-lg ml-1">❤️</span>
+                        <div class="flex-1 bg-slate-700/80 h-4 rounded-full overflow-hidden p-0.5">
+                            <div id="hp-bar-fill" class="h-full bg-gradient-to-r from-red-500 via-orange-400 to-green-400 rounded-full transition-all duration-200" style="width: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 bg-slate-900/60 px-4 py-1.5 rounded-full border-2 border-white/80 text-white font-black text-sm sm:text-base shadow-md">
+                        <div class="flex items-center gap-1 text-amber-300">
+                            🪙 <span id="hud-coin">0</span>
+                        </div>
+                        <div class="h-4 w-0.5 bg-slate-500"></div>
+                        <div class="flex items-center gap-1 text-yellow-300">
+                            ✨ <span id="hud-score">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center items-center gap-1 bg-slate-900/40 backdrop-blur-xs py-1 px-3 rounded-2xl border border-white/30 self-center">
+                    <span class="text-xs text-white/90 font-bold mr-1">BONUS:</span>
+                    <span id="letter-B" class="w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20">B</span>
+                    <span id="letter-O" class="w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20">O</span>
+                    <span id="letter-N" class="w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20">N</span>
+                    <span id="letter-U" class="w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20">U</span>
+                    <span id="letter-S" class="w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20">S</span>
+                </div>
+            </div>
+
+            <div id="status-badges" class="flex gap-2 self-start">
+                <div id="giant-badge" class="hidden bg-yellow-400 text-amber-950 font-black text-xs px-3 py-1 rounded-full border-2 border-white shadow-lg animate-bounce">
+                    ⚡ 糖霜巨大化！
+                </div>
+                <div id="magnet-badge" class="hidden bg-blue-500 text-white font-black text-xs px-3 py-1 rounded-full border-2 border-white shadow-lg animate-pulse">
+                    🧲 寵物超強磁鐵
+                </div>
+            </div>
+
+            <div class="pointer-events-auto flex justify-between items-end w-full pb-2 px-2 sm:px-6">
+                <button id="touch-slide-btn" class="game-btn w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 border-4 border-white text-white font-black text-lg sm:text-xl shadow-2xl flex flex-col items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-angles-down text-2xl mb-1"></i>
+                    <span>滑行 (S)</span>
+                </button>
+
+                <button id="touch-jump-btn" class="game-btn w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 border-4 border-white text-white font-black text-lg sm:text-xl shadow-2xl flex flex-col items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-angles-up text-2xl mb-1"></i>
+                    <span>跳躍 (Space)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- BONUS TIME BANNER -->
+        <div id="fever-banner" class="hidden pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-pink-500/30 backdrop-blur-xs animate-pulse">
+            <div class="text-4xl sm:text-6xl font-black text-yellow-300 drop-shadow-[0_6px_0_rgba(219,39,119,1)] tracking-widest uppercase">
+                🎉 BONUS TIME! 🎉
+            </div>
+            <div class="text-white font-extrabold text-lg sm:text-2xl mt-2 drop-shadow-md">
+                王國雲端狂歡！無限採集金幣與熊熊 Jelly！
+            </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div id="game-over-modal" class="hidden absolute inset-0 z-30 bg-slate-900/85 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-md rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl border-4 border-pink-400">
+                <div class="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center text-4xl mb-2 shadow-inner border-2 border-pink-300">
+                    😵
+                </div>
+                <h2 class="text-3xl font-black text-pink-600 mb-1">餅乾體力用盡啦！</h2>
+                <p class="text-slate-500 text-sm font-bold mb-4">本次王國跑酷冒險成績記錄</p>
+
+                <div class="w-full bg-amber-50/80 rounded-2xl p-4 border border-amber-200 space-y-2 mb-6 text-left">
+                    <div class="flex justify-between items-center text-slate-700 font-bold">
+                        <span>✨ 本局得分:</span>
+                        <span id="final-score" class="text-xl font-black text-amber-600">0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-700 font-bold">
+                        <span>🪙 收集金幣:</span>
+                        <span id="final-coins" class="text-lg font-black text-amber-500">+0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-700 font-bold">
+                        <span>🏆 最高紀錄:</span>
+                        <span id="final-high-score" class="text-lg font-black text-purple-600">0</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 w-full">
+                    <button id="restart-game-btn" class="game-btn flex-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-black py-3 rounded-2xl text-lg border-2 border-white">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> 重新出發
+                    </button>
+                    <button id="return-menu-btn" class="game-btn flex-1 bg-slate-500 text-white font-bold py-3 rounded-2xl text-sm border-2 border-white">
+                        <i class="fa-solid fa-house mr-1"></i> 回主選單
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Sound Engine Synthesizer
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playJelly() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(850, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1250, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playCoin() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.06);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playPowerup() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(420, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(850, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playHurt() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playGachaRoll() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playGachaRare() {
+                if (!this.ctx) return;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.2);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // Cookie Run Kingdom Characters & Combi Pets Dataset
+        const CHARACTERS = [
+            {
+                id: 'hero',
+                name: '勇敢薑餅人',
+                icon: '👦',
+                petIcon: '🍫',
+                petName: '可可點點',
+                rarity: 'N',
+                doughColor: '#c05621',
+                icingColor: '#ffffff',
+                unlocked: true,
+                dupes: 1,
+                price: 0,
+                maxJumps: 2,
+                desc: '王國經典勇敢薑餅人！帶著手作拐杖糖與可可點點。',
+                skill: '標準勇敢二段跳'
+            },
+            {
+                id: 'strawberry',
+                name: '草莓餅乾',
+                icon: '👧',
+                petIcon: '🍓',
+                petName: '小草莓',
+                rarity: 'N',
+                doughColor: '#fb7185',
+                icingColor: '#fff1f2',
+                unlocked: false,
+                dupes: 0,
+                price: 200,
+                maxJumps: 2,
+                desc: '穿著萌萌草莓果醬兜帽，自帶小草莓磁力加成。',
+                skill: '甜美草莓磁吸'
+            },
+            {
+                id: 'ninja',
+                name: '抹茶忍者餅乾',
+                icon: '🥷',
+                petIcon: '🍃',
+                petName: '抹茶飛鏢',
+                rarity: 'R',
+                doughColor: '#15803d',
+                icingColor: '#86efac',
+                unlocked: false,
+                dupes: 0,
+                price: 500,
+                maxJumps: 3,
+                desc: '靈敏的抹茶忍者！可進行獨特【三段超高躍升】！',
+                skill: '抹茶極速三段跳'
+            },
+            {
+                id: 'golden',
+                name: '皇家金黃餅乾',
+                icon: '👸',
+                petIcon: '👑',
+                petName: '黃金皇冠',
+                rarity: 'R',
+                doughColor: '#d97706',
+                icingColor: '#fef08a',
+                unlocked: false,
+                dupes: 0,
+                price: 1000,
+                maxJumps: 2,
+                desc: '閃耀黃金奶油斗篷！獲得的所有金幣收益直接翻倍！',
+                skill: '雙倍皇家金幣'
+            },
+            {
+                id: 'icecream',
+                name: '冰淇淋精靈餅乾',
+                icon: '🧚‍♀️',
+                petIcon: '🍦',
+                petName: '甜筒精靈',
+                rarity: 'SR',
+                doughColor: '#0284c7',
+                icingColor: '#e0f2fe',
+                unlocked: false,
+                dupes: 0,
+                price: 2000,
+                maxJumps: 2,
+                desc: '水藍色冰淇淋髮型，體力消耗速度減慢 25%！',
+                skill: '霜雪體力護盾'
+            },
+            {
+                id: 'witch',
+                name: '星空紫薯魔女餅乾',
+                icon: '🧙‍♀️',
+                petIcon: '🦇',
+                petName: '星糖蝙蝠',
+                rarity: 'SR',
+                doughColor: '#7e22ce',
+                icingColor: '#f3e8ff',
+                unlocked: false,
+                dupes: 0,
+                price: 2500,
+                maxJumps: 2,
+                desc: '神秘紫薯魔女，所有 Jelly 果醬得分額外 +50%！',
+                skill: '星空果醬魔法'
+            },
+            {
+                id: 'dragon',
+                name: '赤紅龍角騎士餅乾',
+                icon: '🐉',
+                petIcon: '🐉',
+                petName: '小火龍仔',
+                rarity: 'SSR',
+                doughColor: '#b91c1c',
+                icingColor: '#fecaca',
+                unlocked: false,
+                dupes: 0,
+                price: 5000,
+                maxJumps: 3,
+                desc: '龍角與焰尾騎士！開局獲得 8 秒【糖霜巨大化】！',
+                skill: '霸氣龍威降臨'
+            },
+            {
+                id: 'unicorn',
+                name: '彩虹獨角獸聖女餅乾',
+                icon: '🦄',
+                petIcon: '☁️',
+                petName: '彩虹棉花糖',
+                rarity: 'UR',
+                doughColor: '#db2777',
+                icingColor: '#fce7f3',
+                unlocked: false,
+                dupes: 0,
+                price: 10000,
+                maxJumps: 3,
+                desc: '夢幻七彩鮮奶油聖女！自帶全螢幕超強磁鐵 + 自動徐徐回復！',
+                skill: '聖光彩虹祈願'
+            }
+        ];
+
+        // Saved Local State
+        let playerState = {
+            coins: 100,
+            highScore: 0,
+            selectedChar: 'hero',
+            unlockedChars: ['hero'],
+            upgrades: {
+                hp: 1,
+                magnet: 1,
+                jelly: 1
+            }
+        };
+
+        function loadSaveData() {
+            try {
+                const saved = window.__galleryStorage.getItem('cookie_runner_save');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    playerState = { ...playerState, ...parsed };
+                    CHARACTERS.forEach(c => {
+                        if (playerState.unlockedChars.includes(c.id)) {
+                            c.unlocked = true;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load save data', e);
+            }
+        }
+
+        function saveData() {
+            try {
+                window.__galleryStorage.setItem('cookie_runner_save', JSON.stringify(playerState));
+            } catch (e) {
+                console.error('Failed to save data', e);
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let viewWidth = 800;
+        let viewHeight = 450;
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            viewWidth = canvas.width;
+            viewHeight = canvas.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Core Game Logic Variables
+        let isPlaying = false;
+        let isBonusTime = false;
+        let bonusTimeTimer = 0;
+        let gameFrame = 0;
+        let gameSpeed = 6;
+        let score = 0;
+        let coinsCollected = 0;
+
+        const groundYMargin = 85;
+        let player = {
+            x: 110,
+            y: 0,
+            width: 52,
+            height: 62,
+            vy: 0,
+            gravity: 0.75,
+            jumpStrength: -13.5,
+            jumpCount: 0,
+            maxJumps: 2,
+            isSliding: false,
+            isGrounded: false,
+            hp: 100,
+            maxHp: 100,
+            giantTimer: 0,
+            magnetTimer: 0,
+            invincibleTimer: 0
+        };
+
+        let bonusLetters = { B: false, O: false, N: false, U: false, S: false };
+
+        let jellies = [];
+        let obstacles = [];
+        let particles = [];
+        let floatingTexts = [];
+        let cloudDecorations = [];
+
+        function initClouds() {
+            cloudDecorations = [];
+            for (let i = 0; i < 8; i++) {
+                cloudDecorations.push({
+                    x: Math.random() * viewWidth,
+                    y: Math.random() * (viewHeight * 0.4),
+                    size: 30 + Math.random() * 40,
+                    speed: 0.5 + Math.random() * 1
+                });
+            }
+        }
+
+        function setupInputs() {
+            window.addEventListener('keydown', (e) => {
+                if (!isPlaying) return;
+                if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                    e.preventDefault();
+                    triggerJump();
+                } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                    e.preventDefault();
+                    triggerSlide(true);
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                    triggerSlide(false);
+                }
+            });
+
+            const jumpBtn = document.getElementById('touch-jump-btn');
+            const slideBtn = document.getElementById('touch-slide-btn');
+
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sound.init();
+                triggerJump();
+            });
+
+            slideBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sound.init();
+                triggerSlide(true);
+            });
+
+            slideBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                triggerSlide(false);
+            });
+        }
+
+        function triggerJump() {
+            if (player.jumpCount < player.maxJumps) {
+                player.vy = player.jumpStrength;
+                player.jumpCount++;
+                player.isGrounded = false;
+                player.isSliding = false;
+                sound.playJump();
+                createParticles(player.x + player.width / 2, player.y + player.height, '#ffffff', 6);
+            }
+        }
+
+        function triggerSlide(sliding) {
+            if (player.isGrounded) {
+                player.isSliding = sliding;
+            }
+        }
+
+        function createParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6 - gameSpeed * 0.3,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 20 + Math.random() * 15
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#facc15') {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                vy: -2,
+                alpha: 1,
+                life: 30
+            });
+        }
+
+        // Kingdom Style Procedural Cookie & Pet Canvas Renderer
+        function drawKingdomCookie(ctx, charId, width, height, isSliding, isGrounded, frame, giantTimer, invincibleTimer) {
+            ctx.save();
+
+            const c = CHARACTERS.find(ch => ch.id === charId) || CHARACTERS[0];
+
+            // Cookie Run Baked Dough & Frosting Colors
+            let doughFill = c.doughColor || '#c05621';
+            let doughOutline = '#642207'; // Baked dark crust outline
+            let icingColor = c.icingColor || '#ffffff';
+
+            // Squash & Stretch Animation for Jump/Landing
+            let scaleX = 1;
+            let scaleY = 1;
+            if (!isGrounded) {
+                scaleX = 0.9;
+                scaleY = 1.15; // Vertical stretch in air
+            } else if (isSliding) {
+                scaleX = 1.25;
+                scaleY = 0.75; // Squash on slide
+            }
+
+            ctx.scale(scaleX, scaleY);
+
+            // 1. Baked Cookie Shadow/Depth Layer
+            ctx.fillStyle = doughOutline;
+            ctx.beginPath();
+            ctx.ellipse(0, 4, width * 0.46, height * 0.48, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Cookie Dough Body Base
+            ctx.fillStyle = doughFill;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, width * 0.43, height * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. Royal Icing Piping Borders (White outline classic Cookie Run detail)
+            ctx.strokeStyle = icingColor;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 4. Character Specific Outfits & Frosting Details
+            if (charId === 'hero') {
+                // Brave Cookie Candy Button & Swirl Icing Hair
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(0, 8, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Swirl Hair
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-2, -height * 0.32, 7, 0, Math.PI * 2);
+                ctx.arc(4, -height * 0.35, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Candy Cane Stick in Hand
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(width * 0.25, -5);
+                ctx.lineTo(width * 0.38, -20);
+                ctx.stroke();
+            } 
+            else if (charId === 'strawberry') {
+                // Strawberry Jam Hood
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(0, -height * 0.1, width * 0.45, Math.PI, Math.PI * 2);
+                ctx.fill();
+
+                // Strawberry Seeds
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(-8, -height * 0.35, 2, 4);
+                ctx.fillRect(6, -height * 0.32, 2, 4);
+
+                // Leaf Hairpin
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.ellipse(-12, -height * 0.38, 5, 2, -0.4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (charId === 'ninja') {
+                // Matcha Ninja Mask & Scarf
+                ctx.fillStyle = '#064e3b';
+                ctx.fillRect(-width * 0.4, -height * 0.15, width * 0.8, 16);
+
+                // Flowing Scarf
+                const scarfWind = Math.sin(frame * 0.3) * 6;
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(-width * 0.3, 0);
+                ctx.lineTo(-width * 0.6, 5 + scarfWind);
+                ctx.stroke();
+            }
+            else if (charId === 'golden') {
+                // Golden Butter Cape & Royal Crown
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.moveTo(-width * 0.4, -height * 0.05);
+                ctx.lineTo(-width * 0.5, height * 0.4);
+                ctx.lineTo(width * 0.5, height * 0.4);
+                ctx.lineTo(width * 0.4, -height * 0.05);
+                ctx.closePath();
+                ctx.fill();
+
+                // Shiny Crown
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(-12, -height * 0.38);
+                ctx.lineTo(-14, -height * 0.5);
+                ctx.lineTo(-6, -height * 0.42);
+                ctx.lineTo(0, -height * 0.53);
+                ctx.lineTo(6, -height * 0.42);
+                ctx.lineTo(14, -height * 0.5);
+                ctx.lineTo(12, -height * 0.38);
+                ctx.closePath();
+                ctx.fill();
+
+                // Crown Gem
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(0, -height * 0.44, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (charId === 'icecream') {
+                // Pastel Blue Waffle Cone Hat & Ice Cream Hair
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(-8, -height * 0.28, 10, 0, Math.PI * 2);
+                ctx.arc(6, -height * 0.3, 11, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Waffle Hat
+                ctx.fillStyle = '#d97706';
+                ctx.beginPath();
+                ctx.moveTo(-10, -height * 0.36);
+                ctx.lineTo(0, -height * 0.58);
+                ctx.lineTo(10, -height * 0.36);
+                ctx.closePath();
+                ctx.fill();
+            }
+            else if (charId === 'witch') {
+                // Purple Witch Hat & Star Buckle
+                ctx.fillStyle = '#581c87';
+                ctx.beginPath();
+                ctx.ellipse(0, -height * 0.35, width * 0.48, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(-12, -height * 0.35);
+                ctx.lineTo(0, -height * 0.65);
+                ctx.lineTo(12, -height * 0.35);
+                ctx.closePath();
+                ctx.fill();
+
+                // Star Buckle
+                ctx.fillStyle = '#facc15';
+                ctx.font = '10px sans-serif';
+                ctx.fillText('★', -4, -height * 0.37);
+            }
+            else if (charId === 'dragon') {
+                // Dragon Horns & Scale Armor
+                ctx.fillStyle = '#991b1b';
+                ctx.beginPath();
+                ctx.moveTo(-10, -height * 0.32);
+                ctx.lineTo(-18, -height * 0.55);
+                ctx.lineTo(-4, -height * 0.4);
+                ctx.moveTo(10, -height * 0.32);
+                ctx.lineTo(18, -height * 0.55);
+                ctx.lineTo(4, -height * 0.4);
+                ctx.fill();
+            }
+            else if (charId === 'unicorn') {
+                // Rainbow Whipped Cream Hair & Golden Horn
+                ctx.fillStyle = '#f472b6';
+                ctx.beginPath();
+                ctx.arc(-10, -height * 0.28, 12, 0, Math.PI * 2);
+                ctx.fillStyle = '#38bdf8';
+                ctx.arc(8, -height * 0.28, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Unicorn Horn
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.moveTo(-4, -height * 0.36);
+                ctx.lineTo(0, -height * 0.62);
+                ctx.lineTo(4, -height * 0.36);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // 5. Kingdom Classic Cookie Eyes & Facial Expressions
+            const eyeOffset = isSliding ? 2 : 0;
+
+            if (invincibleTimer > 0 && Math.floor(invincibleTimer / 4) % 2 === 0) {
+                // Hurt >_< Face
+                ctx.strokeStyle = '#451a03';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-12, -6 + eyeOffset); ctx.lineTo(-4, 0 + eyeOffset); ctx.lineTo(-12, 6 + eyeOffset);
+                ctx.moveTo(12, -6 + eyeOffset); ctx.lineTo(4, 0 + eyeOffset); ctx.lineTo(12, 6 + eyeOffset);
+                ctx.stroke();
+            } else {
+                // Cute Cookie Eyes
+                ctx.fillStyle = '#321404'; // Dark Cookie Glaze
+                ctx.beginPath();
+                ctx.ellipse(-10, -4 + eyeOffset, 4.5, 7, 0, 0, Math.PI * 2);
+                ctx.ellipse(10, -4 + eyeOffset, 4.5, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // White Gloss Pupil Sparkles
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-11, -7 + eyeOffset, 2, 0, Math.PI * 2);
+                ctx.arc(9, -7 + eyeOffset, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cute Smile
+                ctx.strokeStyle = '#451a03';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(0, 5 + eyeOffset, 4.5, 0.1, Math.PI - 0.1);
+                ctx.stroke();
+            }
+
+            // Rosy Sugary Blush
+            ctx.fillStyle = 'rgba(244, 114, 182, 0.65)';
+            ctx.beginPath();
+            ctx.arc(-14, 2 + eyeOffset, 4, 0, Math.PI * 2);
+            ctx.arc(14, 2 + eyeOffset, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw Kingdom Floating Combi Pet
+        function drawKingdomPet(ctx, charId, px, py, frame) {
+            ctx.save();
+            const c = CHARACTERS.find(ch => ch.id === charId) || CHARACTERS[0];
+            
+            // Floating Sine Motion
+            const floatY = Math.sin(frame * 0.1) * 8;
+            const petX = px - 38;
+            const petY = py - 18 + floatY;
+
+            ctx.translate(petX, petY);
+
+            // Pet Aura Glow
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pet Render by Emoji & Baked Style
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(c.petIcon || '🍫', 0, 0);
+
+            ctx.restore();
+        }
+
+        function spawnPattern() {
+            if (gameFrame % 42 !== 0) return;
+
+            const groundY = viewHeight - groundYMargin;
+
+            if (isBonusTime) {
+                const sinVal = Math.sin(gameFrame * 0.1);
+                const jellyY = groundY - 140 + sinVal * 80;
+                
+                jellies.push({
+                    x: viewWidth + 30,
+                    y: jellyY,
+                    type: Math.random() > 0.3 ? 'bear' : 'rainbow',
+                    radius: 14
+                });
+                return;
+            }
+
+            const rand = Math.random();
+
+            const missingLetters = Object.keys(bonusLetters).filter(l => !bonusLetters[l]);
+            if (rand < 0.1 && missingLetters.length > 0) {
+                const letter = missingLetters[Math.floor(Math.random() * missingLetters.length)];
+                jellies.push({
+                    x: viewWidth + 30,
+                    y: groundY - 120 - Math.random() * 80,
+                    type: 'letter',
+                    letter: letter,
+                    radius: 16
+                });
+            } 
+            else if (rand < 0.16) {
+                jellies.push({
+                    x: viewWidth + 30,
+                    y: groundY - 100,
+                    type: 'potion',
+                    radius: 16
+                });
+            }
+            else if (rand < 0.22) {
+                jellies.push({
+                    x: viewWidth + 30,
+                    y: groundY - 110,
+                    type: Math.random() > 0.5 ? 'giant' : 'magnet',
+                    radius: 16
+                });
+            }
+            else if (rand < 0.72) {
+                const count = 3 + Math.floor(Math.random() * 4);
+                const heightType = Math.floor(Math.random() * 3);
+                for (let i = 0; i < count; i++) {
+                    let jy = groundY - 40;
+                    if (heightType === 1) jy = groundY - 110;
+                    if (heightType === 2) jy = groundY - 160 + Math.sin(i * 0.8) * 30;
+
+                    const isCoin = Math.random() < 0.3;
+                    jellies.push({
+                        x: viewWidth + 30 + i * 32,
+                        y: jy,
+                        type: isCoin ? 'coin' : (Math.random() > 0.3 ? 'yellow' : 'bear'),
+                        radius: 12
+                    });
+                }
+            }
+
+            // Spawn Obstacles
+            if (gameFrame % 105 === 0 && Math.random() < 0.8) {
+                const obsType = Math.random();
+                if (obsType < 0.5) {
+                    obstacles.push({
+                        x: viewWidth + 50,
+                        y: groundY - 50,
+                        width: 40,
+                        height: 50,
+                        type: 'spike'
+                    });
+                } else {
+                    obstacles.push({
+                        x: viewWidth + 50,
+                        y: groundY - 130,
+                        width: 45,
+                        height: 60,
+                        type: 'hanging'
+                    });
+                }
+            }
+        }
+
+        function updatePhysics() {
+            gameFrame++;
+
+            if (!isBonusTime) {
+                let hpDrainRate = 0.08 / (1 + (playerState.upgrades.hp - 1) * 0.15);
+                if (playerState.selectedChar === 'icecream') {
+                    hpDrainRate *= 0.75;
+                }
+                player.hp -= hpDrainRate;
+
+                if (playerState.selectedChar === 'unicorn' && gameFrame % 90 === 0) {
+                    player.hp = Math.min(player.maxHp, player.hp + 1);
+                }
+
+                if (player.hp <= 0) {
+                    player.hp = 0;
+                    triggerGameOver();
+                    return;
+                }
+            }
+
+            if (player.giantTimer > 0) player.giantTimer--;
+            if (player.magnetTimer > 0) player.magnetTimer--;
+            if (player.invincibleTimer > 0) player.invincibleTimer--;
+
+            if (isBonusTime) {
+                bonusTimeTimer--;
+                if (bonusTimeTimer <= 0) {
+                    endBonusTime();
+                }
+            }
+
+            const isGiant = player.giantTimer > 0;
+            const sizeMultiplier = isGiant ? 1.6 : 1.0;
+
+            if (player.isSliding) {
+                player.height = 34 * sizeMultiplier;
+                player.width = 56 * sizeMultiplier;
+            } else {
+                player.height = 62 * sizeMultiplier;
+                player.width = 50 * sizeMultiplier;
+            }
+
+            const groundY = viewHeight - groundYMargin;
+            player.vy += player.gravity;
+            player.y += player.vy;
+
+            if (player.y + player.height >= groundY) {
+                player.y = groundY - player.height;
+                player.vy = 0;
+                player.isGrounded = true;
+                player.jumpCount = 0;
+            }
+
+            const magnetRadius = (120 + (playerState.upgrades.magnet - 1) * 40) + 
+                                 (player.magnetTimer > 0 ? 150 : 0) + 
+                                 (playerState.selectedChar === 'strawberry' ? 50 : 0) + 
+                                 (playerState.selectedChar === 'unicorn' ? 180 : 0);
+
+            for (let i = jellies.length - 1; i >= 0; i--) {
+                const j = jellies[i];
+                j.x -= gameSpeed;
+
+                const px = player.x + player.width / 2;
+                const py = player.y + player.height / 2;
+                const dist = Math.hypot(px - j.x, py - j.y);
+
+                if (dist < magnetRadius) {
+                    j.x += (px - j.x) * 0.18;
+                    j.y += (py - j.y) * 0.18;
+                }
+
+                if (dist < j.radius + player.width * 0.5) {
+                    collectJelly(j);
+                    jellies.splice(i, 1);
+                    continue;
+                }
+
+                if (j.x < -40) jellies.splice(i, 1);
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                if (!isBonusTime && checkCollision(player, obs)) {
+                    if (isGiant) {
+                        sound.playPowerup();
+                        addFloatingText(obs.x, obs.y, 'SMASH! +500', '#f59e0b');
+                        score += 500;
+                        createParticles(obs.x + obs.width / 2, obs.y + obs.height / 2, '#ef4444', 12);
+                        obstacles.splice(i, 1);
+                    } else if (player.invincibleTimer <= 0) {
+                        player.hp -= 18;
+                        player.invincibleTimer = 40;
+                        sound.playHurt();
+                        addFloatingText(player.x, player.y - 20, '-18 HP!', '#ef4444');
+                        createParticles(player.x, player.y + player.height / 2, '#dc2626', 10);
+                    }
+                }
+
+                if (obs.x < -60) obstacles.splice(i, 1);
+            }
+
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+                if (p.alpha <= 0) particles.splice(index, 1);
+            });
+
+            floatingTexts.forEach((ft, index) => {
+                ft.y += ft.vy;
+                ft.alpha -= 0.03;
+                if (ft.alpha <= 0) floatingTexts.splice(index, 1);
+            });
+
+            if (gameFrame % 600 === 0 && gameSpeed < 12) {
+                gameSpeed += 0.4;
+            }
+
+            score += Math.floor(gameSpeed * 0.2);
+            updateHUDUI();
+        }
+
+        function collectJelly(jelly) {
+            let jellyBonusMult = 1 + (playerState.upgrades.jelly - 1) * 0.2;
+            if (playerState.selectedChar === 'witch') {
+                jellyBonusMult *= 1.5;
+            }
+
+            if (jelly.type === 'yellow') {
+                score += Math.floor(100 * jellyBonusMult);
+                sound.playJelly();
+                createParticles(jelly.x, jelly.y, '#facc15', 3);
+            } else if (jelly.type === 'bear') {
+                score += Math.floor(250 * jellyBonusMult);
+                sound.playJelly();
+                createParticles(jelly.x, jelly.y, '#f43f5e', 4);
+            } else if (jelly.type === 'rainbow') {
+                score += Math.floor(600 * jellyBonusMult);
+                sound.playJelly();
+                createParticles(jelly.x, jelly.y, '#a855f7', 6);
+            } else if (jelly.type === 'coin') {
+                const coinVal = (playerState.selectedChar === 'golden') ? 2 : 1;
+                coinsCollected += coinVal;
+                score += 50;
+                sound.playCoin();
+                addFloatingText(jelly.x, jelly.y, `+${coinVal} 🪙`, '#fbbf24');
+                createParticles(jelly.x, jelly.y, '#f59e0b', 4);
+            } else if (jelly.type === 'potion') {
+                player.hp = Math.min(player.maxHp, player.hp + 25);
+                sound.playPowerup();
+                addFloatingText(jelly.x, jelly.y, '+25 HP! ❤️', '#22c55e');
+                createParticles(jelly.x, jelly.y, '#22c55e', 8);
+            } else if (jelly.type === 'giant') {
+                player.giantTimer = 300;
+                sound.playPowerup();
+                addFloatingText(jelly.x, jelly.y, 'GIANT! ⚡', '#eab308');
+            } else if (jelly.type === 'magnet') {
+                player.magnetTimer = 360;
+                sound.playPowerup();
+                addFloatingText(jelly.x, jelly.y, 'MAGNET! 🧲', '#3b82f6');
+            } else if (jelly.type === 'letter') {
+                bonusLetters[jelly.letter] = true;
+                sound.playPowerup();
+                addFloatingText(jelly.x, jelly.y, `LETTER ${jelly.letter}!`, '#ec4899');
+                checkBonusTimeTrigger();
+            }
+        }
+
+        function checkBonusTimeTrigger() {
+            if (bonusLetters.B && bonusLetters.O && bonusLetters.N && bonusLetters.U && bonusLetters.S) {
+                triggerBonusTime();
+            }
+        }
+
+        function triggerBonusTime() {
+            isBonusTime = true;
+            bonusTimeTimer = 480;
+            sound.playPowerup();
+            obstacles = [];
+            bonusLetters = { B: false, O: false, N: false, U: false, S: false };
+
+            document.getElementById('fever-banner').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('fever-banner').classList.add('hidden');
+            }, 2000);
+        }
+
+        function endBonusTime() {
+            isBonusTime = false;
+        }
+
+        function checkCollision(r1, r2) {
+            return !(
+                r1.x > r2.x + r2.width ||
+                r1.x + r1.width < r2.x ||
+                r1.y > r2.y + r2.height ||
+                r1.y + r1.height < r2.y
+            );
+        }
+
+        function render() {
+            // Background gradient depending on Bonus Time
+            if (isBonusTime) {
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, viewHeight);
+                bgGrad.addColorStop(0, '#f472b6');
+                bgGrad.addColorStop(0.5, '#38bdf8');
+                bgGrad.addColorStop(1, '#fef08a');
+                ctx.fillStyle = bgGrad;
+            } else {
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, viewHeight);
+                bgGrad.addColorStop(0, '#38bdf8');
+                bgGrad.addColorStop(0.6, '#bae6fd');
+                bgGrad.addColorStop(1, '#fde68a');
+                ctx.fillStyle = bgGrad;
+            }
+            ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+            // Draw Clouds in background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            cloudDecorations.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -100) cloud.x = viewWidth + 100;
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size * 0.5, cloud.y - cloud.size * 0.2, cloud.size * 0.7, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.size, cloud.y, cloud.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw Ground Floor
+            const groundY = viewHeight - groundYMargin;
+            if (isBonusTime) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, groundY, viewWidth, groundYMargin);
+                ctx.fillStyle = '#f0f9ff';
+                for (let x = 0; x < viewWidth; x += 40) {
+                    ctx.beginPath();
+                    ctx.arc(x, groundY, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                ctx.fillStyle = '#b45309'; // Baked Cookie Ground
+                ctx.fillRect(0, groundY, viewWidth, groundYMargin);
+
+                ctx.fillStyle = '#15803d'; // Green Grass Top
+                ctx.fillRect(0, groundY, viewWidth, 14);
+
+                ctx.fillStyle = '#d97706';
+                for (let x = (gameFrame * -gameSpeed) % 40; x < viewWidth; x += 40) {
+                    ctx.fillRect(x, groundY + 14, 15, groundYMargin - 14);
+                }
+            }
+
+            // Draw Obstacles
+            obstacles.forEach(obs => {
+                if (obs.type === 'spike') {
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + obs.height);
+                    ctx.lineTo(obs.x + obs.width / 2, obs.y);
+                    ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                } else if (obs.type === 'hanging') {
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.fillText('⚠️', obs.x + 10, obs.y + 35);
+                }
+            });
+
+            // Draw Jellies & Collectibles
+            jellies.forEach(j => {
+                if (j.type === 'yellow') {
+                    ctx.fillStyle = '#facc15';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else if (j.type === 'bear') {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.arc(j.x - 8, j.y - 10, 6, 0, Math.PI * 2);
+                    ctx.arc(j.x + 8, j.y - 10, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (j.type === 'rainbow') {
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (j.type === 'coin') {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillText('$', j.x - 4, j.y + 4);
+                } else if (j.type === 'potion') {
+                    ctx.fillStyle = '#22c55e';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.fillText('❤️', j.x - 7, j.y + 5);
+                } else if (j.type === 'giant') {
+                    ctx.fillStyle = '#eab308';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.fillText('⚡', j.x - 6, j.y + 5);
+                } else if (j.type === 'magnet') {
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.beginPath();
+                    ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.fillText('🧲', j.x - 7, j.y + 5);
+                } else if (j.type === 'letter') {
+                    ctx.fillStyle = '#ec4899';
+                    ctx.fillRect(j.x - 14, j.y - 14, 28, 28);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'black 16px Fredoka One, sans-serif';
+                    ctx.fillText(j.letter, j.x - 6, j.y + 6);
+                }
+            });
+
+            // Draw Cookie Character & Floating Companion Pet
+            ctx.save();
+            if (player.invincibleTimer % 4 > 2) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            // Draw Giant Glow Aura
+            if (player.giantTimer > 0) {
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.height * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Companion Pet Rendering
+            drawKingdomPet(ctx, playerState.selectedChar, player.x, player.y + player.height / 2, gameFrame);
+
+            // Cookie Rendering Translation
+            ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+            if (player.isSliding) {
+                ctx.rotate(Math.PI / 12);
+            } else if (!player.isGrounded) {
+                ctx.rotate((gameFrame * 0.12) % (Math.PI * 2));
+            }
+
+            // Draw High-Quality Kingdom Style Cookie
+            drawKingdomCookie(ctx, playerState.selectedChar, player.width, player.height, player.isSliding, player.isGrounded, gameFrame, player.giantTimer, player.invincibleTimer);
+
+            ctx.restore();
+
+            // Draw Particles & Floating Text
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.fillStyle = ft.color;
+                ctx.font = 'black 18px Noto Sans TC, sans-serif';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function updateHUDUI() {
+            document.getElementById('hp-bar-fill').style.width = `${(player.hp / player.maxHp) * 100}%`;
+            document.getElementById('hud-score').innerText = score.toLocaleString();
+            document.getElementById('hud-coin').innerText = coinsCollected;
+
+            ['B', 'O', 'N', 'U', 'S'].forEach(letter => {
+                const el = document.getElementById(`letter-${letter}`);
+                if (bonusLetters[letter]) {
+                    el.className = "w-6 h-6 rounded-lg bg-pink-500 text-white font-black text-xs flex items-center justify-center border-2 border-yellow-300 shadow-md animate-bounce";
+                } else {
+                    el.className = "w-6 h-6 rounded-lg bg-slate-700 text-slate-400 font-black text-xs flex items-center justify-center border border-white/20";
+                }
+            });
+
+            document.getElementById('giant-badge').classList.toggle('hidden', player.giantTimer <= 0);
+            document.getElementById('magnet-badge').classList.toggle('hidden', player.magnetTimer <= 0);
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            updatePhysics();
+            spawnPattern();
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            sound.init();
+            resizeCanvas();
+            initClouds();
+
+            const curChar = CHARACTERS.find(c => c.id === playerState.selectedChar);
+
+            isPlaying = true;
+            isBonusTime = false;
+            score = 0;
+            coinsCollected = 0;
+            gameSpeed = 6;
+            gameFrame = 0;
+
+            const baseHp = 100 + (playerState.upgrades.hp - 1) * 20;
+            player.maxHp = baseHp;
+            player.hp = baseHp;
+            player.x = 110;
+            player.y = viewHeight - groundYMargin - 62;
+            player.vy = 0;
+            player.maxJumps = curChar.maxJumps;
+            player.jumpCount = 0;
+            player.giantTimer = 0;
+            player.magnetTimer = 0;
+            player.invincibleTimer = 0;
+
+            if (curChar.id === 'dragon') {
+                player.giantTimer = 480;
+            }
+
+            bonusLetters = { B: false, O: false, N: false, U: false, S: false };
+            jellies = [];
+            obstacles = [];
+            particles = [];
+            floatingTexts = [];
+
+            document.getElementById('start-menu').classList.add('hidden');
+            document.getElementById('game-over-modal').classList.add('hidden');
+            document.getElementById('game-hud').classList.remove('hidden');
+
+            gameLoop();
+        }
+
+        function triggerGameOver() {
+            isPlaying = false;
+            playerState.coins += coinsCollected;
+            if (score > playerState.highScore) {
+                playerState.highScore = score;
+            }
+            saveData();
+
+            document.getElementById('final-score').innerText = score.toLocaleString();
+            document.getElementById('final-coins').innerText = `+${coinsCollected}`;
+            document.getElementById('final-high-score').innerText = playerState.highScore.toLocaleString();
+
+            document.getElementById('game-hud').classList.add('hidden');
+            document.getElementById('game-over-modal').classList.remove('hidden');
+        }
+
+        function updateStartMenuUI() {
+            document.getElementById('coin-count-display').innerText = playerState.coins;
+            document.getElementById('high-score-display').innerText = playerState.highScore.toLocaleString();
+
+            const char = CHARACTERS.find(c => c.id === playerState.selectedChar) || CHARACTERS[0];
+            document.getElementById('hero-avatar-icon').childNodes[0].nodeValue = char.icon;
+            document.getElementById('pet-preview-badge').innerText = char.petIcon;
+            document.getElementById('hero-name-label').innerText = char.name;
+            document.getElementById('hero-skill-label').innerText = `能力：${char.skill}`;
+        }
+
+        function showToast(msg, icon = '⚠️') {
+            const toast = document.getElementById('toast-msg');
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-text').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2500);
+        }
+
+        function performGachaDraw(count) {
+            sound.init();
+            const cost = count === 10 ? 900 : 100;
+
+            if (playerState.coins < cost) {
+                showToast(`金幣不足！抽卡需要 ${cost} 🪙`, '🪙');
+                return;
+            }
+
+            playerState.coins -= cost;
+            saveData();
+            updateGachaCoinUI();
+
+            const resultView = document.getElementById('gacha-result-view');
+            const iconAnim = document.getElementById('gacha-icon-anim');
+
+            sound.playGachaRoll();
+            iconAnim.classList.add('animate-spin', 'scale-125');
+
+            setTimeout(() => {
+                iconAnim.classList.remove('animate-spin', 'scale-125');
+                resultView.innerHTML = '';
+                resultView.classList.remove('hidden');
+
+                let hasRare = false;
+                const results = [];
+
+                for (let i = 0; i < count; i++) {
+                    const pulled = rollCharacterByRarity();
+                    results.push(pulled);
+                    if (['SR', 'SSR', 'UR'].includes(pulled.char.rarity)) {
+                        hasRare = true;
+                    }
+                }
+
+                if (hasRare) {
+                    sound.playGachaRare();
+                }
+
+                results.forEach((item) => {
+                    const c = item.char;
+                    const card = document.createElement('div');
+
+                    let rarityBadgeBg = 'bg-slate-500';
+                    let borderStyle = 'border-slate-300';
+                    if (c.rarity === 'UR') { rarityBadgeBg = 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'; borderStyle = 'border-pink-500 shadow-lg shadow-pink-300 animate-pulse'; }
+                    else if (c.rarity === 'SSR') { rarityBadgeBg = 'bg-amber-500'; borderStyle = 'border-amber-400 shadow-md shadow-amber-200'; }
+                    else if (c.rarity === 'SR') { rarityBadgeBg = 'bg-purple-500'; borderStyle = 'border-purple-300'; }
+                    else if (c.rarity === 'R') { rarityBadgeBg = 'bg-blue-500'; borderStyle = 'border-blue-300'; }
+
+                    card.className = `p-2 bg-white rounded-xl border-2 ${borderStyle} flex flex-col items-center justify-between text-center transform transition duration-300 hover:scale-105 shadow-sm`;
+                    card.innerHTML = `
+                        <span class="text-[10px] ${rarityBadgeBg} text-white font-black px-2 py-0.5 rounded-full">${c.rarity}</span>
+                        <div class="text-3xl my-1 relative">
+                            ${c.icon}
+                            <span class="absolute -bottom-1 -right-1 text-xs">${c.petIcon}</span>
+                        </div>
+                        <div class="font-black text-xs text-slate-800 truncate w-full">${c.name}</div>
+                        ${item.isNew ? `
+                            <span class="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.5 rounded-full mt-1">NEW!</span>
+                        ` : `
+                            <span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1 py-0.5 rounded-full mt-1">+${item.refund}🪙</span>
+                        `}
+                    `;
+                    resultView.appendChild(card);
+                });
+
+                renderShop();
+                updateStartMenuUI();
+            }, 600);
+        }
+
+        function rollCharacterByRarity() {
+            const rand = Math.random() * 100;
+            let targetRarity = 'N';
+
+            if (rand < 2) targetRarity = 'UR';
+            else if (rand < 10) targetRarity = 'SSR';
+            else if (rand < 30) targetRarity = 'SR';
+            else if (rand < 65) targetRarity = 'R';
+            else targetRarity = 'N';
+
+            const matchingChars = CHARACTERS.filter(c => c.rarity === targetRarity);
+            const selected = matchingChars[Math.floor(Math.random() * matchingChars.length)] || CHARACTERS[0];
+
+            let isNew = false;
+            let refund = 0;
+
+            if (!playerState.unlockedChars.includes(selected.id)) {
+                playerState.unlockedChars.push(selected.id);
+                selected.unlocked = true;
+                selected.dupes = 1;
+                isNew = true;
+            } else {
+                selected.dupes = (selected.dupes || 1) + 1;
+                const refundMap = { N: 30, R: 60, SR: 120, SSR: 300, UR: 800 };
+                refund = refundMap[selected.rarity] || 30;
+                playerState.coins += refund;
+            }
+
+            saveData();
+            return { char: selected, isNew, refund };
+        }
+
+        function updateGachaCoinUI() {
+            document.getElementById('gacha-coin-display').innerText = playerState.coins;
+        }
+
+        function renderShop() {
+            document.getElementById('shop-coin-display').innerText = playerState.coins;
+            const container = document.getElementById('characters-list');
+            container.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const isSelected = playerState.selectedChar === char.id;
+                const isUnlocked = playerState.unlockedChars.includes(char.id);
+
+                let rarityBadgeBg = 'bg-slate-500';
+                if (char.rarity === 'UR') rarityBadgeBg = 'bg-gradient-to-r from-pink-500 to-purple-500';
+                else if (char.rarity === 'SSR') rarityBadgeBg = 'bg-amber-500';
+                else if (char.rarity === 'SR') rarityBadgeBg = 'bg-purple-500';
+                else if (char.rarity === 'R') rarityBadgeBg = 'bg-blue-500';
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl border-2 flex flex-col justify-between ${isSelected ? 'bg-amber-100/90 border-amber-500 shadow-md' : 'bg-white border-slate-200'}`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="relative text-3xl p-2 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shadow-inner">
+                            ${char.icon}
+                            <span class="absolute -top-1.5 -right-1.5 text-[9px] ${rarityBadgeBg} text-white font-black px-1.5 py-0.2 rounded-full shadow">${char.rarity}</span>
+                            <span class="absolute -bottom-1 -left-1 text-xs bg-white rounded-full p-0.5 border shadow" title="專屬陪伴寵物: ${char.petName}">${char.petIcon}</span>
+                        </div>
+                        <div>
+                            <div class="font-black text-slate-800 flex items-center gap-1.5">
+                                ${char.name}
+                                ${isUnlocked ? `<span class="text-xs text-amber-500">★${char.dupes || 1}</span>` : ''}
+                            </div>
+                            <div class="text-[11px] text-pink-600 font-bold">寵物：${char.petName}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">${char.desc}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs bg-amber-200 text-amber-950 font-bold px-2.5 py-0.5 rounded-full">${char.skill}</span>
+                        ${isUnlocked ? `
+                            <button onclick="selectChar('${char.id}')" class="game-btn text-xs font-bold px-3.5 py-1.5 rounded-xl ${isSelected ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-700'}">
+                                ${isSelected ? '使用中' : '選擇'}
+                            </button>
+                        ` : `
+                            <button onclick="buyChar('${char.id}', ${char.price})" class="game-btn text-xs font-bold px-3.5 py-1.5 rounded-xl bg-amber-500 text-white">
+                                解鎖 (${char.price}🪙)
+                            </button>
+                        `}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.selectChar = function(id) {
+            playerState.selectedChar = id;
+            saveData();
+            renderShop();
+            updateStartMenuUI();
+        };
+
+        window.buyChar = function(id, price) {
+            if (playerState.coins >= price) {
+                playerState.coins -= price;
+                playerState.unlockedChars.push(id);
+                playerState.selectedChar = id;
+                const char = CHARACTERS.find(c => c.id === id);
+                if (char) { char.unlocked = true; char.dupes = 1; }
+                saveData();
+                renderShop();
+                updateStartMenuUI();
+            } else {
+                showToast('金幣不足喔！快去跑酷或抽卡吧！', '🪙');
+            }
+        };
+
+        function renderUpgrades() {
+            document.getElementById('hp-lvl-desc').innerText = `目前等級: Lv.${playerState.upgrades.hp}`;
+            document.getElementById('magnet-lvl-desc').innerText = `目前等級: Lv.${playerState.upgrades.magnet}`;
+            document.getElementById('jelly-lvl-desc').innerText = `目前等級: Lv.${playerState.upgrades.jelly}`;
+        }
+
+        function bindEvents() {
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+            document.getElementById('restart-game-btn').addEventListener('click', startGame);
+
+            document.getElementById('return-menu-btn').addEventListener('click', () => {
+                document.getElementById('game-over-modal').classList.add('hidden');
+                document.getElementById('start-menu').classList.remove('hidden');
+                updateStartMenuUI();
+            });
+
+            document.getElementById('open-char-shop-btn').addEventListener('click', () => {
+                renderShop();
+                document.getElementById('shop-modal').classList.remove('hidden');
+            });
+            document.getElementById('close-shop-btn').addEventListener('click', () => {
+                document.getElementById('shop-modal').classList.add('hidden');
+            });
+            document.getElementById('shop-done-btn').addEventListener('click', () => {
+                document.getElementById('shop-modal').classList.add('hidden');
+            });
+
+            document.getElementById('open-gacha-btn').addEventListener('click', () => {
+                updateGachaCoinUI();
+                document.getElementById('gacha-result-view').classList.add('hidden');
+                document.getElementById('gacha-modal').classList.remove('hidden');
+            });
+            document.getElementById('close-gacha-btn').addEventListener('click', () => {
+                document.getElementById('gacha-modal').classList.add('hidden');
+            });
+            document.getElementById('gacha-single-btn').addEventListener('click', () => {
+                performGachaDraw(1);
+            });
+            document.getElementById('gacha-multi-btn').addEventListener('click', () => {
+                performGachaDraw(10);
+            });
+
+            document.getElementById('open-upgrades-btn').addEventListener('click', () => {
+                renderUpgrades();
+                document.getElementById('upgrade-modal').classList.remove('hidden');
+            });
+            document.getElementById('close-upgrade-btn').addEventListener('click', () => {
+                document.getElementById('upgrade-modal').classList.add('hidden');
+            });
+            document.getElementById('upgrade-done-btn').addEventListener('click', () => {
+                document.getElementById('upgrade-modal').classList.add('hidden');
+            });
+
+            document.getElementById('upgrade-hp-btn').addEventListener('click', () => {
+                const cost = playerState.upgrades.hp * 100;
+                if (playerState.coins >= cost) {
+                    playerState.coins -= cost;
+                    playerState.upgrades.hp++;
+                    saveData();
+                    renderUpgrades();
+                    updateStartMenuUI();
+                }
+            });
+
+            document.getElementById('upgrade-magnet-btn').addEventListener('click', () => {
+                const cost = playerState.upgrades.magnet * 150;
+                if (playerState.coins >= cost) {
+                    playerState.coins -= cost;
+                    playerState.upgrades.magnet++;
+                    saveData();
+                    renderUpgrades();
+                    updateStartMenuUI();
+                }
+            });
+
+            document.getElementById('upgrade-jelly-btn').addEventListener('click', () => {
+                const cost = playerState.upgrades.jelly * 200;
+                if (playerState.coins >= cost) {
+                    playerState.coins -= cost;
+                    playerState.upgrades.jelly++;
+                    saveData();
+                    renderUpgrades();
+                    updateStartMenuUI();
+                }
+            });
+        }
+
+        window.onload = function() {
+            loadSaveData();
+            resizeCanvas();
+            setupInputs();
+            bindEvents();
+            updateStartMenuUI();
+            render();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

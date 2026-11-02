@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arcade Snake.io - Stiff Physics Neon Arena</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Pixel Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background-color: #030308;
+            color: #00ffcc;
+            touch-action: manipulation;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* CRT Screen Scanline & Curved Glass Effect */
+        .crt-wrapper {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.95);
+            border: 3px solid #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #0a0e1a 0%, #020306 100%);
+        }
+
+        .crt-wrapper::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 10;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        .neon-title {
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 40px #00b386;
+        }
+        .neon-red {
+            text-shadow: 0 0 8px #ff0055, 0 0 15px #ff0055;
+        }
+        .neon-gold {
+            text-shadow: 0 0 8px #ffcc00, 0 0 15px #ffcc00;
+        }
+
+        .arcade-panel {
+            background: rgba(10, 14, 26, 0.92);
+            border: 2px solid #1f293d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 255, 204, 0.05);
+            backdrop-filter: blur(8px);
+        }
+
+        .skin-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid #1e293b;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .skin-card:hover {
+            transform: translateY(-3px);
+            border-color: #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .skin-card.selected {
+            background: rgba(0, 255, 204, 0.12);
+            border-color: #00ffcc;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5), inset 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        .arcade-btn {
+            background: linear-gradient(180deg, #102a43 0%, #061727 100%);
+            border: 2px solid #00ffcc;
+            box-shadow: 0 5px 0 #020b14, 0 0 15px rgba(0, 255, 204, 0.3);
+            transition: all 0.08s ease;
+        }
+
+        .arcade-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #020b14, 0 0 5px rgba(0, 255, 204, 0.3);
+        }
+
+        .boost-btn {
+            background: radial-gradient(circle, #ff0055 0%, #990033 100%);
+            border: 2px solid #ff6699;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.6);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(5, 8, 15, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <div class="crt-wrapper w-full max-w-4xl h-[92vh] max-h-[750px] flex flex-col justify-between relative">
+
+        <!-- Top HUD Header Bar -->
+        <div class="w-full bg-black/70 border-b border-gray-800 p-2 sm:p-3 flex justify-between items-center z-20 backdrop-blur-md">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <i class="fa-solid fa-gamepad text-cyan-400 text-lg sm:text-2xl animate-pulse"></i>
+                <div>
+                    <h1 class="text-xs sm:text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-yellow-400 neon-title">
+                        ARCADE SNAKE.IO
+                    </h1>
+                    <span class="text-[8px] sm:text-[9px] text-gray-400 hidden sm:block">STIFF RIGID PHYSICS EDITION</span>
+                </div>
+            </div>
+
+            <!-- In-Game Real-Time Stats -->
+            <div id="gameStatsHUD" class="hidden flex items-center space-x-3 text-[9px] sm:text-xs">
+                <div class="bg-black/60 px-2 sm:px-3 py-1 rounded border border-cyan-500/30">
+                    <span class="text-gray-400 block text-[7px]">SCORE</span>
+                    <span id="playerScore" class="text-green-400 font-bold">0</span>
+                </div>
+                <div class="bg-black/60 px-2 sm:px-3 py-1 rounded border border-pink-500/30">
+                    <span class="text-gray-400 block text-[7px]">LENGTH</span>
+                    <span id="playerLength" class="text-pink-400 font-bold">12</span>
+                </div>
+                <div class="bg-black/60 px-2 sm:px-3 py-1 rounded border border-yellow-500/30">
+                    <span class="text-gray-400 block text-[7px]">KILLS</span>
+                    <span id="playerKills" class="text-yellow-400 font-bold">0</span>
+                </div>
+            </div>
+
+            <button id="soundToggleBtn" class="bg-gray-900 border border-gray-700 hover:border-cyan-400 p-1.5 sm:p-2 rounded-lg text-yellow-400 text-xs">
+                <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+            </button>
+        </div>
+
+        <div class="relative w-full h-full flex-grow overflow-hidden flex items-center justify-center">
+            
+            <canvas id="gameCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+            <!-- Real-Time Dynamic Leaderboard Overlay -->
+            <div id="leaderboardOverlay" class="hidden absolute top-3 right-3 bg-black/80 border border-cyan-500/30 rounded-lg p-2.5 text-[8px] sm:text-[9px] w-40 sm:w-48 pointer-events-none z-10 backdrop-blur-md shadow-lg">
+                <div class="text-cyan-400 font-bold border-b border-gray-700 pb-1 mb-1.5 flex justify-between items-center">
+                    <span>LEADERBOARD</span>
+                    <i class="fa-solid fa-crown text-yellow-400"></i>
+                </div>
+                <div id="leaderboardList" class="space-y-1"></div>
+            </div>
+
+            <!-- Boost Mobile Touch Button -->
+            <button id="mobileBoostBtn" class="hidden sm:hidden absolute bottom-4 right-4 z-20 w-16 h-16 rounded-full boost-btn flex items-center justify-center text-white text-xs font-bold active:scale-95 shadow-lg">
+                <i class="fa-solid fa-bolt text-lg"></i>
+            </button>
+
+            <div id="characterSelectOverlay" class="absolute inset-0 bg-black/90 z-30 flex flex-col items-center justify-between p-3 sm:p-6 overflow-y-auto">
+                
+                <div class="text-center mt-1 sm:mt-2">
+                    <h2 class="text-base sm:text-2xl font-black text-cyan-400 neon-title mb-1">CHOOSE YOUR SNAKE</h2>
+                    <p class="text-[9px] sm:text-xs text-gray-400">已調整車體剛性與大轉彎半徑，操作更硬朗不易自撞！</p>
+                </div>
+
+                <!-- Nickname Input -->
+                <div class="w-full max-w-md my-2">
+                    <label class="block text-[9px] text-gray-400 mb-1 text-left">PILOT NAME (暱稱)</label>
+                    <div class="relative">
+                        <input type="text" id="playerNameInput" maxlength="12" value="NEON_VIPER" 
+                               class="w-full bg-gray-900/90 border-2 border-cyan-500/60 rounded-lg px-3 py-2 text-xs sm:text-sm text-cyan-300 focus:outline-none focus:border-cyan-400 text-center font-bold tracking-wider">
+                        <i class="fa-solid fa-pen text-cyan-500 absolute right-3 top-3 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Live Interactive Skin Preview Box -->
+                <div class="w-full max-w-md bg-gray-950/80 border border-gray-800 rounded-xl p-3 my-2 flex flex-col items-center relative overflow-hidden">
+                    <div class="absolute top-2 left-3 text-[8px] text-cyan-400/80 uppercase font-bold">LIVE PREVIEW</div>
+                    
+                    <canvas id="previewCanvas" width="280" height="100" class="w-full h-24 my-1"></canvas>
+                    
+                    <div id="skinInfoBox" class="text-center space-y-1 mt-1">
+                        <span id="skinName" class="text-xs sm:text-sm font-bold text-yellow-400 neon-gold">NEON DRAGON</span>
+                        <p id="skinDesc" class="text-[8px] sm:text-[9px] text-gray-300">高速巡航與流線耀眼光暈，霸氣的經典街機王者。</p>
+                    </div>
+                </div>
+
+                <!-- Skin Options Grid Select -->
+                <div class="w-full max-w-xl my-2">
+                    <div class="text-[9px] text-gray-400 mb-1.5 text-left">SELECT SKIN (選擇外觀風格)</div>
+                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2" id="skinGrid"></div>
+                </div>
+
+                <!-- Start Battle Button -->
+                <button id="startBattleBtn" class="arcade-btn w-full max-w-md py-3 sm:py-4 rounded-xl text-xs sm:text-sm font-black text-cyan-300 tracking-wider hover:brightness-125 mt-2">
+                    <i class="fa-solid fa-play mr-2 text-yellow-400 animate-bounce"></i>開始戰鬥 (START BATTLE)
+                </button>
+            </div>
+
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/92 z-30 flex flex-col items-center justify-center p-4 text-center">
+                <div class="max-w-md w-full space-y-4 arcade-panel p-5 rounded-2xl border-2 border-red-500/50">
+                    <div class="text-2xl sm:text-4xl font-extrabold text-red-500 neon-red animate-pulse">
+                        ELIMINATED
+                    </div>
+
+                    <div class="bg-red-950/60 border border-red-500/40 p-3 rounded-xl text-left space-y-1">
+                        <span class="text-[9px] text-red-400 block uppercase font-bold">DEATH REASON (死因分析):</span>
+                        <span id="deathReasonText" class="text-xs text-yellow-300 font-bold block">撞擊到了敵蛇的身體！</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 bg-black/50 p-3 rounded-lg text-center">
+                        <div>
+                            <span class="text-[7px] text-gray-400 block">FINAL SCORE</span>
+                            <span id="finalScore" class="text-xs text-green-400 font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[7px] text-gray-400 block">MAX LENGTH</span>
+                            <span id="finalLength" class="text-xs text-pink-400 font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[7px] text-gray-400 block">KILLS</span>
+                            <span id="finalKills" class="text-xs text-yellow-400 font-bold">0</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                        <button id="reSkinBtn" class="arcade-btn flex-1 py-3 rounded-xl text-xs text-yellow-300 border-yellow-400/80 hover:brightness-110">
+                            <i class="fa-solid fa-user-gear mr-1"></i>重選角色 (RE-SKIN)
+                        </button>
+                        <button id="quickRespawnBtn" class="arcade-btn flex-1 py-3 rounded-xl text-xs text-cyan-300 border-cyan-400 hover:brightness-125">
+                            <i class="fa-solid fa-rotate-right mr-1"></i>立即重生 (REPLAY)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Control Guidance -->
+        <div class="bg-black/80 border-t border-gray-800 p-2 text-[8px] sm:text-[9px] text-gray-400 text-center flex justify-around items-center">
+            <span><i class="fa-solid fa-keyboard text-cyan-400 mr-1"></i>方向鍵 / WASD / 滑鼠：轉向</span>
+            <span><i class="fa-solid fa-bolt text-yellow-400 mr-1"></i>按住 [SPACE] / 左鍵：加速</span>
+            <span class="hidden sm:inline"><i class="fa-solid fa-skull text-red-400 mr-1"></i>身體剛性大增，防禦誤觸自死</span>
+        </div>
+
+    </div>
+
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+            }
+
+            playEat() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1000, this.ctx.currentTime + 0.04);
+
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+
+            playBoost() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playExplode() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        const SKINS = [
+            {
+                id: 'neon_dragon',
+                name: 'NEON DRAGON',
+                desc: '高速巡航與流線耀眼光暈，霸氣的經典街機王者。',
+                headColor: '#00ffcc',
+                bodyColor: '#009973',
+                glowColor: '#00ffcc',
+                eyeColor: '#ffffff'
+            },
+            {
+                id: 'cyber_viper',
+                name: 'CYBER VIPER',
+                desc: '劇毒熱能紅光，具有高震撼力的視覺突襲風格。',
+                headColor: '#ff0055',
+                bodyColor: '#990033',
+                glowColor: '#ff0055',
+                eyeColor: '#ffff00'
+            },
+            {
+                id: 'golden_cobra',
+                name: 'GOLDEN COBRA',
+                desc: '尊榮黃金聖光，戰場上最璀璨華麗的億萬王者。',
+                headColor: '#ffcc00',
+                bodyColor: '#b38f00',
+                glowColor: '#ffcc00',
+                eyeColor: '#ffffff'
+            },
+            {
+                id: 'cosmic_worm',
+                name: 'COSMIC WORM',
+                desc: '深邃宇宙星雲霓虹紫，神秘而迷幻的極光戰蛇。',
+                headColor: '#a855f7',
+                bodyColor: '#6b21a8',
+                glowColor: '#c084fc',
+                eyeColor: '#00ffff'
+            },
+            {
+                id: 'retro_green',
+                name: 'RETRO GREEN',
+                desc: '懷舊8-Bit 經典復古綠，致密純粹的螢光點陣風。',
+                headColor: '#22c55e',
+                bodyColor: '#14532d',
+                glowColor: '#4ade80',
+                eyeColor: '#ffffff'
+            }
+        ];
+
+        const AI_NAMES = ['PixelKing', 'ViperX', 'RetroGlider', 'CyberSlither', 'GlowMaster', 'ByteBiter', 'NeonPhantom', 'StarWorm'];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+
+        // UI DOM Elements
+        const characterSelectOverlay = document.getElementById('characterSelectOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const gameStatsHUD = document.getElementById('gameStatsHUD');
+        const leaderboardOverlay = document.getElementById('leaderboardOverlay');
+        const leaderboardList = document.getElementById('leaderboardList');
+        const skinGrid = document.getElementById('skinGrid');
+        const skinNameEl = document.getElementById('skinName');
+        const skinDescEl = document.getElementById('skinDesc');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const playerScoreEl = document.getElementById('playerScore');
+        const playerLengthEl = document.getElementById('playerLength');
+        const playerKillsEl = document.getElementById('playerKills');
+        const deathReasonText = document.getElementById('deathReasonText');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalLengthEl = document.getElementById('finalLength');
+        const finalKillsEl = document.getElementById('finalKills');
+        const mobileBoostBtn = document.getElementById('mobileBoostBtn');
+
+        // WORLD & RIGID PHYSICS CONSTANTS
+        const WORLD = { width: 1000, height: 750 };
+        const SNAKE_RADIUS = 7.5;
+        
+        /* 
+           KEY CHANGE 1 & 2: Stiffer skeleton physics parameters
+           - SEGMENT_GAP: Increased distance between segments (prevents overlap/coiling)
+           - TURN_SPEED: Constrained angle turn rate (creates wide wide smooth arcs instead of hairpin bends)
+        */
+        const SEGMENT_GAP = 10.5; // Larger rigid distance between skeleton nodes
+        const MAX_TURN_SPEED = 0.055; // Wide minimum turning radius (stiff turns)
+        const NORMAL_SPEED = 2.5;
+        const BOOST_SPEED = 4.3;
+
+        let selectedSkin = SKINS[0];
+        let snakes = [];
+        let playerSnake = null;
+        let foods = [];
+        let particles = [];
+        let gameState = 'MENU';
+        let animFrameId = null;
+        let previewAnimId = null;
+        let previewOffset = 0;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Snake {
+            constructor(id, name, skin, isAI = true) {
+                this.id = id;
+                this.name = name;
+                this.skin = skin;
+                this.isAI = isAI;
+                this.isDead = false;
+                this.score = 0;
+                this.kills = 0;
+
+                const margin = 120;
+                this.x = margin + Math.random() * (WORLD.width - margin * 2);
+                this.y = margin + Math.random() * (WORLD.height - margin * 2);
+
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = this.angle;
+                this.speed = NORMAL_SPEED;
+                this.isBoosting = false;
+
+                // Rigid Segments Initialization
+                this.segments = [];
+                const initLength = 12;
+                for (let i = 0; i < initLength; i++) {
+                    this.segments.push({
+                        x: this.x - Math.cos(this.angle) * i * SEGMENT_GAP,
+                        y: this.y - Math.sin(this.angle) * i * SEGMENT_GAP,
+                        angle: this.angle
+                    });
+                }
+
+                this.aiTimer = 0;
+            }
+
+            update() {
+                if (this.isDead) return;
+
+                // Boost Handling
+                if (this.isBoosting && this.segments.length > 6) {
+                    this.speed = BOOST_SPEED;
+                    if (Math.random() < 0.25) {
+                        const tail = this.segments[this.segments.length - 1];
+                        foods.push({
+                            x: tail.x + (Math.random() - 0.5) * 6,
+                            y: tail.y + (Math.random() - 0.5) * 6,
+                            val: 1,
+                            radius: 2,
+                            color: this.skin.glowColor
+                        });
+                        this.segments.pop();
+                    }
+                    if (!this.isAI && Math.random() < 0.2) sound.playBoost();
+                } else {
+                    this.speed = NORMAL_SPEED;
+                }
+
+                if (this.isAI) {
+                    this.updateAI();
+                } else {
+                    // STIFF TURNING: Clamp maximum turning speed per frame
+                    let diff = this.targetAngle - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+
+                    // Strictly constrain angular velocity to prevent sharp folds
+                    const maxTurn = MAX_TURN_SPEED;
+                    if (Math.abs(diff) > maxTurn) {
+                        this.angle += Math.sign(diff) * maxTurn;
+                    } else {
+                        this.angle = this.targetAngle;
+                    }
+                }
+
+                // Advance Head
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                // Wall Collision Check (Immediate Death)
+                if (this.x < SNAKE_RADIUS || this.x > WORLD.width - SNAKE_RADIUS ||
+                    this.y < SNAKE_RADIUS || this.y > WORLD.height - SNAKE_RADIUS) {
+                    this.die(this.isAI ? '撞擊邊界' : '撞擊到了地圖極光邊界牆壁！');
+                    return;
+                }
+
+                // Lead Segment Position
+                this.segments[0] = { x: this.x, y: this.y, angle: this.angle };
+
+                // Rigid Linkage Solver (Inverse Kinematics distance constraint)
+                for (let i = 1; i < this.segments.length; i++) {
+                    const prev = this.segments[i - 1];
+                    const curr = this.segments[i];
+                    const dx = prev.x - curr.x;
+                    const dy = prev.y - curr.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    // Maintain strict fixed length constraint between nodes
+                    if (dist !== 0) {
+                        const segAngle = Math.atan2(dy, dx);
+                        curr.x = prev.x - Math.cos(segAngle) * SEGMENT_GAP;
+                        curr.y = prev.y - Math.sin(segAngle) * SEGMENT_GAP;
+                        curr.angle = segAngle;
+                    }
+                }
+            }
+
+            updateAI() {
+                this.aiTimer++;
+
+                // Boundary Avoidance
+                const margin = 80;
+                if (this.x < margin || this.x > WORLD.width - margin ||
+                    this.y < margin || this.y > WORLD.height - margin) {
+                    const centerAngle = Math.atan2(WORLD.height / 2 - this.y, WORLD.width / 2 - this.x);
+                    this.targetAngle = centerAngle;
+                    this.isBoosting = false;
+                } else if (this.aiTimer % 20 === 0) {
+                    let closest = null;
+                    let minDist = 160;
+
+                    for (const f of foods) {
+                        const d = Math.hypot(f.x - this.x, f.y - this.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            closest = f;
+                        }
+                    }
+
+                    if (closest) {
+                        this.targetAngle = Math.atan2(closest.y - this.y, closest.x - this.x);
+                        this.isBoosting = (minDist < 60 && Math.random() < 0.2);
+                    } else {
+                        this.targetAngle += (Math.random() - 0.5) * 0.6;
+                        this.isBoosting = false;
+                    }
+                }
+
+                // Clamped turn for AI as well
+                let diff = this.targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                const maxTurn = MAX_TURN_SPEED * 0.9;
+                if (Math.abs(diff) > maxTurn) {
+                    this.angle += Math.sign(diff) * maxTurn;
+                } else {
+                    this.angle = this.targetAngle;
+                }
+            }
+
+            grow(amount = 2) {
+                const tail = this.segments[this.segments.length - 1];
+                for (let i = 0; i < amount; i++) {
+                    this.segments.push({ x: tail.x, y: tail.y, angle: tail.angle });
+                }
+                this.score += amount * 10;
+            }
+
+            die(reason = '', killer = null) {
+                if (this.isDead) return;
+                this.isDead = true;
+
+                if (killer && killer !== this) {
+                    killer.kills += 1;
+                    killer.score += 150;
+                }
+
+                sound.playExplode();
+
+                // Explode Body into Energy Food Drops
+                for (let i = 0; i < this.segments.length; i += 2) {
+                    foods.push({
+                        x: this.segments[i].x + (Math.random() - 0.5) * 12,
+                        y: this.segments[i].y + (Math.random() - 0.5) * 12,
+                        val: 2,
+                        radius: 3.5 + Math.random() * 2,
+                        color: this.skin.glowColor
+                    });
+                }
+
+                // Particle Effect
+                for (let i = 0; i < 20; i++) {
+                    particles.push({
+                        x: this.x,
+                        y: this.y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        color: this.skin.headColor,
+                        life: 25
+                    });
+                }
+
+                if (!this.isAI) {
+                    triggerGameOver(reason);
+                }
+            }
+        }
+
+        function buildSkinGrid() {
+            skinGrid.innerHTML = '';
+            SKINS.forEach((skin) => {
+                const card = document.createElement('div');
+                card.className = `skin-card rounded-xl p-2 flex flex-col items-center justify-center ${skin.id === selectedSkin.id ? 'selected' : ''}`;
+                card.innerHTML = `
+                    <div class="w-6 h-6 rounded-full border-2 mb-1 shadow-md" style="background: ${skin.headColor}; border-color: ${skin.glowColor}; box-shadow: 0 0 8px ${skin.glowColor}"></div>
+                    <span class="text-[7px] font-bold text-gray-200 text-center truncate w-full">${skin.name.split(' ')[0]}</span>
+                `;
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedSkin = skin;
+                    skinNameEl.textContent = skin.name;
+                    skinDescEl.textContent = skin.desc;
+                });
+                skinGrid.appendChild(card);
+            });
+        }
+
+        function renderPreview() {
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            previewOffset += 0.03;
+            const width = previewCanvas.width;
+            const height = previewCanvas.height;
+            const centerY = height / 2;
+
+            const totalSegs = 14;
+            previewCtx.shadowBlur = 10;
+            previewCtx.shadowColor = selectedSkin.glowColor;
+
+            for (let i = totalSegs - 1; i >= 0; i--) {
+                const x = width * 0.15 + (i * 14);
+                const y = centerY + Math.sin(previewOffset + i * 0.25) * 10;
+                const isHead = (i === 0);
+
+                previewCtx.fillStyle = isHead ? selectedSkin.headColor : selectedSkin.bodyColor;
+                previewCtx.beginPath();
+                previewCtx.arc(x, y, isHead ? 9 : 7.5, 0, Math.PI * 2);
+                previewCtx.fill();
+
+                if (isHead) {
+                    previewCtx.fillStyle = selectedSkin.eyeColor;
+                    previewCtx.beginPath();
+                    previewCtx.arc(x + 3, y - 2, 2.5, 0, Math.PI * 2);
+                    previewCtx.fill();
+                }
+            }
+            previewCtx.shadowBlur = 0;
+
+            previewAnimId = requestAnimationFrame(renderPreview);
+        }
+
+        function spawnInitialFoods() {
+            foods = [];
+            for (let i = 0; i < 90; i++) {
+                foods.push({
+                    x: Math.random() * (WORLD.width - 40) + 20,
+                    y: Math.random() * (WORLD.height - 40) + 20,
+                    val: 1,
+                    radius: 2.5,
+                    color: ['#00ffcc', '#ff0055', '#ffcc00', '#a855f7', '#22c55e'][Math.floor(Math.random() * 5)]
+                });
+            }
+        }
+
+        function initBattle() {
+            snakes = [];
+            particles = [];
+            spawnInitialFoods();
+
+            const pName = playerNameInput.value.trim() || 'NEON_VIPER';
+
+            playerSnake = new Snake('player', pName, selectedSkin, false);
+            snakes.push(playerSnake);
+
+            for (let i = 0; i < 5; i++) {
+                const aiName = AI_NAMES[i % AI_NAMES.length];
+                const aiSkin = SKINS[(i + 1) % SKINS.length];
+                snakes.push(new Snake(`ai_${i}`, aiName, aiSkin, true));
+            }
+
+            gameState = 'RUNNING';
+            characterSelectOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            gameStatsHUD.classList.remove('hidden');
+            leaderboardOverlay.classList.remove('hidden');
+
+            if (window.innerWidth < 640) {
+                mobileBoostBtn.classList.remove('hidden');
+            }
+
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            gameLoop();
+        }
+
+        function handleCollisions() {
+            // Food Consumption
+            for (const s of snakes) {
+                if (s.isDead) continue;
+
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const f = foods[i];
+                    if (Math.hypot(s.x - f.x, s.y - f.y) < SNAKE_RADIUS + f.radius + 3) {
+                        s.grow(f.val);
+                        if (!s.isAI) sound.playEat();
+                        foods.splice(i, 1);
+                    }
+                }
+            }
+
+            while (foods.length < 75) {
+                foods.push({
+                    x: Math.random() * (WORLD.width - 40) + 20,
+                    y: Math.random() * (WORLD.height - 40) + 20,
+                    val: 1,
+                    radius: 2.5,
+                    color: ['#00ffcc', '#ff0055', '#ffcc00', '#a855f7', '#22c55e'][Math.floor(Math.random() * 5)]
+                });
+            }
+
+            /* 
+               KEY CHANGE 3: Collision Safe Offset
+               With stiff skeleton (SEGMENT_GAP = 10.5) and constrained turning radius,
+               head cannot loop back into its own neck (segments 0~7 are impossible to reach).
+            */
+            for (const snakeA of snakes) {
+                if (snakeA.isDead) continue;
+
+                for (const snakeB of snakes) {
+                    if (snakeB.isDead) continue;
+
+                    // Safe index buffer: self collision requires passing at least 8 segments
+                    const startIndex = (snakeA.id === snakeB.id) ? 8 : 0;
+
+                    for (let i = startIndex; i < snakeB.segments.length; i++) {
+                        const seg = snakeB.segments[i];
+                        const dist = Math.hypot(snakeA.x - seg.x, snakeA.y - seg.y);
+
+                        if (dist < SNAKE_RADIUS * 1.4) {
+                            let reason = '';
+                            if (snakeA.id === snakeB.id) {
+                                reason = '不小心撞到了自己的尾巴！';
+                            } else {
+                                reason = `頭部撞到了 [${snakeB.name}] 的身體！`;
+                            }
+                            snakeA.die(reason, snakeB);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Respawn AI
+            for (let i = 0; i < snakes.length; i++) {
+                if (snakes[i].isAI && snakes[i].isDead) {
+                    const newName = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
+                    const newSkin = SKINS[Math.floor(Math.random() * SKINS.length)];
+                    snakes[i] = new Snake(`ai_${Date.now()}`, newName, newSkin, true);
+                }
+            }
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            deathReasonText.textContent = reason;
+            finalScoreEl.textContent = playerSnake ? playerSnake.score : 0;
+            finalLengthEl.textContent = playerSnake ? playerSnake.segments.length : 0;
+            finalKillsEl.textContent = playerSnake ? playerSnake.kills : 0;
+
+            mobileBoostBtn.classList.add('hidden');
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        function renderGame() {
+            const scaleX = canvas.width / WORLD.width;
+            const scaleY = canvas.height / WORLD.height;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Deep Space Arcade Background
+            const bgGrad = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 80,
+                canvas.width / 2, canvas.height / 2, canvas.width
+            );
+            bgGrad.addColorStop(0, '#0a0e1c');
+            bgGrad.addColorStop(1, '#020307');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Boundary Warning Frame
+            ctx.strokeStyle = 'rgba(255, 0, 85, 0.5)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+
+            // Render Foods
+            for (const f of foods) {
+                const fx = f.x * scaleX;
+                const fy = f.y * scaleY;
+
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = f.color;
+                ctx.fillStyle = f.color;
+                ctx.beginPath();
+                ctx.arc(fx, fy, f.radius * scaleX, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Render Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = p.color;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x * scaleX, p.y * scaleY, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Render Snakes
+            for (const s of snakes) {
+                if (s.isDead) continue;
+
+                ctx.shadowBlur = s.isBoosting ? 16 : 10;
+                ctx.shadowColor = s.skin.glowColor;
+
+                for (let i = s.segments.length - 1; i >= 0; i--) {
+                    const seg = s.segments[i];
+                    const sx = seg.x * scaleX;
+                    const sy = seg.y * scaleY;
+                    const isHead = (i === 0);
+                    const radius = (isHead ? SNAKE_RADIUS * 1.25 : SNAKE_RADIUS) * scaleX;
+
+                    ctx.fillStyle = isHead ? s.skin.headColor : s.skin.bodyColor;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Head Eyes & Name Badge
+                const hx = s.x * scaleX;
+                const hy = s.y * scaleY;
+
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = s.skin.eyeColor;
+                ctx.beginPath();
+                ctx.arc(hx + Math.cos(s.angle - 0.4) * 4, hy + Math.sin(s.angle - 0.4) * 4, 2, 0, Math.PI * 2);
+                ctx.arc(hx + Math.cos(s.angle + 0.4) * 4, hy + Math.sin(s.angle + 0.4) * 4, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = s.id === 'player' ? '#00ffcc' : '#ffffff';
+                ctx.font = `${8 * scaleX}px 'Press Start 2P', monospace`;
+                ctx.textAlign = 'center';
+                ctx.fillText(s.name, hx, hy - 12 * scaleY);
+            }
+
+            ctx.shadowBlur = 0;
+
+            // HUD & Leaderboard Updates
+            if (playerSnake) {
+                playerScoreEl.textContent = playerSnake.score;
+                playerLengthEl.textContent = playerSnake.segments.length;
+                playerKillsEl.textContent = playerSnake.kills;
+            }
+
+            const sorted = [...snakes].sort((a, b) => b.score - a.score);
+            leaderboardList.innerHTML = '';
+            sorted.slice(0, 5).forEach((s, idx) => {
+                const item = document.createElement('div');
+                item.className = `flex justify-between items-center ${s.id === 'player' ? 'text-green-400 font-bold' : 'text-gray-300'}`;
+                item.innerHTML = `
+                    <span class="truncate max-w-[100px]">${idx + 1}. ${s.name}</span>
+                    <span class="ml-1">${s.score}</span>
+                `;
+                leaderboardList.appendChild(item);
+            });
+        }
+
+        function gameLoop() {
+            if (gameState === 'RUNNING') {
+                for (const s of snakes) s.update();
+                handleCollisions();
+            }
+            renderGame();
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function steerPlayer(dx, dy) {
+            if (!playerSnake || playerSnake.isDead || gameState !== 'RUNNING') return;
+            playerSnake.targetAngle = Math.atan2(dy, dx);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'RUNNING' || !playerSnake) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (WORLD.width / canvas.width);
+            const mouseY = (e.clientY - rect.top) * (WORLD.height / canvas.height);
+            playerSnake.targetAngle = Math.atan2(mouseY - playerSnake.y, mouseX - playerSnake.x);
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (playerSnake) playerSnake.isBoosting = true;
+        });
+        canvas.addEventListener('mouseup', () => {
+            if (playerSnake) playerSnake.isBoosting = false;
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W': steerPlayer(0, -1); break;
+                case 'ArrowDown': case 's': case 'S': steerPlayer(0, 1); break;
+                case 'ArrowLeft': case 'a': case 'A': steerPlayer(-1, 0); break;
+                case 'ArrowRight': case 'd': case 'D': steerPlayer(1, 0); break;
+                case ' ':
+                    if (playerSnake) playerSnake.isBoosting = true;
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === ' ' && playerSnake) {
+                playerSnake.isBoosting = false;
+            }
+        });
+
+        mobileBoostBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (playerSnake) playerSnake.isBoosting = true;
+        });
+        mobileBoostBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (playerSnake) playerSnake.isBoosting = false;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameState !== 'RUNNING' || !playerSnake) return;
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const touchX = (touch.clientX - rect.left) * (WORLD.width / canvas.width);
+            const touchY = (touch.clientY - rect.top) * (WORLD.height / canvas.height);
+            playerSnake.targetAngle = Math.atan2(touchY - playerSnake.y, touchX - playerSnake.x);
+        }, { passive: true });
+
+        document.getElementById('startBattleBtn').addEventListener('click', () => {
+            if (previewAnimId) cancelAnimationFrame(previewAnimId);
+            initBattle();
+        });
+
+        document.getElementById('quickRespawnBtn').addEventListener('click', initBattle);
+
+        document.getElementById('reSkinBtn').addEventListener('click', () => {
+            gameState = 'MENU';
+            gameOverOverlay.classList.add('hidden');
+            characterSelectOverlay.classList.remove('hidden');
+            gameStatsHUD.classList.add('hidden');
+            leaderboardOverlay.classList.add('hidden');
+            renderPreview();
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            document.getElementById('soundIcon').className = sound.muted
+                ? 'fa-solid fa-volume-xmark text-red-400'
+                : 'fa-solid fa-volume-high text-yellow-400';
+        });
+
+        buildSkinGrid();
+        renderPreview();
+    </script>
+</body>
+</html>

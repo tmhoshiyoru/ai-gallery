@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烏龜翻牌記憶遊戲 Turtle Memory Game</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for Celebration Effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #0f3731 0%, #064e3b 50%, #047857 100%);
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            overflow: hidden; /* Prevent scrolling completely */
+            user-select: none;
+        }
+
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-front {
+            background: linear-gradient(145deg, #14b8a6, #0d9488);
+            border: 2px solid #99f6e4;
+        }
+
+        .card-back {
+            background: #ffffff;
+            border: 2px solid #34d399;
+            transform: rotateY(180deg);
+        }
+
+        .card-inner.matched .card-back {
+            border-color: #f59e0b;
+            background: #fef3c7;
+            animation: pulse-match 0.4s ease-in-out;
+        }
+
+        @keyframes pulse-match {
+            0% { transform: rotateY(180deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.05); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .turn-active {
+            box-shadow: 0 0 10px #f59e0b;
+            border-color: #fbbf24 !important;
+        }
+
+        /* Container for flexible fit without scrolling */
+        .board-container {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            max-height: calc(100vh - 150px);
+            justify-content: center;
+            align-content: center;
+            gap: 0.5rem;
+        }
+
+        @media (min-height: 700px) {
+            .board-container {
+                gap: 0.625rem;
+            }
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="text-white flex flex-col justify-between p-1.5 sm:p-3 h-screen overflow-hidden">
+
+    <!-- Header & Dashboard Combined -->
+    <header class="max-w-6xl mx-auto w-full flex-shrink-0 mb-1">
+        <!-- Compact Title Bar -->
+        <div class="flex items-center justify-between gap-2 mb-1">
+            <h1 class="text-base sm:text-2xl font-extrabold tracking-wide drop-shadow flex items-center gap-1.5 text-emerald-200 truncate">
+                <span>🐢</span> 烏龜翻牌記憶對決
+            </h1>
+            
+            <!-- Quick Reset Button -->
+            <button onclick="resetGame()" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-lg transition transform active:scale-95 shadow flex items-center gap-1 text-xs sm:text-sm">
+                <i class="fa-solid fa-rotate-right"></i> 重來
+            </button>
+        </div>
+
+        <!-- Dashboard Panel -->
+        <div class="glass-panel rounded-xl p-2 space-y-1.5 shadow-lg">
+            <!-- Mode & Difficulty Selection Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                
+                <!-- Game Mode -->
+                <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-emerald-200 font-medium hidden sm:inline">模式:</span>
+                    <button onclick="setGameMode('single')" id="mode-single" class="px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow">單人</button>
+                    <button onclick="setGameMode('ai')" id="mode-ai" class="px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition">🤖 電腦</button>
+                    <button onclick="setGameMode('pvp')" id="mode-pvp" class="px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition">👥 雙人</button>
+                </div>
+
+                <!-- AI Difficulty (Visible only in AI mode) -->
+                <div id="ai-difficulty-container" class="hidden items-center gap-1 flex-wrap bg-emerald-950/40 px-1.5 py-0.5 rounded-lg border border-emerald-600/30">
+                    <span class="text-amber-200 font-medium">智力:</span>
+                    <button onclick="setAIDifficulty('easy')" id="ai-diff-easy" class="px-1.5 py-0.5 rounded font-bold bg-emerald-800 transition">簡單</button>
+                    <button onclick="setAIDifficulty('medium')" id="ai-diff-medium" class="px-1.5 py-0.5 rounded font-bold bg-amber-500 text-slate-900 shadow">中等</button>
+                    <button onclick="setAIDifficulty('hard')" id="ai-diff-hard" class="px-1.5 py-0.5 rounded font-bold bg-emerald-800 transition">大師</button>
+                </div>
+
+                <!-- Cards Count / Difficulty Selection -->
+                <div class="flex items-center gap-1 flex-wrap">
+                    <span class="text-emerald-200 font-medium hidden sm:inline">牌數:</span>
+                    <button onclick="setDifficulty('easy')" id="btn-easy" class="px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition">12張</button>
+                    <button onclick="setDifficulty('medium')" id="btn-medium" class="px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow">20張</button>
+                    <button onclick="setDifficulty('hard')" id="btn-hard" class="px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition">28張</button>
+                    <button onclick="setDifficulty('expert')" id="btn-expert" class="px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition">36張</button>
+                </div>
+            </div>
+
+            <!-- Single Player Dashboard -->
+            <div id="dashboard-single" class="flex items-center justify-around bg-emerald-950/50 py-1 px-2 rounded-lg text-center text-xs">
+                <div class="flex items-center gap-1">
+                    <span class="text-emerald-300">步數:</span>
+                    <span id="moves-count" class="font-bold text-amber-300 text-sm">0</span>
+                </div>
+                <div class="w-px h-3 bg-emerald-700"></div>
+                <div class="flex items-center gap-1">
+                    <span class="text-emerald-300">時間:</span>
+                    <span id="timer" class="font-bold text-emerald-200 text-sm">00:00</span>
+                </div>
+                <div class="w-px h-3 bg-emerald-700"></div>
+                <div class="flex items-center gap-1">
+                    <span class="text-emerald-300">完成:</span>
+                    <span id="single-matches" class="font-bold text-teal-300 text-sm">0 / 0</span>
+                </div>
+            </div>
+
+            <!-- Versus (AI/PvP) Scoreboard Dashboard -->
+            <div id="dashboard-versus" class="hidden grid-cols-2 gap-2 text-center text-xs">
+                <div id="player1-card" class="py-1 px-2 rounded-lg bg-emerald-950/60 border border-transparent transition-all flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span>🧑‍🌾</span>
+                        <span id="p1-label" class="text-emerald-200 font-bold">玩家 1</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span id="p1-score" class="font-black text-amber-300 text-sm">0 對</span>
+                        <span id="p1-turn-badge" class="text-[9px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded hidden">回合</span>
+                    </div>
+                </div>
+
+                <div id="player2-card" class="py-1 px-2 rounded-lg bg-emerald-950/60 border border-transparent transition-all flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span id="p2-icon">🤖</span>
+                        <span id="p2-label" class="text-emerald-200 font-bold">電腦 AI</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span id="p2-score" class="font-black text-teal-300 text-sm">0 對</span>
+                        <span id="p2-turn-badge" class="text-[9px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded hidden">
+                            <span id="ai-thinking-dots" class="hidden animate-pulse">💭</span> 回合
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Card Grid Container (Fills remaining height without scrolling) -->
+    <main class="max-w-6xl mx-auto w-full flex-grow flex items-center justify-center min-h-0 py-1">
+        <div id="game-board" class="board-container">
+            <!-- Dynamic cards inserted here -->
+        </div>
+    </main>
+
+    <!-- Victory / Result Modal -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300 opacity-0">
+        <div class="bg-gradient-to-b from-emerald-800 to-teal-900 border-2 border-emerald-400/50 rounded-2xl p-5 max-w-sm w-full text-center shadow-2xl transform scale-90 transition-transform duration-300" id="modal-content">
+            <div id="modal-emoji" class="text-5xl mb-1 animate-bounce">🐢🎉</div>
+            <h2 id="modal-title" class="text-xl sm:text-2xl font-extrabold text-amber-300 mb-1">挑戰成功！</h2>
+            <p id="modal-subtitle" class="text-emerald-100 mb-3 text-xs">精彩的記憶對決！</p>
+            
+            <div class="bg-emerald-950/60 rounded-xl p-3 mb-4 space-y-1.5 text-left text-xs border border-emerald-700/50" id="modal-stats">
+                <!-- Stats injected dynamically -->
+            </div>
+
+            <button onclick="closeModalAndRestart()" class="w-full py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-extrabold text-sm rounded-xl shadow-lg transition transform active:scale-95">
+                再玩一局 🚀
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const TURTLE_TYPES = [
+            {
+                id: 'sea-turtle',
+                name: '海洋綠龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><path d="M 25 35 Q 15 20 5 30 Q 15 45 30 40" fill="#10b981"/><path d="M 75 35 Q 85 20 95 30 Q 85 45 70 40" fill="#10b981"/><ellipse cx="50" cy="20" rx="10" ry="12" fill="#34d399"/><circle cx="46" cy="16" r="2" fill="#000"/><circle cx="54" cy="16" r="2" fill="#000"/><ellipse cx="50" cy="52" rx="28" ry="24" fill="#059669"/><ellipse cx="50" cy="52" rx="22" ry="18" fill="#34d399"/><path d="M 50 34 L 50 70 M 30 52 L 70 52 M 36 40 L 64 64 M 36 64 L 64 40" stroke="#047857" stroke-width="2"/></svg>`
+            },
+            {
+                id: 'land-tortoise',
+                name: '高背陸龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><rect x="25" y="65" width="12" height="18" rx="5" fill="#d97706"/><rect x="63" y="65" width="12" height="18" rx="5" fill="#d97706"/><path d="M 15 55 C 15 40 25 20 50 20 C 75 20 85 40 85 55 Z" fill="#b45309"/><path d="M 22 52 C 22 32 35 25 50 25 C 65 25 78 32 78 52 Z" fill="#f59e0b"/><polygon points="50,28 38,40 42,55 58,55 62,40" fill="#78350f"/><circle cx="80" cy="48" r="9" fill="#f59e0b"/><circle cx="83" cy="46" r="2" fill="#000"/></svg>`
+            },
+            {
+                id: 'ninja-turtle',
+                name: '蒙面忍者龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="50" r="32" fill="#15803d"/><circle cx="50" cy="42" r="22" fill="#22c55e"/><path d="M 26 38 C 35 34 65 34 74 38 L 76 46 C 65 42 35 42 24 46 Z" fill="#ef4444"/><ellipse cx="40" cy="40" rx="3" ry="3" fill="#fff"/><circle cx="40" cy="40" r="1.5" fill="#000"/><ellipse cx="60" cy="40" rx="3" ry="3" fill="#fff"/><circle cx="60" cy="40" r="1.5" fill="#000"/><path d="M 42 55 Q 50 60 58 52" stroke="#052e16" stroke-width="2.5" fill="none"/></svg>`
+            },
+            {
+                id: 'cyber-turtle',
+                name: '賽博朋克龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><rect x="20" y="20" width="60" height="60" rx="15" fill="#0f172a" stroke="#06b6d4" stroke-width="3"/><polygon points="30,30 70,30 80,50 70,70 30,70 20,50" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/><circle cx="50" cy="50" r="10" fill="#06b6d4"/><rect x="35" y="8" width="30" height="14" rx="4" fill="#334155" stroke="#38bdf8"/><rect x="40" y="11" width="20" height="7" fill="#f43f5e"/></svg>`
+            },
+            {
+                id: 'golden-turtle',
+                name: '黃金帝王龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="50" r="30" fill="#eab308" stroke="#854d0e" stroke-width="3"/><path d="M 40 18 L 43 26 L 50 20 L 57 26 L 60 18 L 63 30 L 37 30 Z" fill="#facc15" stroke="#854d0e"/><circle cx="50" cy="34" r="10" fill="#fde047"/><circle cx="46" cy="32" r="1.5" fill="#000"/><circle cx="54" cy="32" r="1.5" fill="#000"/><polygon points="50,45 56,53 50,61 44,53" fill="#ef4444"/></svg>`
+            },
+            {
+                id: 'rainbow-turtle',
+                name: '夢幻彩虹龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><ellipse cx="50" cy="55" rx="30" ry="25" fill="#e0e7ff"/><path d="M 25 55 A 25 20 0 0 1 75 55" fill="none" stroke="#ef4444" stroke-width="4"/><path d="M 28 55 A 22 17 0 0 1 72 55" fill="none" stroke="#f97316" stroke-width="4"/><path d="M 31 55 A 19 14 0 0 1 69 55" fill="none" stroke="#eab308" stroke-width="4"/><path d="M 34 55 A 16 11 0 0 1 66 55" fill="none" stroke="#22c55e" stroke-width="4"/><circle cx="50" cy="26" r="12" fill="#c084fc"/><circle cx="45" cy="24" r="1.5" fill="#000"/><circle cx="55" cy="24" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'steampunk-turtle',
+                name: '齒輪蒸汽龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="50" r="28" fill="#b45309" stroke="#78350f" stroke-width="3"/><circle cx="42" cy="45" r="12" fill="none" stroke="#f59e0b" stroke-width="4" stroke-dasharray="6 3"/><circle cx="60" cy="58" r="8" fill="none" stroke="#d97706" stroke-width="3" stroke-dasharray="4 2"/><circle cx="50" cy="18" r="9" fill="#d97706"/><circle cx="53" cy="17" r="4" fill="none" stroke="#fef08a" stroke-width="1.5"/></svg>`
+            },
+            {
+                id: 'punk-turtle',
+                name: '搖滾龐克龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="55" r="28" fill="#334155" stroke="#0f172a" stroke-width="2"/><polygon points="50,20 45,30 55,30" fill="#e11d48"/><polygon points="30,35 28,47 38,43" fill="#e11d48"/><polygon points="70,35 72,47 62,43" fill="#e11d48"/><circle cx="50" cy="28" r="10" fill="#475569"/><polygon points="41,26 49,26 47,31 42,31" fill="#000"/><polygon points="51,26 59,26 58,31 53,31" fill="#000"/></svg>`
+            },
+            {
+                id: 'star-turtle',
+                name: '印度星龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="50" r="30" fill="#1e293b" stroke="#f59e0b" stroke-width="3"/><path d="M 50 25 L 53 45 L 75 50 L 53 55 L 50 75 L 47 55 L 25 50 L 47 45 Z" fill="#fbbf24"/><circle cx="50" cy="20" r="9" fill="#d97706"/><circle cx="47" cy="18" r="1.5" fill="#000"/><circle cx="53" cy="18" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'ghost-turtle',
+                name: '鬼鬼幽靈龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><path d="M 25 60 C 25 30 35 20 50 20 C 65 20 75 30 75 60 C 70 55 65 65 60 60 C 55 55 50 65 45 60 C 40 55 35 65 30 60 Z" fill="#f1f5f9" opacity="0.9"/><circle cx="42" cy="40" r="4" fill="#0f172a"/><circle cx="58" cy="40" r="4" fill="#0f172a"/><ellipse cx="50" cy="50" rx="5" ry="7" fill="#0f172a"/><circle cx="50" cy="18" r="8" fill="#cbd5e1"/></svg>`
+            },
+            {
+                id: 'space-turtle',
+                name: '宇航太空龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="52" r="28" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/><circle cx="50" cy="25" r="16" fill="#93c5fd" opacity="0.7" stroke="#38bdf8" stroke-width="2"/><circle cx="50" cy="25" r="10" fill="#1e3a8a"/><circle cx="47" cy="23" r="2" fill="#fff"/><rect x="42" y="78" width="16" height="8" rx="3" fill="#ef4444"/></svg>`
+            },
+            {
+                id: 'pizza-turtle',
+                name: '美味披薩龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><path d="M 50 20 L 80 70 C 60 78 40 78 20 70 Z" fill="#f59e0b" stroke="#b45309" stroke-width="3"/><circle cx="45" cy="45" r="4" fill="#dc2626"/><circle cx="58" cy="55" r="5" fill="#dc2626"/><circle cx="38" cy="62" r="4" fill="#dc2626"/><circle cx="50" cy="15" r="8" fill="#10b981"/><circle cx="47" cy="13" r="1.5" fill="#000"/><circle cx="53" cy="13" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'twohead-turtle',
+                name: '奇特雙頭龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><ellipse cx="50" cy="58" rx="26" ry="22" fill="#16a34a"/><circle cx="36" cy="30" r="9" fill="#4ade80"/><circle cx="64" cy="30" r="9" fill="#4ade80"/><circle cx="33" cy="28" r="1.5" fill="#000"/><circle cx="39" cy="28" r="1.5" fill="#000"/><circle cx="61" cy="28" r="1.5" fill="#000"/><circle cx="67" cy="28" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'samurai-turtle',
+                name: '裝甲武士龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="55" r="28" fill="#991b1b" stroke="#450a0a" stroke-width="3"/><path d="M 30 25 L 70 25 L 80 35 L 20 35 Z" fill="#dc2626"/><path d="M 40 12 L 50 25 L 60 12 Z" fill="#facc15"/><circle cx="50" cy="38" r="9" fill="#78350f"/><rect x="42" y="36" width="16" height="4" fill="#000"/></svg>`
+            },
+            {
+                id: 'crystal-turtle',
+                name: '水晶寶石龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><polygon points="50,20 75,35 75,65 50,80 25,65 25,35" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/><polygon points="50,20 62,40 50,60 38,40" fill="#a5f3fc"/><circle cx="50" cy="15" r="8" fill="#22d3ee"/><circle cx="47" cy="13" r="1.5" fill="#000"/><circle cx="53" cy="13" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'unicorn-turtle',
+                name: '獨角獸幻龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="55" r="28" fill="#f472b6" stroke="#db2777" stroke-width="2"/><polygon points="50,5 46,22 54,22" fill="#facc15"/><circle cx="50" cy="28" r="11" fill="#fbcfe8"/><circle cx="46" cy="26" r="1.5" fill="#000"/><circle cx="54" cy="26" r="1.5" fill="#000"/></svg>`
+            },
+            {
+                id: 'cactus-turtle',
+                name: '沙漠仙人掌龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><ellipse cx="50" cy="52" rx="28" ry="24" fill="#15803d"/><path d="M 50 28 L 50 76 M 35 32 L 35 72 M 65 32 L 65 72" stroke="#166534" stroke-width="2"/><circle cx="50" cy="20" r="8" fill="#22c55e"/><circle cx="50" cy="12" r="4" fill="#f43f5e"/></svg>`
+            },
+            {
+                id: 'lava-turtle',
+                name: '地獄熔岩龜',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full p-1"><circle cx="50" cy="50" r="30" fill="#18181b" stroke="#ea580c" stroke-width="3"/><path d="M 30 40 L 50 30 L 70 40 L 60 65 L 40 65 Z" fill="none" stroke="#f97316" stroke-width="4"/><circle cx="50" cy="20" r="9" fill="#f97316"/><circle cx="46" cy="18" r="2" fill="#fef08a"/><circle cx="54" cy="18" r="2" fill="#fef08a"/></svg>`
+            }
+        ];
+
+        let gameMode = 'single'; // 'single', 'ai', 'pvp'
+        let difficulty = 'medium'; // 'easy' (12), 'medium' (20), 'hard' (28), 'expert' (36)
+        let aiDifficulty = 'medium'; // 'easy', 'medium', 'hard'
+        
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairs = 0;
+        let moves = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let isBoardLocked = false;
+
+        // Versus Mode State
+        let currentPlayer = 1; // 1 or 2
+        let p1Score = 0;
+        let p2Score = 0;
+        let aiMemory = []; // AI Memory cache [{index, id}]
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'flip') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(500, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'match') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.08);
+                    osc.frequency.setValueAtTime(659.25, now + 0.16);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'unmatch') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(160, now + 0.15);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'win') {
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        g.gain.setValueAtTime(0.15, now + idx * 0.1);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.25);
+                        o.start(now + idx * 0.1);
+                        o.stop(now + idx * 0.1 + 0.25);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function setGameMode(mode) {
+            gameMode = mode;
+            document.getElementById('mode-single').className = mode === 'single' ? "px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow" : "px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition";
+            document.getElementById('mode-ai').className = mode === 'ai' ? "px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow" : "px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition";
+            document.getElementById('mode-pvp').className = mode === 'pvp' ? "px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow" : "px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition";
+
+            const aiDiffContainer = document.getElementById('ai-difficulty-container');
+
+            if (mode === 'single') {
+                document.getElementById('dashboard-single').classList.remove('hidden');
+                document.getElementById('dashboard-single').classList.add('flex');
+                document.getElementById('dashboard-versus').classList.add('hidden');
+                document.getElementById('dashboard-versus').classList.remove('grid');
+                aiDiffContainer.classList.add('hidden');
+                aiDiffContainer.classList.remove('flex');
+            } else {
+                document.getElementById('dashboard-single').classList.add('hidden');
+                document.getElementById('dashboard-single').classList.remove('flex');
+                document.getElementById('dashboard-versus').classList.remove('hidden');
+                document.getElementById('dashboard-versus').classList.add('grid');
+
+                if (mode === 'ai') {
+                    aiDiffContainer.classList.remove('hidden');
+                    aiDiffContainer.classList.add('flex');
+                } else {
+                    aiDiffContainer.classList.add('hidden');
+                    aiDiffContainer.classList.remove('flex');
+                }
+
+                document.getElementById('p1-label').textContent = mode === 'ai' ? '玩家' : '玩家 1';
+                document.getElementById('p2-label').textContent = mode === 'ai' ? `電腦 (${getAIDifficultyLabel()})` : '玩家 2';
+                document.getElementById('p2-icon').textContent = mode === 'ai' ? '🤖' : '👨‍🌾';
+            }
+
+            resetGame();
+        }
+
+        function setAIDifficulty(level) {
+            aiDifficulty = level;
+            const buttons = ['easy', 'medium', 'hard'];
+            buttons.forEach(b => {
+                const btn = document.getElementById(`ai-diff-${b}`);
+                if (b === level) {
+                    btn.className = "px-1.5 py-0.5 rounded font-bold bg-amber-500 text-slate-900 shadow";
+                } else {
+                    btn.className = "px-1.5 py-0.5 rounded font-bold bg-emerald-800 transition";
+                }
+            });
+
+            if (gameMode === 'ai') {
+                document.getElementById('p2-label').textContent = `電腦 (${getAIDifficultyLabel()})`;
+            }
+            resetGame();
+        }
+
+        function setDifficulty(level) {
+            difficulty = level;
+            const buttons = ['easy', 'medium', 'hard', 'expert'];
+            buttons.forEach(b => {
+                const btn = document.getElementById(`btn-${b}`);
+                if (b === level) {
+                    btn.className = "px-2 py-0.5 rounded-lg font-bold bg-amber-500 text-slate-900 shadow";
+                } else {
+                    btn.className = "px-2 py-0.5 rounded-lg font-bold bg-emerald-800 hover:bg-emerald-700 transition";
+                }
+            });
+            resetGame();
+        }
+
+        function resetGame() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            secondsElapsed = 0;
+            moves = 0;
+            matchedPairs = 0;
+            flippedCards = [];
+            isBoardLocked = false;
+            currentPlayer = 1;
+            p1Score = 0;
+            p2Score = 0;
+            aiMemory = [];
+
+            document.getElementById('moves-count').textContent = '0';
+            document.getElementById('timer').textContent = '00:00';
+            document.getElementById('p1-score').textContent = '0 對';
+            document.getElementById('p2-score').textContent = '0 對';
+            updateTurnBadges();
+
+            let cardCount = 20; // default medium
+            let cols = 5;
+            let rows = 4;
+
+            if (difficulty === 'easy') {
+                cardCount = 12;
+                cols = window.innerWidth < 640 ? 3 : 4;
+                rows = cardCount / cols;
+            } else if (difficulty === 'medium') {
+                cardCount = 20;
+                cols = window.innerWidth < 640 ? 4 : 5;
+                rows = cardCount / cols;
+            } else if (difficulty === 'hard') {
+                cardCount = 28;
+                cols = window.innerWidth < 640 ? 4 : 7;
+                rows = cardCount / cols;
+            } else if (difficulty === 'expert') {
+                cardCount = 36;
+                cols = window.innerWidth < 640 ? 6 : 6;
+                rows = cardCount / cols;
+            }
+
+            totalPairs = cardCount / 2;
+            document.getElementById('single-matches').textContent = `0 / ${totalPairs}`;
+
+            const board = document.getElementById('game-board');
+            board.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+            
+            // Calculate height aspect ratio dynamically to keep grid centered inside screen
+            const availableHeight = window.innerHeight - 150;
+            const maxCardHeight = Math.floor((availableHeight - (rows * 12)) / rows);
+            const maxCardWidth = Math.floor((Math.min(window.innerWidth - 24, 1150) - (cols * 12)) / cols);
+            const cardSize = Math.max(Math.min(maxCardHeight, maxCardWidth, 120), 45);
+
+            const selectedTurtles = TURTLE_TYPES.slice(0, totalPairs);
+            const deck = [...selectedTurtles, ...selectedTurtles];
+            shuffleArray(deck);
+
+            board.innerHTML = '';
+            cards = deck.map((turtle, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'perspective-1000 flex items-center justify-center';
+                cardEl.style.width = `${cardSize}px`;
+                cardEl.style.height = `${cardSize}px`;
+
+                cardEl.innerHTML = `
+                    <div class="card-inner" data-index="${index}" data-id="${turtle.id}">
+                        <div class="card-face card-front text-white text-2xl sm:text-3xl font-bold">
+                            <span class="opacity-70">🐢</span>
+                        </div>
+                        <div class="card-face card-back flex flex-col items-center justify-between p-1 text-center">
+                            <div class="w-full flex-1 flex items-center justify-center overflow-hidden">${turtle.svg}</div>
+                            <span class="text-[10px] sm:text-[12px] font-extrabold text-emerald-950 truncate max-w-full leading-tight px-0.5 mt-0.5">${turtle.name}</span>
+                        </div>
+                    </div>
+                `;
+
+                const cardInner = cardEl.querySelector('.card-inner');
+                cardInner.addEventListener('click', () => handleCardClick(cardInner));
+
+                board.appendChild(cardEl);
+                return cardInner;
+            });
+        }
+
+        window.onresize = function() {
+            resetGame();
+        };
+
+        function updateTurnBadges() {
+            const p1Card = document.getElementById('player1-card');
+            const p2Card = document.getElementById('player2-card');
+            const p1Badge = document.getElementById('p1-turn-badge');
+            const p2Badge = document.getElementById('p2-turn-badge');
+
+            if (gameMode === 'single') return;
+
+            if (currentPlayer === 1) {
+                p1Card.classList.add('turn-active');
+                p2Card.classList.remove('turn-active');
+                p1Badge.classList.remove('hidden');
+                p2Badge.classList.add('hidden');
+            } else {
+                p2Card.classList.add('turn-active');
+                p1Card.classList.remove('turn-active');
+                p2Badge.classList.remove('hidden');
+                p1Badge.classList.add('hidden');
+            }
+        }
+
+        function getAIDifficultyLabel() {
+            if (aiDifficulty === 'easy') return '簡單';
+            if (aiDifficulty === 'medium') return '中等';
+            return '大師';
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                document.getElementById('timer').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function handleCardClick(cardInner) {
+            initAudio();
+            if (isBoardLocked) return;
+            if (gameMode === 'ai' && currentPlayer === 2) return;
+
+            const index = parseInt(cardInner.getAttribute('data-index'));
+            const cardId = cardInner.getAttribute('data-id');
+
+            if (cardInner.classList.contains('flipped') || cardInner.classList.contains('matched')) return;
+
+            if (gameMode === 'single') startTimer();
+
+            flipCard(cardInner, index, cardId);
+        }
+
+        function flipCard(cardInner, index, cardId) {
+            playSound('flip');
+            cardInner.classList.add('flipped');
+            flippedCards.push({ element: cardInner, index, id: cardId });
+
+            // Store in AI memory
+            rememberCard(index, cardId);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves-count').textContent = moves;
+                checkMatch();
+            }
+        }
+
+        function rememberCard(index, cardId) {
+            // Remove existing entry for same index if present
+            aiMemory = aiMemory.filter(item => item.index !== index);
+            aiMemory.push({ index, id: cardId });
+        }
+
+        function checkMatch() {
+            isBoardLocked = true;
+            const [card1, card2] = flippedCards;
+
+            if (card1.id === card2.id) {
+                // Match success!
+                setTimeout(() => {
+                    playSound('match');
+                    card1.element.classList.add('matched');
+                    card2.element.classList.add('matched');
+
+                    // Remove matched cards from AI memory
+                    aiMemory = aiMemory.filter(item => item.index !== card1.index && item.index !== card2.index);
+
+                    matchedPairs++;
+
+                    if (gameMode === 'single') {
+                        document.getElementById('single-matches').textContent = `${matchedPairs} / ${totalPairs}`;
+                    } else {
+                        if (currentPlayer === 1) {
+                            p1Score++;
+                            document.getElementById('p1-score').textContent = `${p1Score} 對`;
+                        } else {
+                            p2Score++;
+                            document.getElementById('p2-score').textContent = `${p2Score} 對`;
+                        }
+                    }
+
+                    flippedCards = [];
+
+                    if (matchedPairs === totalPairs) {
+                        handleGameOver();
+                    } else {
+                        isBoardLocked = false;
+                        // In versus mode, matching gives another turn!
+                        if (gameMode === 'ai' && currentPlayer === 2) {
+                            setTimeout(makeAIMove, 700);
+                        }
+                    }
+                }, 300);
+            } else {
+                // Match fail
+                setTimeout(() => {
+                    playSound('unmatch');
+                    card1.element.classList.remove('flipped');
+                    card2.element.classList.remove('flipped');
+                    flippedCards = [];
+
+                    if (gameMode !== 'single') {
+                        currentPlayer = currentPlayer === 1 ? 2 : 1;
+                        updateTurnBadges();
+                    }
+
+                    isBoardLocked = false;
+
+                    if (gameMode === 'ai' && currentPlayer === 2) {
+                        setTimeout(makeAIMove, 700);
+                    }
+                }, 900);
+            }
+        }
+
+        function makeAIMove() {
+            if (matchedPairs === totalPairs || currentPlayer !== 2) return;
+
+            isBoardLocked = true;
+            const dots = document.getElementById('ai-thinking-dots');
+            if (dots) dots.classList.remove('hidden');
+
+            setTimeout(() => {
+                if (dots) dots.classList.add('hidden');
+
+                // Gather available un-flipped & un-matched cards
+                const availableIndices = cards
+                    .map((card, idx) => ({ card, idx }))
+                    .filter(item => !item.card.classList.contains('flipped') && !item.card.classList.contains('matched'))
+                    .map(item => item.idx);
+
+                if (availableIndices.length < 2) return;
+
+                let choice1 = null;
+                let choice2 = null;
+
+                // Determine memory accuracy threshold based on AI difficulty
+                let recallChance = 0.35; // Easy
+                if (aiDifficulty === 'medium') recallChance = 0.70;
+                if (aiDifficulty === 'hard') recallChance = 1.00;
+
+                // Filter AI memory based on recall chance
+                const activeMemory = aiMemory.filter(() => Math.random() < recallChance);
+
+                // Look for known pairs in memory
+                const memoryGrouped = {};
+                activeMemory.forEach(item => {
+                    if (availableIndices.includes(item.index)) {
+                        if (!memoryGrouped[item.id]) memoryGrouped[item.id] = [];
+                        memoryGrouped[item.id].push(item.index);
+                    }
+                });
+
+                let knownPairId = Object.keys(memoryGrouped).find(id => memoryGrouped[id].length >= 2);
+
+                if (knownPairId) {
+                    choice1 = memoryGrouped[knownPairId][0];
+                    choice2 = memoryGrouped[knownPairId][1];
+                } else {
+                    // Pick 1st random card
+                    choice1 = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+                    // Check if 1st card matches something in memory
+                    const card1Id = cards[choice1].getAttribute('data-id');
+                    const matchInMemory = activeMemory.find(item => item.id === card1Id && item.index !== choice1 && availableIndices.includes(item.index));
+
+                    if (matchInMemory) {
+                        choice2 = matchInMemory.index;
+                    } else {
+                        // Pick 2nd random card
+                        const remaining = availableIndices.filter(i => i !== choice1);
+                        choice2 = remaining[Math.floor(Math.random() * remaining.length)];
+                    }
+                }
+
+                // Execute AI 1st Flip
+                const card1Inner = cards[choice1];
+                flipCard(card1Inner, choice1, card1Inner.getAttribute('data-id'));
+
+                // Execute AI 2nd Flip after small pause
+                setTimeout(() => {
+                    const card2Inner = cards[choice2];
+                    flipCard(card2Inner, choice2, card2Inner.getAttribute('data-id'));
+                }, 600);
+
+            }, 600);
+        }
+
+        function handleGameOver() {
+            clearInterval(timerInterval);
+            playSound('win');
+
+            // Trigger Confetti effect
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            const modal = document.getElementById('victory-modal');
+            const modalContent = document.getElementById('modal-content');
+            const titleEl = document.getElementById('modal-title');
+            const subtitleEl = document.getElementById('modal-subtitle');
+            const emojiEl = document.getElementById('modal-emoji');
+            const statsEl = document.getElementById('modal-stats');
+
+            if (gameMode === 'single') {
+                emojiEl.textContent = '🐢🎉';
+                titleEl.textContent = '記憶大師！挑戰成功';
+                subtitleEl.textContent = '太厲害了，所有烏龜都順利配對！';
+                statsEl.innerHTML = `
+                    <div class="flex justify-between"><span>⏱️ 所用時間:</span><span class="font-bold text-amber-300">${document.getElementById('timer').textContent}</span></div>
+                    <div class="flex justify-between"><span>👣 翻牌步數:</span><span class="font-bold text-teal-300">${moves} 次</span></div>
+                    <div class="flex justify-between"><span>🧩 總配對數:</span><span class="font-bold text-emerald-300">${totalPairs} 對</span></div>
+                `;
+            } else {
+                if (p1Score > p2Score) {
+                    emojiEl.textContent = '👑🥳';
+                    titleEl.textContent = `${gameMode === 'ai' ? '玩家' : '玩家 1'} 獲得勝利！`;
+                    subtitleEl.textContent = '展現了超強的記憶天賦！';
+                } else if (p2Score > p1Score) {
+                    emojiEl.textContent = gameMode === 'ai' ? '🤖⚡' : '👑🥳';
+                    titleEl.textContent = `${gameMode === 'ai' ? `電腦 (${getAIDifficultyLabel()})` : '玩家 2'} 獲得勝利！`;
+                    subtitleEl.textContent = gameMode === 'ai' ? '電腦成功推算出了所有卡牌位置！' : '精彩的翻牌對決！';
+                } else {
+                    emojiEl.textContent = '🤝🐢';
+                    titleEl.textContent = '平手！勢均力敵';
+                    subtitleEl.textContent = '雙方記憶力不相上下！';
+                }
+
+                statsEl.innerHTML = `
+                    <div class="flex justify-between"><span>🧑‍🌾 ${gameMode === 'ai' ? '玩家' : '玩家 1'}:</span><span class="font-bold text-amber-300">${p1Score} 對</span></div>
+                    <div class="flex justify-between"><span>${gameMode === 'ai' ? '🤖 電腦' : '👨‍🌾 玩家 2'}:</span><span class="font-bold text-teal-300">${p2Score} 對</span></div>
+                    <div class="flex justify-between"><span>👣 總回合數:</span><span class="font-bold text-emerald-300">${moves} 回合</span></div>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-90');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModalAndRestart() {
+            const modal = document.getElementById('victory-modal');
+            const modalContent = document.getElementById('modal-content');
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-90');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                resetGame();
+            }, 300);
+        }
+
+        // Initialize game on load
+        window.onload = function() {
+            resetGame();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

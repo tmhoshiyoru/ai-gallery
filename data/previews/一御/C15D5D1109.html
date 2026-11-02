@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>太空雷霆戰機 - 2D Space Shooter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', 'Orbitron', sans-serif;
+            background-color: #050510;
+            color: #ffffff;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Canvas Container Glow */
+        .canvas-container {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2), 0 0 15px rgba(147, 51, 234, 0.15);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* Touch Control Buttons Visuals */
+        .btn-touch {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.1s ease;
+        }
+
+        .btn-touch:active {
+            background: rgba(59, 130, 246, 0.4);
+            transform: scale(0.95);
+        }
+
+        /* Retro Arcade Text Glow Effect */
+        .glow-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(147, 51, 234, 0.6);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-2 sm:p-4 bg-slate-950">
+
+    <!-- Main Game Container -->
+    <div class="relative flex flex-col items-center w-full max-w-md h-full max-h-[900px]">
+
+        <!-- Top Header Stats Bar -->
+        <div class="w-full flex justify-between items-center bg-slate-900/80 border border-slate-800 rounded-t-xl px-4 py-3 backdrop-blur-md z-10">
+            <!-- Health Bar -->
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-heart text-red-500 text-lg animate-pulse"></i>
+                <div id="hp-container" class="flex space-x-1">
+                    <!-- Hearts rendered via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Level & Target Display -->
+            <div class="text-center">
+                <span id="level-badge" class="text-xs font-bold font-orbitron text-cyan-400 block tracking-wider">STAGE 1</span>
+                <span id="target-text" class="text-[10px] text-slate-400">目標: 150分</span>
+            </div>
+
+            <!-- Score Display -->
+            <div class="text-right">
+                <span class="text-xs text-slate-400 font-bold tracking-wider uppercase block">SCORE</span>
+                <span id="score-text" class="text-2xl font-black font-orbitron text-yellow-400 tracking-wider glow-text">0000</span>
+            </div>
+        </div>
+
+        <!-- Main Game Canvas Wrapper -->
+        <div class="relative w-full flex-1 canvas-container bg-black rounded-b-none sm:rounded-b-none overflow-hidden">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+            <!-- Level Up Banner Notification -->
+            <div id="level-up-banner" class="hidden absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-indigo-600/90 text-white font-orbitron text-center px-6 py-3 rounded-xl border border-indigo-400 shadow-2xl z-30 pointer-events-none transition-all duration-300">
+                <h3 id="level-up-title" class="text-2xl font-black tracking-widest text-yellow-300">STAGE CLEAR!</h3>
+                <p id="level-up-sub" class="text-xs text-slate-100 mt-1">HP 已補滿！準備進入下一關卡</p>
+            </div>
+
+            <!-- Start / Game Over Overlay -->
+            <div id="game-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div id="overlay-content" class="flex flex-col items-center max-w-xs">
+                    <div id="overlay-icon" class="mb-4 text-indigo-500 text-5xl">
+                        <i class="fas fa-shuttle-space transform -rotate-45"></i>
+                    </div>
+                    <h1 id="overlay-title" class="text-3xl font-black font-orbitron tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-500 mb-2">
+                        GALAXY DEFENDER
+                    </h1>
+                    <p id="overlay-subtitle" class="text-slate-300 text-sm mb-6">
+                        擊退敵機，挑戰三個極限關卡！
+                    </p>
+
+                    <!-- Rules Box -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-xs text-slate-400 mb-6 w-full text-left space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span><i class="fas fa-flag text-cyan-400 mr-2"></i>關卡機制</span>
+                            <span class="text-cyan-400 font-semibold">共 3 關 (過關恢復滿血)</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span><i class="fas fa-keyboard text-blue-400 mr-2"></i>左右移動</span>
+                            <span class="text-slate-200 font-semibold">← → / A D</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span><i class="fas fa-space-shuttle text-blue-400 mr-2"></i>發射子彈</span>
+                            <span class="text-slate-200 font-semibold">Space (空白鍵)</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span><i class="fas fa-crosshair text-yellow-400 mr-2"></i>擊落敵機</span>
+                            <span class="text-yellow-400 font-bold">+10 分</span>
+                        </div>
+                    </div>
+
+                    <button id="start-btn" class="w-full py-3.5 px-6 rounded-xl font-bold font-orbitron text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition shadow-lg shadow-indigo-500/30 flex items-center justify-center space-x-2">
+                        <i class="fas fa-play text-sm"></i>
+                        <span>START GAME</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pause Screen Overlay -->
+            <div id="pause-overlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+                <h2 class="text-3xl font-black font-orbitron text-white mb-4 tracking-widest">PAUSED</h2>
+                <p class="text-slate-300 text-sm mb-6">按下 ESC 或點擊下方按鈕繼續</p>
+                <button id="resume-btn" class="py-2.5 px-6 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg">
+                    繼續遊戲
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls for Mobile Devices -->
+        <div class="w-full bg-slate-900 border-t border-slate-800 p-3 flex justify-between items-center sm:hidden rounded-b-xl z-10">
+            <!-- Left & Right Buttons -->
+            <div class="flex space-x-2">
+                <button id="btn-left" class="btn-touch w-14 h-14 rounded-xl flex items-center justify-center text-xl text-white active:bg-blue-600">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="btn-right" class="btn-touch w-14 h-14 rounded-xl flex items-center justify-center text-xl text-white active:bg-blue-600">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Shoot Button -->
+            <button id="btn-shoot" class="btn-touch h-14 px-6 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl flex items-center justify-center text-lg font-bold text-white space-x-2 active:opacity-80">
+                <i class="fas fa-crosshair"></i>
+                <span>FIRE</span>
+            </button>
+        </div>
+
+        <!-- Footer Info Bar -->
+        <div class="w-full text-center py-2 text-[11px] text-slate-500 flex justify-between px-2">
+            <span>[ESC] 暫停遊戲</span>
+            <span>按住 [Space] 可連續射擊</span>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME ENGINE & CONFIGURATION ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Element References
+        const overlay = document.getElementById('game-overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlaySubtitle = document.getElementById('overlay-subtitle');
+        const overlayIcon = document.getElementById('overlay-icon');
+        const startBtn = document.getElementById('start-btn');
+        const scoreText = document.getElementById('score-text');
+        const hpContainer = document.getElementById('hp-container');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const resumeBtn = document.getElementById('resume-btn');
+        const levelBadge = document.getElementById('level-badge');
+        const targetText = document.getElementById('target-text');
+        const levelUpBanner = document.getElementById('level-up-banner');
+
+        // Touch Control Elements
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnShoot = document.getElementById('btn-shoot');
+
+        // Level Configurations (Slower speeds and relaxed spawn intervals)
+        const LEVEL_CONFIGS = {
+            1: { targetScore: 150, baseSpeed: 1.1, speedVariance: 0.6, spawnInterval: 1800, name: "STAGE 1" },
+            2: { targetScore: 300, baseSpeed: 1.8, speedVariance: 0.9, spawnInterval: 1300, name: "STAGE 2" },
+            3: { targetScore: 500, baseSpeed: 2.5, speedVariance: 1.2, spawnInterval: 900,  name: "STAGE 3" }
+        };
+
+        // Game State Variables
+        let isGameRunning = false;
+        let isPaused = false;
+        let score = 0;
+        let health = 5;
+        const MAX_HEALTH = 5;
+        let currentLevel = 1;
+        let animationFrameId = null;
+        let lastSpawnTime = 0;
+        let spawnInterval = 1200;
+
+        // Responsive Canvas Scaling
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- KEYBOARD & TOUCH INPUT MANAGEMENT ---
+        const keys = {
+            left: false,
+            right: false,
+            shoot: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space') {
+                keys.shoot = true;
+                e.preventDefault(); // Prevent page scrolling
+            }
+            if (e.code === 'Escape' && isGameRunning) {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'Space') keys.shoot = false;
+        });
+
+        // Touch Events Setup
+        const addTouchControl = (element, keyName) => {
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+            });
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+            });
+        };
+        addTouchControl(btnLeft, 'left');
+        addTouchControl(btnRight, 'right');
+        addTouchControl(btnShoot, 'shoot');
+
+
+        // --- BACKGROUND STARFIELD PARTICLES ---
+        class Star {
+            constructor() {
+                this.reset();
+                this.y = Math.random() * canvas.height; // Random initial placement
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = 0;
+                this.size = Math.random() * 2 + 0.5;
+                this.speed = Math.random() * 3 + 0.8;
+                this.opacity = Math.random() * 0.7 + 0.3;
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        const stars = Array.from({ length: 60 }, () => new Star());
+
+        // --- PLAYER SHIP ---
+        class Player {
+            constructor() {
+                this.width = 44;
+                this.height = 48;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - this.height - 20;
+                this.speed = 6.5;
+                this.lastShotTime = 0;
+                this.shootDelay = 160; // Fire rate delay in ms
+                this.isInvulnerable = false;
+                this.invulnerableTimer = 0;
+            }
+
+            update(now) {
+                // Movement Logic
+                if (keys.left && this.x > 0) {
+                    this.x -= this.speed;
+                }
+                if (keys.right && this.x < canvas.width - this.width) {
+                    this.x += this.speed;
+                }
+
+                // Automatic Shooting while holding space/btn
+                if (keys.shoot && now - this.lastShotTime > this.shootDelay) {
+                    this.shoot();
+                    this.lastShotTime = now;
+                }
+
+                // Invulnerability blink timer
+                if (this.isInvulnerable) {
+                    this.invulnerableTimer--;
+                    if (this.invulnerableTimer <= 0) {
+                        this.isInvulnerable = false;
+                    }
+                }
+            }
+
+            shoot() {
+                // Dual barrel firing for cool effect
+                bullets.push(new Bullet(this.x + 8, this.y));
+                bullets.push(new Bullet(this.x + this.width - 8, this.y));
+
+                // Muzzle Flash Particle Effect
+                for (let i = 0; i < 3; i++) {
+                    particles.push(new Particle(
+                        this.x + this.width / 2, 
+                        this.y, 
+                        (Math.random() - 0.5) * 2, 
+                        -Math.random() * 2, 
+                        '#60A5FA', 
+                        3, 
+                        0.08
+                    ));
+                }
+            }
+
+            draw() {
+                // Flash when hit
+                if (this.isInvulnerable && Math.floor(Date.now() / 80) % 2 === 0) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+                // Engine Flame Effect
+                const flameHeight = Math.random() * 10 + 10;
+                const gradient = ctx.createLinearGradient(0, this.height / 2, 0, this.height / 2 + flameHeight);
+                gradient.addColorStop(0, '#F59E0B');
+                gradient.addColorStop(0.5, '#EF4444');
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(-8, this.height / 2 - 4);
+                ctx.lineTo(8, this.height / 2 - 4);
+                ctx.lineTo(0, this.height / 2 + flameHeight);
+                ctx.closePath();
+                ctx.fill();
+
+                // Player Spaceship Wings (Polygon Path)
+                ctx.fillStyle = '#3B82F6'; // Primary Blue
+                ctx.beginPath();
+                ctx.moveTo(0, -this.height / 2); // Nose
+                ctx.lineTo(this.width / 2, this.height / 2); // Right wing tip
+                ctx.lineTo(this.width / 4, this.height / 3); // Right inner
+                ctx.lineTo(-this.width / 4, this.height / 3); // Left inner
+                ctx.lineTo(-this.width / 2, this.height / 2); // Left wing tip
+                ctx.closePath();
+                ctx.fill();
+
+                // Ship Body Cockpit Highlight
+                ctx.fillStyle = '#93C5FD';
+                ctx.beginPath();
+                ctx.ellipse(0, -5, 5, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wing Tip Cannons
+                ctx.fillStyle = '#60A5FA';
+                ctx.fillRect(-this.width / 2 + 2, -2, 3, 12);
+                ctx.fillRect(this.width / 2 - 5, -2, 3, 12);
+
+                ctx.restore();
+            }
+
+            hit() {
+                if (this.isInvulnerable) return;
+                this.isInvulnerable = true;
+                this.invulnerableTimer = 60; // ~1 second @ 60fps
+                
+                // Red explosion burst on hit
+                createExplosion(this.x + this.width / 2, this.y + this.height / 2, '#EF4444', 25);
+            }
+        }
+
+        // --- BULLETS ---
+        class Bullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 3;
+                this.speed = 10;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.y -= this.speed;
+                if (this.y < -10) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#60A5FA';
+                ctx.fillStyle = '#93C5FD';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- ENEMIES ---
+        class Enemy {
+            constructor() {
+                this.width = Math.random() * 15 + 30; // Random enemy sizes
+                this.height = this.width * 0.9;
+                this.x = Math.random() * (canvas.width - this.width);
+                this.y = -this.height;
+                
+                // Speed determined by current level config
+                const levelConfig = LEVEL_CONFIGS[currentLevel] || LEVEL_CONFIGS[3];
+                this.speed = Math.random() * levelConfig.speedVariance + levelConfig.baseSpeed;
+                this.markedForDeletion = false;
+                
+                // Color variations based on level / speed
+                if (currentLevel === 1) {
+                    this.color = '#38BDF8'; // Sky Blue
+                } else if (currentLevel === 2) {
+                    this.color = '#A855F7'; // Purple
+                } else {
+                    this.color = '#F43F5E'; // Red
+                }
+            }
+
+            update() {
+                this.y += this.speed;
+
+                // Penalty: Enemy reached bottom
+                if (this.y > canvas.height) {
+                    this.markedForDeletion = true;
+                    handleDamage(); // Deduct health
+                }
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+                // Draw Invader/Alien Style Shape
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, this.height / 2); // Front tip facing down
+                ctx.lineTo(-this.width / 2, -this.height / 2 + 5);
+                ctx.lineTo(-this.width / 4, -this.height / 2);
+                ctx.lineTo(0, -this.height / 4);
+                ctx.lineTo(this.width / 4, -this.height / 2);
+                ctx.lineTo(this.width / 2, -this.height / 2 + 5);
+                ctx.closePath();
+                ctx.fill();
+
+                // Glowing Eye
+                ctx.fillStyle = '#FDE047';
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // --- EXPLOSION PARTICLES ---
+        class Particle {
+            constructor(x, y, vx, vy, color, size = 3, decay = 0.04) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = Math.random() * size + 1;
+                this.alpha = 1;
+                this.decay = decay;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+                if (this.alpha <= 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Helper function to create explosion particle bursts
+        function createExplosion(x, y, color = '#F97316', count = 20) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 1;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                particles.push(new Particle(x, y, vx, vy, color, 4, 0.02 + Math.random() * 0.03));
+            }
+        }
+
+
+        // Global Collections
+        let player = new Player();
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+
+        // --- COLLISION DETECTION ALGORITHMS ---
+        function checkCollisions() {
+            // 1. Bullet vs Enemy Collisions
+            bullets.forEach((bullet) => {
+                enemies.forEach((enemy) => {
+                    if (!bullet.markedForDeletion && !enemy.markedForDeletion) {
+                        if (
+                            bullet.x > enemy.x &&
+                            bullet.x < enemy.x + enemy.width &&
+                            bullet.y > enemy.y &&
+                            bullet.y < enemy.y + enemy.height
+                        ) {
+                            bullet.markedForDeletion = true;
+                            enemy.markedForDeletion = true;
+
+                            // Add Score
+                            score += 10;
+                            updateScoreUI();
+
+                            // Create Explosion Effects
+                            createExplosion(
+                                enemy.x + enemy.width / 2, 
+                                enemy.y + enemy.height / 2, 
+                                enemy.color, 
+                                15
+                            );
+
+                            // Check level progress
+                            checkLevelProgression();
+                        }
+                    }
+                });
+            });
+
+            // 2. Enemy vs Player Collisions
+            enemies.forEach((enemy) => {
+                if (!enemy.markedForDeletion && !player.isInvulnerable) {
+                    if (
+                        player.x < enemy.x + enemy.width &&
+                        player.x + player.width > enemy.x &&
+                        player.y < enemy.y + enemy.height &&
+                        player.y + player.height > enemy.y
+                    ) {
+                        enemy.markedForDeletion = true;
+                        createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#EF4444', 20);
+                        player.hit();
+                        handleDamage();
+                    }
+                }
+            });
+        }
+
+        // --- LEVEL PROGRESSION SYSTEM ---
+        function checkLevelProgression() {
+            const currentConfig = LEVEL_CONFIGS[currentLevel];
+            if (score >= currentConfig.targetScore) {
+                if (currentLevel < 3) {
+                    advanceToNextLevel();
+                } else {
+                    gameVictory();
+                }
+            }
+        }
+
+        function advanceToNextLevel() {
+            currentLevel++;
+            
+            // Reset HP & update config
+            health = MAX_HEALTH;
+            updateHealthUI();
+            updateLevelUI();
+
+            const newConfig = LEVEL_CONFIGS[currentLevel];
+            spawnInterval = newConfig.spawnInterval;
+
+            // Clear screen enemies & bullets
+            enemies = [];
+            bullets = [];
+
+            // Show Level Up Animation Banner
+            document.getElementById('level-up-title').textContent = `STAGE ${currentLevel - 1} CLEAR!`;
+            document.getElementById('level-up-sub').textContent = `血量已補滿！進入 STAGE ${currentLevel}`;
+            levelUpBanner.classList.remove('hidden');
+
+            setTimeout(() => {
+                levelUpBanner.classList.add('hidden');
+            }, 2500);
+        }
+
+        function gameVictory() {
+            isGameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+
+            overlayIcon.innerHTML = `<i class="fas fa-trophy text-yellow-400 text-5xl animate-bounce"></i>`;
+            overlayTitle.textContent = "VICTORY!";
+            overlaySubtitle.innerHTML = `恭喜通關全 3 關！<br>最終總得分: <span class="text-yellow-400 font-bold text-lg">${score}</span> 分`;
+            startBtn.innerHTML = `<i class="fas fa-rotate-right text-sm"></i><span>PLAY AGAIN</span>`;
+            overlay.classList.remove('hidden');
+        }
+
+        // Deduct life & trigger Game Over if 0
+        function handleDamage() {
+            health--;
+            updateHealthUI();
+
+            // Screen Shake Effect
+            canvas.classList.add('translate-x-1');
+            setTimeout(() => canvas.classList.remove('translate-x-1'), 100);
+
+            if (health <= 0) {
+                gameOver();
+            }
+        }
+
+        // --- UI REFRESH FUNCTIONS ---
+        function updateScoreUI() {
+            scoreText.textContent = score.toString().padStart(4, '0');
+        }
+
+        function updateLevelUI() {
+            const config = LEVEL_CONFIGS[currentLevel];
+            levelBadge.textContent = config.name;
+            if (currentLevel < 3) {
+                targetText.textContent = `目標: ${config.targetScore}分`;
+            } else {
+                targetText.textContent = `最終關! 目標: ${config.targetScore}分`;
+            }
+        }
+
+        function updateHealthUI() {
+            hpContainer.innerHTML = '';
+            for (let i = 0; i < MAX_HEALTH; i++) {
+                const heart = document.createElement('i');
+                if (i < health) {
+                    heart.className = 'fas fa-heart text-red-500 text-sm';
+                } else {
+                    heart.className = 'far fa-heart text-slate-600 text-sm';
+                }
+                hpContainer.appendChild(heart);
+            }
+        }
+
+        // --- MAIN GAME LOOP ---
+        function gameLoop(timestamp) {
+            if (!isGameRunning || isPaused) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Update & Render Stars
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            // 2. Spawn Enemies Periodically
+            if (timestamp - lastSpawnTime > spawnInterval) {
+                enemies.push(new Enemy());
+                lastSpawnTime = timestamp;
+            }
+
+            // 3. Update & Render Player
+            player.update(timestamp);
+            player.draw();
+
+            // 4. Update & Render Bullets
+            bullets.forEach(bullet => bullet.update());
+            bullets.forEach(bullet => bullet.draw());
+
+            // 5. Update & Render Enemies
+            enemies.forEach(enemy => enemy.update());
+            enemies.forEach(enemy => enemy.draw());
+
+            // 6. Update & Render Explosion Particles
+            particles.forEach(particle => particle.update());
+            particles.forEach(particle => particle.draw());
+
+            // 7. Check Collisions
+            checkCollisions();
+
+            // 8. Clean Up Inactive Entities
+            bullets = bullets.filter(b => !b.markedForDeletion);
+            enemies = enemies.filter(e => !e.markedForDeletion);
+            particles = particles.filter(p => !p.markedForDeletion);
+
+            // Request next animation frame
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- GAME CONTROLS & OVERLAYS ---
+        function startGame() {
+            // Reset Game Variables
+            score = 0;
+            health = MAX_HEALTH;
+            currentLevel = 1;
+            spawnInterval = LEVEL_CONFIGS[1].spawnInterval;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            player = new Player();
+
+            overlayIcon.innerHTML = `<i class="fas fa-shuttle-space transform -rotate-45"></i>`;
+            updateScoreUI();
+            updateHealthUI();
+            updateLevelUI();
+
+            isGameRunning = true;
+            isPaused = false;
+
+            // Hide Overlays
+            overlay.classList.add('hidden');
+            pauseOverlay.classList.add('hidden');
+            levelUpBanner.classList.add('hidden');
+
+            // Start Animation Loop
+            lastSpawnTime = performance.now();
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+
+            // Update Overlay Text for Game Over
+            overlayIcon.innerHTML = `<i class="fas fa-skull text-red-500 text-5xl"></i>`;
+            overlayTitle.textContent = "GAME OVER";
+            overlaySubtitle.innerHTML = `倒在 Stage ${currentLevel}<br>最終得分: <span class="text-yellow-400 font-bold text-lg">${score}</span> 分`;
+            startBtn.innerHTML = `<i class="fas fa-rotate-right text-sm"></i><span>RETRY GAME</span>`;
+            overlay.classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (!isGameRunning) return;
+
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseOverlay.classList.add('hidden');
+                lastSpawnTime = performance.now(); // Prevents instant enemy spawn on resume
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Event Listeners for UI Buttons
+        startBtn.addEventListener('click', startGame);
+        resumeBtn.addEventListener('click', togglePause);
+
+        // Initial setup for Health UI display
+        updateHealthUI();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

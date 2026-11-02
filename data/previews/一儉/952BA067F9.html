@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小鎮物語：溫馨像素漫步</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖標 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap');
+        
+        body {
+            font-family: 'DotGothic16', monospace, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            touch-action: manipulation;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* 像素風面板 */
+        .pixel-panel {
+            background-color: #1e1b4b;
+            border: 4px solid #4338ca;
+            box-shadow: inset -4px -4px 0px #312e81, inset 4px 4px 0px #6366f1;
+            border-radius: 8px;
+        }
+
+        .pixel-btn {
+            background-color: #f59e0b;
+            border: 3px solid #b45309;
+            box-shadow: inset -2px -2px 0px #78350f, inset 2px 2px 0px #fde047;
+            color: #0f172a;
+            font-weight: bold;
+            transition: all 0.1s;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(2px);
+            box-shadow: inset 2px 2px 0px #78350f;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 浮動提示閃爍動畫 */
+        @keyframes pulse-prompt {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
+        .prompt-anim {
+            animation: pulse-prompt 1.2s infinite ease-in-out;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4 bg-slate-950 text-white">
+
+    <!-- 主遊戲容器 -->
+    <div class="relative w-full max-w-2xl flex flex-col items-center">
+        
+        <!-- 頂部 HUD (狀態、任務與金幣) -->
+        <div class="w-full flex justify-between items-center pixel-panel p-2 md:p-3 mb-2 text-xs md:text-sm z-10">
+            <!-- 玩家狀態 -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1 text-red-400">
+                    <i class="fa-solid fa-heart"></i>
+                    <div class="w-16 md:w-24 bg-slate-800 h-3 rounded-full overflow-hidden border border-slate-600">
+                        <div id="hp-bar" class="bg-red-500 h-full transition-all duration-300" style="width: 80%;"></div>
+                    </div>
+                    <span id="hp-text" class="text-[10px] text-slate-300">80/100</span>
+                </div>
+                <div class="flex items-center gap-1 text-amber-400 font-bold">
+                    <i class="fa-solid fa-coins"></i>
+                    <span id="coins-display">60</span>
+                </div>
+                <!-- 背包魚類數量 -->
+                <div class="flex items-center gap-1 text-cyan-300 font-bold text-xs" title="漁獲背包">
+                    <i class="fa-solid fa-fish"></i>
+                    <span id="fish-count-display">0</span>
+                </div>
+            </div>
+
+            <!-- 控制功能按鈕區 -->
+            <div class="flex items-center gap-2">
+                <button id="btn-sound" class="pixel-btn px-2 py-1 text-xs flex items-center gap-1" title="開關音效">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btn-shop" class="pixel-btn px-2 py-1 text-xs flex items-center gap-1" title="開店鋪">
+                    <i class="fa-solid fa-shop"></i>
+                    <span class="hidden sm:inline">商店</span>
+                </button>
+                <button id="btn-help" class="pixel-btn px-2 py-1 text-xs flex items-center gap-1" title="說明">
+                    <i class="fa-solid fa-circle-question"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 任務提示列 -->
+        <div class="w-full pixel-panel p-2 mb-2 bg-indigo-950/80 border-indigo-700 text-xs flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-amber-300 font-bold">📜 當前任務:</span>
+                <span id="quest-title" class="text-white font-semibold">微光鎮的晨曦</span>
+                <span id="quest-desc" class="text-indigo-200 hidden md:inline">- 前往中央噴泉與村長艾倫聊聊</span>
+            </div>
+            <span id="quest-reward-tag" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[10px]">+50金幣</span>
+        </div>
+
+        <!-- 遊戲畫布與畫面容器 -->
+        <div class="relative w-full aspect-[3/2] bg-black rounded-lg overflow-hidden border-4 border-indigo-900 shadow-2xl">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+            <!-- 右上角迷你地圖 Mini-Map -->
+            <div class="absolute top-2 right-2 w-24 h-24 bg-slate-950/85 border-2 border-indigo-500 rounded p-1 shadow-lg pointer-events-none flex flex-col items-center">
+                <div class="text-[9px] text-amber-300 font-bold mb-0.5">🗺️ 小鎮地圖</div>
+                <canvas id="minimapCanvas" width="80" height="80" class="w-full h-[70px] bg-slate-900 rounded"></canvas>
+            </div>
+
+            <!-- 水邊/互動動態提示 -->
+            <div id="interactive-prompt" class="hidden absolute bottom-12 left-1/2 transform -translate-x-1/2 bg-amber-500 text-slate-950 px-3 py-1 rounded-full font-bold text-xs border-2 border-amber-200 shadow-lg prompt-anim z-10 flex items-center gap-1 pointer-events-none">
+                <i id="prompt-icon" class="fa-solid fa-water"></i>
+                <span id="prompt-text">按 E 或空白鍵開始釣魚</span>
+            </div>
+
+            <!-- 浮動對話框 UI -->
+            <div id="dialogue-box" class="hidden absolute bottom-3 left-3 right-3 pixel-panel p-3 z-20 flex flex-col gap-1 cursor-pointer transition-all">
+                <div class="flex justify-between items-center border-b border-indigo-500/50 pb-1 mb-1">
+                    <span id="dialogue-speaker" class="text-amber-300 font-bold text-sm md:text-base">NPC 名字</span>
+                    <span class="text-[10px] text-indigo-300">[ 點擊畫面繼續對話 ]</span>
+                </div>
+                <p id="dialogue-text" class="text-white text-xs md:text-sm leading-relaxed">對話內容...</p>
+            </div>
+
+            <!-- 密碼鎖寶箱 Modal -->
+            <div id="chest-modal" class="hidden absolute inset-0 bg-slate-950/90 z-30 flex flex-col p-4 items-center justify-center">
+                <div class="pixel-panel w-full max-w-sm p-4 flex flex-col gap-3 text-center">
+                    <div class="flex justify-between items-center border-b border-indigo-500 pb-2">
+                        <h3 class="text-amber-300 font-bold text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-lock"></i> 謎題寶箱
+                        </h3>
+                        <button id="btn-close-chest" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <p class="text-xs text-indigo-200">請輸入三位數密碼 [ _ _ _ ]：</p>
+                    <div class="text-amber-300 text-xs text-left bg-slate-900/90 p-2.5 rounded border border-indigo-800 space-y-1.5">
+                        <div class="font-bold text-amber-400 border-b border-indigo-800 pb-1 mb-1">🔍 寶箱上刻著的推理線索：</div>
+                        <p>• <b>第一位數</b>：村長艾倫大叔對話中提到的微光鎮成立年份的【百位數】。</p>
+                        <p>• <b>第二位數</b>：莉莉雜貨店裡「香醇熱咖啡」價格的【個位數】。</p>
+                        <p>• <b>第三位數</b>：中央廣場周圍花圃的【總數量】。</p>
+                    </div>
+                    <div class="flex justify-center gap-2 my-1">
+                        <input id="chest-pass-1" type="number" maxlength="1" min="0" max="9" class="w-12 h-12 text-center text-xl font-bold bg-slate-800 border-2 border-indigo-500 text-amber-300 rounded focus:outline-none focus:border-amber-400">
+                        <input id="chest-pass-2" type="number" maxlength="1" min="0" max="9" class="w-12 h-12 text-center text-xl font-bold bg-slate-800 border-2 border-indigo-500 text-amber-300 rounded focus:outline-none focus:border-amber-400">
+                        <input id="chest-pass-3" type="number" maxlength="1" min="0" max="9" class="w-12 h-12 text-center text-xl font-bold bg-slate-800 border-2 border-indigo-500 text-amber-300 rounded focus:outline-none focus:border-amber-400">
+                    </div>
+                    <button id="btn-unlock-chest" class="pixel-btn py-2 text-xs w-full">嘗試解鎖</button>
+                </div>
+            </div>
+
+            <!-- 釣魚小遊戲 Modal -->
+            <div id="fishing-modal" class="hidden absolute inset-0 bg-slate-950/90 z-30 flex flex-col p-4 items-center justify-center">
+                <div class="pixel-panel w-full max-w-sm p-4 flex flex-col items-center gap-3 text-center">
+                    <div class="w-full flex justify-between items-center border-b border-indigo-500 pb-2">
+                        <h3 class="text-amber-300 font-bold text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-fish"></i> 南部河畔釣魚
+                        </h3>
+                        <button id="btn-close-fishing" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <p id="fishing-status-text" class="text-xs text-indigo-200">當金色指標移動到 <span class="text-emerald-400 font-bold">綠色目標區域</span> 時按「拉桿」！</p>
+                    
+                    <div class="w-full h-8 bg-slate-800 rounded-lg border-2 border-indigo-600 relative overflow-hidden my-2">
+                        <div id="fishing-target-zone" class="absolute h-full bg-emerald-500/70 border-x-2 border-emerald-300" style="left: 30%; width: 35%;"></div>
+                        <div id="fishing-pointer" class="absolute top-0 bottom-0 w-2 bg-amber-400 shadow-md transform -translate-x-1/2" style="left: 0%;"></div>
+                    </div>
+
+                    <button id="btn-pull-rod" class="pixel-btn py-2 px-8 text-xs">🎣 拉桿！</button>
+                </div>
+            </div>
+
+            <!-- 釣獲漁獲結果彈窗 Modal -->
+            <div id="catch-result-modal" class="hidden absolute inset-0 bg-slate-950/90 z-40 flex flex-col p-4 items-center justify-center">
+                <div class="pixel-panel w-full max-w-xs p-4 flex flex-col items-center gap-3 text-center">
+                    <div id="catch-icon" class="text-4xl">🐟</div>
+                    <div id="catch-title" class="text-amber-300 font-bold text-sm">釣到了彩虹鱒魚！</div>
+                    <div id="catch-desc" class="text-xs text-indigo-200">可以拿去莉莉雜貨店出售換取金幣！</div>
+                    <button id="btn-close-catch" class="pixel-btn py-1.5 px-6 text-xs mt-2">收下漁獲</button>
+                </div>
+            </div>
+
+            <!-- 雜貨店 Modal -->
+            <div id="shop-modal" class="hidden absolute inset-0 bg-slate-950/90 z-30 flex flex-col p-4 items-center justify-center">
+                <div class="pixel-panel w-full max-w-md p-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b border-indigo-500 pb-2">
+                        <h3 class="text-amber-300 font-bold text-base flex items-center gap-2">
+                            <i class="fa-solid fa-shop"></i> 莉莉雜貨店 (買賣服務)
+                        </h3>
+                        <button id="btn-close-shop" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    
+                    <div class="flex border-b border-indigo-700 text-xs">
+                        <button id="tab-buy" class="px-3 py-1 font-bold text-amber-300 border-b-2 border-amber-400">購買物品</button>
+                        <button id="tab-sell" class="px-3 py-1 font-bold text-indigo-300 hover:text-white">出售漁獲 (<span id="sell-tab-count">0</span>)</button>
+                    </div>
+
+                    <!-- 購買列表 -->
+                    <div id="shop-buy-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto p-1">
+                        <div class="flex justify-between items-center bg-slate-800/80 p-2 rounded border border-indigo-900">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">☕</span>
+                                <div>
+                                    <div class="text-xs font-bold text-indigo-200">香醇熱咖啡</div>
+                                    <div class="text-[10px] text-slate-400">恢復 30 點體力 (售價 20)</div>
+                                </div>
+                            </div>
+                            <button onclick="buyItem('coffee', 20, 30)" class="pixel-btn text-xs px-2 py-1">20 金幣</button>
+                        </div>
+                        <div class="flex justify-between items-center bg-slate-800/80 p-2 rounded border border-indigo-900">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🥩</span>
+                                <div>
+                                    <div class="text-xs font-bold text-indigo-200">美味狗飼料</div>
+                                    <div class="text-[10px] text-slate-400">小黃狗阿黃最愛的食物</div>
+                                </div>
+                            </div>
+                            <button onclick="buyItem('food', 15, 0)" class="pixel-btn text-xs px-2 py-1">15 金幣</button>
+                        </div>
+                        <div class="flex justify-between items-center bg-slate-800/80 p-2 rounded border border-indigo-900">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">👟</span>
+                                <div>
+                                    <div class="text-xs font-bold text-indigo-200">疾風小紅鞋</div>
+                                    <div class="text-[10px] text-slate-400">永久提升移動速度 25%</div>
+                                </div>
+                            </div>
+                            <button onclick="buyItem('shoes', 80, 0)" class="pixel-btn text-xs px-2 py-1">80 金幣</button>
+                        </div>
+                    </div>
+
+                    <!-- 出售列表 -->
+                    <div id="shop-sell-list" class="hidden flex-col gap-2 max-h-48 overflow-y-auto p-1">
+                        <div id="sell-items-container" class="space-y-2">
+                            <!-- 賣魚項目將由 JS 動態渲染 -->
+                        </div>
+                        <button id="btn-sell-all-fish" class="pixel-btn py-1.5 text-xs w-full mt-2">一鍵出售所有漁獲</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 說明 Modal -->
+            <div id="help-modal" class="hidden absolute inset-0 bg-slate-950/90 z-30 flex flex-col p-4 items-center justify-center">
+                <div class="pixel-panel w-full max-w-md p-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b border-indigo-500 pb-2">
+                        <h3 class="text-amber-300 font-bold text-base"><i class="fa-solid fa-gamepad"></i> 遊戲操作說明</h3>
+                        <button id="btn-close-help" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <div class="text-xs space-y-2 text-indigo-100">
+                        <p>• <b>移動</b>：鍵盤 <span class="bg-indigo-800 px-1 rounded">W</span> <span class="bg-indigo-800 px-1 rounded">A</span> <span class="bg-indigo-800 px-1 rounded">S</span> <span class="bg-indigo-800 px-1 rounded">D</span> 或 <span class="bg-indigo-800 px-1 rounded">方向鍵</span>。手機請滑動左下角搖桿。</p>
+                        <p>• <b>小地圖標示</b>：右上角小地圖 <span class="text-red-400">紅點</span>為玩家、<span class="text-cyan-300">藍點</span>為NPC、<span class="text-amber-300">黃點</span>為寶箱。</p>
+                        <p>• <b>互動與釣魚</b>：靠近 NPC、寶箱或<span class="text-cyan-400 font-bold">南方河流旁</span>按 <span class="bg-indigo-800 px-1 rounded">E</span> 或 <span class="bg-indigo-800 px-1 rounded">空白鍵</span>。</p>
+                        <p>• <b>釣魚賣魚</b>：站在南部河岸釣到的魚，可以拿到雜貨店賣給莉莉賺錢！</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 行動裝置虛擬控制器 -->
+        <div class="w-full flex justify-between items-center mt-3 md:hidden px-4">
+            <div id="joystick-container" class="relative w-24 h-24 bg-indigo-950/60 rounded-full border-2 border-indigo-500/50 flex items-center justify-center touch-none">
+                <div id="joystick-thumb" class="w-10 h-10 bg-amber-500/80 rounded-full border-2 border-amber-300 shadow-md transform transition-transform duration-75"></div>
+            </div>
+
+            <button id="btn-interact-mobile" class="pixel-btn w-20 h-20 rounded-full flex flex-col items-center justify-center text-sm gap-1 active:scale-95">
+                <i class="fa-solid fa-hand-pointer text-xl"></i>
+                <span class="text-[10px]">互動 [E]</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 遊戲腳本 -->
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const mctx = minimapCanvas.getContext('2d');
+
+        const VIEW_WIDTH = 320;
+        const VIEW_HEIGHT = 213;
+
+        canvas.width = VIEW_WIDTH;
+        canvas.height = VIEW_HEIGHT;
+
+        const TILE_SIZE = 32;
+        const MAP_COLS = 30;
+        const MAP_ROWS = 30;
+        const WORLD_WIDTH = MAP_COLS * TILE_SIZE;
+        const WORLD_HEIGHT = MAP_ROWS * TILE_SIZE;
+
+        const camera = {
+            x: 0,
+            y: 0,
+            width: VIEW_WIDTH,
+            height: VIEW_HEIGHT
+        };
+
+        const keys = {};
+        let joystickVector = { x: 0, y: 0 };
+        let joystickActive = false;
+
+        const player = {
+            x: 10 * TILE_SIZE,
+            y: 15 * TILE_SIZE,
+            width: 20,
+            height: 24,
+            speed: 2.3,
+            animTimer: 0,
+            isMoving: false,
+            coins: 60,
+            hp: 80,
+            maxHp: 100,
+            hasShoes: false,
+            hasDogFood: false,
+            hatColor: '#ea580c',
+            inventory: []
+        };
+
+        const fishTypes = [
+            { id: 'trout', name: '彩虹鱒魚', icon: '🐟', price: 25, rarity: '普通' },
+            { id: 'carp', name: '金光錦鯉', icon: '🐠', price: 45, rarity: '稀有' },
+            { id: 'salmon', name: '鮮豔鮭魚', icon: '🍣', price: 35, rarity: '良好' },
+            { id: 'boot', name: '破舊漂流靴', icon: '👞', price: 5, rarity: '垃圾' }
+        ];
+
+        let inCutscene = false;
+        let activeNpc = null;
+        let dialogueQueue = [];
+        let dialogueIndex = 0;
+
+        const quests = [
+            { id: 0, title: '微光鎮的晨曦', desc: '前往中央噴泉與村長艾倫聊聊。', reward: 50 },
+            { id: 1, title: '解密時光寶箱', desc: '尋找東北樹林埋下的寶箱，推理線索解開 3 位數密碼！', reward: 60 },
+            { id: 2, title: '為阿黃購買飼料', desc: '拜訪莉莉雜貨店，購買一份「美味狗飼料」(15金幣)。', reward: 40 },
+            { id: 3, title: '餵食守護犬阿黃', desc: '帶著狗飼料去找廣場下方的阿黃餵食牠！', reward: 50 },
+            { id: 4, title: '🎉 漁獲特約商人', desc: '前往南部河岸釣魚，並將魚賣給莉莉雜貨店賺大錢！', reward: 100 }
+        ];
+        let currentQuestIndex = 0;
+
+        let isFishing = false;
+        let fishingPos = 0;
+        let fishingSpeed = 0.9;
+        let fishingDirection = 1;
+        let fishingTargetMin = 30;
+        let fishingTargetMax = 65;
+        let fishingAnimFrame = null;
+
+        const mapData = [];
+        for (let r = 0; r < MAP_ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < MAP_COLS; c++) {
+                if (r === 0 || r === MAP_ROWS - 1 || c === 0 || c === MAP_COLS - 1) {
+                    row.push(6);
+                } else if ((r >= 8 && r <= 11 && c >= 6 && c <= 11) || (r >= 8 && r <= 11 && c >= 18 && c <= 23)) {
+                    row.push(2);
+                } else if (r >= 13 && r <= 17 && c >= 9 && c <= 20) {
+                    row.push(1);
+                } else if (r >= 22 && r <= 24 && c >= 2 && c <= 27) {
+                    row.push(5);
+                } else if (r === 12 && (c === 8 || c === 21)) {
+                    row.push(3);
+                } else if (r === 18 && c >= 9 && c <= 20) {
+                    row.push(4);
+                } else {
+                    row.push(0);
+                }
+            }
+            mapData.push(row);
+        }
+
+        const npcs = [
+            {
+                id: 'alan',
+                x: 12 * TILE_SIZE,
+                y: 14 * TILE_SIZE,
+                name: '村長 艾倫大叔',
+                type: 'human',
+                shirtColor: '#2563eb',
+                hairColor: '#b45309',
+                dialogues: [
+                    "早安啊，年輕人！微光鎮自從西元 1842 年建立以來，陽光還是一樣溫暖呢。",
+                    "你知道嗎？東北方的森林裡，藏著我年輕時和老朋友們埋下的『時光寶箱』...",
+                    "寶箱設有三位數字密碼鎖！提示藏在鎮上的小細節裡喔！去試著解開它吧！"
+                ],
+                dialoguesFinished: [
+                    "微光鎮雖然不大，但每個人都有屬於自己的溫馨故事呢。"
+                ]
+            },
+            {
+                id: 'lilly',
+                x: 18 * TILE_SIZE,
+                y: 15 * TILE_SIZE,
+                name: '老闆娘 莉莉',
+                type: 'human',
+                shirtColor: '#f43f5e',
+                hairColor: '#facc15',
+                dialogues: [
+                    "歡迎來到莉莉雜貨店～我們這裡一杯香醇熱咖啡只賣 20 金幣喔！",
+                    "走累了隨時來補補體力！另外如果你去南部河邊釣到了鮮魚，我也會高價回收唷！",
+                    "想買飼料或是賣魚，點擊對話框後就能開啟店鋪選單囉！"
+                ],
+                dialoguesFinished: [
+                    "今天也是元氣滿滿的一天！需要買些什麼或出售漁獲嗎？"
+                ]
+            },
+            {
+                id: 'dog',
+                x: 16 * TILE_SIZE + 8,
+                y: 17 * TILE_SIZE,
+                name: '小黃狗 阿黃',
+                type: 'dog',
+                dialogues: [
+                    "汪！汪汪！(阿黃興奮地繞著你的腳邊轉圈，尾巴搖得像直升機槳葉一樣！)",
+                    "(你蹲下來輕輕摸了摸阿黃的頭，牠舒服地發出咕嚕聲並用鼻子蹭了蹭你)",
+                    "汪！(阿黃看起來肚子有點餓了，不知道雜貨店有沒有賣狗飼料呢？)"
+                ],
+                dialoguesFinished: [
+                    "汪！(阿黃吐著舌頭，開心地歪著頭看著你)"
+                ]
+            }
+        ];
+
+        const collectibles = [
+            { x: 26 * TILE_SIZE, y: 3 * TILE_SIZE, type: 'chest', opened: false },
+            { x: 11 * TILE_SIZE, y: 16 * TILE_SIZE, type: 'coin', collected: false },
+            { x: 19 * TILE_SIZE, y: 16 * TILE_SIZE, type: 'coin', collected: false },
+            { x: 15 * TILE_SIZE, y: 10 * TILE_SIZE, type: 'coin', collected: false }
+        ];
+
+        const particles = [];
+        for (let i = 0; i < 25; i++) {
+            particles.push({
+                x: Math.random() * WORLD_WIDTH,
+                y: Math.random() * WORLD_HEIGHT,
+                size: Math.random() * 2 + 1,
+                speedX: Math.random() * 0.5 - 0.2,
+                speedY: Math.random() * 0.5 + 0.2,
+                color: Math.random() > 0.5 ? '#facc15' : '#4ade80'
+            });
+        }
+
+        const sound = {
+            ctx: null,
+            muted: false,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playStep() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            },
+            playTalk() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300 + Math.random() * 150, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+        };
+
+        function updateUI() {
+            const coinsEl = document.getElementById('coins-display');
+            if (coinsEl) coinsEl.innerText = player.coins;
+
+            const hpBar = document.getElementById('hp-bar');
+            if (hpBar) {
+                const percent = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+                hpBar.style.width = `${percent}%`;
+            }
+
+            const hpText = document.getElementById('hp-text');
+            if (hpText) hpText.innerText = `${player.hp}/${player.maxHp}`;
+
+            const fishDisplay = document.getElementById('fish-count-display');
+            if (fishDisplay) fishDisplay.innerText = player.inventory.length;
+
+            const sellTabCount = document.getElementById('sell-tab-count');
+            if (sellTabCount) sellTabCount.innerText = player.inventory.length;
+
+            renderSellShopList();
+        }
+
+        function updateQuestUI() {
+            const q = quests[currentQuestIndex];
+            const titleEl = document.getElementById('quest-title');
+            const descEl = document.getElementById('quest-desc');
+            const tagEl = document.getElementById('quest-reward-tag');
+            
+            if (q) {
+                if (titleEl) titleEl.innerText = q.title;
+                if (descEl) descEl.innerText = `- ${q.desc}`;
+                if (tagEl) {
+                    tagEl.classList.remove('hidden');
+                    tagEl.innerText = `+${q.reward}金幣`;
+                }
+            } else {
+                if (titleEl) titleEl.innerText = "小鎮生活專家";
+                if (descEl) descEl.innerText = "- 🎉 所有任務已完成！享受溫馨的小鎮漫步與釣魚時光吧！";
+                if (tagEl) tagEl.classList.add('hidden');
+            }
+        }
+
+        function checkFishingQuestCompletion() {
+            if (currentQuestIndex === 4) {
+                player.coins += quests[4].reward;
+                currentQuestIndex = 5;
+                updateQuestUI();
+                sound.playCoin();
+                setTimeout(() => {
+                    alert('🎉 恭喜！你完成了「漁獲特約商人」任務！你已經探索了微光鎮的所有角落！');
+                }, 200);
+            }
+        }
+
+        function renderSellShopList() {
+            const container = document.getElementById('sell-items-container');
+            if (!container) return;
+
+            if (player.inventory.length === 0) {
+                container.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">目前背包沒有漁獲，先去南邊河岸釣魚吧！</div>';
+                return;
+            }
+
+            let html = '';
+            player.inventory.forEach((fish, idx) => {
+                html += `
+                    <div class="flex justify-between items-center bg-slate-800/80 p-2 rounded border border-indigo-900">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">${fish.icon}</span>
+                            <div>
+                                <div class="text-xs font-bold text-amber-200">${fish.name}</div>
+                                <div class="text-[10px] text-indigo-300">品質: ${fish.rarity}</div>
+                            </div>
+                        </div>
+                        <button onclick="sellSingleFish(${idx})" class="pixel-btn text-xs px-2 py-1">+${fish.price} 金幣</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function sellSingleFish(index) {
+            if (index >= 0 && index < player.inventory.length) {
+                const fish = player.inventory[index];
+                player.coins += fish.price;
+                player.inventory.splice(index, 1);
+                sound.playCoin();
+                
+                checkFishingQuestCompletion();
+                updateUI();
+            }
+        }
+
+        function sellAllFish() {
+            if (player.inventory.length === 0) return;
+            let totalProfit = 0;
+            player.inventory.forEach(f => totalProfit += f.price);
+            player.coins += totalProfit;
+            player.inventory = [];
+            sound.playCoin();
+            
+            checkFishingQuestCompletion();
+            updateUI();
+            alert(`💰 成功出售所有漁獲！共賺取了 ${totalProfit} 金幣！`);
+        }
+
+        function buyItem(itemType, cost, hpRecover) {
+            if (player.coins < cost) {
+                alert('❌ 金幣不足，快去釣魚或是搜尋地圖賺取金幣吧！');
+                return;
+            }
+
+            player.coins -= cost;
+
+            if (itemType === 'coffee') {
+                player.hp = Math.min(player.maxHp, player.hp + hpRecover);
+                alert('☕ 喝下了熱咖啡，身體暖洋洋的！恢復了 30 點體力！');
+            } else if (itemType === 'food') {
+                player.hasDogFood = true;
+                alert('🥩 購買了一份美味狗飼料！快拿去給小黃狗阿黃吃吧！');
+                if (currentQuestIndex === 2) {
+                    player.coins += quests[2].reward;
+                    currentQuestIndex = 3;
+                    updateQuestUI();
+                }
+            } else if (itemType === 'shoes') {
+                if (player.hasShoes) {
+                    alert('👟 你已經穿著疾風小紅鞋囉！跑得飛快！');
+                    player.coins += cost;
+                } else {
+                    player.hasShoes = true;
+                    player.speed *= 1.25;
+                    alert('👟 穿上了疾風小紅鞋！移動速度提升 25%！');
+                }
+            }
+
+            sound.playCoin();
+            updateUI();
+        }
+
+        function canWalkTo(newX, newY) {
+            const margin = 2;
+            const checkPoints = [
+                { x: newX + margin, y: newY + margin },
+                { x: newX + player.width - margin, y: newY + margin },
+                { x: newX + margin, y: newY + player.height - margin },
+                { x: newX + player.width - margin, y: newY + player.height - margin }
+            ];
+
+            for (let pt of checkPoints) {
+                const c = Math.floor(pt.x / TILE_SIZE);
+                const r = Math.floor(pt.y / TILE_SIZE);
+
+                if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return false;
+
+                const tile = mapData[r][c];
+                if (tile === 2 || tile === 4 || tile === 5 || tile === 6) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function updatePlayerAndCamera() {
+            if (inCutscene) return;
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keys['w'] || keys['W'] || keys['ArrowUp']) dy -= 1;
+            if (keys['s'] || keys['S'] || keys['ArrowDown']) dy += 1;
+            if (keys['a'] || keys['A'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['d'] || keys['D'] || keys['ArrowRight']) dx += 1;
+
+            if (joystickActive) {
+                dx = joystickVector.x;
+                dy = joystickVector.y;
+            }
+
+            if (dx !== 0 && dy !== 0 && !joystickActive) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+
+            if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+                player.isMoving = true;
+                player.animTimer += 1;
+
+                if (player.animTimer % 14 === 0) {
+                    sound.playStep();
+                }
+
+                const nextX = player.x + dx * player.speed;
+                const nextY = player.y + dy * player.speed;
+
+                if (canWalkTo(nextX, player.y)) player.x = nextX;
+                if (canWalkTo(player.x, nextY)) player.y = nextY;
+            } else {
+                player.isMoving = false;
+                player.animTimer = 0;
+            }
+
+            const targetCamX = (player.x + player.width / 2) - camera.width / 2;
+            const targetCamY = (player.y + player.height / 2) - camera.height / 2;
+
+            camera.x += (targetCamX - camera.x) * 0.1;
+            camera.y += (targetCamY - camera.y) * 0.1;
+
+            camera.x = Math.max(0, Math.min(WORLD_WIDTH - camera.width, camera.x));
+            camera.y = Math.max(0, Math.min(WORLD_HEIGHT - camera.height, camera.y));
+
+            collectibles.forEach(item => {
+                if (item.type === 'coin' && !item.collected) {
+                    const dist = Math.hypot((player.x + 10) - (item.x + 8), (player.y + 12) - (item.y + 8));
+                    if (dist < 18) {
+                        item.collected = true;
+                        player.coins += 10;
+                        sound.playCoin();
+                        updateUI();
+                    }
+                }
+            });
+
+            const promptEl = document.getElementById('interactive-prompt');
+            const isNearWater = player.y >= 20 * TILE_SIZE && player.y <= 22 * TILE_SIZE;
+            if (isNearWater) {
+                document.getElementById('prompt-icon').className = 'fa-solid fa-fish';
+                document.getElementById('prompt-text').innerText = '靠近河邊，按 E 或空白鍵釣魚 🎣';
+                promptEl.classList.remove('hidden');
+            } else {
+                promptEl.classList.add('hidden');
+            }
+        }
+
+        function drawMap() {
+            const time = Date.now() * 0.003;
+            const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+            const endCol = Math.min(MAP_COLS, Math.ceil((camera.x + camera.width) / TILE_SIZE));
+            const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+            const endRow = Math.min(MAP_ROWS, Math.ceil((camera.y + camera.height) / TILE_SIZE));
+
+            for (let r = startRow; r < endRow; r++) {
+                for (let c = startCol; c < endCol; c++) {
+                    const tile = mapData[r][c];
+                    const x = c * TILE_SIZE - camera.x;
+                    const y = r * TILE_SIZE - camera.y;
+
+                    if (tile === 0) {
+                        ctx.fillStyle = (r + c) % 2 === 0 ? '#4ade80' : '#22c55e';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        if ((r + c) % 5 === 0) {
+                            ctx.fillStyle = '#f43f5e';
+                            ctx.fillRect(x + 20, y + 16, 3, 3);
+                            ctx.fillStyle = '#fde047';
+                            ctx.fillRect(x + 21, y + 17, 1, 1);
+                        }
+                    } else if (tile === 1) {
+                        ctx.fillStyle = '#f1f5f9';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.fillRect(x, y, TILE_SIZE, 2);
+                        ctx.fillRect(x, y, 2, TILE_SIZE);
+                    } else if (tile === 2) {
+                        ctx.fillStyle = '#e11d48';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#be123c';
+                        ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        ctx.fillStyle = '#fef08a';
+                        ctx.fillRect(x + 8, y + 10, 6, 6);
+                    } else if (tile === 3) {
+                        ctx.fillStyle = '#166534';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#ec4899'; ctx.fillRect(x + 4, y + 4, 7, 7);
+                        ctx.fillStyle = '#eab308'; ctx.fillRect(x + 19, y + 5, 7, 7);
+                    } else if (tile === 4) {
+                        ctx.fillStyle = '#4ade80';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#b45309';
+                        ctx.fillRect(x + 5, y + 2, 6, 26);
+                        ctx.fillRect(x + 20, y + 2, 6, 26);
+                    } else if (tile === 5) {
+                        const wave = Math.sin(time * 3 + r + c) * 3;
+                        ctx.fillStyle = '#0284c7';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.fillRect(x + 5 + wave, y + 6, 9, 3);
+
+                        if (r === 22) {
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                            ctx.fillRect(x + 12 + wave, y + 2, 8, 2);
+                        }
+                    } else if (tile === 6) {
+                        ctx.fillStyle = '#14532d';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#4ade80';
+                        ctx.fillRect(x + 6, y + 6, 12, 12);
+                    }
+                }
+            }
+        }
+
+        function drawMinimap() {
+            const mw = minimapCanvas.width;
+            const mh = minimapCanvas.height;
+            mctx.clearRect(0, 0, mw, mh);
+
+            const scaleX = mw / (MAP_COLS * TILE_SIZE);
+            const scaleY = mh / (MAP_ROWS * TILE_SIZE);
+
+            for (let r = 0; r < MAP_ROWS; r++) {
+                for (let c = 0; c < MAP_COLS; c++) {
+                    const tile = mapData[r][c];
+                    if (tile === 0) mctx.fillStyle = '#15803d';
+                    else if (tile === 1) mctx.fillStyle = '#94a3b8';
+                    else if (tile === 2) mctx.fillStyle = '#b91c1c';
+                    else if (tile === 5) mctx.fillStyle = '#0284c7';
+                    else mctx.fillStyle = '#052e16';
+
+                    mctx.fillRect(c * TILE_SIZE * scaleX, r * TILE_SIZE * scaleY, Math.ceil(TILE_SIZE * scaleX), Math.ceil(TILE_SIZE * scaleY));
+                }
+            }
+
+            npcs.forEach(npc => {
+                mctx.fillStyle = '#38bdf8';
+                mctx.beginPath();
+                mctx.arc((npc.x + 10) * scaleX, (npc.y + 10) * scaleY, 2.5, 0, Math.PI * 2);
+                mctx.fill();
+            });
+
+            collectibles.forEach(item => {
+                if (item.type === 'chest' && !item.opened) {
+                    mctx.fillStyle = '#facc15';
+                    mctx.fillRect((item.x + 6) * scaleX, (item.y + 6) * scaleY, 4, 4);
+                }
+            });
+
+            mctx.fillStyle = '#ef4444';
+            mctx.beginPath();
+            mctx.arc((player.x + 10) * scaleX, (player.y + 12) * scaleY, 3.5, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.strokeStyle = '#ffffff';
+            mctx.lineWidth = 1;
+            mctx.stroke();
+        }
+
+        function drawPlayer() {
+            const screenX = player.x - camera.x;
+            const screenY = player.y - camera.y;
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(10, 22, 8, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            const bounce = player.isMoving ? Math.sin(player.animTimer * 0.4) * 2 : 0;
+
+            ctx.fillStyle = '#e11d48';
+            ctx.fillRect(1 + bounce, 8 + bounce, 4, 10);
+
+            ctx.fillStyle = player.hasShoes ? '#ef4444' : '#334155';
+            ctx.fillRect(4, 18, 5, 5);
+            ctx.fillRect(11, 18, 5, 5);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(5, 14 + bounce, 10, 5);
+
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(4, 8 + bounce, 12, 7);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(9, 10 + bounce, 2, 4);
+
+            ctx.fillStyle = '#ffedd5';
+            ctx.fillRect(5, 2 + bounce, 10, 7);
+
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(4, 0 + bounce, 12, 4);
+            ctx.fillRect(3, 3 + bounce, 3, 4);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(7, 5 + bounce, 2, 2);
+            ctx.fillRect(11, 5 + bounce, 2, 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(7, 5 + bounce, 1, 1);
+            ctx.fillRect(11, 5 + bounce, 1, 1);
+
+            if (player.hatColor) {
+                ctx.fillStyle = player.hatColor;
+                ctx.fillRect(2, -2 + bounce, 16, 3);
+                ctx.fillRect(5, -6 + bounce, 10, 5);
+            }
+
+            ctx.restore();
+        }
+
+        function drawNPCs() {
+            npcs.forEach(npc => {
+                const screenX = npc.x - camera.x;
+                const screenY = npc.y - camera.y;
+
+                if (screenX < -TILE_SIZE || screenX > VIEW_WIDTH || screenY < -TILE_SIZE || screenY > VIEW_HEIGHT) return;
+
+                ctx.save();
+                ctx.translate(screenX, screenY);
+
+                const idleBounce = Math.sin(Date.now() * 0.005 + npc.x) * 1.5;
+
+                if (npc.type === 'human') {
+                    ctx.fillStyle = npc.shirtColor;
+                    ctx.fillRect(4, 10 + idleBounce, 12, 9);
+                    ctx.fillStyle = '#ffedd5';
+                    ctx.fillRect(4, 3 + idleBounce, 12, 8);
+                    ctx.fillStyle = npc.hairColor;
+                    ctx.fillRect(3, 1 + idleBounce, 14, 4);
+                } else if (npc.type === 'dog') {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(2, 8 + idleBounce, 12, 8);
+                    ctx.fillRect(10, 4 + idleBounce, 7, 7);
+                }
+
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillRect(8, -8 + idleBounce, 4, 6);
+
+                ctx.restore();
+            });
+        }
+
+        function drawCollectibles() {
+            collectibles.forEach(item => {
+                const screenX = item.x - camera.x;
+                const screenY = item.y - camera.y;
+
+                if (screenX < -TILE_SIZE || screenX > VIEW_WIDTH || screenY < -TILE_SIZE || screenY > VIEW_HEIGHT) return;
+
+                ctx.save();
+                ctx.translate(screenX, screenY);
+
+                if (item.type === 'chest') {
+                    ctx.fillStyle = item.opened ? '#78350f' : '#d97706';
+                    ctx.fillRect(2, 6, 20, 16);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(10, 12, 4, 5);
+                } else if (item.type === 'coin' && !item.collected) {
+                    const floatAnim = Math.sin(Date.now() * 0.007 + item.x) * 3;
+                    ctx.fillStyle = '#facc15';
+                    ctx.beginPath();
+                    ctx.arc(8, 8 + floatAnim, 6.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+
+                if (p.x > WORLD_WIDTH) p.x = 0;
+                if (p.y > WORLD_HEIGHT) p.y = 0;
+
+                const screenX = p.x - camera.x;
+                const screenY = p.y - camera.y;
+
+                if (screenX >= 0 && screenX <= VIEW_WIDTH && screenY >= 0 && screenY <= VIEW_HEIGHT) {
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(screenX, screenY, p.size, p.size);
+                }
+            });
+        }
+
+        function drawCutsceneView() {
+            if (!inCutscene || !activeNpc) return;
+
+            const time = Date.now() * 0.003;
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_HEIGHT);
+            gradient.addColorStop(0, '#1e1b4b');
+            gradient.addColorStop(0.6, '#312e81');
+            gradient.addColorStop(1, '#4338ca');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fillRect(20, 70, 60, 60);
+            ctx.fillRect(240, 60, 70, 70);
+
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, 130, VIEW_WIDTH, VIEW_HEIGHT - 130);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(0, 130, VIEW_WIDTH, 6);
+
+            ctx.save();
+            ctx.translate(40, 50);
+
+            const pBreath = Math.sin(time * 2) * 2;
+
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(10, 45 + pBreath, 40, 45);
+            ctx.fillStyle = '#e11d48';
+            ctx.fillRect(15, 40 + pBreath, 30, 12);
+            ctx.fillRect(38, 48 + pBreath, 10, 25);
+
+            ctx.fillStyle = '#ffedd5';
+            ctx.fillRect(15, 15 + pBreath, 30, 28);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(30, 26 + pBreath, 4, 6);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(31, 26 + pBreath, 2, 2);
+
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(12, 8 + pBreath, 36, 12);
+            ctx.fillRect(10, 15 + pBreath, 8, 15);
+
+            if (player.hatColor) {
+                ctx.fillStyle = player.hatColor;
+                ctx.fillRect(6, 0 + pBreath, 48, 8);
+                ctx.fillRect(14, -12 + pBreath, 32, 14);
+            }
+
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(210, 50);
+
+            const npcBreath = Math.cos(time * 2) * 2;
+
+            if (activeNpc.type === 'human') {
+                ctx.fillStyle = activeNpc.shirtColor;
+                ctx.fillRect(10, 45 + npcBreath, 40, 45);
+
+                ctx.fillStyle = '#ffedd5';
+                ctx.fillRect(15, 15 + npcBreath, 30, 28);
+
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(20, 26 + npcBreath, 4, 6);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(20, 26 + npcBreath, 2, 2);
+
+                ctx.fillStyle = '#b91c1c';
+                ctx.fillRect(22, 36 + npcBreath, 6, 2);
+
+                ctx.fillStyle = activeNpc.hairColor;
+                ctx.fillRect(12, 8 + npcBreath, 36, 12);
+                ctx.fillRect(34, 15 + npcBreath, 8, 15);
+            } else if (activeNpc.type === 'dog') {
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(0, 30 + npcBreath, 65, 45);
+                ctx.fillRect(35, 10 + npcBreath, 30, 30);
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(30, 10 + npcBreath, 10, 20);
+
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(48, 18 + npcBreath, 6, 8);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(50, 19 + npcBreath, 3, 3);
+
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(58, 26 + npcBreath, 6, 5);
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillRect(52, 33 + npcBreath, 6, 8);
+            }
+
+            ctx.restore();
+        }
+
+        function advanceDialogue() {
+            if (!inCutscene) return;
+
+            sound.playTalk();
+
+            if (dialogueIndex < dialogueQueue.length - 1) {
+                dialogueIndex++;
+                document.getElementById('dialogue-text').innerText = dialogueQueue[dialogueIndex];
+            } else {
+                inCutscene = false;
+                document.getElementById('dialogue-box').classList.add('hidden');
+
+                if (activeNpc) {
+                    if (activeNpc.id === 'alan' && currentQuestIndex === 0) {
+                        player.coins += quests[0].reward;
+                        currentQuestIndex = 1;
+                        updateQuestUI();
+                        updateUI();
+                    } else if (activeNpc.id === 'lilly') {
+                        document.getElementById('shop-modal').classList.remove('hidden');
+                    } else if (activeNpc.id === 'dog' && currentQuestIndex === 3) {
+                        player.coins += quests[3].reward;
+                        currentQuestIndex = 4;
+                        updateQuestUI();
+                        updateUI();
+                    }
+                }
+            }
+        }
+
+        function showDialogue(speaker, lines) {
+            const box = document.getElementById('dialogue-box');
+            document.getElementById('dialogue-speaker').innerText = speaker;
+            document.getElementById('dialogue-text').innerText = lines[0];
+            box.classList.remove('hidden');
+        }
+
+        function triggerInteraction() {
+            sound.init();
+
+            if (inCutscene) {
+                advanceDialogue();
+                return;
+            }
+
+            for (let item of collectibles) {
+                if (item.type === 'chest' && !item.opened) {
+                    const dist = Math.hypot((player.x + 10) - (item.x + 10), (player.y + 12) - (item.y + 10));
+                    if (dist < 32) {
+                        document.getElementById('chest-modal').classList.remove('hidden');
+                        return;
+                    }
+                }
+            }
+
+            for (let npc of npcs) {
+                const dist = Math.hypot((player.x + 10) - (npc.x + 10), (player.y + 12) - (npc.y + 10));
+                if (dist < 36) {
+                    activeNpc = npc;
+                    inCutscene = true;
+
+                    if (npc.id === 'dog' && player.hasDogFood && currentQuestIndex === 3) {
+                        dialogueQueue = [
+                            "汪！汪汪！(阿黃聞到了狗飼料的香氣，興奮地搖著尾巴！)",
+                            "(你把美味狗飼料餵給了阿黃，牠開心地狼吞虎嚥吃了起來！)",
+                            "汪！❤️ (阿黃吃飽後蹭了蹭你，看起來對你充滿感激！)"
+                        ];
+                        player.hasDogFood = false;
+                    } else if (npc.id === 'alan') {
+                        // 村長對話：即使任務完成也可以重複查看預設劇情與村長語錄
+                        if (currentQuestIndex > 0) {
+                            dialogueQueue = npc.dialogues.concat(npc.dialoguesFinished || []);
+                        } else {
+                            dialogueQueue = npc.dialogues;
+                        }
+                    } else if (npc.id === 'dog' && currentQuestIndex > 3) {
+                        dialogueQueue = npc.dialoguesFinished || npc.dialogues;
+                    } else {
+                        dialogueQueue = npc.dialogues;
+                    }
+
+                    dialogueIndex = 0;
+                    showDialogue(npc.name, dialogueQueue);
+                    return;
+                }
+            }
+
+            if (player.y >= 20 * TILE_SIZE && player.y <= 22 * TILE_SIZE) {
+                startFishingGame();
+            }
+        }
+
+        function startFishingGame() {
+            isFishing = true;
+            fishingPos = 0;
+            fishingDirection = 1;
+            fishingTargetMin = 20 + Math.random() * 30;
+            fishingTargetMax = fishingTargetMin + 30 + Math.random() * 10;
+
+            const targetZone = document.getElementById('fishing-target-zone');
+            targetZone.style.left = `${fishingTargetMin}%`;
+            targetZone.style.width = `${fishingTargetMax - fishingTargetMin}%`;
+
+            document.getElementById('fishing-modal').classList.remove('hidden');
+            updateFishingLoop();
+        }
+
+        function updateFishingLoop() {
+            if (!isFishing) return;
+
+            fishingPos += fishingSpeed * fishingDirection;
+            if (fishingPos >= 100) {
+                fishingPos = 100;
+                fishingDirection = -1;
+            } else if (fishingPos <= 0) {
+                fishingPos = 0;
+                fishingDirection = 1;
+            }
+
+            document.getElementById('fishing-pointer').style.left = `${fishingPos}%`;
+            fishingAnimFrame = requestAnimationFrame(updateFishingLoop);
+        }
+
+        function pullFishingRod() {
+            if (!isFishing) return;
+            isFishing = false;
+            cancelAnimationFrame(fishingAnimFrame);
+            document.getElementById('fishing-modal').classList.add('hidden');
+
+            if (fishingPos >= (fishingTargetMin - 2) && fishingPos <= (fishingTargetMax + 2)) {
+                const caughtFish = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+                player.inventory.push(caughtFish);
+                sound.playCoin();
+                updateUI();
+
+                document.getElementById('catch-icon').innerText = caughtFish.icon;
+                document.getElementById('catch-title').innerText = `釣到了「${caughtFish.name}」！`;
+                document.getElementById('catch-desc').innerText = `稀有度: ${caughtFish.rarity} | 莉莉雜貨店收購價: ${caughtFish.price} 金幣`;
+                document.getElementById('catch-result-modal').classList.remove('hidden');
+
+                checkFishingQuestCompletion();
+            } else {
+                alert('💦 哎呀，手滑沒對準！魚兒咬鉤後溜走了，再試一次吧！');
+            }
+        }
+
+        function handleJoystickMove(clientX, clientY) {
+            const joystickContainer = document.getElementById('joystick-container');
+            const joystickThumb = document.getElementById('joystick-thumb');
+            if (!joystickContainer || !joystickThumb) return;
+
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let deltaX = clientX - centerX;
+            let deltaY = clientY - centerY;
+            const maxRadius = rect.width / 2;
+            const distance = Math.hypot(deltaX, deltaY);
+
+            if (distance > maxRadius) {
+                deltaX = (deltaX / distance) * maxRadius;
+                deltaY = (deltaY / distance) * maxRadius;
+            }
+
+            joystickThumb.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            joystickVector = {
+                x: deltaX / maxRadius,
+                y: deltaY / maxRadius
+            };
+            joystickActive = true;
+        }
+
+        function resetJoystick() {
+            const joystickThumb = document.getElementById('joystick-thumb');
+            if (joystickThumb) joystickThumb.style.transform = `translate(0px, 0px)`;
+            joystickVector = { x: 0, y: 0 };
+            joystickActive = false;
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+
+            updatePlayerAndCamera();
+
+            if (inCutscene) {
+                drawCutsceneView();
+            } else {
+                drawMap();
+                drawCollectibles();
+                drawNPCs();
+                drawPlayer();
+                drawParticles();
+                drawMinimap();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            keys[e.key] = true;
+
+            if (e.key.toLowerCase() === 'e' || e.key === ' ') {
+                triggerInteraction();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        window.onload = () => {
+            const joystickContainer = document.getElementById('joystick-container');
+            if (joystickContainer) {
+                joystickContainer.addEventListener('touchstart', (e) => {
+                    sound.init();
+                    const touch = e.touches[0];
+                    handleJoystickMove(touch.clientX, touch.clientY);
+                });
+
+                joystickContainer.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    handleJoystickMove(touch.clientX, touch.clientY);
+                });
+
+                joystickContainer.addEventListener('touchend', resetJoystick);
+            }
+
+            const btnInteractMobile = document.getElementById('btn-interact-mobile');
+            if (btnInteractMobile) {
+                btnInteractMobile.addEventListener('click', triggerInteraction);
+            }
+
+            const btnShop = document.getElementById('btn-shop');
+            if (btnShop) {
+                btnShop.addEventListener('click', () => {
+                    sound.init();
+                    document.getElementById('shop-modal').classList.remove('hidden');
+                });
+            }
+
+            const btnCloseShop = document.getElementById('btn-close-shop');
+            if (btnCloseShop) {
+                btnCloseShop.addEventListener('click', () => {
+                    document.getElementById('shop-modal').classList.add('hidden');
+                });
+            }
+
+            const tabBuy = document.getElementById('tab-buy');
+            const tabSell = document.getElementById('tab-sell');
+            const shopBuyList = document.getElementById('shop-buy-list');
+            const shopSellList = document.getElementById('shop-sell-list');
+
+            if (tabBuy && tabSell) {
+                tabBuy.addEventListener('click', () => {
+                    tabBuy.className = 'px-3 py-1 font-bold text-amber-300 border-b-2 border-amber-400';
+                    tabSell.className = 'px-3 py-1 font-bold text-indigo-300 hover:text-white';
+                    shopBuyList.classList.remove('hidden');
+                    shopSellList.classList.add('hidden');
+                    shopSellList.classList.remove('flex');
+                });
+
+                tabSell.addEventListener('click', () => {
+                    tabSell.className = 'px-3 py-1 font-bold text-amber-300 border-b-2 border-amber-400';
+                    tabBuy.className = 'px-3 py-1 font-bold text-indigo-300 hover:text-white';
+                    shopSellList.classList.remove('hidden');
+                    shopSellList.classList.add('flex');
+                    shopBuyList.classList.add('hidden');
+                });
+            }
+
+            const btnSellAll = document.getElementById('btn-sell-all-fish');
+            if (btnSellAll) {
+                btnSellAll.addEventListener('click', sellAllFish);
+            }
+
+            const btnSound = document.getElementById('btn-sound');
+            if (btnSound) {
+                btnSound.addEventListener('click', () => {
+                    sound.init();
+                    sound.muted = !sound.muted;
+                    document.getElementById('sound-icon').className = sound.muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+                });
+            }
+
+            const btnHelp = document.getElementById('btn-help');
+            if (btnHelp) {
+                btnHelp.addEventListener('click', () => {
+                    document.getElementById('help-modal').classList.remove('hidden');
+                });
+            }
+
+            const btnCloseHelp = document.getElementById('btn-close-help');
+            if (btnCloseHelp) {
+                btnCloseHelp.addEventListener('click', () => {
+                    document.getElementById('help-modal').classList.add('hidden');
+                });
+            }
+
+            const btnUnlockChest = document.getElementById('btn-unlock-chest');
+            if (btnUnlockChest) {
+                btnUnlockChest.addEventListener('click', () => {
+                    const p1 = document.getElementById('chest-pass-1').value;
+                    const p2 = document.getElementById('chest-pass-2').value;
+                    const p3 = document.getElementById('chest-pass-3').value;
+
+                    if (p1 === '8' && p2 === '0' && p3 === '2') {
+                        document.getElementById('chest-modal').classList.add('hidden');
+                        const chest = collectibles.find(c => c.type === 'chest');
+                        if (chest) chest.opened = true;
+                        
+                        player.coins += 50;
+                        sound.playCoin();
+                        showDialogue('小鎮寶箱', ['🎉 咔噠！密碼解開了！你開啟了舊寶箱，獲得了 50 枚金色硬幣！✨']);
+
+                        if (currentQuestIndex === 1) {
+                            player.coins += quests[1].reward;
+                            currentQuestIndex = 2;
+                            updateQuestUI();
+                        }
+                        updateUI();
+                    } else {
+                        alert('❌ 密碼不正確！請仔細閱讀面板上的三項小鎮細節線索喔。');
+                    }
+                });
+            }
+
+            const btnCloseChest = document.getElementById('btn-close-chest');
+            if (btnCloseChest) {
+                btnCloseChest.addEventListener('click', () => {
+                    document.getElementById('chest-modal').classList.add('hidden');
+                });
+            }
+
+            const btnPullRod = document.getElementById('btn-pull-rod');
+            if (btnPullRod) {
+                btnPullRod.addEventListener('click', pullFishingRod);
+            }
+
+            const btnCloseFishing = document.getElementById('btn-close-fishing');
+            if (btnCloseFishing) {
+                btnCloseFishing.addEventListener('click', () => {
+                    isFishing = false;
+                    cancelAnimationFrame(fishingAnimFrame);
+                    document.getElementById('fishing-modal').classList.add('hidden');
+                });
+            }
+
+            const btnCloseCatch = document.getElementById('btn-close-catch');
+            if (btnCloseCatch) {
+                btnCloseCatch.addEventListener('click', () => {
+                    document.getElementById('catch-result-modal').classList.add('hidden');
+                });
+            }
+
+            const dialogueBox = document.getElementById('dialogue-box');
+            if (dialogueBox) {
+                dialogueBox.addEventListener('click', () => {
+                    if (inCutscene) {
+                        advanceDialogue();
+                    } else {
+                        document.getElementById('dialogue-box').classList.add('hidden');
+                    }
+                });
+            }
+
+            updateUI();
+            updateQuestUI();
+            gameLoop();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

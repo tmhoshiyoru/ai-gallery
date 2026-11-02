@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>粉色波點可愛打磚塊 - 極速模式 (Ultra High Speed)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Fredoka', sans-serif, system-ui;
+            user-select: none;
+            touch-action: none;
+            overflow: hidden;
+            background-color: #ffd6e0;
+            background-image: radial-gradient(#ff9ebb 15%, transparent 16%), radial-gradient(#ffb3c6 15%, transparent 16%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            animation: bgShift 10s linear infinite;
+        }
+
+        @keyframes bgShift {
+            0% { background-position: 0 0, 20px 20px; }
+            100% { background-position: 40px 40px, 60px 60px; }
+        }
+
+        .kawaii-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            border: 4px solid #ff85a1;
+            box-shadow: 0 10px 30px rgba(255, 133, 161, 0.4), inset 0 0 15px rgba(255, 182, 193, 0.3);
+        }
+
+        .kawaii-btn {
+            background: linear-gradient(180deg, #ff9ebb 0%, #ff6b8b 100%);
+            border: 3px solid #fff;
+            box-shadow: 0 5px 0px #d64567, 0 8px 15px rgba(255, 107, 139, 0.4);
+            transition: all 0.1s ease;
+        }
+
+        .kawaii-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0px #d64567, 0 12px 20px rgba(255, 107, 139, 0.5);
+        }
+
+        .kawaii-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0px #d64567, 0 4px 8px rgba(255, 107, 139, 0.3);
+        }
+
+        .speed-gauge-turbo {
+            color: #ff0055;
+            text-shadow: 0 0 8px #ff77aa, 0 0 15px #ff0055;
+            animation: pulseTurbo 0.4s infinite alternate;
+        }
+
+        @keyframes pulseTurbo {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
+        }
+
+        canvas {
+            touch-action: none;
+            cursor: none;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="w-screen h-screen flex flex-col justify-center items-center m-0 p-2 text-pink-700">
+
+    <div class="relative w-full max-w-2xl flex flex-col items-center">
+        <!-- Top HUD Bar -->
+        <div class="w-full kawaii-card rounded-2xl p-3 mb-2 flex justify-between items-center text-sm sm:text-base font-bold shadow-lg">
+            <div class="flex items-center gap-3">
+                <span id="score-display" class="text-pink-600 bg-pink-100 px-3 py-1 rounded-full">SCORE: 0</span>
+                <span id="speed-display" class="bg-amber-100 text-amber-600 px-3 py-1 rounded-full font-black tracking-wider flex items-center gap-1">
+                    ⚡ FAST
+                </span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="lives-display" class="flex text-xl gap-1 text-pink-500">
+                    ❤️❤️❤️
+                </div>
+                <button id="pause-btn" class="bg-pink-400 hover:bg-pink-500 text-white rounded-xl px-3 py-1 text-xs font-bold shadow transition">
+                    ⏸️ Pause
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full aspect-[4/3] kawaii-card rounded-3xl overflow-hidden p-2 bg-pink-50/50 shadow-2xl">
+            <canvas id="gameCanvas" class="w-full h-full rounded-2xl bg-gradient-to-b from-pink-100/60 to-purple-100/40"></canvas>
+
+            <!-- Overlay Screen (Start / Game Over / Pause) -->
+            <div id="overlay" class="absolute inset-0 bg-pink-900/40 backdrop-blur-md flex flex-col justify-center items-center p-6 text-center z-10 transition-all duration-300">
+                <h1 id="overlay-title" class="text-4xl sm:text-5xl font-black text-white drop-shadow-[0_4px_8px_rgba(255,107,139,0.8)] mb-2">
+                    ⚡ 極速棉花糖打磚塊 ⚡
+                </h1>
+                <p id="overlay-subtitle" class="text-pink-100 text-sm sm:text-lg mb-6 font-semibold max-w-md drop-shadow">
+                    超極速棉花糖狂暴彈跳！每次撞擊加速！考研反應極限！
+                </p>
+
+                <!-- Speed Switch Selector -->
+                <div class="flex gap-2 mb-6 bg-white/80 p-1.5 rounded-2xl shadow-inner border border-pink-200">
+                    <button id="speed-normal" class="px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-600 bg-white shadow transition">標準極速 (11x)</button>
+                    <button id="speed-hyper" class="px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-400 hover:text-pink-600 transition">超音速 (14x)</button>
+                    <button id="speed-light" class="px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-400 hover:text-pink-600 transition">光速狂暴 (17x)</button>
+                </div>
+
+                <button id="start-btn" class="kawaii-btn text-white text-xl font-black px-10 py-4 rounded-full tracking-wider transform hover:scale-105 active:scale-95 transition">
+                    🎮 開始極速挑戰 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- High Score & Instructions -->
+        <div class="w-full flex justify-between items-center text-xs sm:text-sm font-semibold text-pink-600 mt-2 px-2">
+            <span>🏆 最佳紀錄: <span id="high-score">0</span></span>
+            <span>💡 提示: 移動滑鼠/手指或 A/D 鍵控制超光速擋板</span>
+        </div>
+    </div>
+
+    <script>
+        // Sound Engine (Web Audio API)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type, pitchMultiplier = 1.0) {
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'hit') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400 * pitchMultiplier, now);
+                    osc.frequency.exponentialRampToValueAtTime(800 * pitchMultiplier, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'paddle') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300 * pitchMultiplier, now);
+                    osc.frequency.linearRampToValueAtTime(500 * pitchMultiplier, now + 0.06);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } else if (type === 'powerup') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
+                    osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'lose') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch (e) {}
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const speedDisplay = document.getElementById('speed-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlaySubtitle = document.getElementById('overlay-subtitle');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const highScoreDisplay = document.getElementById('high-score');
+
+        // Speed Mode Selectors
+        const btnNormal = document.getElementById('speed-normal');
+        const btnHyper = document.getElementById('speed-hyper');
+        const btnLight = document.getElementById('speed-light');
+
+        // Game Constants & State Variables
+        let BASE_BALL_SPEED = 11;
+        let MAX_BALL_SPEED = 24;
+        let selectedSpeedSetting = 'FAST';
+
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let highScore = window.__galleryStorage.getItem('kawaii_breakout_high') || 0;
+        highScoreDisplay.innerText = highScore;
+
+        let gameRunning = false;
+        let isPaused = false;
+        let animationFrameId = null;
+
+        // Canvas Scale Context
+        let width = 800;
+        let height = 600;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            width = canvas.width;
+            height = canvas.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        const paddle = {
+            width: 130,
+            height: 18,
+            x: 335,
+            y: 550,
+            speed: 22,
+            targetX: 335,
+            isPointerActive: false
+        };
+
+        class MarshmallowBall {
+            constructor(x, y, vx, vy) {
+                this.x = x;
+                this.y = y;
+                this.radius = 12;
+                this.vx = vx;
+                this.vy = vy;
+                this.rotation = 0;
+                this.rotSpeed = 0.15;
+                this.trail = [];
+            }
+
+            get speed() {
+                return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            }
+
+            set speed(s) {
+                const current = this.speed;
+                if (current === 0) return;
+                this.vx = (this.vx / current) * s;
+                this.vy = (this.vy / current) * s;
+            }
+
+            update() {
+                // High-speed Trail update
+                this.trail.push({ x: this.x, y: this.y, alpha: 0.7 });
+                if (this.trail.length > 8) this.trail.shift();
+                this.trail.forEach(t => t.alpha *= 0.75);
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotSpeed * (this.vx > 0 ? 1 : -1);
+            }
+
+            draw() {
+                // Draw high-speed sugar particle trail
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, this.radius * (0.3 + 0.7 * (i / this.trail.length)), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 182, 193, ${t.alpha})`;
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Draw Marshmallow Ball
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // Body Shadow & Soft Body
+                ctx.beginPath();
+                ctx.roundRect(-this.radius, -this.radius * 0.85, this.radius * 2, this.radius * 1.7, 8);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#FF85A1';
+                ctx.stroke();
+
+                // Blushing Cheeks
+                ctx.fillStyle = '#FFB3C6';
+                ctx.beginPath();
+                ctx.arc(-6, 2, 3, 0, Math.PI * 2);
+                ctx.arc(6, 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Kawaii Eyes
+                ctx.fillStyle = '#553C4E';
+                ctx.beginPath();
+                ctx.arc(-5, -2, 2, 0, Math.PI * 2);
+                ctx.arc(5, -2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cute Smile
+                ctx.beginPath();
+                ctx.arc(0, 1, 3.5, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#553C4E';
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        let balls = [];
+
+        // Bricks Configuration
+        const BRICK_ROWS = 5;
+        const BRICK_COLS = 8;
+        let bricks = [];
+
+        const BRICK_COLORS = [
+            { bg: '#FF9EBB', border: '#FF5C8A', points: 50 }, // Strawberry
+            { bg: '#B3F5D3', border: '#5CD99B', points: 40 }, // Mint
+            { bg: '#FFF1B3', border: '#FAD02C', points: 30 }, // Cream
+            { bg: '#B3E5FF', border: '#52B2FF', points: 20 }, // Sky
+            { bg: '#E3C9FF', border: '#AF7AC5', points: 10 }  // Lavender
+        ];
+
+        // Power-Ups
+        class PowerUp {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'EXPAND', 'SLOW', 'MULTI', 'HEART'
+                this.vy = 5.8; // High speed drop
+                this.radius = 12;
+            }
+
+            update() {
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFF';
+                ctx.fill();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = '#FF6B8B';
+                ctx.stroke();
+
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                let icon = '⭐';
+                if (this.type === 'EXPAND') icon = '↔️';
+                if (this.type === 'SLOW') icon = '🧊';
+                if (this.type === 'MULTI') icon = '🍡';
+                if (this.type === 'HEART') icon = '💖';
+                ctx.fillText(icon, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        let powerUps = [];
+        let particles = [];
+
+        function createHeartParticle(x, y) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1.0,
+                    size: 8 + Math.random() * 8
+                });
+            }
+        }
+
+        function initBricks() {
+            bricks = [];
+            const padding = 8;
+            const marginTop = 60;
+            const availableWidth = width - padding * 2;
+            const brickWidth = (availableWidth / BRICK_COLS) - padding;
+            const brickHeight = 24;
+
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const bx = padding + c * (brickWidth + padding) + padding / 2;
+                    const by = marginTop + r * (brickHeight + padding);
+                    bricks[r][c] = {
+                        x: bx,
+                        y: by,
+                        w: brickWidth,
+                        h: brickHeight,
+                        active: true,
+                        color: BRICK_COLORS[r % BRICK_COLORS.length]
+                    };
+                }
+            }
+        }
+
+        function setSpeedMode(mode) {
+            selectedSpeedSetting = mode;
+            btnNormal.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-400 hover:text-pink-600 transition";
+            btnHyper.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-400 hover:text-pink-600 transition";
+            btnLight.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-400 hover:text-pink-600 transition";
+
+            if (mode === 'FAST') {
+                BASE_BALL_SPEED = 11;
+                MAX_BALL_SPEED = 24;
+                btnNormal.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-600 bg-white shadow transition";
+            } else if (mode === 'HYPER') {
+                BASE_BALL_SPEED = 14;
+                MAX_BALL_SPEED = 28;
+                btnHyper.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-600 bg-white shadow transition";
+            } else if (mode === 'LIGHT') {
+                BASE_BALL_SPEED = 17;
+                MAX_BALL_SPEED = 34;
+                btnLight.className = "px-4 py-1.5 rounded-xl font-bold text-xs sm:text-sm text-pink-600 bg-white shadow transition";
+            }
+        }
+
+        btnNormal.onclick = () => setSpeedMode('FAST');
+        btnHyper.onclick = () => setSpeedMode('HYPER');
+        btnLight.onclick = () => setSpeedMode('LIGHT');
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            scoreDisplay.innerText = `SCORE: ${score}`;
+            updateLivesDisplay();
+            resetPaddleAndBall();
+            initBricks();
+        }
+
+        function resetPaddleAndBall() {
+            paddle.width = 130;
+            paddle.x = width / 2 - paddle.width / 2;
+            paddle.targetX = paddle.x;
+
+            const speed = BASE_BALL_SPEED + (level - 1) * 1.5;
+            const angle = -Math.PI / 4 - (Math.random() * Math.PI / 4);
+            balls = [
+                new MarshmallowBall(
+                    width / 2,
+                    paddle.y - 20,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed
+                )
+            ];
+            powerUps = [];
+        }
+
+        function updateLivesDisplay() {
+            livesDisplay.innerText = '❤️'.repeat(Math.max(0, lives));
+        }
+
+        let keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if (e.key === 'p' || e.key === 'P') togglePause();
+        });
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function handlePointerMove(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = width / rect.width;
+            const mouseX = (clientX - rect.left) * scaleX;
+            paddle.targetX = mouseX - paddle.width / 2;
+            paddle.isPointerActive = true;
+        }
+
+        canvas.addEventListener('mousemove', e => handlePointerMove(e.clientX));
+        canvas.addEventListener('touchmove', e => {
+            if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX);
+        }, { passive: true });
+
+        function update() {
+            if (!gameRunning || isPaused) return;
+
+            // Super Responsive Paddle Movement
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                paddle.targetX -= paddle.speed;
+                paddle.isPointerActive = false;
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                paddle.targetX += paddle.speed;
+                paddle.isPointerActive = false;
+            }
+
+            // Smooth Interpolated Direct Tracking
+            paddle.x += (paddle.targetX - paddle.x) * 0.45;
+            paddle.x = Math.max(0, Math.min(width - paddle.width, paddle.x));
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.04;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Highest active ball speed tracking for dynamic HUD
+            let maxCurrentSpeed = 0;
+
+            // Update Balls
+            for (let bIdx = balls.length - 1; bIdx >= 0; bIdx--) {
+                const ball = balls[bIdx];
+                ball.update();
+
+                const spd = ball.speed;
+                if (spd > maxCurrentSpeed) maxCurrentSpeed = spd;
+
+                // Wall Collisions
+                if (ball.x - ball.radius <= 0) {
+                    ball.x = ball.radius;
+                    ball.vx *= -1;
+                    playSound('hit', spd / BASE_BALL_SPEED);
+                }
+                if (ball.x + ball.radius >= width) {
+                    ball.x = width - ball.radius;
+                    ball.vx *= -1;
+                    playSound('hit', spd / BASE_BALL_SPEED);
+                }
+                if (ball.y - ball.radius <= 0) {
+                    ball.y = ball.radius;
+                    ball.vy *= -1;
+                    playSound('hit', spd / BASE_BALL_SPEED);
+                }
+
+                // Paddle Collision
+                if (
+                    ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x >= paddle.x &&
+                    ball.x <= paddle.x + paddle.width &&
+                    ball.vy > 0
+                ) {
+                    ball.y = paddle.y - ball.radius;
+                    
+                    // Bounce angle depending on impact point
+                    const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    const maxAngle = Math.PI * 0.4; // 72 degrees max
+                    const newAngle = hitPoint * maxAngle - Math.PI / 2;
+                    
+                    const currentSpeed = Math.min(MAX_BALL_SPEED, ball.speed * 1.01); // Subtle paddle boost
+                    ball.vx = Math.cos(newAngle) * currentSpeed;
+                    ball.vy = Math.sin(newAngle) * currentSpeed;
+
+                    playSound('paddle', currentSpeed / BASE_BALL_SPEED);
+                    createHeartParticle(ball.x, ball.y);
+                }
+
+                // Brick Collision
+                let brickHitCount = 0;
+                for (let r = 0; r < BRICK_ROWS; r++) {
+                    for (let c = 0; c < BRICK_COLS; c++) {
+                        const brick = bricks[r][c];
+                        if (!brick.active) continue;
+
+                        if (
+                            ball.x + ball.radius > brick.x &&
+                            ball.x - ball.radius < brick.x + brick.w &&
+                            ball.y + ball.radius > brick.y &&
+                            ball.y - ball.radius < brick.y + brick.h
+                        ) {
+                            brick.active = false;
+                            score += brick.color.points;
+                            scoreDisplay.innerText = `SCORE: ${score}`;
+
+                            // Combo Speed Acceleration: Multiplied by ~1.02 each bounce
+                            const newSpeed = Math.min(MAX_BALL_SPEED, ball.speed * 1.025);
+                            ball.vy *= -1;
+                            ball.speed = newSpeed;
+
+                            playSound('hit', newSpeed / BASE_BALL_SPEED);
+                            createHeartParticle(brick.x + brick.w / 2, brick.y + brick.h / 2);
+
+                            // Drop Power-up chance (30%)
+                            if (Math.random() < 0.3) {
+                                const types = ['EXPAND', 'SLOW', 'MULTI', 'HEART'];
+                                const type = types[Math.floor(Math.random() * types.length)];
+                                powerUps.push(new PowerUp(brick.x + brick.w / 2, brick.y + brick.h / 2, type));
+                            }
+                            brickHitCount++;
+                            break;
+                        }
+                    }
+                    if (brickHitCount > 0) break;
+                }
+
+                // Ball Missed
+                if (ball.y - ball.radius > height) {
+                    balls.splice(bIdx, 1);
+                }
+            }
+
+            // Check dynamic HUD speed gauge
+            if (maxCurrentSpeed >= 28) {
+                speedDisplay.innerHTML = `⚡ LIGHTSPEED`;
+                speedDisplay.className = "bg-purple-200 text-purple-700 px-3 py-1 rounded-full font-black tracking-wider speed-gauge-turbo";
+            } else if (maxCurrentSpeed >= 20) {
+                speedDisplay.innerHTML = `⚡ HYPER`;
+                speedDisplay.className = "bg-rose-200 text-rose-700 px-3 py-1 rounded-full font-black tracking-wider speed-gauge-turbo";
+            } else if (maxCurrentSpeed >= 15) {
+                speedDisplay.innerHTML = `⚡ TURBO`;
+                speedDisplay.className = "bg-amber-200 text-amber-700 px-3 py-1 rounded-full font-black tracking-wider";
+            } else {
+                speedDisplay.innerHTML = `⚡ FAST`;
+                speedDisplay.className = "bg-amber-100 text-amber-600 px-3 py-1 rounded-full font-black tracking-wider";
+            }
+
+            // Check Level Complete
+            let remainingBricks = bricks.flat().filter(b => b.active).length;
+            if (remainingBricks === 0) {
+                level++;
+                resetPaddleAndBall();
+                initBricks();
+            }
+
+            // Check Ball Loss
+            if (balls.length === 0) {
+                lives--;
+                updateLivesDisplay();
+                playSound('lose');
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    resetPaddleAndBall();
+                }
+            }
+
+            // Update PowerUps
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const p = powerUps[i];
+                p.update();
+
+                // Catch PowerUp
+                if (
+                    p.y + p.radius >= paddle.y &&
+                    p.y - p.radius <= paddle.y + paddle.height &&
+                    p.x >= paddle.x &&
+                    p.x <= paddle.x + paddle.width
+                ) {
+                    playSound('powerup');
+                    if (p.type === 'EXPAND') paddle.width = Math.min(220, paddle.width + 30);
+                    if (p.type === 'SLOW') balls.forEach(b => b.speed = Math.max(BASE_BALL_SPEED, b.speed * 0.75));
+                    if (p.type === 'HEART') { lives = Math.min(5, lives + 1); updateLivesDisplay(); }
+                    if (p.type === 'MULTI') {
+                        const len = balls.length;
+                        for (let k = 0; k < len; k++) {
+                            const parent = balls[k];
+                            balls.push(new MarshmallowBall(parent.x, parent.y, -parent.vx, parent.vy));
+                        }
+                    }
+                    powerUps.splice(i, 1);
+                } else if (p.y - p.radius > height) {
+                    powerUps.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Bricks
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (!b.active) continue;
+
+                    ctx.save();
+                    ctx.fillStyle = b.color.bg;
+                    ctx.strokeStyle = b.color.border;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(b.x, b.y, b.w, b.h, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Brick Shine Highlight
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.beginPath();
+                    ctx.roundRect(b.x + 4, b.y + 3, b.w - 8, 4, 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            // Draw Power-ups
+            powerUps.forEach(p => p.draw());
+
+            // Draw Heart Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = '#FF6B8B';
+                ctx.font = `${p.size}px sans-serif`;
+                ctx.fillText('💖', p.x, p.y);
+                ctx.restore();
+            });
+
+            // Draw Paddle
+            ctx.save();
+            ctx.fillStyle = '#FF85A1';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner Cute Dots on Paddle
+            ctx.fillStyle = '#FFF';
+            for (let x = paddle.x + 15; x < paddle.x + paddle.width - 10; x += 20) {
+                ctx.beginPath();
+                ctx.arc(x, paddle.y + paddle.height / 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Draw Balls
+            balls.forEach(b => b.draw());
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            resetGame();
+            overlay.classList.add('hidden');
+            gameRunning = true;
+            isPaused = false;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('kawaii_breakout_high', highScore);
+                highScoreDisplay.innerText = highScore;
+            }
+            overlayTitle.innerText = "💔 遊戲結束 💔";
+            overlaySubtitle.innerText = `最終得分: ${score} 分！點擊下方重新發射超光速棉花糖！`;
+            startBtn.innerText = "🔄 再次極速挑戰";
+            overlay.classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                overlayTitle.innerText = "⏸️ 遊戲暫停 ⏸️";
+                overlaySubtitle.innerText = "休息一下！準備好繼續極速反擊了嗎？";
+                startBtn.innerText = "▶️ 繼續遊戲";
+                overlay.classList.remove('hidden');
+                pauseBtn.innerText = "▶️ Resume";
+            } else {
+                overlay.classList.add('hidden');
+                pauseBtn.innerText = "⏸️ Pause";
+            }
+        }
+
+        startBtn.onclick = () => {
+            if (isPaused) {
+                togglePause();
+            } else {
+                startGame();
+            }
+        };
+
+        pauseBtn.onclick = togglePause;
+
+        // Initialize Canvas Size & Initial Render Setup
+        resizeCanvas();
+        initBricks();
+        draw();
+        gameLoop();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

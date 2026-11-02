@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>夢幻獨角獸打磚塊 - Unicorn Fantasy Brick Breaker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            /* 改為明亮夢幻的馬卡龍彩虹漸層背景 */
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 50%, #fed6e3 100%);
+            color: #4a2840;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 夢幻彩虹與城堡背景裝飾 */
+        .bg-decorations {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 背景明亮七彩彩虹 */
+        .rainbow-bg {
+            position: absolute;
+            top: 2%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 850px;
+            height: 420px;
+            border-radius: 420px 420px 0 0;
+            border: 18px solid transparent;
+            border-top-color: rgba(255, 154, 162, 0.65);
+            box-shadow: 0 -15px 0 0 rgba(255, 183, 178, 0.65),
+                        0 -30px 0 0 rgba(255, 218, 193, 0.65),
+                        0 -45px 0 0 rgba(226, 240, 203, 0.65),
+                        0 -60px 0 0 rgba(181, 234, 215, 0.65),
+                        0 -75px 0 0 rgba(199, 206, 234, 0.65);
+            filter: blur(2px);
+            opacity: 0.9;
+        }
+
+        /* 圓潤童話城堡剪影（非箭頭造型） */
+        .castle-bg {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 220px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" preserveAspectRatio="none"><path fill="rgba(180, 140, 215, 0.35)" d="M0,300 L0,230 L50,230 L50,210 L60,210 L60,230 L90,230 L90,190 Q90,160 120,160 Q150,160 150,190 L150,230 L180,230 L180,210 L190,210 L190,230 L220,230 L220,140 Q220,110 260,110 Q300,110 300,140 L300,230 L330,230 L330,200 L345,200 L345,230 L370,230 L370,170 Q370,140 400,140 Q430,140 430,170 L430,230 L480,230 L480,120 Q480,80 530,80 Q580,80 580,120 L580,230 L630,230 L630,160 Q630,130 660,130 Q690,130 690,160 L690,230 L730,230 L730,200 L745,200 L745,230 L780,230 L780,130 Q780,100 820,100 Q860,100 860,130 L860,230 L900,230 L900,180 Q900,150 930,150 Q960,150 960,180 L960,230 L1000,230 L1000,210 L1010,210 L1010,230 L1050,230 L1050,170 Q1050,140 1080,140 Q1110,140 1110,170 L1110,230 L1200,230 L1200,300 Z"/></svg>');
+            background-size: cover;
+            background-position: bottom;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 28px;
+            box-shadow: 0 15px 35px rgba(180, 120, 200, 0.25),
+                        inset 0 0 20px rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            max-width: 100%;
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(45deg, #ff6b81, #a88beb, #38ada9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1.5px;
+        }
+
+        .score-board {
+            display: flex;
+            gap: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #5c3c70;
+        }
+
+        .score-item {
+            background: rgba(255, 255, 255, 0.65);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        canvas {
+            /* 明亮乳白色粉嫩背景 */
+            background: linear-gradient(180deg, rgba(255, 245, 250, 0.95) 0%, rgba(240, 243, 255, 0.95) 100%);
+            border-radius: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 8px 25px rgba(160, 130, 190, 0.2),
+                        inset 0 0 15px rgba(255, 192, 203, 0.3);
+            display: block;
+            touch-action: none;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #6a4c7d;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 245, 250, 0.92);
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .overlay-title {
+            font-size: 34px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        .overlay-title.game-over {
+            color: #ff6b81;
+            text-shadow: 0 0 10px rgba(255, 107, 129, 0.3);
+        }
+
+        .overlay-title.victory {
+            color: #2ed573;
+            text-shadow: 0 0 10px rgba(46, 213, 115, 0.3);
+        }
+
+        .overlay-title.start {
+            background: linear-gradient(135deg, #ff758c 0%, #a88beb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .overlay-desc {
+            font-size: 16px;
+            color: #6a4c7d;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #5c2c54;
+            font-weight: 800;
+            font-size: 18px;
+            padding: 12px 36px;
+            border: 2px solid #ffffff;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+            transition: all 0.2s ease;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(255, 154, 158, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 螢幕觸控按鈕 */
+        .touch-controls {
+            display: none;
+            width: 100%;
+            margin-top: 15px;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .touch-controls {
+                display: flex;
+            }
+        }
+
+        .touch-btn {
+            flex: 1;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 182, 233, 0.8);
+            border-radius: 18px;
+            color: #7b4397;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .touch-btn:active {
+            background: rgba(255, 220, 240, 0.9);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-decorations">
+        <div class="rainbow-bg"></div>
+        <div class="castle-bg"></div>
+    </div>
+
+    <div class="game-container">
+        <div class="header">
+            <div class="title">🦄 UNICORN BRICK</div>
+            <div class="score-board">
+                <div id="itemStatus" class="score-item" style="display:none; color:#ffe600; border-color: rgba(255,230,0,0.5);">
+                    ✨ 獨角獸魔法: <span id="itemTimer" class="score-value">5s</span>
+                </div>
+                <div class="score-item">分數: <span id="score" class="score-value">0</span></div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="450"></canvas>
+
+        <div class="controls-hint">使用鍵盤 <kbd>←</kbd> <kbd>→</kbd> 方向鍵移動彩虹滑塊</div>
+
+        <div class="touch-controls">
+            <div class="touch-btn" id="btnLeft">◄ 左移</div>
+            <div class="touch-btn" id="btnRight">右移 ►</div>
+        </div>
+
+        <!-- 遊戲狀態遮罩 (Start / Game Over / Win) -->
+        <div id="overlay" class="overlay">
+            <div id="overlayTitle" class="overlay-title start">🦄 UNICORN BRICK</div>
+            <div id="overlayDesc" class="overlay-desc">開啟夢幻獨角獸的星光冒險！</div>
+            <button id="startBtn" class="btn">✨ 開始遊戲 ✨</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI 元素
+        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayDesc = document.getElementById('overlayDesc');
+        const startBtn = document.getElementById('startBtn');
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const itemStatusEl = document.getElementById('itemStatus');
+        const itemTimerEl = document.getElementById('itemTimer');
+
+        // 遊戲狀態變數
+        let score = 0;
+        let isRunning = false;
+        let animationFrameId;
+
+        // 道具系統變數
+        let powerups = [];
+        let paddlePowerupTimer = null;
+        let powerupTimeRemaining = 0;
+        let powerupInterval = null;
+        const NORMAL_PADDLE_WIDTH = 100;
+        const EXPANDED_PADDLE_WIDTH = 160;
+
+        // 鍵盤狀態
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // 磚塊與圖案設定
+        const brickRows = 3;
+        const brickCols = 8;
+        const brickPadding = 10;
+        const brickOffsetTop = 40;
+        const brickOffsetLeft = 20;
+
+        // 動態計算磚塊寬度與高度
+        const brickWidth = (canvas.width - (brickOffsetLeft * 2) - (brickPadding * (brickCols - 1))) / brickCols;
+        const brickHeight = 22;
+
+        // 明亮柔和夢幻圖案與配色
+        const rowColors = [
+            { main: '#ff85a2', glow: 'rgba(255, 133, 162, 0.5)', emoji: '👑' }, // 第一排：粉紅皇冠
+            { main: '#b388ff', glow: 'rgba(179, 136, 255, 0.5)', emoji: '🪄' }, // 第二排：薰衣草魔法棒
+            { main: '#ffa726', glow: 'rgba(255, 167, 38, 0.5)', emoji: '💖' }  // 第三排：蜜桃暖金愛心
+        ];
+
+        let bricks = [];
+
+        // 彩虹滑塊物件 (Paddle)
+        const paddle = {
+            width: NORMAL_PADDLE_WIDTH,
+            height: 14,
+            x: (canvas.width - NORMAL_PADDLE_WIDTH) / 2,
+            y: canvas.height - 25,
+            speed: 7,
+            dx: 0,
+            isPoweredUp: false
+        };
+
+        // 魔法小球 (Ball - 獨角獸珍珠星光球)
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 40,
+            radius: 8,
+            speed: 5,
+            dx: 4,
+            dy: -4,
+            color: '#ffffff'
+        };
+
+        // 星光爆破粒子效果 (Sparkle Particles)
+        let particles = [];
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 7,
+                    dy: (Math.random() - 0.5) * 7,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 25,
+                    isStar: Math.random() > 0.5
+                });
+            }
+        }
+
+        // 事件監聽：鍵盤
+        document.addEventListener('keydown', keyDownHandler, false);
+        document.addEventListener('keyup', keyUpHandler, false);
+
+        function keyDownHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                rightPressed = true;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                leftPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                rightPressed = false;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                leftPressed = false;
+            }
+        }
+
+        // 手機與觸控事件
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); leftPressed = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); leftPressed = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); rightPressed = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); rightPressed = false; });
+
+        // 滑鼠跟隨
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const relativeX = e.clientX - rect.left;
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddle.x = relativeX - paddle.width / 2;
+                if (paddle.x < 0) paddle.x = 0;
+                if (paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+            }
+        });
+
+        // 初始化磚塊
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < brickRows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickCols; c++) {
+                    bricks[r][c] = {
+                        x: 0,
+                        y: 0,
+                        status: 1,
+                        color: rowColors[r].main,
+                        glow: rowColors[r].glow,
+                        emoji: rowColors[r].emoji
+                    };
+                }
+            }
+        }
+
+        // 重置遊戲數據
+        function resetGame() {
+            score = 0;
+            scoreEl.textContent = score;
+            
+            clearPowerup();
+            paddle.width = NORMAL_PADDLE_WIDTH;
+            paddle.x = (canvas.width - paddle.width) / 2;
+            
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height - 40;
+            ball.dx = 4 * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = -4;
+            
+            particles = [];
+            powerups = [];
+            initBricks();
+        }
+
+        // 觸發獨角獸魔法變長道具
+        function activateExpandPaddle() {
+            paddle.width = EXPANDED_PADDLE_WIDTH;
+            paddle.isPoweredUp = true;
+            
+            if (paddlePowerupTimer) clearTimeout(paddlePowerupTimer);
+            if (powerupInterval) clearInterval(powerupInterval);
+
+            powerupTimeRemaining = 5;
+            itemStatusEl.style.display = 'block';
+            itemTimerEl.textContent = powerupTimeRemaining + 's';
+
+            powerupInterval = setInterval(() => {
+                powerupTimeRemaining--;
+                if (powerupTimeRemaining > 0) {
+                    itemTimerEl.textContent = powerupTimeRemaining + 's';
+                }
+            }, 1000);
+
+            paddlePowerupTimer = setTimeout(() => {
+                clearPowerup();
+            }, 5000);
+        }
+
+        // 清除道具效果
+        function clearPowerup() {
+            paddle.width = NORMAL_PADDLE_WIDTH;
+            paddle.isPoweredUp = false;
+            itemStatusEl.style.display = 'none';
+            if (paddlePowerupTimer) clearTimeout(paddlePowerupTimer);
+            if (powerupInterval) clearInterval(powerupInterval);
+        }
+
+        // 磚塊碰撞檢測
+        function collisionDetection() {
+            let activeBricks = 0;
+            for (let r = 0; r < brickRows; r++) {
+                for (let c = 0; c < brickCols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        activeBricks++;
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + brickWidth &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + brickHeight
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            score += 10;
+                            scoreEl.textContent = score;
+
+                            // 產生星光爆破粒子效果
+                            createParticles(ball.x, ball.y, b.color);
+
+                            // 20% 機率掉落獨角獸角魔法道具
+                            if (Math.random() < 0.20) {
+                                powerups.push({
+                                    x: b.x + brickWidth / 2,
+                                    y: b.y + brickHeight,
+                                    radius: 12,
+                                    dy: 2.2
+                                });
+                            }
+
+                            if (activeBricks - 1 === 0) {
+                                gameWin();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateAndDrawPowerups() {
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                let p = powerups[i];
+                p.y += p.dy;
+
+                // 繪製獨角獸魔法星星道具
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffe600';
+                ctx.shadowColor = '#ff758c';
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                
+                // 獨角獸 Emoji 圖示 🦄
+                ctx.font = '14px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🦄', p.x, p.y + 1);
+                ctx.restore();
+
+                // 檢測道具與滑塊碰撞
+                if (
+                    p.y + p.radius >= paddle.y &&
+                    p.y - p.radius <= paddle.y + paddle.height &&
+                    p.x >= paddle.x &&
+                    p.x <= paddle.x + paddle.width
+                ) {
+                    activateExpandPaddle();
+                    createParticles(p.x, p.y, '#ffe600');
+                    powerups.splice(i, 1);
+                } 
+                else if (p.y - p.radius > canvas.height) {
+                    powerups.splice(i, 1);
+                }
+            }
+        }
+
+        // 繪製珍珠夢幻小球
+        function drawBall() {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#ffb6e9';
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.closePath();
+
+            // 小球內層粉嫩高光
+            ctx.beginPath();
+            ctx.arc(ball.x - 2, ball.y - 2, ball.radius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 182, 217, 0.8)';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 繪製彩虹滑塊
+        function drawPaddle() {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+
+            // 明亮彩虹漸層
+            let gradient = ctx.createLinearGradient(paddle.x, 0, paddle.x + paddle.width, 0);
+            if (paddle.isPoweredUp) {
+                gradient.addColorStop(0, '#ffd166');
+                gradient.addColorStop(0.3, '#ff85a2');
+                gradient.addColorStop(0.7, '#b388ff');
+                gradient.addColorStop(1, '#ffd166');
+            } else {
+                gradient.addColorStop(0, '#ff9a9e');
+                gradient.addColorStop(0.5, '#a1c4fd');
+                gradient.addColorStop(1, '#c2e9fb');
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = paddle.isPoweredUp ? 'rgba(255, 209, 102, 0.6)' : 'rgba(161, 196, 253, 0.6)';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.closePath();
+
+            // 滑塊頂部高光
+            ctx.beginPath();
+            ctx.roundRect(paddle.x + 4, paddle.y + 2, paddle.width - 8, 3, 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 繪製彩虹滑塊
+        function drawPaddle() {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+
+            // 彩虹漸層
+            let gradient = ctx.createLinearGradient(paddle.x, 0, paddle.x + paddle.width, 0);
+            if (paddle.isPoweredUp) {
+                gradient.addColorStop(0, '#ffe600');
+                gradient.addColorStop(0.3, '#ff758c');
+                gradient.addColorStop(0.7, '#a88beb');
+                gradient.addColorStop(1, '#ffe600');
+            } else {
+                gradient.addColorStop(0, '#ff9a9e');
+                gradient.addColorStop(0.5, '#fecfef');
+                gradient.addColorStop(1, '#a1c4fd');
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = paddle.isPoweredUp ? '#ffe600' : '#ff9a9e';
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            ctx.closePath();
+
+            // 滑塊高光頂邊
+            ctx.beginPath();
+            ctx.roundRect(paddle.x + 4, paddle.y + 2, paddle.width - 8, 3, 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 繪製獨角獸夢幻磚塊
+        function drawBricks() {
+            for (let r = 0; r < brickRows; r++) {
+                for (let c = 0; c < brickCols; c++) {
+                    if (bricks[r][c].status === 1) {
+                        const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                        const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                        bricks[r][c].x = brickX;
+                        bricks[r][c].y = brickY;
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 6);
+                        ctx.fillStyle = bricks[r][c].color;
+                        ctx.shadowColor = bricks[r][c].glow;
+                        ctx.shadowBlur = 12;
+                        ctx.fill();
+
+                        // 磚塊內部柔光邊框
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        // 繪製磚塊中央圖示
+                        ctx.font = '10px serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(bricks[r][c].emoji, brickX + brickWidth / 2, brickY + brickHeight / 2);
+
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        // 繪製星光魔法粒子
+        function drawParticles() {
+            particles.forEach((p, index) => {
+                if (p.life <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    p.life--;
+                    p.alpha = p.life / 25;
+
+                    ctx.save();
+                    ctx.globalAlpha = p.alpha;
+                    if (p.isStar) {
+                        ctx.fillStyle = '#ffe600';
+                        ctx.font = `${p.size * 2}px sans-serif`;
+                        ctx.fillText('★', p.x, p.y);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 8;
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            });
+        }
+
+        function update() {
+            if (rightPressed && paddle.x < canvas.width - paddle.width) {
+                paddle.x += paddle.speed;
+            } else if (leftPressed && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // 左右牆反彈
+            if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+                ball.dx = -ball.dx;
+            }
+
+            // 頂部牆反彈
+            if (ball.y - ball.radius < 0) {
+                ball.dy = -ball.dy;
+            }
+
+            // 滑塊碰撞處理
+            if (ball.y + ball.radius > paddle.y && 
+                ball.y - ball.radius < paddle.y + paddle.height &&
+                ball.x > paddle.x && 
+                ball.x < paddle.x + paddle.width) {
+                
+                let hitPoint = ball.x - (paddle.x + paddle.width / 2);
+                hitPoint = hitPoint / (paddle.width / 2);
+                
+                let angle = hitPoint * (Math.PI / 3);
+                let currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+                
+                ball.dx = currentSpeed * Math.sin(angle);
+                ball.dy = -currentSpeed * Math.cos(angle);
+
+                // 擊中滑塊時觸發彩虹星光特效
+                createParticles(ball.x, paddle.y, '#fecfef');
+            } 
+            else if (ball.y + ball.radius > canvas.height) {
+                gameOver();
+                return;
+            }
+
+            collisionDetection();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawBricks();
+            drawPaddle();
+            drawBall();
+            drawParticles();
+            updateAndDrawPowerups();
+        }
+
+        function gameLoop() {
+            if (!isRunning) return;
+
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            isRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            clearPowerup();
+            
+            overlayTitle.textContent = "GAME OVER";
+            overlayTitle.className = "overlay-title game-over";
+            overlayDesc.textContent = `魔法星光消逝了... 最終得分: ${score}`;
+            startBtn.textContent = "✨ 再試一次 ✨";
+            overlay.classList.remove('hidden');
+        }
+
+        function gameWin() {
+            isRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            clearPowerup();
+
+            overlayTitle.textContent = "🦄 VICTORY! 🦄";
+            overlayTitle.className = "overlay-title victory";
+            overlayDesc.textContent = `完美破關！你拯救了獨角獸王國！分數: ${score}`;
+            startBtn.textContent = "✨ 再玩一次 ✨";
+            overlay.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', () => {
+            resetGame();
+            overlay.classList.add('hidden');
+            isRunning = true;
+            gameLoop();
+        });
+
+        // 初始化畫布
+        initBricks();
+        draw();
+    </script>
+</body>
+</html>

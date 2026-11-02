@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>龍蛇殺陣 - 戰鬥行動漫貪食蛇</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Action Anime feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        anime: ['"M PLUS Rounded 1c"', 'sans-serif'],
+                        bebas: ['"Bebas Neue"', 'cursive'],
+                    },
+                    colors: {
+                        battle: {
+                            dark: '#0f172a',
+                            panel: 'rgba(30, 41, 59, 0.85)',
+                            red: '#ef4444',
+                            orange: '#f97316',
+                            gold: '#fbbf24',
+                            cyan: '#06b6d4',
+                            purple: '#a855f7',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 70%, #020617 100%);
+            touch-action: manipulation;
+            user-select: none;
+            color: #f8fafc;
+        }
+
+        .battle-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.15), inset 0 0 15px rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+        }
+
+        /* Manga action line pulse effect */
+        @keyframes auraGlow {
+            0% { box-shadow: 0 0 10px #f97316, inset 0 0 5px #f97316; }
+            50% { box-shadow: 0 0 25px #ef4444, inset 0 0 12px #ef4444; }
+            100% { box-shadow: 0 0 10px #f97316, inset 0 0 5px #f97316; }
+        }
+
+        .battle-aura {
+            animation: auraGlow 1.2s infinite alternate;
+        }
+
+        /* Screen shake for intense action */
+        .shake {
+            animation: screenShake 0.25s ease-in-out;
+        }
+
+        @keyframes screenShake {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-6px, 4px); }
+            40% { transform: translate(6px, -4px); }
+            60% { transform: translate(-4px, -2px); }
+            80% { transform: translate(4px, 2px); }
+        }
+
+        .clip-manga {
+            clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex items-center justify-center p-3 sm:p-6 text-slate-100">
+
+    <div id="gameContainer" class="w-full max-w-md mx-auto flex flex-col items-center">
+
+        <!-- Header: Battle Title & Scoreboard -->
+        <header class="w-full battle-card p-3.5 mb-3 flex flex-col sm:flex-row justify-between items-center gap-2 border-red-500/50">
+            <!-- Game Title & Badge -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-gradient-to-br from-red-600 to-orange-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg shadow-red-500/40 border border-red-300">
+                    <i class="fa-solid fa-dragon"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-300 to-yellow-400 tracking-wider flex items-center gap-2">
+                        龍蛇殺陣 <span class="text-[10px] px-2 py-0.5 rounded bg-red-950/80 text-red-400 border border-red-700 font-bold tracking-normal uppercase">Battle Mode</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-400 font-bold">熱血捕獵 ✕ 破陣獵老鼠</p>
+                </div>
+            </div>
+
+            <!-- Invincible Super Saiyan Battle Mode Indicator -->
+            <div id="invincibleBadge" class="hidden px-3 py-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 text-white font-black text-xs rounded-full border border-yellow-300 shadow-lg shadow-orange-500/50 animate-pulse flex items-center gap-1.5">
+                <i class="fa-solid fa-fire text-yellow-300"></i> 極限覺醒: <span id="invincibleTimerText" class="text-yellow-200">15</span>s
+            </div>
+
+            <!-- Score display -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <div class="bg-slate-900/90 border border-cyan-500/40 px-3 py-1 rounded-xl text-center min-w-[65px]">
+                    <div class="text-[9px] font-black text-cyan-400 tracking-wider uppercase">SCORE</div>
+                    <div id="scoreDisplay" class="text-lg font-black text-cyan-200 font-bebas tracking-wider">0</div>
+                </div>
+                <div class="bg-slate-900/90 border border-amber-500/40 px-3 py-1 rounded-xl text-center min-w-[65px]">
+                    <div class="text-[9px] font-black text-amber-400 tracking-wider uppercase">BEST</div>
+                    <div id="highScoreDisplay" class="text-lg font-black text-amber-300 font-bebas tracking-wider">0</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Game Panel -->
+        <main class="w-full battle-card p-3 sm:p-4 relative flex flex-col items-center">
+
+            <!-- Speed & Map Difficulty Control -->
+            <div class="w-full flex items-center justify-between mb-2.5 px-1 text-xs font-bold text-slate-300">
+                <span class="text-slate-400 flex items-center gap-1"><i class="fa-solid fa-bolt text-amber-400"></i>戰速模式:</span>
+                <div class="flex gap-1.5">
+                    <button class="speed-btn px-2.5 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 hover:border-red-500 transition" data-speed="210">修練 (慢)</button>
+                    <button class="speed-btn px-2.5 py-0.5 bg-gradient-to-r from-red-600 to-orange-600 text-white text-xs font-black rounded-lg border border-red-400 shadow-md shadow-red-600/30" data-speed="140">熱血 (中)</button>
+                    <button class="speed-btn px-2.5 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 hover:border-red-500 transition" data-speed="90">極限 (快)</button>
+                </div>
+            </div>
+
+            <!-- Canvas Grid Container -->
+            <div class="relative w-full aspect-square bg-slate-950 rounded-2xl overflow-hidden border-2 border-red-900/60 shadow-2xl">
+                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+                <!-- Start Screen Overlay -->
+                <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10">
+                    <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-red-600 to-amber-500 rounded-2xl flex items-center justify-center text-4xl text-white border-2 border-orange-400 shadow-xl shadow-red-600/50 animate-pulse">
+                        🐍
+                    </div>
+                    <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-amber-300 mb-1">龍蛇出世・決戰登場</h2>
+                    <p class="text-xs text-slate-300 mb-4 max-w-xs font-medium leading-relaxed">
+                        捕獲 <span class="text-amber-300 font-bold">老鼠 🐭</span> 提升戰力！<br>
+                        避開 <span class="text-purple-400 font-bold">捕蛇網 🕸️</span>，吞噬 <span class="text-red-400 font-bold">爆發鼠 🐭🔥</span> 觸發 <span class="text-yellow-300 font-bold">15秒無敵覺醒</span> 摧毀陷阱！
+                    </p>
+                    
+                    <button id="startBtn" onclick="startGame()" class="px-8 py-3 bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 hover:brightness-110 active:scale-95 text-white font-black text-lg rounded-xl border border-yellow-300 shadow-lg shadow-red-600/50 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-play"></i> 開啟戰鬥
+                    </button>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 text-white animate-fade-in">
+                    <div class="w-16 h-16 mb-2 bg-red-900/80 rounded-2xl flex items-center justify-center text-3xl shadow-xl border-2 border-red-500 animate-bounce">
+                        ⚔️
+                    </div>
+                    <h2 class="text-2xl font-black text-red-400 mb-1 tracking-wider">戰敗倒下！</h2>
+                    <p id="deathReasonText" class="text-xs text-slate-300 mb-4 font-bold">遭捕蛇網困住了！再接再厲 💪</p>
+
+                    <div class="bg-slate-900/90 p-3 rounded-xl mb-4 w-52 border border-red-500/30 text-center shadow-inner">
+                        <div class="text-[10px] text-slate-400 font-bold tracking-wider">最終戰績</div>
+                        <div id="finalScore" class="text-3xl font-black text-amber-400 font-bebas">0</div>
+                        <div class="text-[10px] text-slate-400 mt-1">最高紀錄: <span id="finalHighScore" class="text-cyan-300">0</span></div>
+                    </div>
+
+                    <button onclick="startGame()" class="px-8 py-3 bg-gradient-to-r from-red-600 to-orange-500 hover:brightness-110 active:scale-95 text-white font-black text-lg rounded-xl border border-yellow-300 shadow-lg shadow-red-600/50 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> 再次挑戰
+                    </button>
+                </div>
+            </div>
+
+            <!-- Touch Controls for Mobile -->
+            <div class="mt-3.5 w-full flex flex-col items-center gap-1 sm:hidden">
+                <button onclick="handleInput(0, -1)" class="w-12 h-12 bg-slate-800 text-red-400 font-bold text-xl rounded-xl shadow-md active:bg-red-900/50 border border-slate-700 flex items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <div class="flex gap-6">
+                    <button onclick="handleInput(-1, 0)" class="w-12 h-12 bg-slate-800 text-red-400 font-bold text-xl rounded-xl shadow-md active:bg-red-900/50 border border-slate-700 flex items-center justify-center active:scale-95">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button onclick="handleInput(1, 0)" class="w-12 h-12 bg-slate-800 text-red-400 font-bold text-xl rounded-xl shadow-md active:bg-red-900/50 border border-slate-700 flex items-center justify-center active:scale-95">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+                <button onclick="handleInput(0, 1)" class="w-12 h-12 bg-slate-800 text-red-400 font-bold text-xl rounded-xl shadow-md active:bg-red-900/50 border border-slate-700 flex items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </div>
+
+            <p class="hidden sm:block text-[11px] text-slate-400 mt-2.5 font-bold text-center">
+                ⌨️ 使用鍵盤 <span class="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">↑</span> <span class="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">↓</span> <span class="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">←</span> <span class="px-1.5 py-0.5 bg-slate-800 text-slate-200 rounded border border-slate-700">→</span> 或 WASD 移動
+            </p>
+        </main>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer for Anime Battle Sound Effects
+        class BattleAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            // Eating Mouse sound (sharp crunch & surge)
+            playEatMouse() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            // Power-Up Awaken Mode sound
+            playPowerAwaken() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [300, 450, 600, 900, 1200, 1600];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.04);
+                    osc.stop(now + idx * 0.04 + 0.2);
+                });
+            }
+
+            // Destroy Trap sound
+            playTrapDestroy() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.22);
+            }
+
+            // Defeat/Explosion sound
+            playExplosion() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+
+            // Dash Move sound
+            playDash() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(320, now + 0.03);
+
+                gain.gain.setValueAtTime(0.02, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.035);
+            }
+        }
+
+        const sound = new BattleAudio();
+
+        let canvas = null;
+        let ctx = null;
+
+        const GRID_COUNT = 16;
+        let tileSize = 0;
+
+        let snake = [];
+        let direction = { x: 1, y: 0 };
+        let nextDirection = { x: 1, y: 0 };
+        
+        let mouseFood = { x: 0, y: 0 }; // 普通老鼠
+        let powerMouse = null; // 能量爆發鼠
+        let traps = []; // 捕蛇網陣列 [{x, y}]
+
+        let invincibleTimer = 0; // 無敵極限覺醒倒數
+        let invincibleInterval = null;
+
+        let particles = [];
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('battle_snake_highscore') || '0', 10);
+
+        let gameLoopTimer = null;
+        let gameSpeed = 140; // 熱血預設 140ms
+        let isPlaying = false;
+        let isDying = false;
+        let deathHeadPos = null;
+
+        // UI references
+        let scoreDisplay, highScoreDisplay, startOverlay, gameOverOverlay, finalScore, finalHighScore, invincibleBadge, invincibleTimerText, deathReasonText;
+
+        function initDOMReferences() {
+            canvas = document.getElementById('gameCanvas');
+            if (canvas) ctx = canvas.getContext('2d');
+
+            scoreDisplay = document.getElementById('scoreDisplay');
+            highScoreDisplay = document.getElementById('highScoreDisplay');
+            startOverlay = document.getElementById('startOverlay');
+            gameOverOverlay = document.getElementById('gameOverOverlay');
+            finalScore = document.getElementById('finalScore');
+            finalHighScore = document.getElementById('finalHighScore');
+            invincibleBadge = document.getElementById('invincibleBadge');
+            invincibleTimerText = document.getElementById('invincibleTimerText');
+            deathReasonText = document.getElementById('deathReasonText');
+
+            if (highScoreDisplay) highScoreDisplay.textContent = highScore;
+        }
+
+        // Speed Button Listeners
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.speed-btn').forEach(b => {
+                    b.className = 'speed-btn px-2.5 py-0.5 bg-slate-800 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 hover:border-red-500 transition';
+                });
+                const target = e.currentTarget;
+                target.className = 'speed-btn px-2.5 py-0.5 bg-gradient-to-r from-red-600 to-orange-600 text-white text-xs font-black rounded-lg border border-red-400 shadow-md shadow-red-600/30';
+                gameSpeed = parseInt(target.dataset.speed, 10);
+
+                if (isPlaying) {
+                    clearInterval(gameLoopTimer);
+                    gameLoopTimer = setInterval(updateGame, gameSpeed);
+                }
+            });
+        });
+
+        function resizeCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            const container = canvas.parentElement;
+            const size = container.clientWidth;
+            canvas.width = size;
+            canvas.height = size;
+            tileSize = size / GRID_COUNT;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function renderBoard() {
+            if (!ctx || !canvas) return;
+            // Battle Anime Dark Tactical Grid
+            for (let r = 0; r < GRID_COUNT; r++) {
+                for (let c = 0; c < GRID_COUNT; c++) {
+                    ctx.fillStyle = (r + c) % 2 === 0 ? '#0f172a' : '#1e293b';
+                    ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+
+                    // Grid subtle borders
+                    ctx.strokeStyle = 'rgba(51, 65, 85, 0.3)';
+                    ctx.lineWidth = 0.5;
+                    ctx.strokeRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                }
+            }
+        }
+
+        function isOccupied(x, y) {
+            if (snake.some(s => s.x === x && s.y === y)) return true;
+            if (mouseFood.x === x && mouseFood.y === y) return true;
+            if (powerMouse && powerMouse.x === x && powerMouse.y === y) return true;
+            if (traps.some(t => t.x === x && t.y === y)) return true;
+            return false;
+        }
+
+        function spawnMouseFood() {
+            let valid = false;
+            while (!valid) {
+                const rx = Math.floor(Math.random() * GRID_COUNT);
+                const ry = Math.floor(Math.random() * GRID_COUNT);
+                if (!isOccupied(rx, ry)) {
+                    mouseFood = { x: rx, y: ry };
+                    valid = true;
+                }
+            }
+
+            // 35% Chance to spawn a flaming power mouse if not currently active
+            if (!powerMouse && Math.random() < 0.35) {
+                spawnPowerMouse();
+            }
+
+            // Update Traps according to current score level
+            updateTraps();
+        }
+
+        function spawnPowerMouse() {
+            let valid = false;
+            while (!valid) {
+                const rx = Math.floor(Math.random() * GRID_COUNT);
+                const ry = Math.floor(Math.random() * GRID_COUNT);
+                if (!isOccupied(rx, ry)) {
+                    powerMouse = { x: rx, y: ry };
+                    valid = true;
+                }
+            }
+        }
+
+        // Dynamically manage Snake Net Traps (捕蛇網) based on score
+        function updateTraps() {
+            const targetTrapCount = Math.min(6, Math.floor(score / 30) + 2); // Starts at 2 traps, max 6
+            while (traps.length < targetTrapCount) {
+                const rx = Math.floor(Math.random() * GRID_COUNT);
+                const ry = Math.floor(Math.random() * GRID_COUNT);
+                // Do not spawn trap directly in front of snake head
+                const head = snake[0];
+                if (head && Math.abs(head.x - rx) <= 1 && Math.abs(head.y - ry) <= 1) continue;
+
+                if (!isOccupied(rx, ry)) {
+                    traps.push({ x: rx, y: ry });
+                }
+            }
+        }
+
+        function activateInvincibility() {
+            invincibleTimer = 15;
+            invincibleTimerText.textContent = '15';
+            invincibleBadge.classList.remove('hidden');
+
+            if (invincibleInterval) clearInterval(invincibleInterval);
+            invincibleInterval = setInterval(() => {
+                invincibleTimer--;
+                invincibleTimerText.textContent = invincibleTimer;
+                if (invincibleTimer <= 0) {
+                    clearInterval(invincibleInterval);
+                    invincibleBadge.classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function handleInput(dirX, dirY) {
+            if (!isPlaying || isDying) return;
+            if (dirX !== 0 && direction.x === -dirX) return;
+            if (dirY !== 0 && direction.y === -dirY) return;
+            nextDirection = { x: dirX, y: dirY };
+        }
+
+        function updateGame() {
+            if (!isPlaying || isDying) return;
+
+            direction = { ...nextDirection };
+            let head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+            const isInvincible = invincibleTimer > 0;
+
+            // 1. Wall Collision Detection
+            if (head.x < 0 || head.x >= GRID_COUNT || head.y < 0 || head.y >= GRID_COUNT) {
+                if (isInvincible) {
+                    // Invincible mode: Warp through walls
+                    head.x = (head.x + GRID_COUNT) % GRID_COUNT;
+                    head.y = (head.y + GRID_COUNT) % GRID_COUNT;
+                } else {
+                    triggerDeath({ x: snake[0].x, y: snake[0].y }, "撞到了封鎖線障礙牆！");
+                    return;
+                }
+            }
+
+            // 2. Snake Net Trap Collision (捕蛇網陷阱)
+            const trapIndex = traps.findIndex(t => t.x === head.x && t.y === head.y);
+            if (trapIndex !== -1) {
+                if (isInvincible) {
+                    // Destroy Trap with Battle Impact!
+                    traps.splice(trapIndex, 1);
+                    score += 15; // Bonus destruction points
+                    scoreDisplay.textContent = score;
+                    sound.playTrapDestroy();
+                    createExplosionParticles(head.x, head.y, '#f97316', 16);
+                    triggerScreenShake();
+                } else {
+                    triggerDeath({ x: head.x, y: head.y }, "被捕蛇網 🕸️ 困住了！");
+                    return;
+                }
+            }
+
+            // 3. Body Self-Collision Detection
+            if (!isInvincible && snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                triggerDeath({ x: head.x, y: head.y }, "遭到自己的戰鬥長蛇糾纏！");
+                return;
+            }
+
+            snake.unshift(head);
+
+            // 4. Eat Flaming Power Mouse (能量爆發鼠)
+            if (powerMouse && head.x === powerMouse.x && head.y === powerMouse.y) {
+                score += 30;
+                scoreDisplay.textContent = score;
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreDisplay.textContent = highScore;
+                    window.__galleryStorage.setItem('battle_snake_highscore', highScore.toString());
+                }
+
+                sound.playPowerAwaken();
+                createExplosionParticles(powerMouse.x, powerMouse.y, '#fbbf24', 24);
+                triggerScreenShake();
+                powerMouse = null;
+                activateInvincibility();
+            }
+
+            // 5. Eat Normal Mouse (老鼠)
+            if (head.x === mouseFood.x && head.y === mouseFood.y) {
+                score += 10;
+                scoreDisplay.textContent = score;
+
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreDisplay.textContent = highScore;
+                    window.__galleryStorage.setItem('battle_snake_highscore', highScore.toString());
+                }
+
+                sound.playEatMouse();
+                createExplosionParticles(mouseFood.x, mouseFood.y, '#38bdf8', 12);
+                spawnMouseFood();
+            } else {
+                snake.pop();
+                sound.playDash();
+            }
+        }
+
+        function triggerScreenShake() {
+            const container = document.getElementById('gameContainer');
+            if (container) {
+                container.classList.remove('shake');
+                void container.offsetWidth; // trigger reflow
+                container.classList.add('shake');
+            }
+        }
+
+        // Trigger Death with Manga Slash & Burst Effects
+        function triggerDeath(headPos, reason) {
+            isDying = true;
+            deathHeadPos = headPos;
+            sound.playExplosion();
+            createExplosionParticles(headPos.x, headPos.y, '#ef4444', 28);
+            triggerScreenShake();
+
+            setTimeout(() => {
+                triggerGameOver(reason);
+            }, 900);
+        }
+
+        function triggerGameOver(reason) {
+            isPlaying = false;
+            isDying = false;
+            clearInterval(gameLoopTimer);
+            if (invincibleInterval) clearInterval(invincibleInterval);
+            invincibleBadge.classList.add('hidden');
+
+            finalScore.textContent = score;
+            finalHighScore.textContent = highScore;
+            if (deathReasonText) deathReasonText.textContent = reason || "陣亡過後，下回再戰！";
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        function startGame() {
+            initDOMReferences();
+            resizeCanvas();
+
+            snake = [
+                { x: 5, y: 8 },
+                { x: 4, y: 8 },
+                { x: 3, y: 8 }
+            ];
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            score = 0;
+            isDying = false;
+            powerMouse = null;
+            traps = [];
+            invincibleTimer = 0;
+            if (invincibleInterval) clearInterval(invincibleInterval);
+
+            scoreDisplay.textContent = '0';
+            invincibleBadge.classList.add('hidden');
+            startOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+
+            spawnMouseFood();
+            isPlaying = true;
+
+            if (gameLoopTimer) clearInterval(gameLoopTimer);
+            gameLoopTimer = setInterval(updateGame, gameSpeed);
+        }
+
+        function createExplosionParticles(gx, gy, colorHex, count = 15) {
+            const px = gx * tileSize + tileSize / 2;
+            const py = gy * tileSize + tileSize / 2;
+
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 5;
+                particles.push({
+                    x: px,
+                    y: py,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colorHex,
+                    size: 3 + Math.random() * 5,
+                    alpha: 1,
+                    life: 1
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.04;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        
+        // Render Cute Battle Mouse (老鼠)
+        function drawMouse(gx, gy, timestamp) {
+            const cx = gx * tileSize + tileSize / 2;
+            const cy = gy * tileSize + tileSize / 2;
+            const bounce = Math.sin(timestamp / 180) * (tileSize * 0.06);
+            const r = tileSize * 0.35;
+
+            ctx.save();
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+
+            // Mouse Body (Grey/Cyan spirit mouse)
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + bounce, r, r * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouse Ears 🐭
+            ctx.fillStyle = '#f472b6';
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.6, cy - r * 0.6 + bounce, r * 0.45, 0, Math.PI * 2);
+            ctx.arc(cx + r * 0.6, cy - r * 0.6 + bounce, r * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouse Eyes (Cute scared anime dots)
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.3, cy - r * 0.1 + bounce, r * 0.18, 0, Math.PI * 2);
+            ctx.arc(cx + r * 0.3, cy - r * 0.1 + bounce, r * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Twitching Whiskers
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx - r * 0.4, cy + bounce);
+            ctx.lineTo(cx - r * 1.1, cy - r * 0.2 + bounce);
+            ctx.moveTo(cx + r * 0.4, cy + bounce);
+            ctx.lineTo(cx + r * 1.1, cy - r * 0.2 + bounce);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Render Flaming Power Mouse (能量爆發老鼠 🐭🔥)
+        function drawPowerMouse(gx, gy, timestamp) {
+            const cx = gx * tileSize + tileSize / 2;
+            const cy = gy * tileSize + tileSize / 2;
+            const pulse = 1 + Math.sin(timestamp / 120) * 0.15;
+            const r = (tileSize * 0.38) * pulse;
+
+            ctx.save();
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 16;
+
+            // Flaming aura background
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Golden Body
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, r, r * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Red Flame Ears
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.6, cy - r * 0.6, r * 0.45, 0, Math.PI * 2);
+            ctx.arc(cx + r * 0.6, cy - r * 0.6, r * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glowing Eyes 🤩
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `${r * 0.9}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔥', cx, cy);
+
+            ctx.restore();
+        }
+
+        // Render Snake Net Trap (捕蛇網 🕸️)
+        function drawTrap(gx, gy, timestamp) {
+            const cx = gx * tileSize + tileSize / 2;
+            const cy = gy * tileSize + tileSize / 2;
+            const size = tileSize * 0.85;
+
+            ctx.save();
+            ctx.shadowColor = '#a855f7';
+            ctx.shadowBlur = 10;
+
+            // Outer Net Cage Frame
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cx - size / 2, cy - size / 2, size, size);
+
+            // Web Grid Lines
+            ctx.strokeStyle = 'rgba(192, 132, 252, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // Diagonal cross
+            ctx.moveTo(cx - size / 2, cy - size / 2);
+            ctx.lineTo(cx + size / 2, cy + size / 2);
+            ctx.moveTo(cx + size / 2, cy - size / 2);
+            ctx.lineTo(cx - size / 2, cy + size / 2);
+
+            // Inner square web
+            const s2 = size * 0.4;
+            ctx.rect(cx - s2 / 2, cy - s2 / 2, s2, s2);
+            ctx.stroke();
+
+            // Center Warning Icon
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = `${tileSize * 0.4}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🕸️', cx, cy);
+
+            ctx.restore();
+        }
+
+        // Render Dragon Snake Body Segments
+        function drawSnakeBody(segment, index, isGolden) {
+            const cx = segment.x * tileSize + tileSize / 2;
+            const cy = segment.y * tileSize + tileSize / 2;
+            const r = (tileSize / 2) * 0.85;
+
+            ctx.save();
+            if (isGolden) {
+                ctx.fillStyle = index % 2 === 0 ? '#f59e0b' : '#ef4444';
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 12;
+            } else {
+                ctx.fillStyle = index % 2 === 0 ? '#dc2626' : '#ea580c';
+                ctx.shadowColor = '#dc2626';
+                ctx.shadowBlur = 6;
+            }
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anime Energy Scale Pattern
+            ctx.fillStyle = isGolden ? '#fef08a' : '#fca5a5';
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Render Dragon Snake Head with Battle Anime Glare
+        function drawSnakeHead(gx, gy, dir, isGolden) {
+            const cx = gx * tileSize + tileSize / 2;
+            const cy = gy * tileSize + tileSize / 2;
+            const r = tileSize / 2;
+
+            ctx.save();
+            if (isGolden) {
+                ctx.fillStyle = '#b45309';
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 18;
+            } else {
+                ctx.fillStyle = '#991b1b';
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 12;
+            }
+
+            // Head Outer Shape
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.95, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Battle Horns / Crown Fins 🐲
+            ctx.fillStyle = isGolden ? '#fbbf24' : '#f97316';
+            ctx.beginPath();
+            ctx.moveTo(cx - dir.y * r * 0.8, cy + dir.x * r * 0.8);
+            ctx.lineTo(cx - dir.x * r * 1.3 - dir.y * r * 0.5, cy - dir.y * r * 1.3 + dir.x * r * 0.5);
+            ctx.lineTo(cx, cy);
+            ctx.fill();
+
+            // Eyes Position offset based on direction
+            const eyeOffset = r * 0.38;
+            let eye1X = cx, eye1Y = cy, eye2X = cx, eye2Y = cy;
+
+            if (dir.x === 1) { // Right
+                eye1X = cx + eyeOffset; eye1Y = cy - eyeOffset;
+                eye2X = cx + eyeOffset; eye2Y = cy + eyeOffset;
+            } else if (dir.x === -1) { // Left
+                eye1X = cx - eyeOffset; eye1Y = cy - eyeOffset;
+                eye2X = cx - eyeOffset; eye2Y = cy + eyeOffset;
+            } else if (dir.y === -1) { // Up
+                eye1X = cx - eyeOffset; eye1Y = cy - eyeOffset;
+                eye2X = cx + eyeOffset; eye2Y = cy - eyeOffset;
+            } else { // Down
+                eye1X = cx - eyeOffset; eye1Y = cy + eyeOffset;
+                eye2X = cx + eyeOffset; eye2Y = cy + eyeOffset;
+            }
+
+            // Sharp Anime Battle Eye Glow (Cyan/Yellow Slit)
+            const eyeR = r * 0.28;
+            ctx.fillStyle = isGolden ? '#fef08a' : '#38bdf8';
+            ctx.shadowColor = isGolden ? '#fbbf24' : '#06b6d4';
+            ctx.shadowBlur = 8;
+
+            ctx.beginPath();
+            ctx.arc(eye1X, eye1Y, eyeR, 0, Math.PI * 2);
+            ctx.arc(eye2X, eye2Y, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Intense Slit Pupil
+            ctx.fillStyle = '#020617';
+            ctx.beginPath();
+            ctx.rect(eye1X - 1.5, eye1Y - eyeR * 0.8, 3, eyeR * 1.6);
+            ctx.rect(eye2X - 1.5, eye2Y - eyeR * 0.8, 3, eyeR * 1.6);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function renderFrame(timestamp) {
+            if (!ctx || !canvas) {
+                requestAnimationFrame(renderFrame);
+                return;
+            }
+
+            renderBoard();
+
+            const isGolden = invincibleTimer > 0;
+
+            // Render Traps (捕蛇網)
+            traps.forEach(trap => {
+                drawTrap(trap.x, trap.y, timestamp || 0);
+            });
+
+            // Render Normal Mouse
+            drawMouse(mouseFood.x, mouseFood.y, timestamp || 0);
+
+            // Render Power Mouse (能量爆發老鼠)
+            if (powerMouse) {
+                drawPowerMouse(powerMouse.x, powerMouse.y, timestamp || 0);
+            }
+
+            // Draw Snake Body
+            for (let i = snake.length - 1; i > 0; i--) {
+                drawSnakeBody(snake[i], i, isGolden);
+            }
+
+            // Draw Snake Head
+            if (snake.length > 0 && (!isDying || (Math.floor((timestamp || 0) / 80) % 2 === 0))) {
+                drawSnakeHead(snake[0].x, snake[0].y, direction, isGolden);
+            }
+
+            // Render Particles
+            updateAndDrawParticles();
+
+            requestAnimationFrame(renderFrame);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initDOMReferences();
+            resizeCanvas();
+            requestAnimationFrame(renderFrame);
+        });
+
+        window.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    handleInput(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    handleInput(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    e.preventDefault();
+                    handleInput(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    e.preventDefault();
+                    handleInput(1, 0);
+                    break;
+            }
+        });
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

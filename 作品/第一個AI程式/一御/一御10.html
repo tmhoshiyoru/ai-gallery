@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyberpunk Breakout Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05050d;
+            color: #f1f5f9;
+            touch-action: none; /* Prevent scrolling on touch */
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .neon-border {
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.25), inset 0 0 15px rgba(0, 240, 255, 0.15);
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+        .neon-text-magenta {
+            text-shadow: 0 0 8px rgba(255, 0, 127, 0.7), 0 0 20px rgba(255, 0, 127, 0.4);
+        }
+        canvas {
+            background: linear-gradient(180deg, #090a16 0%, #03040a 100%);
+            border-radius: 12px;
+            cursor: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <main class="w-full max-w-2xl flex flex-col items-center">
+        <!-- Title and Stats Bar -->
+        <div class="w-full flex items-center justify-between mb-4 px-2">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-indigo-400 neon-text-cyan">
+                    NEON BREAKOUT
+                </h1>
+                <p class="text-xs text-slate-400 font-mono mt-1">CYBERPUNK ARCADE SYSTEM v2.0</p>
+            </div>
+            <div class="flex items-center gap-4 font-orbitron">
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg px-4 py-2 text-right">
+                    <span class="text-xs text-slate-400 block uppercase tracking-widest">Score</span>
+                    <span id="scoreText" class="text-2xl font-bold text-cyan-400 neon-text-cyan">000</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative w-full aspect-[4/3] rounded-xl p-1 bg-gradient-to-b from-cyan-500/30 via-slate-800/40 to-fuchsia-500/30 neon-border">
+            <canvas id="gameCanvas" width="800" height="600" class="w-full h-full block"></canvas>
+
+            <!-- Game Overlay UI -->
+            <div id="overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md rounded-xl flex flex-col items-center justify-center gap-6 p-6 transition-opacity duration-300">
+                <div id="overlayContent" class="text-center">
+                    <h2 id="overlayTitle" class="text-4xl sm:text-5xl font-extrabold font-orbitron text-cyan-400 neon-text-cyan mb-2">
+                        READY PLAYER ONE
+                    </h2>
+                    <p id="overlaySubtitle" class="text-slate-300 text-sm sm:text-base max-w-xs mx-auto">
+                        使用鍵盤 [←] [→] / [A] [D] 或滑鼠控制滑塊，撞擊磚塊獲得分數！
+                    </p>
+                </div>
+                
+                <button id="startBtn" class="font-orbitron font-bold tracking-widest px-8 py-3 bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 text-white rounded-lg shadow-lg hover:shadow-cyan-500/50 transform hover:-translate-y-0.5 active:translate-y-0 transition-all text-lg cursor-pointer">
+                    START GAME
+                </button>
+                
+                <div class="text-xs text-slate-500 font-mono flex gap-4 mt-2">
+                    <span>[◄] [►] MOVE</span>
+                    <span>•</span>
+                    <span>[MOUSE] CONTROLS</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full mt-4 text-center text-xs text-slate-500 font-mono flex items-center justify-between px-2">
+            <span>STRICT BOUNDARY CHECK: ENABLED</span>
+            <span>FPS: 60</span>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreText = document.getElementById('scoreText');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+
+        // Game Configuration & State
+        let score = 0;
+        let gameRunning = false;
+        let animationFrameId = null;
+
+        // Key states
+        const keys = {
+            left: false,
+            right: false
+        };
+
+        // Paddle definition
+        const paddle = {
+            width: 120,
+            height: 16,
+            x: (canvas.width - 120) / 2,
+            y: canvas.height - 35,
+            speed: 9,
+            color: '#00f0ff',
+            glowColor: 'rgba(0, 240, 255, 0.8)'
+        };
+
+        // Ball definition
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 60,
+            dx: 5,
+            dy: -5,
+            radius: 8,
+            speed: 6.5,
+            color: '#ffffff',
+            glowColor: 'rgba(255, 255, 255, 0.9)'
+        };
+
+        // Bricks configuration (3 Rows of Bricks)
+        const brickConfig = {
+            rows: 3,
+            cols: 8,
+            padding: 12,
+            offsetTop: 60,
+            offsetLeft: 35,
+            height: 24,
+            width: 0 // Calculated dynamically
+        };
+        brickConfig.width = (canvas.width - (brickConfig.offsetLeft * 2) - ((brickConfig.cols - 1) * brickConfig.padding)) / brickConfig.cols;
+
+        // Row Styles / Colors for Cyberpunk aesthetic
+        const rowStyles = [
+            { color: '#ff007f', glow: 'rgba(255, 0, 127, 0.8)' },   // Row 0: Neon Magenta
+            { color: '#00f0ff', glow: 'rgba(0, 240, 255, 0.8)' },   // Row 1: Neon Cyan
+            { color: '#a855f7', glow: 'rgba(168, 85, 247, 0.8)' }   // Row 2: Neon Purple
+        ];
+
+        let bricks = [];
+
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < brickConfig.rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const brickX = brickConfig.offsetLeft + c * (brickConfig.width + brickConfig.padding);
+                    const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: brickX,
+                        y: brickY,
+                        status: 1, // 1 = intact, 0 = destroyed
+                        row: r
+                    };
+                }
+            }
+        }
+
+        function updatePaddlePosition() {
+            // Keyboard controls update
+            if (keys.left) {
+                paddle.x -= paddle.speed;
+            }
+            if (keys.right) {
+                paddle.x += paddle.speed;
+            }
+
+            // CRITICAL BOUNDARY GUARANTEE:
+            // Ensure paddle stays strictly within [0, canvas.width - paddle.width]
+            if (paddle.x < 0) {
+                paddle.x = 0;
+            } else if (paddle.x > canvas.width - paddle.width) {
+                paddle.x = canvas.width - paddle.width;
+            }
+        }
+
+        function updateBallPosition() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Bounce off left and right walls
+            if (ball.x + ball.radius > canvas.width) {
+                ball.x = canvas.width - ball.radius;
+                ball.dx = -ball.dx;
+            } else if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.dx = -ball.dx;
+            }
+
+            // Bounce off top wall
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.dy = -ball.dy;
+            }
+
+            // Paddle Collision Check
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width
+            ) {
+                // Calculate bounce angle depending on where the ball hits the paddle
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const angle = hitPoint * (Math.PI / 3); // Max 60 deg angle
+                
+                ball.dx = ball.speed * Math.sin(angle);
+                ball.dy = -ball.speed * Math.cos(angle);
+                
+                // Reposition ball on top of paddle to prevent sticking
+                ball.y = paddle.y - ball.radius;
+            }
+
+            // Bottom Boundary Check (Game Over Condition)
+            if (ball.y + ball.radius > canvas.height) {
+                triggerGameOver();
+            }
+
+            // Brick Collisions
+            checkBrickCollisions();
+        }
+
+        function checkBrickCollisions() {
+            let activeBricksCount = 0;
+
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        activeBricksCount++;
+                        // AABB check for circle-rectangle collision
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + brickConfig.width &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + brickConfig.height
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0; // Destroy brick
+                            score += 10;
+                            scoreText.innerText = String(score).padStart(3, '0');
+
+                            // Slight speed boost as bricks are broken
+                            ball.speed += 0.05;
+                        }
+                    }
+                }
+            }
+
+            // Win Condition (All bricks destroyed)
+            if (activeBricksCount === 0 && gameRunning) {
+                triggerVictory();
+            }
+        }
+
+        function drawBackgroundGrid() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawPaddle() {
+            ctx.save();
+            ctx.shadowColor = paddle.glowColor;
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = paddle.color;
+            
+            // Draw main paddle body
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fill();
+
+            // Highlight inner core
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(paddle.x + 10, paddle.y + 4, paddle.width - 20, 2);
+            ctx.restore();
+        }
+
+        function drawBall() {
+            ctx.save();
+            ctx.shadowColor = ball.glowColor;
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = ball.color;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawBricks() {
+            for (let r = 0; r < brickConfig.rows; r++) {
+                const style = rowStyles[r % rowStyles.length];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        ctx.shadowColor = style.glow;
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = style.color;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, brickConfig.width, brickConfig.height, 6);
+                        ctx.fill();
+
+                        // Inner specular shine line
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.fillRect(b.x + 4, b.y + 3, brickConfig.width - 8, 2);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Render components
+            drawBackgroundGrid();
+            drawBricks();
+            drawPaddle();
+            drawBall();
+
+            if (gameRunning) {
+                updatePaddlePosition();
+                updateBallPosition();
+                animationFrameId = requestAnimationFrame(draw);
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            scoreText.innerText = '000';
+            
+            // Reset ball position & direction
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height - 60;
+            ball.speed = 6.5;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (4 + Math.random() * 2);
+            ball.dy = -5;
+
+            // Reset paddle position centrally
+            paddle.x = (canvas.width - paddle.width) / 2;
+
+            initBricks();
+
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            gameRunning = true;
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            draw();
+        }
+
+        function triggerGameOver() {
+            gameRunning = false;
+            overlayTitle.innerText = "GAME OVER";
+            overlayTitle.className = "text-4xl sm:text-5xl font-extrabold font-orbitron text-rose-500 neon-text-magenta mb-2";
+            overlaySubtitle.innerText = `最終得分: ${score} 分。點擊下方按鈕重新挑戰！`;
+            startBtn.innerText = "TRY AGAIN";
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function triggerVictory() {
+            gameRunning = false;
+            overlayTitle.innerText = "VICTORY!";
+            overlayTitle.className = "text-4xl sm:text-5xl font-extrabold font-orbitron text-emerald-400 neon-text-cyan mb-2";
+            overlaySubtitle.innerText = `恭喜清除所有磚塊！總得分: ${score} 分。`;
+            startBtn.innerText = "PLAY AGAIN";
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+            }
+            if (e.key === ' ' && !gameRunning) {
+                startGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            }
+        });
+
+        // Mouse Controls with strict canvas bounding
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+
+            // Center paddle at mouse position while strictly constraining boundaries
+            let targetX = mouseX - paddle.width / 2;
+            
+            if (targetX < 0) {
+                targetX = 0;
+            } else if (targetX > canvas.width - paddle.width) {
+                targetX = canvas.width - paddle.width;
+            }
+
+            paddle.x = targetX;
+        });
+
+        // Touch Controls support for mobile devices
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const touchX = (e.touches[0].clientX - rect.left) * scaleX;
+
+                let targetX = touchX - paddle.width / 2;
+                if (targetX < 0) targetX = 0;
+                if (targetX > canvas.width - paddle.width) targetX = canvas.width - paddle.width;
+
+                paddle.x = targetX;
+            }
+        }, { passive: true });
+
+        startBtn.addEventListener('click', startGame);
+
+        // Initial preview draw
+        initBricks();
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>像素橘子大冒險：飛刀大作戰</title>
+    <!-- Tailwind CSS for UI Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pixel Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background-color: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 0 20px rgba(255, 123, 0, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+        .pixel-btn {
+            background-color: #ff7b00;
+            border: 3px solid #fff;
+            box-shadow: 0 5px 0 #b35600;
+            transition: all 0.1s ease;
+        }
+        .pixel-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #b35600;
+        }
+        .mode-btn {
+            border: 2px solid #64748b;
+            background-color: #334155;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+        }
+        .mode-btn.active {
+            border-color: #f97316;
+            background-color: #ea580c;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+        .scanline {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+        }
+        .rule-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            transition: all 0.2s ease;
+        }
+        .rule-card:hover {
+            border-color: #f97316;
+            transform: translateY(-2px);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 select-none relative overflow-hidden">
+
+    <!-- Scanline overlay -->
+    <div class="scanline absolute inset-0 pointer-events-none z-30"></div>
+
+    <!-- Game Container -->
+    <div class="relative flex flex-col items-center max-w-lg w-full">
+        <!-- Top Header Info -->
+        <div class="w-full flex justify-between items-center mb-2 px-3 py-2 bg-slate-900 border-2 border-orange-500 rounded-lg shadow-md z-10 text-xs sm:text-sm">
+            <div class="flex items-center space-x-1" id="lives-container">
+                <span class="text-amber-400 mr-1">HP:</span>
+                <span class="text-red-500 text-lg">❤️</span>
+                <span class="text-red-500 text-lg">❤️</span>
+                <span class="text-red-500 text-lg">❤️</span>
+            </div>
+            <div class="text-right">
+                <span class="text-gray-400">TIME:</span>
+                <span id="timer" class="text-green-400 font-bold">00:00.0</span>
+            </div>
+        </div>
+
+        <!-- Boss Health Bar Container -->
+        <div id="boss-hp-container" class="w-full mb-2 px-3 py-1 bg-red-950 border-2 border-red-600 rounded-lg shadow-md z-10 hidden flex flex-col items-center">
+            <div class="flex justify-between w-full text-[9px] text-red-300 font-bold mb-1">
+                <span>榨汁機魔王 JUICER BOSS</span>
+                <span id="boss-hp-text">100%</span>
+            </div>
+            <div class="w-full bg-slate-900 border border-red-500 rounded h-4 p-0.5 relative overflow-hidden">
+                <div id="boss-hp-bar" class="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 h-full rounded transition-all duration-200" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="relative w-full aspect-[3/4] max-h-[65vh] flex justify-center items-center">
+            <canvas id="gameCanvas" class="w-full h-full bg-slate-900 rounded-lg border-4 border-slate-700"></canvas>
+            
+            <!-- Pause Overlay -->
+            <div id="pause-overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 z-20 text-center rounded-lg hidden">
+                <h2 class="text-2xl text-yellow-400 font-extrabold mb-2 tracking-wider drop-shadow-[0_2px_0_#b45309]">
+                    PAUSED
+                </h2>
+                <p id="pause-countdown-text" class="text-xs text-slate-300 mb-2">
+                    按 [P] 鍵或點擊下方按鈕繼續
+                </p>
+                <div id="pause-countdown" class="text-4xl text-orange-500 font-bold mb-4 hidden">
+                    3
+                </div>
+                <button id="resume-btn" class="pixel-btn text-white px-5 py-2 text-xs font-bold rounded cursor-pointer tracking-wider">
+                    繼續遊戲
+                </button>
+            </div>
+
+            <!-- Start / Game Over / Victory Screen Overlay -->
+            <div id="ui-overlay" class="absolute inset-0 bg-black/95 flex flex-col items-center justify-start p-3 z-20 text-center rounded-lg overflow-y-auto">
+                <h1 id="ui-title" class="text-lg sm:text-xl text-orange-500 font-extrabold my-2 tracking-wider leading-relaxed drop-shadow-[0_3px_0_#9a3412]">
+                    像素橘子<br>飛刀大作戰
+                </h1>
+
+                <!-- Mode Navigation Tabs: Rules vs Leaderboard -->
+                <div class="flex w-full justify-center gap-2 mb-2">
+                    <button id="tab-rules-btn" class="px-3 py-1 bg-orange-600 text-white rounded text-[9px] font-bold border border-orange-400">
+                        📖 遊戲圖解規則
+                    </button>
+                    <button id="tab-rank-btn" class="px-3 py-1 bg-slate-800 text-slate-400 rounded text-[9px] font-bold border border-slate-600">
+                        🏆 英雄榜
+                    </button>
+                </div>
+
+                <!-- Visual Rules Guide Section -->
+                <div id="rules-guide-container" class="w-full space-y-2 mb-2">
+                    <!-- Rule 1 -->
+                    <div class="rule-card p-2 rounded-lg text-left flex items-center space-x-2">
+                        <div class="w-12 h-12 shrink-0 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 40 40" class="w-10 h-10">
+                                <rect x="12" y="12" width="16" height="16" fill="#f97316" rx="2" />
+                                <rect x="18" y="8" width="4" height="4" fill="#22c55e" />
+                                <path d="M 5 5 L 12 12 M 35 5 L 28 12 M 5 35 L 12 28" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-orange-400 font-bold text-[9px]">1. 走位生存</p>
+                            <p class="text-slate-300 text-[8px] leading-tight">使用 [WASD] 或觸控紐移動橘子，躲避全方位飛刀。</p>
+                        </div>
+                    </div>
+
+                    <!-- Rule 2 -->
+                    <div class="rule-card p-2 rounded-lg text-left flex items-center space-x-2">
+                        <div class="w-12 h-12 shrink-0 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 40 40" class="w-10 h-10">
+                                <rect x="14" y="10" width="12" height="20" fill="#22c55e" rx="2" />
+                                <line x1="20" y1="12" x2="20" y2="28" stroke="#15803d" stroke-width="2" />
+                                <text x="20" y="38" fill="#22c55e" font-size="8" text-anchor="middle" font-weight="bold">+1 HP</text>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-emerald-400 font-bold text-[9px]">2. 吃葉子補血</p>
+                            <p class="text-slate-300 text-[8px] leading-tight">場上隨機掉落綠葉，碰觸可恢復 1 點 HP。</p>
+                        </div>
+                    </div>
+
+                    <!-- Rule 3 -->
+                    <div class="rule-card p-2 rounded-lg text-left flex items-center space-x-2">
+                        <div class="w-12 h-12 shrink-0 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 40 40" class="w-10 h-10">
+                                <rect x="8" y="10" width="24" height="12" fill="#ef4444" rx="2" />
+                                <rect x="6" y="22" width="28" height="12" fill="#475569" rx="2" />
+                                <rect x="10" y="26" width="6" height="6" fill="#fef08a" />
+                                <rect x="24" y="26" width="6" height="6" fill="#fef08a" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-purple-400 font-bold text-[9px]">3. 40秒榨汁機魔王</p>
+                            <p class="text-slate-300 text-[8px] leading-tight">魔王登場會發射螺旋彈幕與追擊鋸刀。</p>
+                        </div>
+                    </div>
+
+                    <!-- Rule 4 -->
+                    <div class="rule-card p-2 rounded-lg text-left flex items-center space-x-2">
+                        <div class="w-12 h-12 shrink-0 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 40 40" class="w-10 h-10">
+                                <rect x="10" y="10" width="20" height="20" fill="#1e293b" rx="2" stroke="#e2e8f0" stroke-width="1" />
+                                <rect x="14" y="16" width="12" height="12" fill="#ef4444" rx="1" />
+                                <text x="20" y="38" fill="#facc15" font-size="7" text-anchor="middle" font-weight="bold">按[SPACE]</text>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-yellow-400 font-bold text-[9px]">4. 踩插頭連按反擊</p>
+                            <p class="text-slate-300 text-[8px] leading-tight">站在插頭按 [SPACE] 蓄力拔掉，重創魔王！（進度可保留）</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Difficulty Select Buttons -->
+                <div id="difficulty-selector" class="w-full mb-2 flex justify-center gap-2">
+                    <button id="btn-easy" class="mode-btn text-[10px] px-3 py-1.5 rounded font-bold">
+                        🌱 簡單模式
+                    </button>
+                    <button id="btn-hard" class="mode-btn active text-[10px] px-3 py-1.5 rounded font-bold">
+                        🔥 困難模式
+                    </button>
+                </div>
+
+                <!-- Final Stats -->
+                <div id="final-stats" class="hidden mb-2 text-xs w-full">
+                    <p class="text-yellow-400 mb-1">堅持時間：<span id="final-time" class="text-white font-bold">0.0</span> 秒</p>
+                </div>
+
+                <!-- Leaderboard Container -->
+                <div id="leaderboard-container" class="w-full bg-slate-800/90 border-2 border-orange-400/50 rounded p-2 mb-2 max-h-28 overflow-y-auto hidden">
+                    <div class="text-[10px] text-orange-400 mb-1 border-b border-slate-700 pb-1">🏆 英雄榜 (BEST TIMES)</div>
+                    <ol id="leaderboard-list" class="text-[9px] space-y-1 text-slate-200">
+                        <li class="text-slate-500">尚無紀錄</li>
+                    </ol>
+                </div>
+
+                <!-- Action Button -->
+                <button id="start-btn" class="pixel-btn text-white px-6 py-2 text-xs sm:text-sm font-bold rounded cursor-pointer tracking-wider my-1">
+                    開始遊戲
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div class="w-full mt-3 flex justify-between items-center sm:hidden px-2 z-10">
+            <div class="grid grid-cols-3 gap-1 w-32 h-32">
+                <div></div>
+                <button id="btn-up" class="bg-slate-700 border-2 border-slate-500 rounded text-white active:bg-orange-600 flex items-center justify-center font-bold">▲</button>
+                <div></div>
+                <button id="btn-left" class="bg-slate-700 border-2 border-slate-500 rounded text-white active:bg-orange-600 flex items-center justify-center font-bold">◄</button>
+                <div class="bg-slate-800 rounded-full border border-slate-700"></div>
+                <button id="btn-right" class="bg-slate-700 border-2 border-slate-500 rounded text-white active:bg-orange-600 flex items-center justify-center font-bold">►</button>
+                <div></div>
+                <button id="btn-down" class="bg-slate-700 border-2 border-slate-500 rounded text-white active:bg-orange-600 flex items-center justify-center font-bold">▼</button>
+                <div></div>
+            </div>
+
+            <div class="flex flex-col gap-2 items-center">
+                <button id="btn-pull" class="bg-yellow-600 border-2 border-yellow-300 text-white font-bold text-xs px-4 py-3 rounded active:bg-yellow-500 shadow-md">
+                    ⚡ 拔插頭<br><span class="text-[8px]">(SPACE)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playShoot() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+            playBossAlert() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(600, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+            playHeal() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playPullProgress() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(500 + Math.random() * 200, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+            playBossDamage() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.1);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.1);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + (idx + 1) * 0.1 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.1);
+                    osc.stop(this.ctx.currentTime + (idx + 1) * 0.1 + 0.2);
+                });
+            }
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                const notes = [200, 150, 100, 70];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + (idx + 1) * 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + (idx + 1) * 0.12);
+                });
+            }
+        }
+
+        const soundFX = new SoundFX();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_WIDTH = 320;
+        const GAME_HEIGHT = 425;
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
+            ' ': false
+        };
+
+        const touchState = { up: false, down: false, left: false, right: false };
+
+        let difficultyMode = 'hard';
+        let maxLives = 3;
+        let lives = 3;
+        let gameState = 'START';
+        let startTime = 0;
+        let elapsedTime = 0;
+        let totalPausedTime = 0;
+        let pauseStartTime = 0;
+        let countdownTimer = 3;
+        let countdownInterval = null;
+
+        let blades = [];
+        let particles = [];
+        let leaves = [];
+        let homingBlade = null;
+        let homingBladeRespawnTimer = 0;
+
+        let lastLeafSpawnTime = 0;
+        let spawnTimer = 0;
+        let leafSpawnIntervalSec = 10;
+
+        let isBossActive = false;
+        let bossMaxHp = 12;
+        let bossHp = 12;
+        let bossStunTimer = 0;
+        let bossAppearanceCount = 0;
+        let bossSpiralAngle = 0;
+        let bossX = GAME_WIDTH / 2;
+        let bossY = -60;
+        let bossTargetY = 55;
+        let bossVx = 1.2;
+        let bossWarningTimer = 0;
+        let bossDuration = 40;
+
+        let plugObject = null;
+        let plugsSpawnedThisBossPhase = 0;
+        let plugCooldownTimer = 0;
+        let persistentPlugPresses = 0;
+
+        let victoryCutsceneTimer = 0;
+
+        class Player {
+            constructor() {
+                this.x = GAME_WIDTH / 2;
+                this.y = GAME_HEIGHT / 2 + 50;
+                this.radius = 12;
+                this.speed = 3.2;
+                this.walkFrame = 0;
+                this.walkTimer = 0;
+                this.invulnerableTimer = 0;
+            }
+
+            update() {
+                let dx = 0;
+                let dy = 0;
+
+                if (keys.w || keys.ArrowUp || touchState.up) dy -= 1;
+                if (keys.s || keys.ArrowDown || touchState.down) dy += 1;
+                if (keys.a || keys.ArrowLeft || touchState.left) dx -= 1;
+                if (keys.d || keys.ArrowRight || touchState.right) dx += 1;
+
+                if (dx !== 0 && dy !== 0) {
+                    dx *= 0.7071;
+                    dy *= 0.7071;
+                }
+
+                this.x += dx * this.speed;
+                this.y += dy * this.speed;
+
+                this.x = Math.max(this.radius + 2, Math.min(GAME_WIDTH - this.radius - 2, this.x));
+                this.y = Math.max(this.radius + 2, Math.min(GAME_HEIGHT - this.radius - 2, this.y));
+
+                if (dx !== 0 || dy !== 0) {
+                    this.walkTimer++;
+                    if (this.walkTimer % 8 === 0) {
+                        this.walkFrame = (this.walkFrame + 1) % 4;
+                    }
+                } else {
+                    this.walkFrame = 0;
+                }
+
+                if (this.invulnerableTimer > 0) {
+                    this.invulnerableTimer--;
+                }
+            }
+
+            draw(ctx) {
+                if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+
+                const px = 1.5;
+
+                // Orange Body
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(-7 * px, -7 * px, 14 * px, 14 * px);
+                ctx.fillStyle = '#ea580c';
+                ctx.fillRect(4 * px, -5 * px, 2 * px, 10 * px);
+                ctx.fillRect(-5 * px, 4 * px, 10 * px, 2 * px);
+
+                // Leaf & Stem
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(-1 * px, -10 * px, 2 * px, 3 * px);
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(1 * px, -11 * px, 4 * px, 3 * px);
+
+                // Eyes
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(-4 * px, -3 * px, 2 * px, 4 * px);
+                ctx.fillRect(2 * px, -3 * px, 2 * px, 4 * px);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-4 * px, -3 * px, 1 * px, 1 * px);
+                ctx.fillRect(2 * px, -3 * px, 1 * px, 1 * px);
+
+                // Cheeks
+                ctx.fillStyle = '#fb7185';
+                ctx.fillRect(-6 * px, 1 * px, 2 * px, 2 * px);
+                ctx.fillRect(4 * px, 1 * px, 2 * px, 2 * px);
+
+                // Feet (Walking animation)
+                ctx.fillStyle = '#c2410c';
+                let legOffsetLeft = 0;
+                let legOffsetRight = 0;
+
+                if (this.walkFrame === 1) legOffsetLeft = -2 * px;
+                if (this.walkFrame === 3) legOffsetRight = -2 * px;
+
+                ctx.fillRect(-5 * px, 7 * px + legOffsetLeft, 3 * px, 3 * px);
+                ctx.fillRect(2 * px, 7 * px + legOffsetRight, 3 * px, 3 * px);
+
+                ctx.restore();
+            }
+        }
+
+        class PixelBlade {
+            constructor(x, y, vx, vy, speed) {
+                if (x !== undefined && y !== undefined) {
+                    this.x = x;
+                    this.y = y;
+                    this.vx = vx;
+                    this.vy = vy;
+                    this.speed = speed;
+                } else {
+                    const fromTop = Math.random() > 0.5;
+                    this.x = Math.random() * (GAME_WIDTH - 20) + 10;
+                    this.y = fromTop ? -10 : GAME_HEIGHT + 10;
+
+                    const angle = fromTop ? 
+                        (Math.PI / 4 + Math.random() * Math.PI / 2) : 
+                        (-Math.PI / 4 - Math.random() * Math.PI / 2);
+
+                    this.speed = 1.8 + Math.random() * 1.5;
+                    this.vx = Math.cos(angle);
+                    this.vy = Math.sin(angle);
+                }
+
+                this.radius = 7;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotSpeed = 0.2;
+            }
+
+            update() {
+                this.x += this.vx * this.speed;
+                this.y += this.vy * this.speed;
+                this.rotation += this.rotSpeed;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+                ctx.rotate(this.rotation);
+
+                const px = 1.2;
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fillRect(-8 * px, -2 * px, 16 * px, 4 * px);
+                ctx.fillRect(-2 * px, -8 * px, 4 * px, 16 * px);
+
+                ctx.fillStyle = '#f87171';
+                ctx.fillRect(-2 * px, -2 * px, 4 * px, 4 * px);
+
+                ctx.restore();
+            }
+
+            isOutOfBounds() {
+                return this.x < -20 || this.x > GAME_WIDTH + 20 || this.y < -20 || this.y > GAME_HEIGHT + 20;
+            }
+        }
+
+        class HomingBlade {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 16;
+                this.rotation = 0;
+                this.speed = 0.85;
+            }
+
+            update(targetX, targetY) {
+                const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                this.x += Math.cos(angle) * this.speed;
+                this.y += Math.sin(angle) * this.speed;
+                this.rotation += 0.15;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+                ctx.rotate(this.rotation);
+
+                const px = 2;
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-10 * px, -2 * px, 20 * px, 4 * px);
+                ctx.fillRect(-2 * px, -10 * px, 4 * px, 20 * px);
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(-4 * px, -4 * px, 8 * px, 8 * px);
+
+                ctx.restore();
+            }
+        }
+
+        class CollectibleLeaf {
+            constructor() {
+                this.x = 30 + Math.random() * (GAME_WIDTH - 60);
+                this.y = 40 + Math.random() * (GAME_HEIGHT - 80);
+                this.radius = 8;
+                this.lifeTimer = 0;
+                this.maxLifeTimer = 480;
+            }
+
+            update() {
+                this.lifeTimer++;
+            }
+
+            draw(ctx) {
+                if (this.lifeTimer > this.maxLifeTimer - 120 && Math.floor(this.lifeTimer / 10) % 2 === 0) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+
+                const px = 1.2;
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(-4 * px, -6 * px, 8 * px, 12 * px);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(-1 * px, -5 * px, 2 * px, 10 * px);
+
+                ctx.restore();
+            }
+
+            isExpired() {
+                return this.lifeTimer >= this.maxLifeTimer;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 25 + Math.random() * 15;
+                this.size = 2 + Math.random() * 3;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+            }
+        }
+
+        class PowerPlug {
+            constructor() {
+                this.x = 40 + Math.random() * (GAME_WIDTH - 80);
+                this.y = 120 + Math.random() * (GAME_HEIGHT - 200);
+                this.radius = 18;
+                this.pressesCount = persistentPlugPresses;
+                this.maxPresses = difficultyMode === 'easy' ? 30 : 45;
+                this.pulse = 0;
+                this.spawnScale = 0;
+            }
+
+            update() {
+                this.pulse += 0.1;
+                if (this.spawnScale < 1.0) {
+                    this.spawnScale = Math.min(1.0, this.spawnScale + 0.1);
+                }
+            }
+
+            draw(ctx, playerX, playerY) {
+                ctx.save();
+                ctx.translate(Math.floor(this.x), Math.floor(this.y));
+                ctx.scale(this.spawnScale, this.spawnScale);
+
+                const dist = Math.hypot(playerX - this.x, playerY - this.y);
+                const isPlayerOnPlug = dist < this.radius + 10;
+                const px = 1.5;
+
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(-12 * px, -12 * px, 24 * px, 24 * px);
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-10 * px, -10 * px, 20 * px, 20 * px);
+
+                const shiftY = -(this.pressesCount / this.maxPresses) * 4 * px;
+
+                ctx.save();
+                ctx.translate(0, shiftY);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-7 * px, -3 * px, 14 * px, 10 * px);
+                ctx.fillStyle = '#b91c1c';
+                ctx.fillRect(-5 * px, 2 * px, 10 * px, 4 * px);
+                ctx.restore();
+
+                if (this.pressesCount > 0) {
+                    const barWidth = 36;
+                    const fillWidth = (this.pressesCount / this.maxPresses) * barWidth;
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-barWidth / 2, -22, barWidth, 6);
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-barWidth / 2, -22, fillWidth, 6);
+                }
+
+                if (isPlayerOnPlug) {
+                    ctx.fillStyle = '#facc15';
+                    ctx.font = '8px "Press Start 2P"';
+                    ctx.textAlign = 'center';
+                    const bounce = Math.sin(this.pulse * 4) * 3;
+                    ctx.fillText('按[空白鍵]拔掉!', 0, -28 + bounce);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        const player = new Player();
+
+        function createExplosion(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function drawJuicerBoss(ctx, x, y, isStunned) {
+            ctx.save();
+            ctx.translate(Math.floor(x), Math.floor(y));
+
+            const px = 2;
+            if (isStunned && Math.floor(Date.now() / 80) % 2 === 0) {
+                ctx.translate((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4);
+            }
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-12 * px, -18 * px, 24 * px, 16 * px);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(-14 * px, -2 * px, 28 * px, 18 * px);
+
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-8 * px, 2 * px, 5 * px, 5 * px);
+            ctx.fillRect(3 * px, 2 * px, 5 * px, 5 * px);
+
+            ctx.restore();
+        }
+
+        function updateLivesUI() {
+            const container = document.getElementById('lives-container');
+            container.innerHTML = `<span class="text-amber-400 mr-1">HP:</span>` + `<span class="text-red-500 text-lg">❤️</span>`.repeat(lives);
+        }
+
+        function updateBossHpUI() {
+            const container = document.getElementById('boss-hp-container');
+            if (!isBossActive) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            const pct = Math.max(0, Math.floor((bossHp / bossMaxHp) * 100));
+            document.getElementById('boss-hp-text').innerText = `${pct}%`;
+            document.getElementById('boss-hp-bar').style.width = `${pct}%`;
+        }
+
+        function getLeaderboard() {
+            try {
+                return JSON.parse(window.__galleryStorage.getItem('dodgeball_leaderboard_v2') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveScore(time, mode) {
+            const list = getLeaderboard();
+            list.push({ time: parseFloat(time.toFixed(2)), mode, date: new Date().toLocaleDateString() });
+            list.sort((a, b) => b.time - a.time);
+            const top5 = list.slice(0, 5);
+            try {
+                window.__galleryStorage.setItem('dodgeball_leaderboard_v2', JSON.stringify(top5));
+            } catch (e) {}
+        }
+
+        function renderLeaderboard() {
+            const list = getLeaderboard();
+            const elem = document.getElementById('leaderboard-list');
+            if (list.length === 0) {
+                elem.innerHTML = `<li class="text-slate-500">尚無紀錄</li>`;
+                return;
+            }
+            elem.innerHTML = list.map((item, idx) => 
+                `<li class="flex justify-between">
+                    <span>${idx + 1}. ${item.mode === 'easy' ? '🌱' : '🔥'} ${item.time.toFixed(1)}s</span>
+                    <span class="text-slate-400">${item.date}</span>
+                </li>`
+            ).join('');
+        }
+
+        function handlePullPlugPress() {
+            if (!plugObject || gameState !== 'PLAYING') return;
+
+            const dx = player.x - plugObject.x;
+            const dy = player.y - plugObject.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < plugObject.radius + 12) {
+                plugObject.pressesCount++;
+                persistentPlugPresses = plugObject.pressesCount;
+                soundFX.playPullProgress();
+                createExplosion(plugObject.x, plugObject.y - 4, '#fef08a', 3);
+
+                if (plugObject.pressesCount >= plugObject.maxPresses) {
+                    const damageAmount = difficultyMode === 'easy' ? 3 : 2;
+                    bossHp = Math.max(0, bossHp - damageAmount);
+                    bossStunTimer = 60;
+                    persistentPlugPresses = 0;
+
+                    soundFX.playBossDamage();
+                    updateBossHpUI();
+
+                    createExplosion(plugObject.x, plugObject.y, '#ef4444', 20);
+                    createExplosion(plugObject.x, plugObject.y, '#fef08a', 25);
+                    createExplosion(bossX, bossY, '#f97316', 30);
+
+                    if (homingBlade) {
+                        createExplosion(homingBlade.x, homingBlade.y, '#ef4444', 25);
+                        homingBlade = null;
+                        homingBladeRespawnTimer = 300;
+                    }
+
+                    plugObject = null;
+                    plugCooldownTimer = 300;
+
+                    if (bossHp <= 0) {
+                        triggerBossDefeatCutscene();
+                        return;
+                    }
+
+                    if (plugsSpawnedThisBossPhase >= 2) {
+                        bossTargetY = -80;
+                    }
+                }
+            }
+        }
+
+        function triggerBossDefeatCutscene() {
+            gameState = 'VICTORY_CUTSCENE';
+            victoryCutsceneTimer = 180;
+            plugObject = null;
+            homingBlade = null;
+            blades = [];
+            soundFX.playBossDamage();
+        }
+
+        function triggerVictoryScreen() {
+            gameState = 'VICTORY';
+            soundFX.playVictory();
+
+            saveScore(elapsedTime, difficultyMode);
+
+            // 更新勝利標題與詳細通關說明
+            document.getElementById('ui-title').innerHTML = '榨汁機魔王已斷電<br><span class="text-xs text-yellow-300 font-normal mt-2 block leading-relaxed">英雄橘子成功打敗了榨汁機魔王，讓像素水果小鎮的居民們免於被榨成汁的危機！</span>';
+            document.getElementById('final-time').innerText = elapsedTime.toFixed(2);
+            document.getElementById('final-stats').classList.remove('hidden');
+
+            document.getElementById('start-btn').innerText = '再次挑戰';
+            
+            // 通關後自動切換至排行榜，隱藏介紹圖解
+            switchToLeaderboardTab();
+
+            renderLeaderboard();
+            updateBossHpUI();
+            document.getElementById('ui-overlay').classList.remove('hidden');
+        }
+
+        function startGame() {
+            soundFX.init();
+            if (difficultyMode === 'easy') {
+                maxLives = 10;
+                lives = 10;
+                bossDuration = 20;
+                leafSpawnIntervalSec = 5;
+            } else {
+                maxLives = 3;
+                lives = 3;
+                bossDuration = 40;
+                leafSpawnIntervalSec = 10;
+            }
+
+            player.x = GAME_WIDTH / 2;
+            player.y = GAME_HEIGHT / 2 + 50;
+
+            blades = [];
+            particles = [];
+            leaves = [];
+            homingBlade = null;
+            plugObject = null;
+
+            isBossActive = false;
+            bossHp = 12;
+            bossAppearanceCount = 0;
+            plugsSpawnedThisBossPhase = 0;
+            persistentPlugPresses = 0;
+
+            startTime = performance.now();
+            totalPausedTime = 0;
+            elapsedTime = 0;
+            gameState = 'PLAYING';
+
+            updateLivesUI();
+            updateBossHpUI();
+            document.getElementById('ui-overlay').classList.add('hidden');
+            document.getElementById('pause-overlay').classList.add('hidden');
+        }
+
+        function pauseGame() {
+            if (gameState !== 'PLAYING') return;
+            gameState = 'PAUSED';
+            pauseStartTime = performance.now();
+            document.getElementById('pause-countdown').classList.add('hidden');
+            document.getElementById('pause-countdown-text').innerText = '按 [P] 鍵或點擊下方按鈕繼續';
+            document.getElementById('pause-overlay').classList.remove('hidden');
+        }
+
+        function resumeGame() {
+            if (gameState !== 'PAUSED') return;
+            gameState = 'COUNTDOWN';
+            countdownTimer = 3;
+            const cdElem = document.getElementById('pause-countdown');
+            cdElem.innerText = countdownTimer;
+            cdElem.classList.remove('hidden');
+
+            countdownInterval = setInterval(() => {
+                countdownTimer--;
+                if (countdownTimer > 0) {
+                    cdElem.innerText = countdownTimer;
+                } else {
+                    clearInterval(countdownInterval);
+                    totalPausedTime += (performance.now() - pauseStartTime);
+                    document.getElementById('pause-overlay').classList.add('hidden');
+                    gameState = 'PLAYING';
+                }
+            }, 1000);
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            soundFX.playGameOver();
+
+            saveScore(elapsedTime, difficultyMode);
+
+            // 保留原本標題文本
+            document.getElementById('ui-title').innerHTML = '像素橘子<br>飛刀大作戰';
+            document.getElementById('final-time').innerText = elapsedTime.toFixed(2);
+            document.getElementById('final-stats').classList.remove('hidden');
+
+            document.getElementById('start-btn').innerText = '重新開始';
+
+            // 遊戲結束後自動切換至排行榜，隱藏介紹圖解
+            switchToLeaderboardTab();
+
+            renderLeaderboard();
+            document.getElementById('ui-overlay').classList.remove('hidden');
+        }
+
+        function updateGame() {
+            if (gameState === 'VICTORY_CUTSCENE') {
+                victoryCutsceneTimer--;
+                if (victoryCutsceneTimer % 3 === 0) {
+                    createExplosion(bossX + (Math.random() - 0.5) * 50, bossY + (Math.random() - 0.5) * 50, '#ef4444', 12);
+                    createExplosion(bossX + (Math.random() - 0.5) * 40, bossY + (Math.random() - 0.5) * 40, '#fef08a', 12);
+                    createExplosion(bossX + (Math.random() - 0.5) * 60, bossY + (Math.random() - 0.5) * 60, '#f97316', 8);
+                }
+                if (victoryCutsceneTimer <= 0) {
+                    triggerVictoryScreen();
+                }
+                return;
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            const now = performance.now();
+            elapsedTime = (now - startTime - totalPausedTime) / 1000;
+
+            const mins = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+            const secs = Math.floor(elapsedTime % 60).toString().padStart(2, '0');
+            const ms = Math.floor((elapsedTime % 1) * 10);
+            document.getElementById('timer').innerText = `${mins}:${secs}.${ms}`;
+
+            player.update();
+
+            if (Math.floor(elapsedTime / leafSpawnIntervalSec) > lastLeafSpawnTime) {
+                lastLeafSpawnTime = Math.floor(elapsedTime / leafSpawnIntervalSec);
+                leaves.push(new CollectibleLeaf());
+            }
+
+            for (let i = leaves.length - 1; i >= 0; i--) {
+                const leaf = leaves[i];
+                leaf.update();
+                const dist = Math.hypot(leaf.x - player.x, leaf.y - player.y);
+
+                if (dist < leaf.radius + player.radius) {
+                    if (lives < maxLives) {
+                        lives++;
+                        updateLivesUI();
+                    }
+                    soundFX.playHeal();
+                    createExplosion(leaf.x, leaf.y, '#22c55e', 12);
+                    leaves.splice(i, 1);
+                    continue;
+                }
+                if (leaf.isExpired()) leaves.splice(i, 1);
+            }
+
+            const totalCycle = 40 + bossDuration;
+            const cycleTime = elapsedTime % totalCycle;
+
+            if (cycleTime >= 35 && cycleTime < 40) {
+                bossWarningTimer++;
+                if (bossWarningTimer % 30 === 0) soundFX.playBossAlert();
+            } else {
+                bossWarningTimer = 0;
+            }
+
+            if (cycleTime >= 40 && cycleTime < totalCycle) {
+                if (!isBossActive) {
+                    isBossActive = true;
+                    bossAppearanceCount++;
+                    bossTargetY = 55;
+                    plugsSpawnedThisBossPhase = 0;
+                    plugCooldownTimer = 0;
+                    plugObject = new PowerPlug();
+                    plugsSpawnedThisBossPhase = 1;
+                    updateBossHpUI();
+
+                    if (bossAppearanceCount >= 2 && !homingBlade && homingBladeRespawnTimer <= 0) {
+                        homingBlade = new HomingBlade(bossX, bossY + 20);
+                    }
+                }
+
+                if (!homingBlade && bossAppearanceCount >= 2) {
+                    if (homingBladeRespawnTimer > 0) {
+                        homingBladeRespawnTimer--;
+                    } else {
+                        homingBlade = new HomingBlade(bossX, bossY + 20);
+                    }
+                }
+
+                if (!plugObject && plugsSpawnedThisBossPhase < 2 && bossTargetY > 0) {
+                    if (plugCooldownTimer > 0) {
+                        plugCooldownTimer--;
+                    } else {
+                        plugObject = new PowerPlug();
+                        plugsSpawnedThisBossPhase++;
+                    }
+                }
+
+                if (plugObject) plugObject.update();
+
+                if (bossY < bossTargetY) bossY += 2;
+                else if (bossY > bossTargetY) bossY -= 3;
+
+                if (bossStunTimer > 0) {
+                    bossStunTimer--;
+                } else if (bossY >= bossTargetY - 5) {
+                    bossX += bossVx;
+                    if (bossX < 45 || bossX > GAME_WIDTH - 45) bossVx *= -1;
+
+                    spawnTimer++;
+                    const bossShootDelay = difficultyMode === 'easy' ? 32 : 22;
+                    if (spawnTimer >= bossShootDelay) {
+                        spawnTimer = 0;
+                        soundFX.playShoot();
+                        for (let i = 0; i < 2; i++) {
+                            const angle = bossSpiralAngle + (i * Math.PI);
+                            blades.push(new PixelBlade(bossX, bossY + 15, Math.cos(angle), Math.sin(angle), 2));
+                        }
+                        bossSpiralAngle += 0.3;
+                    }
+                }
+            } else {
+                if (isBossActive) {
+                    isBossActive = false;
+                    homingBlade = null;
+                    plugObject = null;
+                    updateBossHpUI();
+                }
+                if (bossY > -60) bossY -= 3;
+
+                spawnTimer++;
+                const currentSpawnRate = difficultyMode === 'easy' ? 40 : 25;
+                if (spawnTimer >= currentSpawnRate) {
+                    blades.push(new PixelBlade());
+                    soundFX.playShoot();
+                    spawnTimer = 0;
+                }
+            }
+
+            if (homingBlade) {
+                homingBlade.update(player.x, player.y);
+                if (Math.hypot(homingBlade.x - player.x, homingBlade.y - player.y) < homingBlade.radius + player.radius) {
+                    if (player.invulnerableTimer === 0) {
+                        lives--;
+                        player.invulnerableTimer = 60;
+                        soundFX.playHit();
+                        updateLivesUI();
+                        if (lives <= 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            for (let i = blades.length - 1; i >= 0; i--) {
+                const b = blades[i];
+                b.update();
+                if (Math.hypot(b.x - player.x, b.y - player.y) < b.radius + player.radius - 2) {
+                    if (player.invulnerableTimer === 0) {
+                        lives--;
+                        player.invulnerableTimer = 60;
+                        soundFX.playHit();
+                        blades.splice(i, 1);
+                        updateLivesUI();
+                        if (lives <= 0) {
+                            gameOver();
+                            return;
+                        }
+                        continue;
+                    }
+                }
+                if (b.isOutOfBounds()) blades.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function render() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            if (bossWarningTimer > 0 && Math.floor(Date.now() / 150) % 2 === 0) {
+                ctx.fillStyle = '#f87171';
+                ctx.font = '10px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠️ WARNING! BOSS ⚠️', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+            }
+
+            // Cutscene Camera Focus and Shake
+            if (gameState === 'VICTORY_CUTSCENE') {
+                ctx.save();
+                const shakeX = (Math.random() - 0.5) * 8;
+                const shakeY = (Math.random() - 0.5) * 8;
+                ctx.translate(shakeX, shakeY);
+
+                // Boss Defeat Shatter Flash
+                if (Math.floor(victoryCutsceneTimer / 10) % 2 === 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                }
+
+                drawJuicerBoss(ctx, bossX, bossY, true);
+                particles.forEach(p => p.draw(ctx));
+
+                ctx.fillStyle = '#fef08a';
+                ctx.font = '12px "Press Start 2P"';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡ POWER CUT! ⚡', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
+                ctx.restore();
+                return;
+            }
+
+            if (plugObject && isBossActive) plugObject.draw(ctx, player.x, player.y);
+            if (bossY > -50) drawJuicerBoss(ctx, bossX, bossY, bossStunTimer > 0);
+
+            leaves.forEach(l => l.draw(ctx));
+            blades.forEach(b => b.draw(ctx));
+            if (homingBlade) homingBlade.draw(ctx);
+            particles.forEach(p => p.draw(ctx));
+
+            if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+                player.draw(ctx);
+            }
+        }
+
+        function gameLoop() {
+            updateGame();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+            if (e.key === 'p' || e.key === 'P') {
+                if (gameState === 'PLAYING') pauseGame();
+                else if (gameState === 'PAUSED') resumeGame();
+            }
+            if (e.key === ' ') handlePullPlugPress();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('resume-btn').addEventListener('click', resumeGame);
+        document.getElementById('btn-pull').addEventListener('click', handlePullPlugPress);
+
+        document.getElementById('btn-easy').addEventListener('click', () => {
+            difficultyMode = 'easy';
+            document.getElementById('btn-easy').classList.add('active');
+            document.getElementById('btn-hard').classList.remove('active');
+        });
+
+        document.getElementById('btn-hard').addEventListener('click', () => {
+            difficultyMode = 'hard';
+            document.getElementById('btn-hard').classList.add('active');
+            document.getElementById('btn-easy').classList.remove('active');
+        });
+
+        // Tab Navigation for Rules vs Leaderboard
+        const rulesGuideContainer = document.getElementById('rules-guide-container');
+        const leaderboardContainer = document.getElementById('leaderboard-container');
+        const tabRulesBtn = document.getElementById('tab-rules-btn');
+        const tabRankBtn = document.getElementById('tab-rank-btn');
+
+        function switchToRulesTab() {
+            rulesGuideContainer.classList.remove('hidden');
+            leaderboardContainer.classList.add('hidden');
+            tabRulesBtn.className = "px-3 py-1 bg-orange-600 text-white rounded text-[9px] font-bold border border-orange-400";
+            tabRankBtn.className = "px-3 py-1 bg-slate-800 text-slate-400 rounded text-[9px] font-bold border border-slate-600";
+        }
+
+        function switchToLeaderboardTab() {
+            rulesGuideContainer.classList.add('hidden');
+            leaderboardContainer.classList.remove('hidden');
+            tabRankBtn.className = "px-3 py-1 bg-orange-600 text-white rounded text-[9px] font-bold border border-orange-400";
+            tabRulesBtn.className = "px-3 py-1 bg-slate-800 text-slate-400 rounded text-[9px] font-bold border border-slate-600";
+        }
+
+        tabRulesBtn.addEventListener('click', switchToRulesTab);
+        tabRankBtn.addEventListener('click', switchToLeaderboardTab);
+
+        window.onload = () => {
+            renderLeaderboard();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

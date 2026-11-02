@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>馬卡龍可愛風貪食蛇大冒險 - 原神級抽卡與訓練家大冒險</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background: linear-gradient(135deg, #fde2e4 0%, #e2ece9 50%, #bee1e6 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .macaron-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border: 4px solid #ffffff;
+            box-shadow: 0 10px 25px -5px rgba(230, 175, 190, 0.4), 0 8px 10px -6px rgba(180, 200, 220, 0.3);
+            border-radius: 2rem;
+        }
+
+        .macaron-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 5px 0px rgba(0,0,0,0.1);
+        }
+
+        .macaron-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .macaron-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0px rgba(0,0,0,0.1);
+        }
+
+        #gameCanvas {
+            background-color: #fbf8cc;
+            border-radius: 1.5rem;
+            border: 4px solid #f3c4fb;
+            box-shadow: inset 0 0 15px rgba(243, 196, 251, 0.5);
+            transition: background 0.5s ease;
+        }
+
+        /* Map Canvas Background Skins */
+        .map-forest {
+            background-color: #fbf8cc;
+            background-image: radial-gradient(#f7d6e0 2px, transparent 2px), radial-gradient(#f7d6e0 2px, #fbf8cc 2px);
+            background-size: 32px 32px;
+            background-position: 0 0, 16px 16px;
+        }
+
+        .map-ice {
+            background-color: #e0f2fe;
+            background-image: radial-gradient(#bae6fd 2px, transparent 2px), radial-gradient(#bae6fd 2px, #e0f2fe 2px);
+            background-size: 32px 32px;
+            background-position: 0 0, 16px 16px;
+        }
+
+        .map-volcano {
+            background-color: #fce7f3;
+            background-image: radial-gradient(#fbcfe8 2px, transparent 2px), radial-gradient(#fbcfe8 2px, #fce7f3 2px);
+            background-size: 32px 32px;
+            background-position: 0 0, 16px 16px;
+        }
+
+        @keyframes bounce-gentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .animate-bounce-gentle {
+            animation: bounce-gentle 2s infinite ease-in-out;
+        }
+
+        /* Genshin Wish Animations */
+        @keyframes wishMeteor {
+            0% { transform: translateY(-300px) rotate(-45deg) scale(0.2); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(200px) rotate(-45deg) scale(1.5); opacity: 1; }
+        }
+
+        .animate-wish-meteor {
+            animation: wishMeteor 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes wishBurst {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-wish-burst {
+            animation: wishBurst 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-2 md:p-4 text-gray-700">
+
+    <div class="macaron-card w-full max-w-xl p-3 md:p-5 flex flex-col items-center relative overflow-hidden">
+        
+        <!-- Top Bar: Title, Coins, Navigation Tabs -->
+        <div class="w-full flex justify-between items-center mb-2 px-1">
+            <h1 class="text-lg md:text-xl font-black text-pink-400 tracking-wider flex items-center gap-1 animate-bounce-gentle">
+                <span>✨</span> 馬卡龍貪食蛇 <span>✨</span>
+            </h1>
+
+            <div class="flex items-center gap-2">
+                <div class="bg-yellow-100 border-2 border-yellow-300 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                    <span class="text-base">🪙</span>
+                    <span id="globalCoinsText" class="font-black text-yellow-600 text-sm md:text-base">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="w-full grid grid-cols-4 gap-1 bg-pink-50/80 p-1 rounded-2xl mb-2 border border-pink-100 text-xs font-black">
+            <button onclick="switchTab('game')" id="tabGame" class="py-1.5 rounded-xl bg-pink-400 text-white shadow-sm transition">🎮 冒險</button>
+            <button onclick="switchTab('gacha')" id="tabGacha" class="py-1.5 rounded-xl text-pink-500 hover:bg-pink-100 transition">✨ 願望</button>
+            <button onclick="switchTab('trainer')" id="tabTrainer" class="py-1.5 rounded-xl text-pink-500 hover:bg-pink-100 transition">👩‍🏫 訓練家</button>
+            <button onclick="switchTab('cards')" id="tabCards" class="py-1.5 rounded-xl text-pink-500 hover:bg-pink-100 transition">🎒 寶可夢裝備</button>
+        </div>
+
+        <!-- In-Game Dashboard Stats -->
+        <div id="gameDashboard" class="w-full flex items-center justify-between bg-pink-50/80 rounded-2xl p-2 mb-2 border-2 border-pink-100 text-xs">
+            <div class="flex items-center gap-1">
+                <span class="font-bold text-pink-400">生命:</span>
+                <div id="livesContainer" class="flex gap-0.5 text-red-400 text-base"></div>
+            </div>
+
+            <div class="bg-yellow-100 text-yellow-700 px-2.5 py-0.5 rounded-full font-black border border-yellow-200">
+                🍎 得分: <span id="scoreText">0</span>/5
+            </div>
+
+            <div id="shieldBadge" class="hidden bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full font-black text-[10px] border border-sky-200">
+                🎒 攜帶裝備中
+            </div>
+
+            <div id="bossGauge" class="hidden flex items-center gap-1 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-black border border-purple-200">
+                <span>👾 BOSS:</span>
+                <span id="bossHitsText">0</span>/10
+            </div>
+        </div>
+
+        <!-- Event Banner Notification -->
+        <div id="eventBanner" class="hidden w-full bg-gradient-to-r from-amber-300 to-pink-300 text-white font-black text-center text-xs py-1 rounded-xl mb-2 animate-bounce-gentle shadow-sm">
+            ⚡ 突發事件啟動！
+        </div>
+
+        <!-- Canvas and Overlay Area -->
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" width="400" height="400" class="w-full max-w-[400px] h-auto aspect-square map-forest"></canvas>
+
+            <!-- Overlay 1: Main Game Start Menu -->
+            <div id="startOverlay" class="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-between p-3.5 text-center backdrop-blur-sm z-10 overflow-y-auto">
+                <div class="w-full">
+                    <h2 class="text-lg font-black text-pink-400 mb-0.5">選擇冒險夥伴與地圖</h2>
+                    <p class="text-[11px] text-gray-400 font-bold mb-2">吃到 5 個蘋果即召喚大魔王！</p>
+
+                    <!-- Map Selector -->
+                    <div class="flex justify-center gap-2 mb-2">
+                        <button onclick="setMap('forest')" id="mapBtnForest" class="px-2.5 py-1 text-xs rounded-xl font-black border-2 border-pink-300 bg-pink-100 text-pink-600">🍬 甜點森林</button>
+                        <button onclick="setMap('ice')" id="mapBtnIce" class="px-2.5 py-1 text-xs rounded-xl font-black border-2 border-gray-200 bg-gray-50 text-gray-500">🍦 冰淇淋島</button>
+                        <button onclick="setMap('volcano')" id="mapBtnVolcano" class="px-2.5 py-1 text-xs rounded-xl font-black border-2 border-gray-200 bg-gray-50 text-gray-500">🌋 糖果火山</button>
+                    </div>
+                    
+                    <!-- Animals Grid -->
+                    <div id="charGrid" class="grid grid-cols-3 gap-2 mb-2 w-full max-w-sm"></div>
+                </div>
+
+                <!-- Skill Banner -->
+                <div id="skillInfoBanner" class="w-full max-w-sm bg-pink-50 border-2 border-pink-200 rounded-xl p-2 text-xs text-pink-600 font-bold flex items-center gap-2">
+                    <span class="text-xl" id="skillEmoji">🐍</span>
+                    <div class="text-left">
+                        <div id="skillName" class="font-black text-pink-500">技能：蘋果大補</div>
+                        <div id="skillDesc" class="text-[10px] text-gray-500 font-medium">吃到蘋果獲得 2 倍得分！</div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button onclick="startGame()" class="w-full max-w-sm bg-gradient-to-r from-pink-400 to-purple-400 text-white font-black py-2.5 rounded-full macaron-btn shadow-md text-sm mt-2">
+                    開始冒險！ 🚀
+                </button>
+            </div>
+
+            <!-- Overlay 2: Genshin Style Wish Gacha Modal -->
+            <div id="gachaView" class="hidden absolute inset-0 bg-slate-900/95 rounded-2xl flex flex-col items-center justify-between p-4 text-center z-20">
+                <!-- Pool Select Banner -->
+                <div class="w-full flex justify-between items-center text-xs text-amber-200 font-bold border-b border-amber-500/30 pb-2">
+                    <span class="text-sm font-black text-amber-300">✨ 祈願祭壇 (10🪙/抽)</span>
+                    <div class="flex gap-1">
+                        <button onclick="selectPool('animals')" id="poolBtnAnimals" class="px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 font-black">萌寵池</button>
+                        <button onclick="selectPool('trainers')" id="poolBtnTrainers" class="px-2 py-0.5 rounded-full bg-slate-800 text-amber-200">訓練家</button>
+                        <button onclick="selectPool('cards')" id="poolBtnCards" class="px-2 py-0.5 rounded-full bg-slate-800 text-amber-200">卡牌池</button>
+                    </div>
+                </div>
+
+                <!-- Animation Container -->
+                <div class="relative w-full h-48 flex items-center justify-center my-2 overflow-hidden">
+                    <div id="gachaScene" class="flex flex-col items-center">
+                        <div id="henActor" class="text-6xl animate-bounce mb-2">🐔</div>
+                        <div id="sceneText" class="text-xs text-amber-100 font-bold">金光綻放！母雞正下著帶有神聖祈願的彩蛋...</div>
+                    </div>
+
+                    <div id="meteorGraphic" class="hidden text-6xl text-yellow-300 animate-wish-meteor">💫</div>
+
+                    <div id="wishResultCard" class="hidden flex flex-col items-center p-4 rounded-2xl border-4 animate-wish-burst">
+                        <div id="wishEmoji" class="text-6xl mb-1">👑</div>
+                        <div id="wishTitle" class="text-base font-black">夢幻甜心 莉莉</div>
+                        <div id="wishRarity" class="text-[10px] font-black px-2 py-0.5 rounded-full my-1">⭐⭐⭐⭐⭐ SSR</div>
+                        <div id="wishDesc" class="text-[11px] text-gray-600 font-bold max-w-[220px]">專屬訓練家技能：初始生命+1，發射雙倍蘋果子彈！</div>
+                    </div>
+                </div>
+
+                <!-- Wish Controls -->
+                <div class="w-full flex gap-2 justify-center">
+                    <button id="btnPerformWish" onclick="performWish()" class="flex-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 font-black py-2 rounded-full macaron-btn text-xs shadow-lg">
+                        進行祈願 (10🪙)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Overlay 3: Trainer Center View -->
+            <div id="trainerView" class="hidden absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-between p-3 text-center z-10 overflow-y-auto">
+                <div class="w-full">
+                    <h2 class="text-base font-black text-purple-500 mb-0.5">👩‍🏫 訓練家頭像卡面 & 專屬健身房</h2>
+                    <p class="text-[11px] text-gray-400 font-bold mb-2">選擇訓練師，並挑選指定貪食蛇進行訓練！</p>
+
+                    <!-- Trainer Visual Face Cards Grid -->
+                    <div id="trainerGrid" class="grid grid-cols-3 gap-2 mb-2 w-full"></div>
+
+                    <!-- Targeted Snake Trainer Selection Bar -->
+                    <div class="w-full bg-purple-50 border-2 border-purple-200 rounded-2xl p-2 mb-2 flex items-center justify-between text-xs">
+                        <span class="font-black text-purple-600">🎯 選擇訓練目標蛇蛇:</span>
+                        <select id="targetSnakeSelect" onchange="changeTargetSnake(this.value)" class="bg-white border border-purple-300 rounded-lg px-2 py-1 font-bold text-purple-700 outline-none">
+                        </select>
+                    </div>
+
+                    <!-- Target Snake Stats Card -->
+                    <div id="targetSnakeStatsCard" class="bg-gradient-to-r from-pink-50 to-purple-50 border border-purple-200 rounded-xl p-2 text-left mb-2 flex items-center justify-between text-xs font-bold text-gray-700">
+                    </div>
+
+                    <!-- Gym Workout Mini Games -->
+                    <div class="w-full bg-amber-50 border border-amber-200 rounded-xl p-2">
+                        <div class="text-xs font-black text-amber-700 mb-1 flex justify-between items-center">
+                            <span>🏋️ 特訓健身房 (指定貪食蛇升級)</span>
+                            <span class="text-[10px] text-amber-500">費用: 15🪙/次</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="startTrainingAnimation('treadmill')" class="bg-amber-200 hover:bg-amber-300 text-amber-800 text-[11px] font-black py-2 rounded-xl macaron-btn flex items-center justify-center gap-1">
+                                <span>🏃 跑步機 (增加移動速度)</span>
+                            </button>
+                            <button onclick="startTrainingAnimation('weights')" class="bg-amber-200 hover:bg-amber-300 text-amber-800 text-[11px] font-black py-2 rounded-xl macaron-btn flex items-center justify-center gap-1">
+                                <span>🏋️ 重訓 (增加最大HP)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Action Modal Overlay with Live Animations -->
+            <div id="trainingModal" class="hidden absolute inset-0 bg-slate-900/90 rounded-2xl flex flex-col items-center justify-center p-4 text-center z-40 backdrop-blur-md">
+                <div id="trainingAnimBox" class="text-6xl mb-3 animate-bounce">🏃</div>
+                <h3 id="trainingModalTitle" class="text-xl font-black text-amber-300 mb-1">正在進行跑步特訓...</h3>
+                <p id="trainingModalSub" class="text-xs text-white/80 font-bold mb-4">貪食蛇正在揮灑汗水急速奔跑中！</p>
+                <div class="w-48 bg-slate-700 h-3 rounded-full overflow-hidden border border-amber-300/40 mb-2">
+                    <div id="trainingProgressBar" class="bg-gradient-to-r from-amber-400 to-yellow-300 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Overlay 4: Pokémon Item Deck View -->
+            <div id="cardsView" class="hidden absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-between p-3 text-center z-10 overflow-y-auto">
+                <div class="w-full">
+                    <h2 class="text-base font-black text-indigo-500 mb-0.5">🎒 寶可夢風格攜帶道具庫</h2>
+                    <p class="text-[11px] text-gray-400 font-bold mb-2">裝備精靈寶可夢經典攜帶道具，觸發獨特被動效果！</p>
+                    <div id="cardDeckGrid" class="grid grid-cols-2 gap-2 w-full"></div>
+                </div>
+            </div>
+
+            <!-- Overlay 5: Game Over / Win Display -->
+            <div id="endOverlay" class="hidden absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center p-4 text-center backdrop-blur-md z-30">
+                <div id="endEmoji" class="text-5xl mb-1">😭</div>
+                <h2 id="endTitle" class="text-2xl font-black text-red-400 mb-1">你死了！</h2>
+                <p id="endDesc" class="text-xs font-bold text-gray-500 mb-3">要再挑戰一次嗎？下次一定可以的！</p>
+
+                <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl px-4 py-2 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">🪙</span>
+                    <span id="endRewardCoinsText" class="font-black text-yellow-600 text-sm">+10 金幣入帳！</span>
+                </div>
+
+                <button onclick="resetToMenu()" class="bg-gradient-to-r from-pink-400 to-purple-400 text-white font-black text-base px-8 py-2.5 rounded-full macaron-btn shadow-md">
+                    回到主選單 🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls & Charge Shot Bar -->
+        <div class="w-full mt-2 flex flex-col items-center gap-1.5">
+            <!-- Charge Bar -->
+            <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden border border-white">
+                <div id="chargeBar" class="bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 h-full w-0 transition-all duration-75"></div>
+            </div>
+
+            <!-- Action Controls Row -->
+            <div class="w-full grid grid-cols-2 gap-2">
+                <button id="mobileJumpBtn" onclick="handleJumpInput()" class="bg-gradient-to-r from-sky-300 to-indigo-300 active:from-sky-400 active:to-indigo-400 text-white font-black py-2 rounded-2xl shadow-sm border-2 border-white flex items-center justify-center gap-1 text-xs macaron-btn">
+                    <span>🦘 跳躍 (Shift)</span>
+                </button>
+
+                <button id="mobileFireBtn" 
+                        onmousedown="startChargeFire()" onmouseup="releaseChargeFire()"
+                        ontouchstart="startChargeFire()" ontouchend="releaseChargeFire()"
+                        class="bg-gradient-to-r from-red-300 to-pink-400 active:from-red-400 active:to-pink-500 text-white font-black py-2 rounded-2xl shadow-sm border-2 border-white flex items-center justify-center gap-1 text-xs macaron-btn">
+                    <span>🍎 蓄力發射 (Space長按)</span>
+                </button>
+            </div>
+
+            <!-- Direction Pad -->
+            <div class="grid grid-cols-3 gap-1 w-36">
+                <div></div>
+                <button onclick="handleDirInput('UP')" class="bg-sky-100 border border-sky-200 text-sky-500 active:bg-sky-200 rounded-xl p-2 font-bold flex justify-center items-center macaron-btn">
+                    <i class="fa-solid fa-arrow-up text-sm"></i>
+                </button>
+                <div></div>
+                <button onclick="handleDirInput('LEFT')" class="bg-sky-100 border border-sky-200 text-sky-500 active:bg-sky-200 rounded-xl p-2 font-bold flex justify-center items-center macaron-btn">
+                    <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
+                <button onclick="handleDirInput('DOWN')" class="bg-sky-100 border border-sky-200 text-sky-500 active:bg-sky-200 rounded-xl p-2 font-bold flex justify-center items-center macaron-btn">
+                    <i class="fa-solid fa-arrow-down text-sm"></i>
+                </button>
+                <button onclick="handleDirInput('RIGHT')" class="bg-sky-100 border border-sky-200 text-sky-500 active:bg-sky-200 rounded-xl p-2 font-bold flex justify-center items-center macaron-btn">
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Constants & Config ---
+        const CANVAS_SIZE = 400;
+        const GRID_SIZE = 20;
+        const CELL_SIZE = CANVAS_SIZE / GRID_SIZE;
+        const TARGET_APPLES_FOR_BOSS = 5; // Require 5 apples to spawn BOSS
+        const BOSS_MAX_HITS = 10;
+
+        // --- Database Collections ---
+        const ALL_ANIMALS = {
+            snake:  { id: 'snake', name: '小蛇', emoji: '🐍', bodyColor: '#a8e6cf', headColor: '#56ab2f', skillName: '蘋果大補', skillDesc: '吃蘋果獲得雙倍得分', unlocked: true, speedLevel: 140, extraHp: 0 },
+            pig:    { id: 'pig', name: '粉豬', emoji: '🐷', bodyColor: '#ffaaa5', headColor: '#ff8b94', skillName: '鋼鐵防護', skillDesc: '雙倍受傷無敵時間', unlocked: true, speedLevel: 150, extraHp: 1 },
+            chick:  { id: 'chick', name: '萌雞', emoji: '🐥', bodyColor: '#ffd3b6', headColor: '#ffaaa5', skillName: '疾風連射', skillDesc: '子彈飛行速度加倍', unlocked: true, speedLevel: 130, extraHp: 0 },
+            cat:    { id: 'cat', name: '喵咪', emoji: '🐱', bodyColor: '#ffd1dc', headColor: '#f3abb6', skillName: '幸運雙倍', skillDesc: '結算金幣翻倍', unlocked: false, speedLevel: 140, extraHp: 0 },
+            penguin:{ id: 'penguin', name: '企鵝', emoji: '🐧', bodyColor: '#bde0fe', headColor: '#a2d2ff', skillName: '冰爽滯空', skillDesc: '跳躍時間延長 50%', unlocked: false, speedLevel: 140, extraHp: 0 },
+            rabbit: { id: 'rabbit', name: '兔子', emoji: '🐰', bodyColor: '#e8ae52', headColor: '#f7d1cd', skillName: '超級連跳', skillDesc: '跳躍冷卻大幅縮短', unlocked: false, speedLevel: 120, extraHp: 0 }
+        };
+
+        const ALL_TRAINERS = {
+            miao:   { 
+                id: 'miao', name: '實習生 喵喵', emoji: '👧', rarity: 'SSR', buff: '初始生命 +1', unlocked: true,
+                avatarBg: 'from-pink-300 to-rose-400',
+                faceSvg: `<svg class="w-10 h-10" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#fde047"/><circle cx="35" cy="40" r="6" fill="#1e293b"/><circle cx="65" cy="40" r="6" fill="#1e293b"/><ellipse cx="50" cy="60" rx="10" ry="6" fill="#f43f5e"/><path d="M 20 25 Q 50 5 80 25" stroke="#475569" stroke-width="8" fill="none"/></svg>`
+            },
+            lili:   { 
+                id: 'lili', name: '夢幻甜心 莉莉', emoji: '👑', rarity: 'SSR', buff: '子彈攻擊傷害 x2', unlocked: false,
+                avatarBg: 'from-purple-300 to-indigo-400',
+                faceSvg: `<svg class="w-10 h-10" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#f472b6"/><circle cx="35" cy="42" r="5" fill="#0f172a"/><circle cx="65" cy="42" r="5" fill="#0f172a"/><path d="M 40 62 Q 50 72 60 62" stroke="#be123c" stroke-width="5" fill="none"/><polygon points="30,15 50,30 70,15 65,35 35,35" fill="#fbbf24"/></svg>`
+            },
+            hero:   { 
+                id: 'hero', name: '熱血教練 傑克', emoji: '🏋️‍♂️', rarity: 'SR', buff: '控制反應穩定 (速度緩衝)', unlocked: false,
+                avatarBg: 'from-amber-300 to-orange-400',
+                faceSvg: `<svg class="w-10 h-10" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#fb923c"/><rect x="25" y="38" width="20" height="8" rx="2" fill="#1e293b"/><rect x="55" y="38" width="20" height="8" rx="2" fill="#1e293b"/><path d="M 38 65 Q 50 55 62 65" stroke="#7c2d12" stroke-width="6" fill="none"/></svg>`
+            }
+        };
+
+        const ALL_CARDS = {
+            sash:      { id: 'sash', name: '氣勢披帶 (Sash)', emoji: '🎗️', rarity: 'SSR', desc: '收到致命傷害時，釋放聖光免疫死亡 1 次', pokeRef: 'Pokémon 氣勢披帶', equipped: true, unlocked: true },
+            leftovers: { id: 'leftovers', name: '吃剩的東西 (Leftovers)', emoji: '🍎', rarity: 'SR', desc: '每吃到 3 個蘋果額外恢復 1 點生命值', pokeRef: 'Pokémon 吃剩的東西', equipped: false, unlocked: false },
+            orb:       { id: 'orb', name: '生命寶珠 (Life Orb)', emoji: '🔮', rarity: 'SSR', desc: '對 BOSS 造成傷害加倍，發射雙倍火力', pokeRef: 'Pokémon 生命寶珠', equipped: false, unlocked: false },
+            lumBerry:  { id: 'lumBerry', name: '木子果 (Lum Berry)', emoji: '🍒', rarity: 'SR', desc: '免疫碰撞或障礙物傷害', pokeRef: 'Pokémon 木子果', equipped: false, unlocked: false },
+            expShare:  { id: 'expShare', name: '學習裝置 (Exp. Share)', emoji: '💡', rarity: 'R', desc: '遊戲結束時獲得的金幣量提升 50%', pokeRef: 'Pokémon 學習裝置', equipped: false, unlocked: false }
+        };
+
+        // --- Game State Variables ---
+        let coins = 50;
+        let selectedAnimalKey = 'snake';
+        let selectedTrainerKey = 'miao';
+        let equippedCardKey = 'sash';
+        let selectedMap = 'forest';
+        let currentPool = 'animals';
+        let targetedSnakeKey = 'snake';
+
+        let unlockedChars = ['snake', 'pig', 'chick'];
+        let unlockedTrainers = ['miao'];
+        let unlockedCards = ['sash'];
+
+        let canvas, ctx;
+        let gameInterval = null;
+        let score = 0;
+        let lives = 3;
+        let hasShield = false;
+        let isInvincible = false;
+        let invincibilityTimer = 0;
+        let activeEvent = null;
+
+        let snake = [];
+        let direction = 'RIGHT';
+        let nextDirection = 'RIGHT';
+        let apple = { x: 10, y: 10, golden: false };
+
+        let bossActive = false;
+        let boss = { x: 10, y: 2, hits: 0, moveCounter: 0 };
+
+        let bullets = [];
+        let particles = [];
+        let chargePower = 0;
+        let chargeTimer = null;
+
+        let jumpZ = 0;
+        let jumpVelocity = 0;
+        let isJumping = false;
+        let jumpCooldown = 0;
+        let eatenApplesCounter = 0;
+
+        function setMap(mapName) {
+            selectedMap = mapName;
+            const canvasEl = document.getElementById('gameCanvas');
+            canvasEl.className = `w-full max-w-[400px] h-auto aspect-square map-${mapName}`;
+
+            document.getElementById('mapBtnForest').className = mapName === 'forest' ? "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-pink-300 bg-pink-100 text-pink-600" : "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-gray-200 bg-gray-50 text-gray-500";
+            document.getElementById('mapBtnIce').className = mapName === 'ice' ? "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-sky-300 bg-sky-100 text-sky-600" : "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-gray-200 bg-gray-50 text-gray-500";
+            document.getElementById('mapBtnVolcano').className = mapName === 'volcano' ? "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-purple-300 bg-purple-100 text-purple-600" : "px-2.5 py-1 text-xs rounded-xl font-black border-2 border-gray-200 bg-gray-50 text-gray-500";
+        }
+
+        function switchTab(tab) {
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gachaView').classList.add('hidden');
+            document.getElementById('trainerView').classList.add('hidden');
+            document.getElementById('cardsView').classList.add('hidden');
+
+            const tabBtns = ['tabGame', 'tabGacha', 'tabTrainer', 'tabCards'];
+            tabBtns.forEach(b => {
+                const btn = document.getElementById(b);
+                btn.className = "py-1.5 rounded-xl text-pink-500 hover:bg-pink-100 transition";
+            });
+
+            if (tab === 'game') {
+                document.getElementById('tabGame').className = "py-1.5 rounded-xl bg-pink-400 text-white shadow-sm transition";
+                document.getElementById('startOverlay').classList.remove('hidden');
+            } else if (tab === 'gacha') {
+                document.getElementById('tabGacha').className = "py-1.5 rounded-xl bg-pink-400 text-white shadow-sm transition";
+                document.getElementById('gachaView').classList.remove('hidden');
+            } else if (tab === 'trainer') {
+                document.getElementById('tabTrainer').className = "py-1.5 rounded-xl bg-pink-400 text-white shadow-sm transition";
+                document.getElementById('trainerView').classList.remove('hidden');
+                renderTrainerCenter();
+            } else if (tab === 'cards') {
+                document.getElementById('tabCards').className = "py-1.5 rounded-xl bg-pink-400 text-white shadow-sm transition";
+                document.getElementById('cardsView').classList.remove('hidden');
+                renderCardsDeck();
+            }
+        }
+
+        function renderCharacterSelector() {
+            const grid = document.getElementById('charGrid');
+            grid.innerHTML = '';
+
+            Object.values(ALL_ANIMALS).forEach(animal => {
+                const isUnlocked = unlockedChars.includes(animal.id);
+                const isSelected = selectedAnimalKey === animal.id;
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-2xl text-center cursor-pointer border-2 transition-all flex flex-col items-center justify-center ${
+                    isUnlocked 
+                        ? (isSelected ? 'bg-pink-100 border-pink-400 ring-2 ring-pink-300 scale-105' : 'bg-white border-pink-100 hover:border-pink-200')
+                        : 'bg-gray-100 opacity-50 border-gray-200'
+                }`;
+
+                card.innerHTML = `
+                    <div class="text-3xl mb-1">${isUnlocked ? animal.emoji : '🔒'}</div>
+                    <div class="text-xs font-black ${isUnlocked ? 'text-gray-700' : 'text-gray-400'}">${animal.name}</div>
+                `;
+
+                if (isUnlocked) {
+                    card.onclick = () => selectCharacter(animal.id);
+                }
+                grid.appendChild(card);
+            });
+
+            updateSkillBanner();
+        }
+
+        function selectCharacter(key) {
+            selectedAnimalKey = key;
+            renderCharacterSelector();
+        }
+
+        function updateSkillBanner() {
+            const animal = ALL_ANIMALS[selectedAnimalKey];
+            if (animal) {
+                document.getElementById('skillEmoji').innerText = animal.emoji;
+                document.getElementById('skillName').innerText = `技能：${animal.skillName}`;
+                document.getElementById('skillDesc').innerText = animal.skillDesc;
+            }
+        }
+
+        function selectPool(pool) {
+            currentPool = pool;
+            document.getElementById('poolBtnAnimals').className = pool === 'animals' ? "px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 font-black" : "px-2 py-0.5 rounded-full bg-slate-800 text-amber-200";
+            document.getElementById('poolBtnTrainers').className = pool === 'trainers' ? "px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 font-black" : "px-2 py-0.5 rounded-full bg-slate-800 text-amber-200";
+            document.getElementById('poolBtnCards').className = pool === 'cards' ? "px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 font-black" : "px-2 py-0.5 rounded-full bg-slate-800 text-amber-200";
+        }
+
+        function performWish() {
+            if (coins < 10) {
+                alert('❌ 金幣不足！祈願需要 10 🪙');
+                return;
+            }
+
+            coins -= 10;
+            saveState();
+
+            const btn = document.getElementById('btnPerformWish');
+            btn.disabled = true;
+
+            const scene = document.getElementById('gachaScene');
+            const meteor = document.getElementById('meteorGraphic');
+            const card = document.getElementById('wishResultCard');
+
+            scene.classList.remove('hidden');
+            meteor.classList.add('hidden');
+            card.classList.add('hidden');
+
+            document.getElementById('henActor').className = "text-6xl animate-bounce mb-2";
+            document.getElementById('sceneText').innerText = "咯咯咯！母雞正下著神聖金蛋...";
+
+            setTimeout(() => {
+                scene.classList.add('hidden');
+                meteor.classList.remove('hidden');
+
+                setTimeout(() => {
+                    meteor.classList.add('hidden');
+                    card.classList.remove('hidden');
+
+                    let rewardItem = null;
+                    if (currentPool === 'animals') {
+                        const locked = Object.keys(ALL_ANIMALS).filter(k => !unlockedChars.includes(k));
+                        const targetKey = locked.length > 0 ? locked[Math.floor(Math.random() * locked.length)] : 'snake';
+                        if (!unlockedChars.includes(targetKey)) unlockedChars.push(targetKey);
+                        rewardItem = ALL_ANIMALS[targetKey];
+
+                        document.getElementById('wishEmoji').innerText = rewardItem.emoji;
+                        document.getElementById('wishTitle').innerText = rewardItem.name;
+                        document.getElementById('wishRarity').innerText = '⭐⭐⭐⭐ SSR 萌寵';
+                        document.getElementById('wishRarity').className = 'text-[10px] font-black px-2 py-0.5 rounded-full my-1 bg-amber-400 text-slate-900';
+                        document.getElementById('wishDesc').innerText = `技能：${rewardItem.skillName} - ${rewardItem.skillDesc}`;
+                    } else if (currentPool === 'trainers') {
+                        const locked = Object.keys(ALL_TRAINERS).filter(k => !unlockedTrainers.includes(k));
+                        const targetKey = locked.length > 0 ? locked[Math.floor(Math.random() * locked.length)] : 'miao';
+                        if (!unlockedTrainers.includes(targetKey)) unlockedTrainers.push(targetKey);
+                        rewardItem = ALL_TRAINERS[targetKey];
+
+                        document.getElementById('wishEmoji').innerText = rewardItem.emoji;
+                        document.getElementById('wishTitle').innerText = rewardItem.name;
+                        document.getElementById('wishRarity').innerText = '⭐⭐⭐⭐⭐ SSR 訓練家';
+                        document.getElementById('wishRarity').className = 'text-[10px] font-black px-2 py-0.5 rounded-full my-1 bg-purple-500 text-white';
+                        document.getElementById('wishDesc').innerText = `專屬加成：${rewardItem.buff}`;
+                    } else {
+                        const locked = Object.keys(ALL_CARDS).filter(k => !unlockedCards.includes(k));
+                        const targetKey = locked.length > 0 ? locked[Math.floor(Math.random() * locked.length)] : 'sash';
+                        if (!unlockedCards.includes(targetKey)) unlockedCards.push(targetKey);
+                        rewardItem = ALL_CARDS[targetKey];
+
+                        document.getElementById('wishEmoji').innerText = rewardItem.emoji;
+                        document.getElementById('wishTitle').innerText = rewardItem.name;
+                        document.getElementById('wishRarity').innerText = '⭐⭐⭐⭐ 寶可夢裝備';
+                        document.getElementById('wishRarity').className = 'text-[10px] font-black px-2 py-0.5 rounded-full my-1 bg-indigo-500 text-white';
+                        document.getElementById('wishDesc').innerText = rewardItem.desc;
+                    }
+
+                    saveState();
+                    renderCharacterSelector();
+                    btn.disabled = false;
+                }, 1000);
+            }, 1200);
+        }
+
+        function saveState() {
+            localStorage.setItem('mac_coins', coins.toString());
+            localStorage.setItem('mac_chars', JSON.stringify(unlockedChars));
+            localStorage.setItem('mac_trainers', JSON.stringify(unlockedTrainers));
+            localStorage.setItem('mac_cards', JSON.stringify(unlockedCards));
+            localStorage.setItem('mac_snake_stats', JSON.stringify(ALL_ANIMALS));
+            document.getElementById('globalCoinsText').innerText = coins;
+        }
+
+        function loadState() {
+            const savedCoins = localStorage.getItem('mac_coins');
+            if (savedCoins) coins = parseInt(savedCoins);
+
+            const savedChars = localStorage.getItem('mac_chars');
+            if (savedChars) unlockedChars = JSON.parse(savedChars);
+
+            const savedTrainers = localStorage.getItem('mac_trainers');
+            if (savedTrainers) unlockedTrainers = JSON.parse(savedTrainers);
+
+            const savedCards = localStorage.getItem('mac_cards');
+            if (savedCards) unlockedCards = JSON.parse(savedCards);
+
+            const savedStats = localStorage.getItem('mac_snake_stats');
+            if (savedStats) {
+                const parsed = JSON.parse(savedStats);
+                Object.keys(parsed).forEach(k => {
+                    if (ALL_ANIMALS[k]) {
+                        ALL_ANIMALS[k].speedLevel = parsed[k].speedLevel || ALL_ANIMALS[k].speedLevel;
+                        ALL_ANIMALS[k].extraHp = parsed[k].extraHp || 0;
+                    }
+                });
+            }
+        }
+
+        function renderTrainerCenter() {
+            const grid = document.getElementById('trainerGrid');
+            grid.innerHTML = '';
+
+            Object.values(ALL_TRAINERS).forEach(t => {
+                const isUnlocked = unlockedTrainers.includes(t.id);
+                const isSelected = selectedTrainerKey === t.id;
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-2xl text-center cursor-pointer border-2 flex flex-col items-center justify-between transition-all ${
+                    isUnlocked 
+                        ? (isSelected ? 'bg-gradient-to-b from-purple-100 to-pink-100 border-purple-500 ring-4 ring-purple-200 scale-105' : 'bg-white border-purple-200 hover:border-purple-300')
+                        : 'bg-gray-100 opacity-50 border-gray-200'
+                }`;
+
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br ${t.avatarBg} flex items-center justify-center shadow-md mb-1 border-2 border-white overflow-hidden">
+                        ${isUnlocked ? t.faceSvg : '<span class="text-xl">🔒</span>'}
+                    </div>
+                    <div class="text-[11px] font-black ${isUnlocked ? 'text-purple-700' : 'text-gray-400'}">${t.name}</div>
+                    <div class="text-[9px] font-bold text-pink-500">${t.buff}</div>
+                `;
+
+                if (isUnlocked) card.onclick = () => { selectedTrainerKey = t.id; renderTrainerCenter(); };
+                grid.appendChild(card);
+            });
+
+            const select = document.getElementById('targetSnakeSelect');
+            select.innerHTML = '';
+            unlockedChars.forEach(key => {
+                const anim = ALL_ANIMALS[key];
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.innerText = `${anim.emoji} ${anim.name}`;
+                if (key === targetedSnakeKey) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            updateTargetSnakeCard();
+        }
+
+        function changeTargetSnake(snakeKey) {
+            targetedSnakeKey = snakeKey;
+            updateTargetSnakeCard();
+        }
+
+        function updateTargetSnakeCard() {
+            const snake = ALL_ANIMALS[targetedSnakeKey];
+            const card = document.getElementById('targetSnakeStatsCard');
+            card.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">${snake.emoji}</span>
+                    <div>
+                        <div class="font-black text-purple-600 text-xs">${snake.name} 特訓檔案</div>
+                        <div class="text-[10px] text-gray-500">專屬技能: ${snake.skillName}</div>
+                    </div>
+                </div>
+                <div class="text-right text-[10px] space-y-0.5">
+                    <div class="text-emerald-600">⚡ 移動速度: <span class="font-black">${snake.speedLevel}ms</span></div>
+                    <div class="text-rose-500">❤️ 額外HP加成: <span class="font-black">+${snake.extraHp}</span></div>
+                </div>
+            `;
+        }
+
+        function startTrainingAnimation(type) {
+            if (coins < 15) {
+                alert('❌ 金幣不足！健身升級需要 15 🪙');
+                return;
+            }
+
+            const targetSnake = ALL_ANIMALS[targetedSnakeKey];
+            coins -= 15;
+            saveState();
+
+            const modal = document.getElementById('trainingModal');
+            const animBox = document.getElementById('trainingAnimBox');
+            const title = document.getElementById('trainingModalTitle');
+            const sub = document.getElementById('trainingModalSub');
+            const pBar = document.getElementById('trainingProgressBar');
+
+            modal.classList.remove('hidden');
+            pBar.style.width = '0%';
+
+            if (type === 'treadmill') {
+                animBox.innerText = `${targetSnake.emoji}🏃`;
+                title.innerText = `${targetSnake.name} 跑步機特訓中！`;
+                sub.innerText = '正在飆速奔跑提升反應速度...';
+            } else {
+                animBox.innerText = `${targetSnake.emoji}🏋️`;
+                title.innerText = `${targetSnake.name} 槓鈴重訓中！`;
+                sub.innerText = '正在進行肌力極限特訓...';
+            }
+
+            setTimeout(() => { pBar.style.width = '40%'; }, 200);
+            setTimeout(() => { pBar.style.width = '80%'; }, 700);
+
+            setTimeout(() => {
+                pBar.style.width = '100%';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+
+                    if (type === 'treadmill') {
+                        targetSnake.speedLevel = Math.max(80, targetSnake.speedLevel - 10);
+                        alert(`🎉 特訓成功！${targetSnake.name} 的移動週期加快至 ${targetSnake.speedLevel}ms！`);
+                    } else {
+                        targetSnake.extraHp = (targetSnake.extraHp || 0) + 1;
+                        alert(`🎉 特訓成功！${targetSnake.name} 的初始最大生命值 +1！`);
+                    }
+
+                    saveState();
+                    updateTargetSnakeCard();
+                }, 300);
+            }, 1200);
+        }
+
+        function renderCardsDeck() {
+            const grid = document.getElementById('cardDeckGrid');
+            grid.innerHTML = '';
+
+            Object.values(ALL_CARDS).forEach(c => {
+                const isUnlocked = unlockedCards.includes(c.id);
+                const isEquipped = equippedCardKey === c.id;
+
+                const card = document.createElement('div');
+                card.className = `p-2 rounded-xl border-2 text-left flex items-center gap-2 cursor-pointer transition-all ${
+                    isUnlocked 
+                        ? (isEquipped ? 'bg-indigo-100 border-indigo-500 ring-2 ring-indigo-300' : 'bg-white border-indigo-100 hover:border-indigo-300')
+                        : 'bg-gray-100 opacity-50 border-gray-200'
+                }`;
+
+                card.innerHTML = `
+                    <div class="text-3xl">${isUnlocked ? c.emoji : '🔒'}</div>
+                    <div>
+                        <div class="text-xs font-black text-indigo-700">${c.name} ${isEquipped ? ' (已攜帶)' : ''}</div>
+                        <div class="text-[9px] font-bold text-amber-600 mb-0.5">${c.pokeRef}</div>
+                        <div class="text-[10px] text-gray-500">${c.desc}</div>
+                    </div>
+                `;
+
+                if (isUnlocked) card.onclick = () => { equippedCardKey = c.id; renderCardsDeck(); };
+                grid.appendChild(card);
+            });
+        }
+
+        function startGame() {
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('endOverlay').classList.add('hidden');
+
+            const currentAnimal = ALL_ANIMALS[selectedAnimalKey];
+
+            score = 0;
+            lives = 3 + (selectedTrainerKey === 'miao' ? 1 : 0) + (currentAnimal.extraHp || 0);
+            hasShield = (equippedCardKey === 'sash' || equippedCardKey === 'lumBerry');
+            bossActive = false;
+            boss.hits = 0;
+            bullets = [];
+            particles = [];
+            direction = 'RIGHT';
+            nextDirection = 'RIGHT';
+            jumpZ = 0;
+            jumpVelocity = 0;
+            isJumping = false;
+            jumpCooldown = 0;
+
+            snake = [
+                { x: 5, y: 10 },
+                { x: 4, y: 10 },
+                { x: 3, y: 10 }
+            ];
+
+            spawnApple();
+            updateUI();
+
+            if (Math.random() > 0.5) {
+                activeEvent = 'fever';
+                document.getElementById('eventBanner').classList.remove('hidden');
+                document.getElementById('eventBanner').innerText = "⚡ 突發事件：黃金狂熱！吃蘋果獲得雙倍分數！";
+            } else {
+                activeEvent = null;
+                document.getElementById('eventBanner').classList.add('hidden');
+            }
+
+            if (gameInterval) clearInterval(gameInterval);
+            let actualSpeed = currentAnimal.speedLevel || 140;
+            if (selectedTrainerKey === 'hero') actualSpeed += 25;
+
+            gameInterval = setInterval(gameLoop, actualSpeed);
+        }
+
+        function gameLoop() {
+            updatePositions();
+            checkCollisions();
+            draw();
+        }
+
+        function spawnApple() {
+            apple.x = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+            apple.y = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+            apple.golden = Math.random() < 0.2;
+        }
+
+        function updatePositions() {
+            direction = nextDirection;
+            const head = { ...snake[0] };
+
+            switch (direction) {
+                case 'UP': head.y -= 1; break;
+                case 'DOWN': head.y += 1; break;
+                case 'LEFT': head.x -= 1; break;
+                case 'RIGHT': head.x += 1; break;
+            }
+
+            snake.unshift(head);
+
+            // Check Apple Eaten
+            if (head.x === apple.x && head.y === apple.y) {
+                const basePoints = selectedAnimalKey === 'snake' ? 2 : 1;
+                const multiplier = apple.golden ? 2 : 1;
+                score += basePoints * multiplier;
+
+                if (equippedCardKey === 'leftovers') {
+                    eatenApplesCounter++;
+                    if (eatenApplesCounter % 3 === 0) {
+                        lives++;
+                        updateUI();
+                        createParticles(head.x * CELL_SIZE, head.y * CELL_SIZE, '#22c55e', 12);
+                    }
+                }
+
+                createParticles(apple.x * CELL_SIZE + CELL_SIZE / 2, apple.y * CELL_SIZE + CELL_SIZE / 2, apple.golden ? '#fbbf24' : '#ff6b6b', 10);
+
+                if (score >= TARGET_APPLES_FOR_BOSS && !bossActive) {
+                    bossActive = true;
+                    boss.x = 10;
+                    boss.y = 2;
+                    boss.hits = 0;
+                    createParticles(200, 200, '#a855f7', 20);
+                }
+
+                spawnApple();
+            } else {
+                snake.pop();
+            }
+
+            // Update Jump Physics
+            if (isJumping) {
+                jumpZ += jumpVelocity;
+                jumpVelocity -= 1.5;
+                if (jumpZ <= 0) {
+                    jumpZ = 0;
+                    isJumping = false;
+                }
+            }
+
+            // Update Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x < 0 || b.x >= CANVAS_SIZE || b.y < 0 || b.y >= CANVAS_SIZE) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                if (bossActive) {
+                    const bossCenterX = boss.x * CELL_SIZE + CELL_SIZE;
+                    const bossCenterY = boss.y * CELL_SIZE + CELL_SIZE;
+                    const dist = Math.hypot(b.x - bossCenterX, b.y - bossCenterY);
+
+                    if (dist < CELL_SIZE * 1.3) {
+                        let damage = (b.isCharged ? 3 : 1) * (selectedTrainerKey === 'lili' ? 2 : 1);
+                        if (equippedCardKey === 'orb') damage *= 2;
+
+                        boss.hits += damage;
+                        createParticles(b.x, b.y, '#f43f5e', 15);
+
+                        bullets.splice(i, 1);
+
+                        if (boss.hits >= BOSS_MAX_HITS) {
+                            triggerWin();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Boss tracking AI
+            if (bossActive) {
+                boss.moveCounter = (boss.moveCounter || 0) + 1;
+                if (boss.moveCounter % 2 === 0) {
+                    const targetX = snake[0].x;
+                    const targetY = snake[0].y;
+
+                    if (boss.x < targetX) boss.x += 0.35;
+                    else if (boss.x > targetX) boss.x -= 0.35;
+
+                    if (boss.y < targetY) boss.y += 0.35;
+                    else if (boss.y > targetY) boss.y -= 0.35;
+                }
+            }
+
+            // Particles update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.05;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            if (isInvincible) {
+                invincibilityTimer--;
+                if (invincibilityTimer <= 0) isInvincible = false;
+            }
+
+            updateUI();
+        }
+
+        function checkCollisions() {
+            if (isJumping && jumpZ > 10) return; // Immune during high airborne jump
+
+            const head = snake[0];
+
+            // Wall Collisions
+            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                handleDamage();
+                return;
+            }
+
+            // Self Collisions
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    handleDamage();
+                    return;
+                }
+            }
+
+            // Boss Collisions
+            if (bossActive && !isInvincible) {
+                const bossCenterX = boss.x * CELL_SIZE + CELL_SIZE;
+                const bossCenterY = boss.y * CELL_SIZE + CELL_SIZE;
+                const headCenterX = head.x * CELL_SIZE + CELL_SIZE / 2;
+                const headCenterY = head.y * CELL_SIZE + CELL_SIZE / 2;
+
+                if (Math.hypot(bossCenterX - headCenterX, bossCenterY - headCenterY) < CELL_SIZE * 1.2) {
+                    handleDamage();
+                }
+            }
+        }
+
+        function handleDamage() {
+            if (isInvincible) return;
+
+            if (hasShield) {
+                hasShield = false;
+                isInvincible = true;
+                invincibilityTimer = 20;
+                createParticles(snake[0].x * CELL_SIZE, snake[0].y * CELL_SIZE, '#38bdf8', 15);
+                updateUI();
+                return;
+            }
+
+            lives--;
+            updateUI();
+
+            if (lives <= 0) {
+                triggerGameOver();
+            } else {
+                isInvincible = true;
+                invincibilityTimer = selectedAnimalKey === 'pig' ? 35 : 20;
+                snake[0] = { x: 10, y: 10 };
+                createParticles(200, 200, '#ef4444', 15);
+            }
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    color: color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // Draw Apple
+            ctx.font = `${CELL_SIZE * 0.9}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(apple.golden ? '🌟' : '🍎', apple.x * CELL_SIZE + CELL_SIZE / 2, apple.y * CELL_SIZE + CELL_SIZE / 2);
+
+            // Draw Snake Body & Head
+            const animal = ALL_ANIMALS[selectedAnimalKey];
+            for (let i = snake.length - 1; i >= 0; i--) {
+                const seg = snake[i];
+                const px = seg.x * CELL_SIZE;
+                const py = seg.y * CELL_SIZE - (i === 0 ? jumpZ : 0);
+
+                if (i === 0) {
+                    ctx.fillText(animal.emoji, px + CELL_SIZE / 2, py + CELL_SIZE / 2);
+                } else {
+                    ctx.fillStyle = animal.bodyColor;
+                    ctx.beginPath();
+                    ctx.arc(px + CELL_SIZE / 2, py + CELL_SIZE / 2, CELL_SIZE * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw Boss
+            if (bossActive) {
+                const bx = boss.x * CELL_SIZE;
+                const by = boss.y * CELL_SIZE;
+                ctx.font = `${CELL_SIZE * 2}px sans-serif`;
+                ctx.fillText('👾', bx + CELL_SIZE, by + CELL_SIZE);
+            }
+
+            // Draw Bullets
+            bullets.forEach(b => {
+                ctx.fillStyle = b.isCharged ? '#f59e0b' : '#ef4444';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.isCharged ? 8 : 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('scoreText').innerText = score;
+
+            const livesContainer = document.getElementById('livesContainer');
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                livesContainer.innerHTML += '❤️';
+            }
+
+            const shieldBadge = document.getElementById('shieldBadge');
+            if (hasShield) shieldBadge.classList.remove('hidden');
+            else shieldBadge.classList.add('hidden');
+
+            const bossGauge = document.getElementById('bossGauge');
+            if (bossActive) {
+                bossGauge.classList.remove('hidden');
+                document.getElementById('bossHitsText').innerText = boss.hits;
+            } else {
+                bossGauge.classList.add('hidden');
+            }
+        }
+
+        function triggerGameOver() {
+            clearInterval(gameInterval);
+            let earnedCoins = selectedAnimalKey === 'cat' ? 20 : 10;
+            if (equippedCardKey === 'expShare') earnedCoins = Math.floor(earnedCoins * 1.5);
+
+            coins += earnedCoins;
+            saveState();
+
+            document.getElementById('endEmoji').innerText = '😭';
+            document.getElementById('endTitle').innerText = '你死了！';
+            document.getElementById('endTitle').className = 'text-2xl font-black text-red-400 mb-1';
+            document.getElementById('endDesc').innerText = `得 🍏 ${score} 分。別氣餒，再接再厲！`;
+            document.getElementById('endRewardCoinsText').innerText = `+${earnedCoins} 金幣入帳！`;
+            document.getElementById('endOverlay').classList.remove('hidden');
+        }
+
+        function triggerWin() {
+            clearInterval(gameInterval);
+            let earnedCoins = selectedAnimalKey === 'cat' ? 200 : 100;
+            if (equippedCardKey === 'expShare') earnedCoins = Math.floor(earnedCoins * 1.5);
+
+            coins += earnedCoins;
+            saveState();
+
+            document.getElementById('endEmoji').innerText = '🎉🏆✨';
+            document.getElementById('endTitle').innerText = '你贏了！';
+            document.getElementById('endTitle').className = 'text-2xl font-black text-emerald-500 mb-1';
+            document.getElementById('endDesc').innerText = `太強了！成功擊退大魔王拯救馬卡龍森林！`;
+            document.getElementById('endRewardCoinsText').innerText = `+${earnedCoins} 金幣入帳！`;
+            document.getElementById('endOverlay').classList.remove('hidden');
+        }
+
+        function resetToMenu() {
+            document.getElementById('endOverlay').classList.add('hidden');
+            switchTab('game');
+        }
+
+        function handleDirInput(dir) {
+            if (dir === 'UP' && direction !== 'DOWN') nextDirection = 'UP';
+            if (dir === 'DOWN' && direction !== 'UP') nextDirection = 'DOWN';
+            if (dir === 'LEFT' && direction !== 'RIGHT') nextDirection = 'LEFT';
+            if (dir === 'RIGHT' && direction !== 'LEFT') nextDirection = 'RIGHT';
+        }
+
+        function handleJumpInput() {
+            if (!isJumping) {
+                isJumping = true;
+                jumpVelocity = selectedAnimalKey === 'penguin' ? 16 : 12;
+            }
+        }
+
+        function startChargeFire() {
+            chargePower = 0;
+            if (chargeTimer) clearInterval(chargeTimer);
+            chargeTimer = setInterval(() => {
+                chargePower = Math.min(100, chargePower + 10);
+                document.getElementById('chargeBar').style.width = `${chargePower}%`;
+            }, 50);
+        }
+
+        function releaseChargeFire() {
+            if (chargeTimer) clearInterval(chargeTimer);
+            document.getElementById('chargeBar').style.width = '0%';
+
+            const head = snake[0];
+            let vx = 0, vy = 0;
+            const speed = selectedAnimalKey === 'chick' ? 12 : 7;
+
+            switch (direction) {
+                case 'UP': vy = -speed; break;
+                case 'DOWN': vy = speed; break;
+                case 'LEFT': vx = -speed; break;
+                case 'RIGHT': vx = speed; break;
+            }
+
+            bullets.push({
+                x: head.x * CELL_SIZE + CELL_SIZE / 2,
+                y: head.y * CELL_SIZE + CELL_SIZE / 2,
+                vx: vx,
+                vy: vy,
+                isCharged: chargePower >= 80
+            });
+
+            chargePower = 0;
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp') handleDirInput('UP');
+            if (e.key === 'ArrowDown') handleDirInput('DOWN');
+            if (e.key === 'ArrowLeft') handleDirInput('LEFT');
+            if (e.key === 'ArrowRight') handleDirInput('RIGHT');
+            if (e.key === 'Shift') handleJumpInput();
+            if (e.key === ' ' && !e.repeat) startChargeFire();
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === ' ') releaseChargeFire();
+        });
+
+        // Initialize state on load
+        window.onload = function() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            loadState();
+            saveState();
+            renderCharacterSelector();
+            setMap('forest');
+        };
+    </script>
+</body>
+</html>

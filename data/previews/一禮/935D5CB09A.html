@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>讀書計畫決定器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #B4C4AE; /* 指定的鼠尾草綠背景 */
+        }
+        
+        /* 質感毛玻璃卡片效果 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* 隱藏滾動條但保留滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 動畫效果 */
+        @keyframes pop {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop {
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen p-4 py-8 md:py-12 overflow-x-hidden text-gray-800">
+
+    <!-- 頁面主要容器：在大螢幕上會變成左右並排 -->
+    <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-start justify-center gap-6 lg:gap-8">
+        
+        <!-- ================= 左半部：決定器與自訂區 ================= -->
+        <div class="flex flex-col w-full max-w-md mx-auto lg:mx-0 gap-6 shrink-0">
+            
+            <!-- 卡片 1：讀書決定器主體 -->
+            <div class="glass-card rounded-3xl p-8 text-center transition-transform duration-300 hover:scale-[1.02]">
+                <h1 class="text-3xl font-black text-gray-800 mb-6">📚 讀書計畫決定器</h1>
+                
+                <!-- 顯示結果區塊 -->
+                <div class="bg-white/60 rounded-2xl p-6 mb-6 shadow-inner min-h-[140px] flex flex-col justify-center items-center gap-3">
+                    <div id="result-subject" class="text-4xl font-black text-indigo-500">等待抽取...</div>
+                    <div class="flex gap-4 items-center justify-center mt-2">
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs text-gray-500 font-bold mb-1">讀書</span>
+                            <div id="result-time" class="text-xl font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-lg">--</div>
+                        </div>
+                        <div class="text-2xl text-gray-300">|</div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs text-gray-500 font-bold mb-1">休息</span>
+                            <div id="result-break" class="text-xl font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-lg">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 抽籤按鈕 -->
+                <button id="decide-btn" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg transition-all transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/></svg>
+                    幫我決定！
+                </button>
+            </div>
+
+            <!-- 卡片 2：自訂項目池 -->
+            <div class="glass-card rounded-3xl p-6 text-left">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    自訂項目池
+                </h2>
+
+                <!-- 科目區 -->
+                <div class="mb-5">
+                    <label class="text-sm font-bold text-gray-600 mb-2 block">新增科目</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="new-subject-input" class="flex-1 rounded-xl border-none bg-white/60 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-400 placeholder-gray-400" placeholder="例如：生物">
+                        <button id="add-subject-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm">加入</button>
+                    </div>
+                    <div id="subject-tags" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- 讀書時間區 -->
+                <div class="mb-5">
+                    <label class="text-sm font-bold text-gray-600 mb-2 block">新增讀書時間</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="new-time-input" class="flex-1 rounded-xl border-none bg-white/60 px-4 py-2 outline-none focus:ring-2 focus:ring-amber-400 placeholder-gray-400" placeholder="例如：45分鐘">
+                        <button id="add-time-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm">加入</button>
+                    </div>
+                    <div id="time-tags" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- 休息時間區 -->
+                <div>
+                    <label class="text-sm font-bold text-gray-600 mb-2 block">新增休息時間</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="new-break-input" class="flex-1 rounded-xl border-none bg-white/60 px-4 py-2 outline-none focus:ring-2 focus:ring-emerald-400 placeholder-gray-400" placeholder="例如：15分鐘">
+                        <button id="add-break-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm">加入</button>
+                    </div>
+                    <div id="break-tags" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 右半部：抽籤紀錄 ================= -->
+        <!-- 預設隱藏，有紀錄時才顯示，lg:sticky 讓它在電腦版滾動時固定在畫面上方 -->
+        <div id="history-container" class="hidden w-full max-w-md mx-auto lg:mx-0 glass-card rounded-3xl p-6 flex-col shrink-0 max-h-[80vh] lg:sticky lg:top-8">
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                    抽籤紀錄
+                </h2>
+                <button id="clear-history-btn" class="text-sm text-red-500 hover:text-red-700 font-bold px-2 py-1 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                    清空紀錄
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto no-scrollbar flex-1 bg-white/40 rounded-xl border border-white/50">
+                <table class="w-full text-center border-collapse">
+                    <thead class="bg-white/60 sticky top-0 backdrop-blur-sm shadow-sm">
+                        <tr>
+                            <th class="py-3 px-2 font-bold text-gray-600 text-sm w-12">#</th>
+                            <th class="py-3 px-2 font-bold text-gray-600 text-sm">科目</th>
+                            <th class="py-3 px-2 font-bold text-gray-600 text-sm">讀書</th>
+                            <th class="py-3 px-2 font-bold text-gray-600 text-sm">休息</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list" class="text-gray-700">
+                        <!-- 動態插入紀錄 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= JavaScript 邏輯區 ================= -->
+    <script>
+        // 預設項目池
+        let subjects = ["國文", "數學", "英文", "物理", "地科", "歷史", "地理", "公民"];
+        let studyTimes = ["半小時", "一小時", "一個半小時", "兩個小時"];
+        let breakTimes = ["5分鐘", "10分鐘", "15分鐘", "20分鐘", "25分鐘", "30分鐘"];
+        
+        let history = []; // 儲存歷史紀錄
+
+        // DOM 元素取得
+        const resultSubjectEl = document.getElementById('result-subject');
+        const resultTimeEl = document.getElementById('result-time');
+        const resultBreakEl = document.getElementById('result-break');
+        const decideBtn = document.getElementById('decide-btn');
+        
+        const historyContainer = document.getElementById('history-container');
+        const historyList = document.getElementById('history-list');
+        const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+        // 渲染標籤的通用函式
+        function renderTags(array, containerId, bgColor, textColor) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            array.forEach((item, index) => {
+                const tag = document.createElement('div');
+                tag.className = `${bgColor} ${textColor} px-3 py-1 rounded-full text-sm font-medium shadow-sm flex items-center gap-1`;
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = item;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.className = "hover:bg-black/10 rounded-full w-4 h-4 flex items-center justify-center leading-none ml-1";
+                deleteBtn.onclick = () => {
+                    if (array.length > 1) {
+                        array.splice(index, 1);
+                        renderTags(array, containerId, bgColor, textColor);
+                    } else {
+                        alert('至少要保留一個選項喔！');
+                    }
+                };
+
+                tag.appendChild(textSpan);
+                tag.appendChild(deleteBtn);
+                container.appendChild(tag);
+            });
+        }
+
+        // 初始化渲染標籤
+        function initTags() {
+            renderTags(subjects, 'subject-tags', 'bg-indigo-100', 'text-indigo-700');
+            renderTags(studyTimes, 'time-tags', 'bg-amber-100', 'text-amber-700');
+            renderTags(breakTimes, 'break-tags', 'bg-emerald-100', 'text-emerald-700');
+        }
+
+        // 新增項目的邏輯綁定
+        function setupInput(inputId, btnId, array, containerId, bgColor, textColor) {
+            const inputEl = document.getElementById(inputId);
+            const btnEl = document.getElementById(btnId);
+
+            const addFunc = () => {
+                const val = inputEl.value.trim();
+                if (val && !array.includes(val)) {
+                    array.push(val);
+                    renderTags(array, containerId, bgColor, textColor);
+                    inputEl.value = '';
+                }
+            };
+
+            btnEl.addEventListener('click', addFunc);
+            inputEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addFunc();
+            });
+        }
+
+        setupInput('new-subject-input', 'add-subject-btn', subjects, 'subject-tags', 'bg-indigo-100', 'text-indigo-700');
+        setupInput('new-time-input', 'add-time-btn', studyTimes, 'time-tags', 'bg-amber-100', 'text-amber-700');
+        setupInput('new-break-input', 'add-break-btn', breakTimes, 'break-tags', 'bg-emerald-100', 'text-emerald-700');
+
+        // 更新歷史紀錄表格
+        function updateHistory(subject, study, breakT) {
+            history.push({ subject, study, breakT }); // 改為加到陣列末尾（最新的一筆在最下面）
+            
+            // 顯示右側紀錄區塊 (設定為 flex 佈局)
+            historyContainer.classList.remove('hidden');
+            historyContainer.classList.add('flex');
+
+            historyList.innerHTML = '';
+            history.forEach((record, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-200/50 hover:bg-white/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-2 text-sm text-gray-400">${index + 1}</td>
+                    <td class="py-3 px-2 font-bold text-indigo-600">${record.subject}</td>
+                    <td class="py-3 px-2 font-medium text-amber-600">${record.study}</td>
+                    <td class="py-3 px-2 font-medium text-emerald-600">${record.breakT}</td>
+                `;
+                historyList.appendChild(tr);
+            });
+
+            // 自動捲動到最底部，確保看得到最新抽出的紀錄
+            const scrollContainer = historyList.closest('.overflow-y-auto');
+            if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
+
+        // 清空紀錄
+        clearHistoryBtn.addEventListener('click', () => {
+            history = [];
+            historyContainer.classList.add('hidden');
+            historyContainer.classList.remove('flex');
+            historyList.innerHTML = '';
+            
+            // 重置顯示畫面
+            resultSubjectEl.textContent = "等待抽取...";
+            resultTimeEl.textContent = "--";
+            resultBreakEl.textContent = "--";
+            resultSubjectEl.parentElement.classList.remove('animate-pop');
+        });
+
+        // 抽籤邏輯
+        let isSpinning = false;
+        
+        decideBtn.addEventListener('click', () => {
+            if (isSpinning) return;
+            isSpinning = true;
+            decideBtn.disabled = true;
+            decideBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            decideBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 抽取中...`;
+
+            resultSubjectEl.parentElement.classList.remove('animate-pop');
+
+            let count = 0;
+            const maxSpins = 20; // 輪播次數
+            const speed = 60; // 輪播速度(毫秒)
+
+            // 設定計時器製造快速跳動效果
+            const interval = setInterval(() => {
+                resultSubjectEl.textContent = subjects[Math.floor(Math.random() * subjects.length)];
+                resultTimeEl.textContent = studyTimes[Math.floor(Math.random() * studyTimes.length)];
+                resultBreakEl.textContent = breakTimes[Math.floor(Math.random() * breakTimes.length)];
+                count++;
+
+                if (count >= maxSpins) {
+                    clearInterval(interval);
+                    
+                    // 決定最終結果
+                    const finalSubject = subjects[Math.floor(Math.random() * subjects.length)];
+                    const finalStudyTime = studyTimes[Math.floor(Math.random() * studyTimes.length)];
+                    const finalBreakTime = breakTimes[Math.floor(Math.random() * breakTimes.length)];
+
+                    resultSubjectEl.textContent = finalSubject;
+                    resultTimeEl.textContent = finalStudyTime;
+                    resultBreakEl.textContent = finalBreakTime;
+
+                    // 加入彈跳動畫
+                    resultSubjectEl.parentElement.classList.add('animate-pop');
+
+                    // 恢復按鈕狀態
+                    isSpinning = false;
+                    decideBtn.disabled = false;
+                    decideBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    decideBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" y1="5" x2="22" y2="5"/><line x1="19" y1="2" x2="19" y2="8"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/></svg> 幫我決定！`;
+
+                    // 記錄到歷史
+                    updateHistory(finalSubject, finalStudyTime, finalBreakTime);
+                }
+            }, speed);
+        });
+
+        // 啟動畫面時渲染一次標籤
+        initTags();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

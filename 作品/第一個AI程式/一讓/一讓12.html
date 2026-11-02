@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>假偷刀大作戰：生物作業逆襲</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .arcade-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 520px;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+            border: 3px solid #10b981;
+            border-radius: 12px;
+            overflow: hidden;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.85; }
+        }
+
+        .animate-pulse-fast {
+            animation: pulse-fast 0.6s infinite;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4">
+
+    <header class="w-full max-w-4xl text-center mb-2">
+        <h1 class="text-2xl md:text-3xl font-black text-emerald-400 tracking-wider flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt text-yellow-400 animate-bounce"></i>
+            假偷刀大作戰：生物作業逆襲
+            <i class="fa-solid fa-flask text-emerald-400"></i>
+        </h1>
+        <p class="text-xs md:text-sm text-slate-400 mt-1">
+            <span class="text-amber-400 font-bold">【假動作佯攻】</span>誘誘 Boss 出招破防，趁隙 <span class="text-rose-500 font-bold">【暴擊偷刀】</span>！
+        </p>
+    </header>
+
+    <div id="game-container" class="relative flex items-center justify-center">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Dynamic Game HUD Overlay (In-game) -->
+        <div id="hud-overlay" class="absolute top-0 left-0 w-full p-3 pointer-events-none flex justify-between items-start hidden">
+            <!-- Player Status -->
+            <div class="flex flex-col gap-1 w-1/3">
+                <div class="flex justify-between items-center text-xs font-bold text-emerald-300">
+                    <span><i class="fa-solid fa-user-ninja"></i> 學霸 (玩家)</span>
+                    <span id="player-hp-text">100 / 100</span>
+                </div>
+                <div class="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden border border-emerald-500/50">
+                    <div id="player-hp-bar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full transition-all duration-200"></div>
+                </div>
+
+                <div class="flex justify-between items-center text-[10px] font-bold text-amber-300 mt-1">
+                    <span><i class="fa-solid fa-bolt"></i> 耐力 (佯攻/閃避)</span>
+                    <span id="stamina-text">100%</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-amber-500/30">
+                    <div id="stamina-bar" class="bg-amber-400 h-full w-full transition-all duration-100"></div>
+                </div>
+            </div>
+
+            <!-- Stage & Combo Info -->
+            <div class="text-center flex flex-col items-center gap-1 pointer-events-auto">
+                <div class="flex items-center gap-2">
+                    <div id="stage-badge" class="px-3 py-1 bg-slate-900/90 border border-amber-400/50 rounded-full text-xs font-bold text-amber-300 shadow-md">
+                        STAGE 1: 變形蟲暴君
+                    </div>
+                    <!-- Skip Stage Button -->
+                    <button id="skip-stage-btn" class="px-2.5 py-1 bg-amber-500/30 hover:bg-amber-500/50 border border-amber-400 rounded-full text-[11px] text-amber-200 font-bold transition flex items-center gap-1 shadow cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-forward text-xs"></i> 直接下一關
+                    </button>
+                </div>
+                <div id="combo-display" class="text-xl font-black text-yellow-300 opacity-0 transition-opacity duration-200 arcade-font">
+                    <span id="combo-count">0</span> COMBO!
+                </div>
+            </div>
+
+            <!-- Boss Status -->
+            <div class="flex flex-col gap-1 w-1/3 text-right">
+                <div class="flex justify-between items-center text-xs font-bold text-rose-400">
+                    <span id="boss-hp-text">400 / 400</span>
+                    <span id="boss-name-tag"><i class="fa-solid fa-dragon"></i> BOSS</span>
+                </div>
+                <div class="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden border border-rose-500/50">
+                    <div id="boss-hp-bar" class="bg-gradient-to-r from-rose-600 to-red-400 h-full w-full transition-all duration-200"></div>
+                </div>
+                <div class="text-[10px] text-slate-400 font-bold" id="boss-state-text">狀態: 伺機而動</div>
+            </div>
+        </div>
+
+        <!-- Boss Warning Telegraph Prompt -->
+        <div id="boss-prompt" class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none hidden transition-all duration-150">
+            <div id="prompt-box" class="px-4 py-2 bg-rose-900/90 border-2 border-rose-500 rounded-lg shadow-lg text-rose-200 font-black text-xs md:text-sm animate-pulse-fast">
+                ⚠️ BOSS 前搖預備！按下 【假動作】 誘誘並破防！
+            </div>
+        </div>
+
+        <div id="menu-overlay" class="absolute inset-0 glass-panel flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/30">
+                <i class="fa-solid fa-bolt text-3xl text-emerald-400"></i>
+            </div>
+            <h2 class="text-xl md:text-2xl font-black text-white mb-2">生物作業沒寫完？來偷刀吧！</h2>
+            <p class="text-xs md:text-sm text-slate-300 max-w-md mb-5 leading-relaxed">
+                直接硬砍會被 Boss <span class="text-rose-400 font-bold">完美招架</span>！<br>
+                觀察 Boss 出招紅光，使用 <span class="text-amber-400 font-bold">【假動作】</span> 誘敵，在 Boss 硬直時瞬間 <span class="text-emerald-400 font-bold">【暴擊偷刀】</span>！
+            </p>
+
+            <div class="grid grid-cols-2 gap-2 max-w-xs w-full mb-5 text-[11px] text-slate-300 bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                <div class="text-left"><span class="text-emerald-400 font-bold">[ Space / J ]</span>: 攻擊/偷刀</div>
+                <div class="text-left"><span class="text-amber-400 font-bold">[ K ]</span>: 假動作 (誘敵)</div>
+                <div class="text-left"><span class="text-cyan-400 font-bold">[ L / Shift ]</span>: 衝刺閃避</div>
+                <div class="text-left"><span class="text-purple-400 font-bold">[ A / D ]</span>: 左右移動</div>
+            </div>
+
+            <button id="start-btn" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-900 font-black text-base rounded-xl shadow-lg shadow-emerald-500/40 transform hover:scale-105 transition active:scale-95 flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-play"></i> 開始戰鬥
+            </button>
+        </div>
+
+        <div id="shop-overlay" class="absolute inset-0 glass-panel flex flex-col items-center justify-between p-4 text-center z-20 hidden overflow-y-auto">
+            <div>
+                <h2 class="text-xl font-black text-amber-400 mb-1">🎉 戰術整補 (ATP 基因強化)</h2>
+                <p class="text-xs text-slate-300">獲得 ATP 點數：<span id="atp-count" class="text-yellow-400 font-bold text-base">0</span></p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 max-w-xl w-full my-2">
+                <div class="bg-slate-800/90 border border-slate-700 p-2 rounded-xl flex flex-col items-center justify-between">
+                    <div class="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm mb-1">
+                        <i class="fa-solid fa-fire"></i>
+                    </div>
+                    <div class="font-bold text-xs text-slate-100">線粒體暴擊</div>
+                    <div class="text-[10px] text-slate-400 my-1">偷刀傷害 +30%</div>
+                    <button id="upg-dmg-btn" class="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold rounded text-white transition cursor-pointer">
+                        強化 (100 ATP)
+                    </button>
+                </div>
+
+                <div class="bg-slate-800/90 border border-slate-700 p-2 rounded-xl flex flex-col items-center justify-between">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm mb-1">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="font-bold text-xs text-slate-100">酵素加速</div>
+                    <div class="text-[10px] text-slate-400 my-1">耐力消耗 -30%</div>
+                    <button id="upg-sta-btn" class="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold rounded text-white transition cursor-pointer">
+                        強化 (80 ATP)
+                    </button>
+                </div>
+
+                <div class="bg-slate-800/90 border border-slate-700 p-2 rounded-xl flex flex-col items-center justify-between">
+                    <div class="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-sm mb-1">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                    </div>
+                    <div class="font-bold text-xs text-slate-100">光合作用</div>
+                    <div class="text-[10px] text-slate-400 my-1">恢復 50 血量</div>
+                    <button id="upg-heal-btn" class="w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold rounded text-white transition cursor-pointer">
+                        修復 (120 ATP)
+                    </button>
+                </div>
+            </div>
+
+            <button id="next-stage-btn" class="px-8 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-black text-base rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-2 my-1 animate-bounce cursor-pointer">
+                挑戰下一關 <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <div id="end-overlay" class="absolute inset-0 glass-panel flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <div id="end-icon" class="text-4xl mb-2">🏆</div>
+            <h2 id="end-title" class="text-2xl font-black text-amber-400 mb-2">通關成功！</h2>
+            <p id="end-desc" class="text-xs text-slate-300 max-w-md mb-4 leading-relaxed">
+                你成功運用【假動作佯攻】將所有生物難題偷刀擊破！
+            </p>
+            <div class="bg-slate-800/90 border border-slate-700 px-6 py-2 rounded-xl mb-5 text-xs">
+                最高連擊: <span id="final-combo" class="text-yellow-400 font-bold">0</span> | 累積 ATP: <span id="final-atp" class="text-emerald-400 font-bold">0</span>
+            </div>
+            <button id="restart-btn" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-900 font-black text-base rounded-xl shadow-lg transform hover:scale-105 transition active:scale-95 flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-rotate-right"></i> 再戰一次
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="touch-controls" class="w-full max-w-4xl mt-3 grid grid-cols-2 gap-4 md:hidden">
+        <div class="flex gap-2 justify-center items-center">
+            <button id="btn-left" class="w-16 h-12 bg-slate-800 active:bg-slate-700 border border-slate-600 rounded-lg text-white font-bold text-lg flex items-center justify-center active:scale-95">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="btn-right" class="w-16 h-12 bg-slate-800 active:bg-slate-700 border border-slate-600 rounded-lg text-white font-bold text-lg flex items-center justify-center active:scale-95">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <div class="flex gap-2 justify-center items-center">
+            <button id="btn-feint" class="w-14 h-12 bg-amber-600/80 active:bg-amber-500 border border-amber-400 rounded-lg text-amber-100 font-bold text-xs flex flex-col items-center justify-center active:scale-95">
+                假動作
+            </button>
+            <button id="btn-attack" class="w-14 h-12 bg-rose-600/80 active:bg-rose-500 border border-rose-400 rounded-lg text-rose-100 font-bold text-xs flex flex-col items-center justify-center active:scale-95">
+                偷刀
+            </button>
+            <button id="btn-dash" class="w-12 h-12 bg-cyan-600/80 active:bg-cyan-500 border border-cyan-400 rounded-lg text-cyan-100 font-bold text-xs flex flex-col items-center justify-center active:scale-95">
+                閃避
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, type, duration, vol=0.1) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+            slash() { this.playTone(350, 'sawtooth', 0.1, 0.15); }
+            critSlash() {
+                this.playTone(600, 'sawtooth', 0.15, 0.25);
+                setTimeout(() => this.playTone(850, 'square', 0.2, 0.2), 40);
+            }
+            feint() {
+                this.playTone(400, 'sine', 0.15, 0.1);
+                setTimeout(() => this.playTone(700, 'sine', 0.15, 0.12), 40);
+            }
+            bossAttack() { this.playTone(120, 'sawtooth', 0.25, 0.2); }
+            hit() { this.playTone(90, 'square', 0.15, 0.2); }
+            win() {
+                [300, 400, 500, 700].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sine', 0.2, 0.15), i * 100);
+                });
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game State Variables
+        let gameState = 'MENU'; // MENU, PLAYING, SHOP, GAMEOVER, VICTORY
+        let currentStage = 1;
+        let atpPoints = 0;
+        let combo = 0;
+        let maxCombo = 0;
+
+        let upgrades = {
+            damageMultiplier: 1.0,
+            staminaCostMultiplier: 1.0,
+            atpCostDmg: 100,
+            atpCostSta: 80,
+            atpCostHeal: 120
+        };
+
+        const player = {
+            x: 150,
+            y: 0,
+            width: 45,
+            height: 65,
+            vx: 0,
+            speed: 5.5,
+            hp: 100,
+            maxHp: 100,
+            stamina: 100,
+            maxStamina: 100,
+            isFacingRight: true,
+            isFeinting: false,
+            feintTimer: 0,
+            isAttacking: false,
+            attackTimer: 0,
+            isDashing: false,
+            dashTimer: 0,
+            invulnerableTimer: 0,
+            ghosts: []
+        };
+
+        const bossesConfig = [
+            { 
+                name: '單細胞變形蟲暴君', hp: 350, color: '#10b981', attackInterval: 140, feintWindow: 50, damage: 35,
+                dialogues: {
+                    intro: '想偷刀？先過我偽足這一關！',
+                    windup: '細胞吞噬！看招！',
+                    stunned: '啊！？竟然是假動作陷阱！'
+                }
+            },
+            { 
+                name: '線粒體動力核心', hp: 600, color: '#f59e0b', attackInterval: 110, feintWindow: 40, damage: 55,
+                dialogues: {
+                    intro: 'ATP 能量全開！你毫無勝算！',
+                    windup: '呼吸作用暴走衝擊波！',
+                    stunned: '能量過載！酵素被佯攻破壞了！'
+                }
+            },
+            { 
+                name: '終極生物老師 (生物作業化身)', hp: 1000, color: '#ef4444', attackInterval: 85, feintWindow: 32, damage: 85,
+                dialogues: {
+                    intro: '作業解答在哪裡？不跟你說！偷刀直接當掉！',
+                    windup: '明天這題會不會考？不跟你說！突堂測驗！',
+                    stunned: '重點到底是什麼？不跟你說…等等！假動作？！'
+                }
+            }
+        ];
+
+        let boss = {
+            name: '',
+            x: 600,
+            y: 0,
+            width: 90,
+            height: 110,
+            hp: 350,
+            maxHp: 350,
+            color: '#10b981',
+            state: 'IDLE', // IDLE, WINDUP, ATTACKING, STUNNED
+            stateTimer: 0,
+            attackTimer: 0,
+            attackInterval: 140,
+            feintWindow: 50,
+            damage: 15,
+            stunTimer: 0,
+            shakeTimer: 0,
+            dialogue: '',
+            dialogueTimer: 0,
+            dialogues: {}
+        };
+
+        function sayBossDialogue(text, duration = 120) {
+            boss.dialogue = text;
+            boss.dialogueTimer = duration;
+        }
+
+        let particles = [];
+        let floatingTexts = [];
+
+        function addFloatingText(text, x, y, color='#facc15', fontSize=20) {
+            floatingTexts.push({ text, x, y, color, fontSize, alpha: 1.0, vy: -1.5 });
+        }
+
+        function createSlashSparks(x, y, color='#ef4444', count=12) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 3 + Math.random() * 4,
+                    color,
+                    life: 1.0,
+                    decay: 0.03 + Math.random() * 0.03
+                });
+            }
+        }
+
+        // Action Triggers
+        function triggerPlayerAttack() {
+            if (gameState !== 'PLAYING') return;
+            if (player.isAttacking) return;
+
+            player.isAttacking = true;
+            player.attackTimer = 15;
+
+            const dist = Math.abs((player.x + player.width/2) - (boss.x + boss.width/2));
+            if (dist < 140) {
+                if (boss.state === 'STUNNED') {
+                    // Critical Feint Attack!
+                    const dmg = 45 * upgrades.damageMultiplier;
+                    boss.hp = Math.max(0, boss.hp - dmg);
+                    combo++;
+                    if (combo > maxCombo) maxCombo = combo;
+                    atpPoints += 20;
+                    boss.shakeTimer = 10;
+                    sfx.critSlash();
+                    addFloatingText(`暴擊偷刀 -${Math.ceil(dmg)}!`, boss.x + boss.width/2, boss.y - 20, '#facc15', 26);
+                    createSlashSparks(boss.x + boss.width/2, boss.y + boss.height/2, '#facc15', 18);
+                } else if (boss.state === 'WINDUP') {
+                    // Boss Parries Player Counter!
+                    addFloatingText('硬砍被招架懲罰！', boss.x + boss.width/2, boss.y - 20, '#f87171', 20);
+                    player.hp = Math.max(0, player.hp - 25);
+                    combo = 0;
+                    sfx.hit();
+                } else {
+                    // Normal Attack
+                    const dmg = 12 * upgrades.damageMultiplier;
+                    boss.hp = Math.max(0, boss.hp - dmg);
+                    sfx.slash();
+                    addFloatingText(`-${Math.ceil(dmg)}`, boss.x + boss.width/2, boss.y - 20, '#ffffff', 18);
+                    createSlashSparks(boss.x + boss.width/2, boss.y + boss.height/2, '#94a3b8', 6);
+                }
+            } else {
+                sfx.slash();
+            }
+        }
+
+        function triggerPlayerFeint() {
+            if (gameState !== 'PLAYING') return;
+            const cost = 20 * upgrades.staminaCostMultiplier;
+            if (player.stamina < cost) return;
+
+            player.stamina -= cost;
+            player.isFeinting = true;
+            player.feintTimer = 20;
+            player.ghosts.push({ x: player.x, y: player.y, alpha: 1.0 });
+            sfx.feint();
+
+            // Feint Decoy check during Boss Windup
+            if (boss.state === 'WINDUP') {
+                boss.state = 'STUNNED';
+                boss.stunTimer = 120; // 2 Seconds Stun
+                atpPoints += 30;
+                if (boss.dialogues.stunned) sayBossDialogue(boss.dialogues.stunned, 120);
+                addFloatingText('誘敵成功！破防！', boss.x + boss.width/2, boss.y - 40, '#10b981', 28);
+                createSlashSparks(boss.x + boss.width/2, boss.y + boss.height/2, '#10b981', 15);
+            }
+        }
+
+        function triggerPlayerDash() {
+            if (gameState !== 'PLAYING') return;
+            const cost = 15 * upgrades.staminaCostMultiplier;
+            if (player.stamina < cost) return;
+
+            player.stamina -= cost;
+            player.isDashing = true;
+            player.dashTimer = 12;
+            player.invulnerableTimer = 18;
+            player.vx = (player.isFacingRight ? 1 : -1) * 14;
+            sfx.feint();
+        }
+
+        function skipCurrentStage() {
+            if (gameState !== 'PLAYING') return;
+            boss.hp = 0;
+            addFloatingText('跳關成功！', boss.x + boss.width/2, boss.y - 30, '#38bdf8', 26);
+            handleStageClear();
+        }
+
+        // Keyboard Controls
+        const keys = { left: false, right: false };
+
+        window.addEventListener('keydown', (e) => {
+            sfx.init();
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'Space' || e.code === 'KeyJ') triggerPlayerAttack();
+            if (e.code === 'KeyK') triggerPlayerFeint();
+            if (e.code === 'KeyL' || e.code === 'ShiftLeft') triggerPlayerDash();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+        });
+
+        // Touch Control Binding Helper
+        const bindBtn = (id, action) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                sfx.init();
+                action();
+            });
+        };
+
+        bindBtn('btn-attack', triggerPlayerAttack);
+        bindBtn('btn-feint', triggerPlayerFeint);
+        bindBtn('btn-dash', triggerPlayerDash);
+        bindBtn('skip-stage-btn', skipCurrentStage);
+
+        // Touch directional hold
+        const leftBtn = document.getElementById('btn-left');
+        const rightBtn = document.getElementById('btn-right');
+
+        if (leftBtn && rightBtn) {
+            ['touchstart', 'mousedown'].forEach(evt => {
+                leftBtn.addEventListener(evt, (e) => { e.preventDefault(); sfx.init(); keys.left = true; });
+                rightBtn.addEventListener(evt, (e) => { e.preventDefault(); sfx.init(); keys.right = true; });
+            });
+            ['touchend', 'mouseup', 'mouseleave'].forEach(evt => {
+                leftBtn.addEventListener(evt, () => keys.left = false);
+                rightBtn.addEventListener(evt, () => keys.right = false);
+            });
+        }
+
+        function initStage(stageNum) {
+            currentStage = stageNum;
+            const cfg = bossesConfig[stageNum - 1];
+            boss.name = cfg.name;
+            boss.maxHp = cfg.hp;
+            boss.hp = cfg.hp;
+            boss.color = cfg.color;
+            boss.attackInterval = cfg.attackInterval;
+            boss.feintWindow = cfg.feintWindow;
+            boss.damage = cfg.damage;
+            boss.dialogues = cfg.dialogues || {};
+            boss.state = 'IDLE';
+            boss.attackTimer = 0;
+
+            player.x = 120;
+            boss.x = canvas.width - 200;
+
+            if (boss.dialogues.intro) sayBossDialogue(boss.dialogues.intro, 150);
+
+            document.getElementById('stage-badge').innerText = `STAGE ${stageNum}: ${boss.name}`;
+            document.getElementById('boss-name-tag').innerHTML = `<i class="fa-solid fa-dragon"></i> ${boss.name}`;
+        }
+
+        function handleStageClear() {
+            sfx.win();
+            if (currentStage < 3) {
+                gameState = 'SHOP';
+                document.getElementById('hud-overlay').classList.add('hidden');
+                document.getElementById('boss-prompt').classList.add('hidden');
+                document.getElementById('shop-overlay').classList.remove('hidden');
+                document.getElementById('atp-count').innerText = atpPoints;
+                updateShopButtons();
+            } else {
+                gameState = 'VICTORY';
+                document.getElementById('hud-overlay').classList.add('hidden');
+                document.getElementById('boss-prompt').classList.add('hidden');
+                document.getElementById('end-overlay').classList.remove('hidden');
+                document.getElementById('end-icon').innerText = '🎓';
+                document.getElementById('end-title').innerText = '生物作業通關大成功！';
+                document.getElementById('end-desc').innerText = '你完美掌握了【假動作誘敵】與【暴擊偷刀】心法，全數擊潰生物魔王！';
+                document.getElementById('final-combo').innerText = maxCombo;
+                document.getElementById('final-atp').innerText = atpPoints;
+            }
+        }
+
+        function updateShopButtons() {
+            document.getElementById('upg-dmg-btn').innerText = `強化 (${upgrades.atpCostDmg} ATP)`;
+            document.getElementById('upg-sta-btn').innerText = `強化 (${upgrades.atpCostSta} ATP)`;
+            document.getElementById('upg-heal-btn').innerText = `修復 (${upgrades.atpCostHeal} ATP)`;
+        }
+
+        document.getElementById('upg-dmg-btn').onclick = () => {
+            if (atpPoints >= upgrades.atpCostDmg) {
+                atpPoints -= upgrades.atpCostDmg;
+                upgrades.damageMultiplier += 0.3;
+                upgrades.atpCostDmg += 50;
+                document.getElementById('atp-count').innerText = atpPoints;
+                updateShopButtons();
+            }
+        };
+
+        document.getElementById('upg-sta-btn').onclick = () => {
+            if (atpPoints >= upgrades.atpCostSta) {
+                atpPoints -= upgrades.atpCostSta;
+                upgrades.staminaCostMultiplier = Math.max(0.4, upgrades.staminaCostMultiplier - 0.2);
+                upgrades.atpCostSta += 40;
+                document.getElementById('atp-count').innerText = atpPoints;
+                updateShopButtons();
+            }
+        };
+
+        document.getElementById('upg-heal-btn').onclick = () => {
+            if (atpPoints >= upgrades.atpCostHeal) {
+                atpPoints -= upgrades.atpCostHeal;
+                player.hp = Math.min(player.maxHp, player.hp + 50);
+                upgrades.atpCostHeal += 30;
+                document.getElementById('atp-count').innerText = atpPoints;
+                updateShopButtons();
+            }
+        };
+
+        function updateBossAI() {
+            if (boss.hp <= 0) {
+                handleStageClear();
+                return;
+            }
+
+            boss.y = canvas.height - 80 - boss.height;
+
+            if (boss.state === 'STUNNED') {
+                boss.stunTimer--;
+                if (boss.stunTimer <= 0) {
+                    boss.state = 'IDLE';
+                    boss.attackTimer = 0;
+                }
+                return;
+            }
+
+            if (boss.state === 'IDLE') {
+                boss.attackTimer++;
+                const dx = (player.x + player.width/2) - (boss.x + boss.width/2);
+                if (Math.abs(dx) > 120) {
+                    boss.x += Math.sign(dx) * 1.5;
+                }
+
+                if (boss.attackTimer >= boss.attackInterval) {
+                    boss.state = 'WINDUP';
+                    boss.stateTimer = boss.feintWindow;
+                    if (boss.dialogues.windup) sayBossDialogue(boss.dialogues.windup, 90);
+                    sfx.bossAttack();
+                }
+            } else if (boss.state === 'WINDUP') {
+                boss.stateTimer--;
+                if (boss.stateTimer <= 0) {
+                    boss.state = 'ATTACKING';
+                    boss.stateTimer = 25;
+
+                    const dist = Math.abs((player.x + player.width/2) - (boss.x + boss.width/2));
+                    if (dist < 130 && player.invulnerableTimer <= 0) {
+                        player.hp = Math.max(0, player.hp - boss.damage);
+                        combo = 0;
+                        sfx.hit();
+                        addFloatingText(`受擊 -${boss.damage}`, player.x + player.width/2, player.y - 20, '#f87171', 22);
+                        createSlashSparks(player.x + player.width/2, player.y + player.height/2, '#ef4444', 15);
+                    }
+                }
+            } else if (boss.state === 'ATTACKING') {
+                boss.stateTimer--;
+                if (boss.stateTimer <= 0) {
+                    boss.state = 'IDLE';
+                    boss.attackTimer = 0;
+                }
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.isFacingRight = false;
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.isFacingRight = true;
+            } else if (!player.isDashing) {
+                player.vx *= 0.7;
+            }
+
+            player.x += player.vx;
+            player.x = Math.max(30, Math.min(canvas.width - player.width - 30, player.x));
+            player.y = canvas.height - 80 - player.height;
+
+            if (player.stamina < player.maxStamina) {
+                player.stamina = Math.min(player.maxStamina, player.stamina + 0.6);
+            }
+            if (player.feintTimer > 0) player.feintTimer--;
+            else player.isFeinting = false;
+
+            if (player.attackTimer > 0) player.attackTimer--;
+            else player.isAttacking = false;
+
+            if (player.dashTimer > 0) player.dashTimer--;
+            else player.isDashing = false;
+
+            if (player.invulnerableTimer > 0) player.invulnerableTimer--;
+
+            player.ghosts.forEach((g, idx) => {
+                g.alpha -= 0.05;
+                if (g.alpha <= 0) player.ghosts.splice(idx, 1);
+            });
+
+            updateBossAI();
+
+            if (player.hp <= 0) {
+                gameState = 'GAMEOVER';
+                document.getElementById('hud-overlay').classList.add('hidden');
+                document.getElementById('boss-prompt').classList.add('hidden');
+                document.getElementById('end-overlay').classList.remove('hidden');
+                document.getElementById('end-icon').innerText = '💀';
+                document.getElementById('end-title').innerText = '生物作業被退件！';
+                document.getElementById('end-desc').innerText = '太急著硬砍被招架了！記得等 Boss 發紅光時按下【假動作】誘破防再偷刀！';
+                document.getElementById('final-combo').innerText = maxCombo;
+                document.getElementById('final-atp').innerText = atpPoints;
+            }
+
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+
+            floatingTexts.forEach((ft, index) => {
+                ft.y += ft.vy;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) floatingTexts.splice(index, 1);
+            });
+
+            // Update UI
+            document.getElementById('player-hp-text').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+            document.getElementById('player-hp-bar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+
+            document.getElementById('stamina-text').innerText = `${Math.ceil((player.stamina / player.maxStamina) * 100)}%`;
+            document.getElementById('stamina-bar').style.width = `${(player.stamina / player.maxStamina) * 100}%`;
+
+            document.getElementById('boss-hp-text').innerText = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
+            document.getElementById('boss-hp-bar').style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+
+            const promptEl = document.getElementById('boss-prompt');
+            if (boss.state === 'WINDUP') {
+                promptEl.classList.remove('hidden');
+                document.getElementById('boss-state-text').innerText = '狀態: ⚠️ 出招前搖 (按下假動作！)';
+                document.getElementById('boss-state-text').className = 'text-[10px] text-amber-400 font-bold animate-pulse';
+            } else if (boss.state === 'STUNNED') {
+                promptEl.classList.add('hidden');
+                document.getElementById('boss-state-text').innerText = '狀態: ⚡ 破防暈眩 (快暴擊偷刀！)';
+                document.getElementById('boss-state-text').className = 'text-[10px] text-emerald-400 font-bold';
+            } else {
+                promptEl.classList.add('hidden');
+                document.getElementById('boss-state-text').innerText = '狀態: 伺機而動';
+                document.getElementById('boss-state-text').className = 'text-[10px] text-slate-400 font-bold';
+            }
+
+            const comboEl = document.getElementById('combo-display');
+            if (combo > 1) {
+                comboEl.style.opacity = '1';
+                document.getElementById('combo-count').innerText = combo;
+            } else {
+                comboEl.style.opacity = '0';
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const groundY = canvas.height - 80;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            for (let i = 0; i < canvas.width; i += 60) {
+                ctx.fillRect(i, groundY, 2, 80);
+            }
+
+            // Player Ghosts
+            player.ghosts.forEach(g => {
+                ctx.save();
+                ctx.globalAlpha = g.alpha * 0.6;
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(g.x, g.y, player.width, player.height);
+                ctx.restore();
+            });
+
+            // Player
+            ctx.save();
+            if (player.invulnerableTimer > 0 && Math.floor(Date.now() / 50) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            ctx.fillStyle = player.isFeinting ? '#f59e0b' : '#10b981';
+            ctx.beginPath();
+            ctx.roundRect(player.x, player.y, player.width, player.height, 8);
+            ctx.fill();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(player.isFacingRight ? player.x + player.width - 15 : player.x + 5, player.y + 8, 10, 10);
+
+            if (player.isAttacking) {
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                const arcX = player.isFacingRight ? player.x + player.width + 20 : player.x - 20;
+                ctx.arc(arcX, player.y + player.height/2, 35, -Math.PI/3, Math.PI/3, !player.isFacingRight);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Boss
+            ctx.save();
+            let bx = boss.x;
+            if (boss.shakeTimer > 0) {
+                boss.shakeTimer--;
+                bx += (Math.random() - 0.5) * 12;
+            }
+
+            if (boss.state === 'WINDUP') {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+                ctx.beginPath();
+                ctx.arc(bx + boss.width/2, boss.y + boss.height/2, boss.width * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (currentStage === 1) {
+                // STAGE 1: Amoeba Blob
+                ctx.fillStyle = boss.state === 'STUNNED' ? '#64748b' : '#10b981';
+                ctx.beginPath();
+                ctx.arc(bx + boss.width/2, boss.y + boss.height/2, boss.width/2, 0, Math.PI * 2);
+                ctx.fill();
+                // Pseudopods & Nucleus
+                ctx.fillStyle = '#047857';
+                ctx.beginPath();
+                ctx.arc(bx + boss.width/2 - 10, boss.y + boss.height/2 - 5, 18, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = boss.state === 'STUNNED' ? '#cbd5e1' : '#ffffff';
+                ctx.fillRect(bx + 25, boss.y + 30, 10, 10);
+                ctx.fillRect(bx + 55, boss.y + 30, 10, 10);
+            } else if (currentStage === 2) {
+                // STAGE 2: Mitochondria Core
+                ctx.fillStyle = boss.state === 'STUNNED' ? '#475569' : '#d97706';
+                ctx.beginPath();
+                ctx.roundRect(bx, boss.y, boss.width, boss.height, 40);
+                ctx.fill();
+                // Inner Cristae Fold Lines
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                for (let yOffset = 25; yOffset < boss.height - 20; yOffset += 20) {
+                    ctx.moveTo(bx + 15, boss.y + yOffset);
+                    ctx.lineTo(bx + boss.width - 15, boss.y + yOffset + 5);
+                }
+                ctx.stroke();
+                // Glowing Eyes
+                ctx.fillStyle = boss.state === 'STUNNED' ? '#94a3b8' : '#fef08a';
+                ctx.fillRect(bx + 22, boss.y + 35, 14, 14);
+                ctx.fillRect(bx + boss.width - 36, boss.y + 35, 14, 14);
+            } else {
+                // STAGE 3: Biology Teacher (Humanoid Head & Lab Coat)
+                const isStun = boss.state === 'STUNNED';
+                // Floating Test Paper background accessory
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(bx + boss.width + 10, boss.y + 20, 30, 40);
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(bx + boss.width + 10, boss.y + 20, 30, 40);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText('0分', bx + boss.width + 14, boss.y + 45);
+                ctx.restore();
+
+                // Teacher Head / Skin
+                ctx.fillStyle = isStun ? '#94a3b8' : '#fde047';
+                ctx.beginPath();
+                ctx.arc(bx + boss.width/2, boss.y + 28, 26, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hair & Glasses
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(bx + boss.width/2, boss.y + 16, 26, Math.PI, 0);
+                ctx.fill();
+
+                // Glasses Frames
+                ctx.strokeStyle = '#020617';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(bx + 22, boss.y + 22, 18, 12);
+                ctx.strokeRect(bx + 50, boss.y + 22, 18, 12);
+                ctx.beginPath();
+                ctx.moveTo(bx + 40, boss.y + 28);
+                ctx.lineTo(bx + 50, boss.y + 28);
+                ctx.stroke();
+
+                // Eyes inside glasses
+                ctx.fillStyle = isStun ? '#64748b' : '#ef4444';
+                ctx.fillRect(bx + 27, boss.y + 26, 8, 5);
+                ctx.fillRect(bx + 55, boss.y + 26, 8, 5);
+
+                // Body (Lab Coat + Red Tie)
+                ctx.fillStyle = isStun ? '#475569' : '#f8fafc'; // White lab coat
+                ctx.fillRect(bx + 10, boss.y + 54, boss.width - 20, boss.height - 54);
+
+                // Red Tie
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.moveTo(bx + boss.width/2 - 5, boss.y + 54);
+                ctx.lineTo(bx + boss.width/2 + 5, boss.y + 54);
+                ctx.lineTo(bx + boss.width/2 + 7, boss.y + 90);
+                ctx.lineTo(bx + boss.width/2, boss.y + 100);
+                ctx.lineTo(bx + boss.width/2 - 7, boss.y + 90);
+                ctx.closePath();
+                ctx.fill();
+
+                // Teaching Stick
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(bx + 5, boss.y + 70);
+                ctx.lineTo(bx - 35, boss.y + 30);
+                ctx.stroke();
+            }
+
+            if (boss.state === 'STUNNED') {
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
+                ctx.fillText('💫 破防暈眩中', bx + 5, boss.y - 18);
+            }
+
+            // Boss Speech Bubble
+            if (boss.dialogueTimer > 0 && boss.dialogue) {
+                boss.dialogueTimer--;
+                ctx.save();
+                ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
+                const textWidth = ctx.measureText(boss.dialogue).width;
+                const bubbleW = Math.max(120, textWidth + 24);
+                const bubbleH = 32;
+                const bubbleX = bx + boss.width / 2 - bubbleW / 2;
+                const bubbleY = boss.y - 55;
+
+                // Speech Box
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                // Speech Pointer Arrow
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(bx + boss.width / 2 - 6, bubbleY + bubbleH);
+                ctx.lineTo(bx + boss.width / 2 + 6, bubbleY + bubbleH);
+                ctx.lineTo(bx + boss.width / 2, bubbleY + bubbleH + 6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Speech Text
+                ctx.fillStyle = '#fef08a';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(boss.dialogue, bx + boss.width / 2, bubbleY + bubbleH / 2);
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            // Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Floating Texts
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = `bold ${ft.fontSize}px 'Noto Sans TC', sans-serif`;
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x - 30, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Overlay Button Click Listeners
+        document.getElementById('start-btn').onclick = () => {
+            sfx.init();
+            gameState = 'PLAYING';
+            combo = 0;
+            maxCombo = 0;
+            atpPoints = 0;
+            player.hp = player.maxHp;
+            player.stamina = player.maxStamina;
+
+            initStage(1);
+
+            document.getElementById('menu-overlay').classList.add('hidden');
+            document.getElementById('hud-overlay').classList.remove('hidden');
+        };
+
+        document.getElementById('next-stage-btn').onclick = () => {
+            sfx.init();
+            gameState = 'PLAYING';
+            initStage(currentStage + 1);
+
+            document.getElementById('shop-overlay').classList.add('hidden');
+            document.getElementById('hud-overlay').classList.remove('hidden');
+        };
+
+        document.getElementById('restart-btn').onclick = () => {
+            sfx.init();
+            gameState = 'PLAYING';
+            combo = 0;
+            maxCombo = 0;
+            atpPoints = 0;
+            player.hp = player.maxHp;
+            player.stamina = player.maxStamina;
+
+            upgrades = {
+                damageMultiplier: 1.0,
+                staminaCostMultiplier: 1.0,
+                atpCostDmg: 100,
+                atpCostSta: 80,
+                atpCostHeal: 120
+            };
+
+            initStage(1);
+
+            document.getElementById('end-overlay').classList.add('hidden');
+            document.getElementById('hud-overlay').classList.remove('hidden');
+        };
+
+        window.onload = () => {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

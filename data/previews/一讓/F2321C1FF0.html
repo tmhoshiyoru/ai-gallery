@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>奶龍極限跑酷 像素無限跑酷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        /* Custom scrollbars for skin selector */
+        ::-webkit-scrollbar {
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-stone-900 text-stone-100 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="w-full bg-stone-950/80 border-b border-stone-800 px-4 py-3 flex justify-between items-center z-10 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-400 text-stone-900 font-black p-2 rounded-lg text-lg flex items-center justify-center shadow-lg">
+                🥛🐉
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold tracking-wider text-amber-400 flex items-center gap-2">
+                    奶龍極限跑酷 <span class="text-xs bg-stone-800 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">Milk Dragon Runner</span>
+                </h1>
+                <p class="text-xs text-stone-400 hidden sm:block">控制呆萌奶龍躍過障礙，收集高分！</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button id="soundToggleBtn" class="bg-stone-800 hover:bg-stone-700 text-stone-200 p-2 rounded-lg border border-stone-700 transition flex items-center gap-1 text-xs">
+                <span id="soundIcon">🔊</span> <span class="hidden sm:inline">音效</span>
+            </button>
+            <button id="skinMenuBtn" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-2 rounded-lg text-xs transition flex items-center gap-1 shadow-md">
+                🎨 奶龍造型
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-3 sm:p-6 flex flex-col justify-center items-center relative">
+        
+        <!-- Score HUD & Night Mode Banner -->
+        <div class="w-full flex justify-between items-center mb-2 px-2 font-pixel text-xs sm:text-sm">
+            <div id="nightStatus" class="text-amber-400 font-bold opacity-0 transition-opacity duration-500 flex items-center gap-1">
+                🌙 進入夜間牛奶派對 (+Bonus)
+            </div>
+            <div class="flex gap-4 tracking-widest text-stone-300">
+                <span class="text-stone-500">HI <span id="hiScoreText">00000</span></span>
+                <span class="text-amber-400 font-bold" id="currentScoreText">00000</span>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="w-full bg-stone-200 rounded-2xl shadow-2xl overflow-hidden border-4 border-stone-700 relative group transition-all duration-500" id="canvasWrapper">
+            <canvas id="gameCanvas" width="800" height="240" class="w-full h-auto block bg-[#f7f7f7] transition-colors duration-700"></canvas>
+
+            <!-- Game Overlay Screens -->
+            <div id="startOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center cursor-pointer">
+                <div class="bg-stone-900/90 border-2 border-amber-400 p-6 rounded-2xl shadow-2xl max-w-xs w-full flex flex-col items-center gap-3 transform hover:scale-105 transition">
+                    <span class="text-5xl animate-bounce">🥛🐉</span>
+                    <h2 class="text-xl font-extrabold text-amber-400">點擊或按空白鍵</h2>
+                    <p class="text-xs text-stone-300">帶領呆萌奶龍跳過仙人掌與飛鳥！</p>
+                    <div class="mt-2 text-[10px] text-stone-400 bg-stone-950 px-3 py-1.5 rounded-full border border-stone-800 flex gap-2">
+                        <span>按 [↑]/[Space] 跳躍</span>
+                        <span>•</span>
+                        <span>[↓] 圓滾滾俯衝</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                <div class="bg-stone-900 border-2 border-red-500/80 p-6 rounded-2xl shadow-2xl max-w-xs w-full flex flex-col items-center gap-3">
+                    <span class="text-4xl">💥</span>
+                    <h2 class="text-2xl font-black text-red-400 font-pixel">GAME OVER</h2>
+                    <div class="w-full bg-stone-950 p-3 rounded-xl border border-stone-800 my-1 text-xs space-y-1">
+                        <div class="flex justify-between text-stone-400">
+                            <span>本次得分：</span>
+                            <span id="finalScore" class="text-amber-400 font-bold font-pixel">0</span>
+                        </div>
+                        <div class="flex justify-between text-stone-400">
+                            <span>最高紀錄：</span>
+                            <span id="finalHighScore" class="text-emerald-400 font-bold font-pixel">0</span>
+                        </div>
+                    </div>
+                    <button id="restartBtn" class="w-full bg-amber-400 hover:bg-amber-300 text-black font-black py-2.5 rounded-xl shadow-lg transition active:scale-95 text-sm flex items-center justify-center gap-2">
+                        🔄 奶龍再次出發
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Action Controls -->
+        <div class="w-full grid grid-cols-2 gap-3 mt-4 sm:hidden">
+            <button id="mobileDuckBtn" class="bg-stone-800 border-2 border-stone-700 active:bg-stone-700 text-stone-200 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-1 shadow-lg select-none">
+                ⬇️ 快速蹲下
+            </button>
+            <button id="mobileJumpBtn" class="bg-emerald-600 border-2 border-emerald-500 active:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-1 shadow-lg select-none">
+                ⬆️ 跳躍
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Skin Selection Modal -->
+    <div id="skinModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-stone-900 border-2 border-amber-500/60 rounded-3xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4">
+            <div class="flex justify-between items-center border-b border-stone-800 pb-3">
+                <h3 class="text-lg font-extrabold text-amber-400 flex items-center gap-2">
+                    🎨 奶龍造型選擇 <span class="text-xs text-stone-400 font-normal">(達成分數免費解鎖)</span>
+                </h3>
+                <button id="closeSkinModal" class="text-stone-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <!-- Skins List Grid -->
+            <div class="grid grid-cols-1 gap-2.5 max-h-[320px] overflow-y-auto pr-1" id="skinListContainer">
+                <!-- Dynamic Skins Rendered via JS -->
+            </div>
+
+            <div class="text-xs text-stone-400 text-center bg-stone-950 p-2 rounded-xl border border-stone-800">
+                💡 換上心儀的奶龍造型，探索不同的繽紛奶龍配色！
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-2 text-[11px] text-stone-500 bg-stone-950/60">
+        經典小恐龍跑酷 • 網頁版 HTML5 Canvas 遊戲
+    </footer>
+
+    <script>
+        // Sound Effects Synthesizer using Web Audio API
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(750, this.ctx.currentTime + 0.14);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.14);
+            }
+
+            playScoreMilestone() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            playCrash() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.28);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.28);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.28);
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        // Milk Dragon Skins Configuration
+        const SKINS = [
+            {
+                id: 'classic',
+                name: '招牌呆萌奶龍',
+                unlockScore: 0,
+                color: '#eab308', // Vibrant yellow
+                bellyColor: '#fef08a', // Cream belly
+                nightColor: '#facc15',
+                accent: '#eab308',
+                desc: '經典黃色肚子滾圓圓的招牌奶龍！'
+            },
+            {
+                id: 'boba',
+                name: '珍奶黑糖奶龍',
+                unlockScore: 300,
+                color: '#854d0e',
+                bellyColor: '#fef3c7',
+                nightColor: '#ca8a04',
+                accent: '#854d0e',
+                desc: '帶有濃郁黑糖珍珠質感的醇香奶龍。'
+            },
+            {
+                id: 'strawberry',
+                name: '草莓牛奶龍',
+                unlockScore: 800,
+                color: '#f43f5e',
+                bellyColor: '#ffe4e6',
+                nightColor: '#fb7185',
+                accent: '#f43f5e',
+                desc: '甜蜜草莓牛奶香氣甜美呆萌龍。'
+            },
+            {
+                id: 'golden',
+                name: '閃耀黃金奶龍',
+                unlockScore: 1500,
+                color: '#f59e0b',
+                bellyColor: '#fef3c7',
+                nightColor: '#fde047',
+                accent: '#f59e0b',
+                desc: '達人專屬！全身散發璀璨亮光的至尊奶龍。'
+            }
+        ];
+
+        let selectedSkinId = window.__galleryStorage.getItem('dino_selected_skin') || 'classic';
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State variables
+        let gameStatus = 'START';
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('dino_highscore') || '0', 10);
+        let speed = 6;
+        const BASE_SPEED = 6;
+        let frameCount = 0;
+        let isNight = false;
+        let nightBgAlpha = 0;
+
+        const currentScoreText = document.getElementById('currentScoreText');
+        const hiScoreText = document.getElementById('hiScoreText');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const finalScore = document.getElementById('finalScore');
+        const finalHighScore = document.getElementById('finalHighScore');
+        const nightStatus = document.getElementById('nightStatus');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+
+        hiScoreText.innerText = String(highScore).padStart(5, '0');
+
+        // Milk Dragon Player Class
+        class Dino {
+            constructor() {
+                this.x = 55;
+                this.groundY = 190;
+                this.y = this.groundY;
+                this.width = 46;
+                this.height = 48;
+                this.vy = 0;
+                this.gravity = 0.65;
+                this.jumpPower = -11.5;
+                this.isJumping = false;
+                this.isDucking = false;
+                this.legFrame = 0;
+                this.legTimer = 0;
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = this.jumpPower;
+                    this.isJumping = true;
+                    this.isDucking = false;
+                    soundFX.playJump();
+                }
+            }
+
+            duck(ducking) {
+                if (this.isJumping) {
+                    if (ducking) this.vy += 2.5; // Fast descent
+                    return;
+                }
+                this.isDucking = ducking;
+                if (ducking) {
+                    this.height = 28;
+                    this.y = this.groundY + 20;
+                } else {
+                    this.height = 48;
+                    this.y = this.groundY;
+                }
+            }
+
+            update() {
+                // Gravity physics
+                if (this.isJumping) {
+                    this.y += this.vy;
+                    this.vy += this.gravity;
+
+                    if (this.y >= this.groundY) {
+                        this.y = this.groundY;
+                        this.isJumping = false;
+                        this.vy = 0;
+                    }
+                }
+
+                // Leg Animation Cycle
+                this.legTimer++;
+                if (this.legTimer % 6 === 0) {
+                    this.legFrame = (this.legFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                const currentSkin = SKINS.find(s => s.id === selectedSkinId) || SKINS[0];
+                const mainColor = isNight ? currentSkin.nightColor : currentSkin.color;
+                const bellyColor = currentSkin.bellyColor;
+
+                const posX = Math.floor(this.x);
+                const posY = Math.floor(this.y);
+
+                if (this.isDucking) {
+                    // --- DUCKING MILK DRAGON (Chubby Pancake Shape) ---
+                    // Main Body Block
+                    ctx.fillStyle = mainColor;
+                    ctx.fillRect(posX, posY + 8, 52, 16);
+                    ctx.fillRect(posX + 6, posY + 4, 42, 20);
+
+                    // Chubby Head / Snout (Forward)
+                    ctx.fillRect(posX + 32, posY, 22, 14);
+                    
+                    // Small Horn / Spike on Back
+                    ctx.fillStyle = '#f97316'; // Orange spike accent
+                    ctx.fillRect(posX + 10, posY, 4, 6);
+                    ctx.fillRect(posX + 18, posY + 2, 4, 4);
+
+                    // Belly (Cute Cream Accent underneath)
+                    ctx.fillStyle = bellyColor;
+                    ctx.fillRect(posX + 18, posY + 14, 24, 8);
+
+                    // Cute Eye & Blush
+                    ctx.fillStyle = '#1e293b'; // Eye
+                    ctx.fillRect(posX + 44, posY + 3, 4, 4);
+                    ctx.fillStyle = '#f43f5e'; // Pink cheek
+                    ctx.fillRect(posX + 42, posY + 8, 4, 3);
+
+                    // Tiny Tail
+                    ctx.fillStyle = mainColor;
+                    ctx.fillRect(posX - 6, posY + 12, 8, 8);
+
+                    // Running Legs
+                    ctx.fillStyle = mainColor;
+                    if (this.isJumping) {
+                        ctx.fillRect(posX + 12, posY + 22, 6, 4);
+                        ctx.fillRect(posX + 32, posY + 22, 6, 4);
+                    } else if (this.legFrame === 0) {
+                        ctx.fillRect(posX + 12, posY + 22, 6, 4);
+                        ctx.fillRect(posX + 30, posY + 22, 6, 4);
+                    } else {
+                        ctx.fillRect(posX + 18, posY + 22, 6, 4);
+                        ctx.fillRect(posX + 36, posY + 22, 6, 4);
+                    }
+                } else {
+                    // --- STANDING / JUMPING MILK DRAGON (Chubby Cute Body) ---
+                    // Round Chubby Body & Head
+                    ctx.fillStyle = mainColor;
+
+                    // Round Head
+                    ctx.fillRect(posX + 16, posY - 42, 26, 20);
+                    ctx.fillRect(posX + 12, posY - 38, 32, 14);
+
+                    // Cute Little Snout
+                    ctx.fillRect(posX + 32, posY - 32, 10, 8);
+
+                    // Round Chubby Belly & Body
+                    ctx.fillRect(posX + 6, posY - 24, 32, 22);
+                    ctx.fillRect(posX + 10, posY - 26, 26, 26);
+
+                    // Milk Dragon's Soft Belly (Cream/Lighter tone)
+                    ctx.fillStyle = bellyColor;
+                    ctx.fillRect(posX + 20, posY - 22, 14, 18);
+
+                    // Orange Back Horns / Spikes (Iconic Dragon feature)
+                    ctx.fillStyle = '#f97316';
+                    ctx.fillRect(posX + 10, posY - 44, 4, 6); // Head spike
+                    ctx.fillRect(posX + 8, posY - 32, 5, 5);  // Neck spike
+                    ctx.fillRect(posX + 4, posY - 20, 5, 5);  // Back spike
+
+                    // Eye & Blush
+                    ctx.fillStyle = '#0f172a'; // Big cute pupil
+                    ctx.fillRect(posX + 30, posY - 38, 5, 6);
+                    ctx.fillStyle = '#ffffff'; // Eye shine
+                    ctx.fillRect(posX + 31, posY - 38, 2, 2);
+
+                    ctx.fillStyle = '#fb7185'; // Cute pink blush
+                    ctx.fillRect(posX + 28, posY - 30, 5, 3);
+
+                    // Tiny Cute Arms
+                    ctx.fillStyle = mainColor;
+                    ctx.fillRect(posX + 28, posY - 18, 8, 5);
+
+                    // Chubby Tail
+                    ctx.fillRect(posX - 8, posY - 18, 16, 12);
+                    ctx.fillRect(posX - 12, posY - 14, 6, 6);
+
+                    // Feet Animation
+                    if (this.isJumping) {
+                        ctx.fillRect(posX + 12, posY - 2, 8, 6);
+                        ctx.fillRect(posX + 24, posY - 2, 8, 6);
+                    } else if (this.legFrame === 0) {
+                        ctx.fillRect(posX + 12, posY - 2, 8, 8);
+                        ctx.fillRect(posX + 26, posY - 2, 8, 4);
+                    } else {
+                        ctx.fillRect(posX + 12, posY - 2, 8, 4);
+                        ctx.fillRect(posX + 26, posY - 2, 8, 8);
+                    }
+                }
+            }
+
+            getBounds() {
+                const padding = 4;
+                if (this.isDucking) {
+                    return {
+                        x: this.x + padding,
+                        y: this.y + padding,
+                        width: 50 - (padding * 2),
+                        height: this.height - (padding * 2)
+                    };
+                }
+                return {
+                    x: this.x + padding,
+                    y: this.y - 42 + padding,
+                    width: 38 - (padding * 2),
+                    height: 46 - (padding * 2)
+                };
+            }
+        }
+
+        // Obstacle Base Class
+        class Obstacle {
+            constructor() {
+                this.x = canvas.width + 50;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x -= speed;
+                if (this.x < -60) {
+                    this.markedForDeletion = true;
+                }
+            }
+        }
+
+        // Cactus Obstacle
+        class Cactus extends Obstacle {
+            constructor() {
+                super();
+                this.type = Math.floor(Math.random() * 3); // 0: single small, 1: double small, 2: large
+                this.y = 190;
+
+                if (this.type === 0) {
+                    this.width = 18;
+                    this.height = 36;
+                } else if (this.type === 1) {
+                    this.width = 34;
+                    this.height = 36;
+                } else {
+                    this.width = 24;
+                    this.height = 48;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = isNight ? '#34d399' : '#059669';
+                const px = Math.floor(this.x);
+                const py = Math.floor(this.y);
+
+                if (this.type === 0) {
+                    // Single Small Cactus
+                    ctx.fillRect(px + 6, py - 36, 6, 36);
+                    ctx.fillRect(px, py - 26, 6, 12);
+                    ctx.fillRect(px, py - 26, 14, 4);
+                    ctx.fillRect(px + 12, py - 22, 6, 10);
+                } else if (this.type === 1) {
+                    // Double Small Cactus
+                    ctx.fillRect(px + 4, py - 36, 6, 36);
+                    ctx.fillRect(px, py - 24, 12, 4);
+                    ctx.fillRect(px + 20, py - 32, 6, 32);
+                    ctx.fillRect(px + 16, py - 20, 12, 4);
+                } else {
+                    // Single Large Cactus
+                    ctx.fillRect(px + 8, py - 48, 8, 48);
+                    ctx.fillRect(px, py - 36, 8, 16);
+                    ctx.fillRect(px, py - 36, 18, 5);
+                    ctx.fillRect(px + 16, py - 30, 8, 14);
+                }
+            }
+
+            getBounds() {
+                return {
+                    x: this.x + 2,
+                    y: this.y - this.height + 2,
+                    width: this.width - 4,
+                    height: this.height - 2
+                };
+            }
+        }
+
+        // Pterodactyl (Bird) Obstacle
+        class Pterodactyl extends Obstacle {
+            constructor() {
+                super();
+                this.width = 42;
+                this.height = 30;
+                // Height variations: low (duckable), mid (jumpable), high
+                const heights = [190 - 20, 190 - 45, 190 - 65];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                this.wingFrame = 0;
+                this.wingTimer = 0;
+            }
+
+            update() {
+                super.update();
+                this.wingTimer++;
+                if (this.wingTimer % 12 === 0) {
+                    this.wingFrame = (this.wingFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = isNight ? '#f87171' : '#dc2626';
+                const px = Math.floor(this.x);
+                const py = Math.floor(this.y);
+
+                // Body & Beak
+                ctx.fillRect(px + 12, py - 12, 18, 8);
+                ctx.fillRect(px, py - 16, 12, 6); // Head/Beak
+                ctx.fillRect(px + 30, py - 10, 8, 4); // Tail
+
+                // Wing Up or Down
+                if (this.wingFrame === 0) {
+                    ctx.fillRect(px + 16, py - 26, 8, 14);
+                } else {
+                    ctx.fillRect(px + 16, py - 4, 8, 14);
+                }
+            }
+
+            getBounds() {
+                return {
+                    x: this.x + 4,
+                    y: this.y - 24,
+                    width: this.width - 8,
+                    height: this.height - 4
+                };
+            }
+        }
+
+        // Environment Elements
+        class Environment {
+            constructor() {
+                this.clouds = [];
+                this.stars = [];
+                this.groundX = 0;
+                this.spawnCloudTimer = 0;
+
+                // Init star field for night mode
+                for (let i = 0; i < 20; i++) {
+                    this.stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * 100,
+                        size: Math.random() > 0.5 ? 2 : 1
+                    });
+                }
+            }
+
+            update() {
+                // Ground scroll
+                this.groundX = (this.groundX - speed) % 24;
+
+                // Cloud manager
+                this.spawnCloudTimer++;
+                if (this.spawnCloudTimer > 120) {
+                    if (Math.random() < 0.4) {
+                        this.clouds.push({
+                            x: canvas.width + 40,
+                            y: Math.random() * 70 + 20,
+                            speed: speed * 0.2
+                        });
+                    }
+                    this.spawnCloudTimer = 0;
+                }
+
+                this.clouds.forEach(c => c.x -= c.speed);
+                this.clouds = this.clouds.filter(c => c.x > -60);
+            }
+
+            draw() {
+                // Background Night Alpha transition
+                if (isNight && nightBgAlpha < 1) nightBgAlpha += 0.02;
+                if (!isNight && nightBgAlpha > 0) nightBgAlpha -= 0.02;
+
+                const bgColor = nightBgAlpha > 0.5 ? '#111827' : '#f7f7f7';
+                canvas.style.backgroundColor = bgColor;
+
+                // Draw Stars (Night only)
+                if (nightBgAlpha > 0.2) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${nightBgAlpha})`;
+                    this.stars.forEach(star => {
+                        ctx.fillRect(star.x, star.y, star.size, star.size);
+                    });
+                }
+
+                // Draw Clouds
+                ctx.fillStyle = isNight ? 'rgba(255,255,255,0.15)' : '#d1d5db';
+                this.clouds.forEach(c => {
+                    const px = Math.floor(c.x);
+                    const py = Math.floor(c.y);
+                    ctx.fillRect(px, py, 34, 10);
+                    ctx.fillRect(px + 6, py - 6, 16, 6);
+                });
+
+                // Draw Ground Line
+                ctx.strokeStyle = isNight ? '#4b5563' : '#535353';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 190);
+                ctx.lineTo(canvas.width, 190);
+                ctx.stroke();
+
+                // Ground bumps / pixel dots
+                ctx.fillStyle = isNight ? '#6b7280' : '#888888';
+                for (let i = this.groundX; i < canvas.width; i += 24) {
+                    ctx.fillRect(i, 194, 4, 2);
+                    ctx.fillRect(i + 10, 198, 2, 2);
+                }
+            }
+        }
+
+        const player = new Dino();
+        const env = new Environment();
+        let obstacles = [];
+        let obstacleSpawnTimer = 0;
+        let nextSpawnInterval = 100;
+
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
+        function resetGame() {
+            score = 0;
+            speed = BASE_SPEED;
+            obstacles = [];
+            obstacleSpawnTimer = 0;
+            isNight = false;
+            nightBgAlpha = 0;
+            gameStatus = 'RUNNING';
+
+            startOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            nightStatus.style.opacity = '0';
+        }
+
+        function triggerGameOver() {
+            gameStatus = 'GAMEOVER';
+            soundFX.playCrash();
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('dino_highscore', highScore);
+                hiScoreText.innerText = String(highScore).padStart(5, '0');
+            }
+
+            finalScore.innerText = score;
+            finalHighScore.innerText = highScore;
+            gameOverOverlay.classList.remove('hidden');
+
+            renderSkinList(); // Refresh skins unlock status
+        }
+
+        // Skins Shop Rendering
+        const skinModal = document.getElementById('skinModal');
+        const skinMenuBtn = document.getElementById('skinMenuBtn');
+        const closeSkinModal = document.getElementById('closeSkinModal');
+        const skinListContainer = document.getElementById('skinListContainer');
+
+        function renderSkinList() {
+            skinListContainer.innerHTML = SKINS.map(skin => {
+                const isUnlocked = highScore >= skin.unlockScore;
+                const isSelected = selectedSkinId === skin.id;
+
+                return `
+                    <div class="p-3 rounded-2xl border-2 transition flex items-center justify-between ${
+                        isSelected 
+                            ? 'bg-stone-800 border-amber-500' 
+                            : isUnlocked 
+                                ? 'bg-stone-950 border-stone-800 hover:border-stone-700' 
+                                : 'bg-stone-950/50 border-stone-900 opacity-60'
+                    }">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shadow-inner" style="background-color: ${skin.color}">
+                                🥛🐉
+                            </div>
+                            <div>
+                                <div class="font-bold text-xs text-white flex items-center gap-2">
+                                    ${skin.name}
+                                    ${isSelected ? '<span class="bg-amber-500 text-black text-[9px] px-1.5 py-0.2 rounded font-black">使用中</span>' : ''}
+                                </div>
+                                <div class="text-[11px] text-stone-400 mt-0.5">${skin.desc}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            ${isUnlocked ? `
+                                <button onclick="selectSkin('${skin.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold ${
+                                    isSelected ? 'bg-stone-700 text-stone-400 cursor-default' : 'bg-amber-500 hover:bg-amber-400 text-black'
+                                }">
+                                    ${isSelected ? '已選用' : '選擇'}
+                                </button>
+                            ` : `
+                                <span class="text-[10px] bg-stone-800 text-stone-400 px-2.5 py-1 rounded-lg border border-stone-700 font-bold block text-center">
+                                    🔒 需 ${skin.unlockScore} 分
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectSkin = function(skinId) {
+            selectedSkinId = skinId;
+            window.__galleryStorage.setItem('dino_selected_skin', skinId);
+            renderSkinList();
+        };
+
+        skinMenuBtn.addEventListener('click', () => {
+            renderSkinList();
+            skinModal.classList.remove('hidden');
+        });
+
+        closeSkinModal.addEventListener('click', () => {
+            skinModal.classList.add('hidden');
+        });
+
+        // Controls & Input Event Listeners
+        function handleJumpAction() {
+            if (gameStatus === 'START') {
+                resetGame();
+            } else if (gameStatus === 'RUNNING') {
+                player.jump();
+            } else if (gameStatus === 'GAMEOVER') {
+                resetGame();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                e.preventDefault();
+                handleJumpAction();
+            } else if (e.code === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                player.duck(true);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                player.duck(false);
+            }
+        });
+
+        // Touch & Canvas click handlers
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        if (canvasWrapper) {
+            canvasWrapper.addEventListener('click', (e) => {
+                if (e.target.closest('#skinMenuBtn') || e.target.closest('#skinModal')) return;
+                handleJumpAction();
+            });
+        }
+
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                resetGame();
+            });
+        }
+
+        const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+        const mobileDuckBtn = document.getElementById('mobileDuckBtn');
+
+        if (mobileJumpBtn) {
+            mobileJumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleJumpAction();
+            });
+            mobileJumpBtn.addEventListener('click', handleJumpAction);
+        }
+
+        if (mobileDuckBtn) {
+            mobileDuckBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                player.duck(true);
+            });
+            mobileDuckBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                player.duck(false);
+            });
+            mobileDuckBtn.addEventListener('mousedown', () => player.duck(true));
+            mobileDuckBtn.addEventListener('mouseup', () => player.duck(false));
+        }
+
+        soundToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            soundFX.enabled = !soundFX.enabled;
+            soundIcon.innerText = soundFX.enabled ? '🔊' : '🔇';
+        });
+
+        // Main Game Loop Function
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+
+            // Clear screen
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update & draw environment (Background, stars, clouds, ground)
+            env.update();
+            env.draw();
+
+            if (gameStatus === 'RUNNING') {
+                // Score updates
+                score += 1;
+                currentScoreText.innerText = String(score).padStart(5, '0');
+
+                if (score % 100 === 0 && score > 0) {
+                    soundFX.playScoreMilestone();
+                }
+
+                // Speed scaling over time
+                speed = BASE_SPEED + Math.floor(score / 250) * 0.8;
+
+                // Day / Night cycle toggle every 500 points
+                isNight = Math.floor(score / 500) % 2 === 1;
+                nightStatus.style.opacity = isNight ? '1' : '0';
+
+                // Spawn obstacles (Cactus & Birds)
+                obstacleSpawnTimer++;
+                if (obstacleSpawnTimer >= nextSpawnInterval) {
+                    if (score > 200 && Math.random() < 0.35) {
+                        obstacles.push(new Pterodactyl());
+                    } else {
+                        obstacles.push(new Cactus());
+                    }
+                    obstacleSpawnTimer = 0;
+                    nextSpawnInterval = Math.floor(Math.random() * 45) + 55 - Math.min(25, Math.floor(score / 200));
+                }
+
+                // Update & draw obstacles
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.update();
+                    obs.draw();
+
+                    // Collision detection
+                    if (checkCollision(player.getBounds(), obs.getBounds())) {
+                        triggerGameOver();
+                    }
+
+                    if (obs.markedForDeletion) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                // Update player position & physics
+                player.update();
+            }
+
+            // Always render player
+            player.draw();
+        }
+
+        // Start animation loop on window load
+        window.onload = () => {
+            gameLoop();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典黑白簡約小恐龍遊戲 Classic Dino Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background-color: #f7f7f7;
+            color: #202124;
+        }
+
+        /* 暗色模式自動適應 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #e8eaed;
+            }
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 800 / 240;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* 極簡陰影按鈕 */
+        .retro-btn {
+            border: 2px solid currentColor;
+            transition: all 0.1s ease;
+        }
+        .retro-btn:active {
+            transform: translateY(2px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 md:p-6 transition-colors duration-300">
+
+    <div class="w-full max-w-3xl flex flex-col items-center">
+        
+        <!-- 頁首與分數顯示區 -->
+        <header class="w-full flex justify-between items-center mb-4 px-1 text-xs md:text-sm tracking-wider">
+            <div class="flex items-center space-x-2 font-bold opacity-80">
+                <span>🦖</span>
+                <span>DINO RUNNER</span>
+            </div>
+
+            <div class="flex items-center space-x-4 opacity-90">
+                <span class="text-gray-500 dark:text-gray-400" id="highScoreText">HI 00000</span>
+                <span class="font-bold" id="scoreText">00000</span>
+            </div>
+        </header>
+
+        <!-- 主遊戲畫布區域 -->
+        <div id="gameWrapper" class="game-container bg-white dark:bg-zinc-900 rounded-lg border-2 border-gray-300 dark:border-zinc-700 overflow-hidden shadow-sm relative">
+            <canvas id="gameCanvas" width="800" height="240"></canvas>
+
+            <!-- 開始 / 遊戲結束 提示懸浮窗 -->
+            <div id="overlay" class="absolute inset-0 bg-white/90 dark:bg-zinc-900/90 flex flex-col items-center justify-center p-4 z-20 transition-opacity duration-200">
+                <div class="text-center space-y-4">
+                    <div id="overlayTitle" class="text-base md:text-lg font-bold tracking-widest">
+                        PRESS SPACE TO PLAY
+                    </div>
+                    
+                    <p id="overlaySubtitle" class="text-[10px] md:text-xs opacity-75 leading-relaxed max-w-sm">
+                        [SPACE / ↑] 跳躍 | [↓] 蹲下 & 空中急降
+                    </p>
+
+                    <button id="startBtn" class="retro-btn px-6 py-2.5 rounded text-xs font-bold uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800">
+                        開始遊戲
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手機端專用控制鍵 -->
+        <div class="w-full grid grid-cols-2 gap-3 mt-4 md:hidden text-xs">
+            <button id="mobileDuckBtn" class="retro-btn bg-gray-100 dark:bg-zinc-800 py-3 rounded text-center active:bg-gray-200 dark:active:bg-zinc-700 touch-none">
+                ⬇ 蹲下 (DUCK)
+            </button>
+            <button id="mobileJumpBtn" class="retro-btn bg-gray-900 text-white dark:bg-gray-100 dark:text-zinc-900 py-3 rounded text-center touch-none">
+                ⬆ 跳躍 (JUMP)
+            </button>
+        </div>
+
+        <!-- 底層簡易輔助列 -->
+        <div class="w-full flex justify-between items-center mt-3 text-[10px] opacity-60 px-1">
+            <span>經典黑白簡約版</span>
+            <button id="soundToggle" class="hover:underline cursor-pointer">🔊 音效: 開</button>
+        </div>
+    </div>
+
+    <!-- 遊戲核心邏輯腳本 -->
+    <script>
+        // --- 簡易 8-Bit 擬真音效合成器 ---
+        class SimpleAudio {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // 跳躍音效
+            playJump() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            // 得分千分里程碑嗶聲
+            playScoreBeep() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.setValueAtTime(1000, now + 0.05);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(now + 0.12);
+            }
+
+            // 碰撞 Game Over 音效
+            playHit() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(now + 0.15);
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = new SimpleAudio();
+
+        // DOM 元素
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const soundToggle = document.getElementById('soundToggle');
+
+        // 畫布維度常數
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 240;
+        const GROUND_Y = 200;
+        const GRAVITY = 0.65;
+
+        // 遊戲狀態 Variables
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('dino_classic_high') || '0', 10);
+        let speed = 6;
+        let frameCount = 0;
+        let lastScoreBeep = 0;
+        let groundOffset = 0;
+
+        highScoreText.textContent = `HI ${String(highScore).padStart(5, '0')}`;
+
+        // 按鍵輸入控制
+        const keys = { jump: false, duck: false };
+
+        // --- 經典小恐龍類別 ---
+        class Dinosaur {
+            constructor() {
+                this.x = 50;
+                this.y = GROUND_Y;
+                this.width = 36;
+                this.height = 40;
+                this.vy = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.legFrame = 0;
+                this.animTimer = 0;
+            }
+
+            reset() {
+                this.y = GROUND_Y;
+                this.vy = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+            }
+
+            jump() {
+                if (this.isGrounded) {
+                    this.vy = -12.5;
+                    this.isGrounded = false;
+                    audio.playJump();
+                }
+            }
+
+            slam() {
+                // 空中急速砸地
+                if (!this.isGrounded) {
+                    this.vy = 14;
+                }
+            }
+
+            update() {
+                // 重力計算
+                if (!this.isGrounded) {
+                    this.vy += GRAVITY;
+                    this.y += this.vy;
+                }
+
+                // 著地檢查
+                if (this.y >= GROUND_Y) {
+                    this.y = GROUND_Y;
+                    this.vy = 0;
+                    this.isGrounded = true;
+                }
+
+                // 蹲下尺寸轉換
+                this.isDucking = keys.duck && this.isGrounded;
+                if (this.isDucking) {
+                    this.width = 46;
+                    this.height = 24;
+                } else {
+                    this.width = 36;
+                    this.height = 40;
+                }
+
+                // 動畫切換
+                this.animTimer++;
+                if (this.animTimer % 6 === 0) {
+                    this.legFrame = (this.legFrame + 1) % 2;
+                }
+            }
+
+            draw(color) {
+                ctx.save();
+                ctx.fillStyle = color;
+
+                const posX = this.x;
+                const posY = this.y - this.height;
+
+                if (this.isDucking) {
+                    // 蹲下姿態
+                    ctx.fillRect(posX, posY + 6, 38, 18);
+                    ctx.fillRect(posX + 28, posY, 18, 14);
+                    ctx.fillRect(posX - 6, posY + 6, 8, 8); // 尾巴
+
+                    if (this.isGrounded) {
+                        if (this.legFrame === 0) {
+                            ctx.fillRect(posX + 8, posY + 24, 6, 4);
+                            ctx.fillRect(posX + 24, posY + 24, 6, 2);
+                        } else {
+                            ctx.fillRect(posX + 8, posY + 24, 6, 2);
+                            ctx.fillRect(posX + 24, posY + 24, 6, 4);
+                        }
+                    }
+                } else {
+                    // 站立姿態
+                    ctx.fillRect(posX + 8, posY + 12, 22, 18);
+                    ctx.fillRect(posX + 18, posY, 18, 16);
+                    ctx.fillRect(posX + 26, posY + 18, 6, 4); // 小手
+                    ctx.fillRect(posX, posY + 14, 10, 10); // 尾巴
+
+                    if (this.isGrounded) {
+                        if (this.legFrame === 0) {
+                            ctx.fillRect(posX + 10, posY + 30, 5, 10);
+                            ctx.fillRect(posX + 20, posY + 30, 5, 5);
+                        } else {
+                            ctx.fillRect(posX + 10, posY + 30, 5, 5);
+                            ctx.fillRect(posX + 20, posY + 30, 5, 10);
+                        }
+                    } else {
+                        ctx.fillRect(posX + 10, posY + 30, 5, 5);
+                        ctx.fillRect(posX + 18, posY + 30, 5, 5);
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            getCollisionBox() {
+                const pad = 3;
+                return {
+                    x: this.x + pad,
+                    y: this.y - this.height + pad,
+                    width: this.width - (pad * 2),
+                    height: this.height - (pad * 2)
+                };
+            }
+        }
+
+        // --- 仙人掌障礙物 ---
+        class Cactus {
+            constructor(speed) {
+                this.x = CANVAS_WIDTH + 20;
+                this.type = Math.floor(Math.random() * 3); // 0:單仙人掌, 1:雙仙人掌, 2:大仙人掌
+                this.speed = speed;
+
+                if (this.type === 0) { this.width = 18; this.height = 36; }
+                else if (this.type === 1) { this.width = 34; this.height = 38; }
+                else { this.width = 24; this.height = 44; }
+
+                this.y = GROUND_Y - this.height;
+            }
+
+            update() {
+                this.x -= this.speed;
+            }
+
+            draw(color) {
+                ctx.save();
+                ctx.fillStyle = color;
+
+                if (this.type === 0) {
+                    ctx.fillRect(this.x + 6, this.y, 6, this.height);
+                    ctx.fillRect(this.x, this.y + 10, 6, 12);
+                    ctx.fillRect(this.x + 12, this.y + 14, 6, 10);
+                } else if (this.type === 1) {
+                    ctx.fillRect(this.x + 4, this.y + 6, 6, this.height - 6);
+                    ctx.fillRect(this.x + 18, this.y, 8, this.height);
+                    ctx.fillRect(this.x + 10, this.y + 14, 6, 4);
+                } else {
+                    ctx.fillRect(this.x + 7, this.y, 10, this.height);
+                    ctx.fillRect(this.x, this.y + 14, 7, 16);
+                    ctx.fillRect(this.x + 17, this.y + 18, 7, 12);
+                }
+
+                ctx.restore();
+            }
+
+            getCollisionBox() {
+                return { x: this.x + 1, y: this.y + 1, width: this.width - 2, height: this.height - 1 };
+            }
+        }
+
+        // --- 飛行翼龍障礙物 ---
+        class Pterodactyl {
+            constructor(speed) {
+                this.x = CANVAS_WIDTH + 30;
+                this.width = 38;
+                this.height = 26;
+                this.speed = speed + 0.5;
+
+                // 兩種飛行高度：低飛（須跳過）與中高飛（須蹲下）
+                const heights = [GROUND_Y - 22, GROUND_Y - 48];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                this.wingPhase = 0;
+                this.animTimer = 0;
+            }
+
+            update() {
+                this.x -= this.speed;
+                this.animTimer++;
+                if (this.animTimer % 10 === 0) {
+                    this.wingPhase = (this.wingPhase + 1) % 2;
+                }
+            }
+
+            draw(color) {
+                ctx.save();
+                ctx.fillStyle = color;
+                const px = this.x;
+                const py = this.y;
+
+                ctx.fillRect(px + 10, py + 10, 18, 6);
+                ctx.fillRect(px + 28, py + 8, 8, 4);
+
+                if (this.wingPhase === 0) {
+                    ctx.fillRect(px + 12, py - 4, 5, 14);
+                } else {
+                    ctx.fillRect(px + 12, py + 16, 5, 12);
+                }
+                ctx.restore();
+            }
+
+            getCollisionBox() {
+                return { x: this.x + 3, y: this.y + 3, width: this.width - 6, height: this.height - 6 };
+            }
+        }
+
+        let dino = new Dinosaur();
+        let obstacles = [];
+
+        function checkCollision(r1, r2) {
+            return (
+                r1.x < r2.x + r2.width &&
+                r1.x + r1.width > r2.x &&
+                r1.y < r2.y + r2.height &&
+                r1.y + r1.height > r2.y
+            );
+        }
+
+        function resetGame() {
+            score = 0;
+            speed = 6;
+            frameCount = 0;
+            lastScoreBeep = 0;
+
+            dino.reset();
+            obstacles = [];
+
+            gameState = 'PLAYING';
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            audio.playHit();
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('dino_classic_high', highScore);
+                highScoreText.textContent = `HI ${String(highScore).padStart(5, '0')}`;
+            }
+
+            overlayTitle.textContent = 'GAME OVER';
+            overlaySubtitle.textContent = `最終得分: ${String(score).padStart(5, '0')}`;
+            startBtn.textContent = '重新開始';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            frameCount++;
+
+            // 漸進式加速與分數計算
+            speed = 6 + Math.min(6, score / 250);
+            score = Math.floor(frameCount / 4);
+            scoreText.textContent = String(score).padStart(5, '0');
+
+            // 每 100 分播放提示嗶聲
+            if (score > 0 && score % 100 === 0 && score !== lastScoreBeep) {
+                audio.playScoreBeep();
+                lastScoreBeep = score;
+            }
+
+            // 地面移動 offset
+            groundOffset = (groundOffset + speed) % 16;
+
+            dino.update();
+
+            // 生成障礙物
+            const minDistance = Math.max(45, 90 - speed * 3);
+            if (frameCount % Math.floor(minDistance) === 0) {
+                if (score > 120 && Math.random() < 0.35) {
+                    obstacles.push(new Pterodactyl(speed));
+                } else {
+                    obstacles.push(new Cactus(speed));
+                }
+            }
+
+            // 更新與碰撞檢查
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.speed = speed;
+                obs.update();
+
+                if (checkCollision(dino.getCollisionBox(), obs.getCollisionBox())) {
+                    gameOver();
+                }
+
+                if (obs.x + obs.width < -20) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            // 判斷是否為暗色模式
+            const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const mainColor = isDark ? '#e8eaed' : '#202124';
+            const bgColor = isDark ? '#18181b' : '#ffffff';
+
+            // 清空畫布背景
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 繪製地平線
+            ctx.fillStyle = mainColor;
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
+
+            // 繪製地面虛線點陣
+            for (let x = -groundOffset; x < CANVAS_WIDTH; x += 20) {
+                ctx.fillRect(x, GROUND_Y + 6, 6, 2);
+                ctx.fillRect(x + 10, GROUND_Y + 14, 3, 2);
+            }
+
+            // 繪製實體
+            obstacles.forEach(obs => obs.draw(mainColor));
+            dino.draw(mainColor);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleJumpStart() {
+            audio.init();
+            if (gameState === 'PLAYING') {
+                dino.jump();
+            } else if (gameState === 'START' || gameState === 'GAMEOVER') {
+                resetGame();
+            }
+        }
+
+        function handleDuckStart() {
+            audio.init();
+            if (gameState === 'PLAYING') {
+                if (!dino.isGrounded) {
+                    dino.slam();
+                }
+                keys.duck = true;
+            }
+        }
+
+        // 鍵盤事件監聽
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                keys.jump = true;
+                handleJumpStart();
+            }
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                e.preventDefault();
+                handleDuckStart();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                keys.jump = false;
+            }
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                keys.duck = false;
+            }
+        });
+
+        // 畫布與按鈕點擊事件
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJumpStart();
+        });
+
+        startBtn.addEventListener('click', handleJumpStart);
+
+        // 手機觸控按鈕
+        const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+        const mobileDuckBtn = document.getElementById('mobileDuckBtn');
+
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJumpStart();
+        });
+
+        mobileDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDuckStart();
+        });
+
+        mobileDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.duck = false;
+        });
+
+        // 音效切換
+        soundToggle.addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            soundToggle.textContent = audio.enabled ? '🔊 音效: 開' : '🔇 音效: 關';
+        });
+
+        // 啟動主循環
+        window.onload = () => {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

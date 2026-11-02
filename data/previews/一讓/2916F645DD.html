@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pixel Quest: The Crystal Realm</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* 像素復古視覺風格定義 */
+    body {
+      font-family: 'Press Start 2P', 'Noto Sans TC', monospace;
+      background-color: #0f0f1b;
+      color: #e2e8f0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      overflow: hidden;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .pixel-box {
+      border: 4px solid #4a5568;
+      box-shadow: inset -4px -4px 0px 0px #1a202c, inset 4px 4px 0px 0px #718096, 0 8px 0 0 #000;
+      background-color: #1a1b26;
+    }
+    .pixel-btn {
+      border: 3px solid #000;
+      box-shadow: inset -3px -3px 0px 0px #2d3748, inset 3px 3px 0px 0px #a0aec0;
+      transition: all 0.05s ease;
+    }
+    .pixel-btn:active {
+      box-shadow: inset 3px 3px 0px 0px #2d3748, inset -3px -3px 0px 0px #a0aec0;
+      transform: translateY(2px);
+    }
+    .crt-effect::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+    /* 隱藏滾動條 */
+    ::-webkit-scrollbar { display: none; }
+  </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col h-screen w-screen justify-between items-center p-2 md:p-4 select-none crt-effect">
+
+  <!-- 頂部資訊列 (HUD) -->
+  <header class="w-full max-w-4xl flex justify-between items-center px-3 py-2 bg-slate-900 border-2 border-slate-700 rounded-lg z-10 text-xs md:text-sm flex-wrap gap-y-1">
+    <div class="flex items-center space-x-2 md:space-x-4">
+      <div class="flex items-center space-x-1">
+        <span class="text-amber-400 font-bold">LV.<span id="ui-level">1</span></span>
+      </div>
+      <!-- 血條 -->
+      <div class="flex flex-col">
+        <div class="text-[10px] text-red-400 mb-0.5">HP <span id="ui-hp-text">100/100</span></div>
+        <div class="w-16 md:w-28 h-2.5 bg-slate-950 border border-slate-700 rounded-sm overflow-hidden">
+          <div id="ui-hp-bar" class="h-full bg-red-500 transition-all duration-200" style="width: 100%;"></div>
+        </div>
+      </div>
+      <!-- 魔力條 (MP) -->
+      <div class="flex flex-col">
+        <div class="text-[10px] text-blue-400 mb-0.5">MP <span id="ui-mp-text">50/50</span></div>
+        <div class="w-14 md:w-24 h-2.5 bg-slate-950 border border-slate-700 rounded-sm overflow-hidden">
+          <div id="ui-mp-bar" class="h-full bg-blue-500 transition-all duration-200" style="width: 100%;"></div>
+        </div>
+      </div>
+      <!-- 經驗值條 -->
+      <div class="flex flex-col">
+        <div class="text-[10px] text-emerald-400 mb-0.5">EXP <span id="ui-exp-text">0/50</span></div>
+        <div class="w-14 md:w-20 h-2.5 bg-slate-950 border border-slate-700 rounded-sm overflow-hidden">
+          <div id="ui-exp-bar" class="h-full bg-emerald-400 transition-all duration-200" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 金幣與系統功能 -->
+    <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-1 text-yellow-400 font-bold text-xs">
+        <span>🪙</span>
+        <span id="ui-gold">0</span>
+      </div>
+      <button id="btn-save" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] border border-emerald-900" title="保存存檔">💾 存檔</button>
+      <button id="btn-audio" class="p-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs" title="聲音切換">🔊</button>
+      <button id="btn-inventory" class="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px] font-bold border border-amber-800">🎒 (E)</button>
+    </div>
+  </header>
+
+  <!-- 遊戲主視窗區域 -->
+  <main class="relative flex-1 w-full max-w-4xl flex items-center justify-center my-2 overflow-hidden rounded-lg border-4 border-slate-800 bg-black shadow-2xl">
+    <canvas id="gameCanvas" class="w-full h-full max-w-full max-h-full object-contain"></canvas>
+
+    <!-- BOSS 專屬血條 HUD Overlay -->
+    <div id="boss-hud" class="hidden absolute top-3 left-1/2 -translate-x-1/2 w-3/4 max-w-md bg-slate-900/90 border-2 border-red-600 p-2 rounded-lg z-20 flex flex-col items-center">
+      <div class="text-xs text-red-400 font-bold mb-1">☠️ 哥布林巨魔王 (BOSS)</div>
+      <div class="w-full h-3 bg-slate-950 border border-red-900 rounded overflow-hidden">
+        <div id="boss-hp-bar" class="h-full bg-red-600 transition-all duration-150" style="width: 100%;"></div>
+      </div>
+    </div>
+
+    <!-- 對話框 Overlay -->
+    <div id="dialog-box" class="hidden absolute bottom-4 left-4 right-4 bg-slate-900/95 border-4 border-amber-600 p-3 rounded-lg z-30 text-xs md:text-sm shadow-xl">
+      <div class="flex justify-between items-center border-b border-amber-600/40 pb-1 mb-2">
+        <span id="dialog-speaker" class="text-amber-400 font-bold">NPC 名字</span>
+        <span class="text-[10px] text-slate-400">按 Space / 點擊 繼續</span>
+      </div>
+      <p id="dialog-text" class="text-slate-200 leading-relaxed min-h-[40px] font-sans">對話內容...</p>
+    </div>
+
+    <!-- 任務告示彈窗 -->
+    <div id="quest-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 text-slate-950 font-bold px-4 py-1.5 rounded-full border-2 border-yellow-300 z-30 text-xs shadow-lg animate-bounce">
+      <span id="quest-text">新任務！</span>
+    </div>
+
+    <!-- 背包 modal -->
+    <div id="inventory-modal" class="hidden absolute inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border-4 border-slate-600 p-4 rounded-lg w-80 max-w-full text-xs">
+        <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-3">
+          <h3 class="text-amber-400 font-bold text-sm">🎒 冒險者背包與裝備</h3>
+          <button id="btn-close-inv" class="text-slate-400 hover:text-white text-base">✕</button>
+        </div>
+        <div class="mb-3 p-2 bg-slate-800 rounded border border-slate-700 flex justify-around text-[10px]">
+          <div>⚔️ 攻擊力: <span id="stat-atk" class="text-amber-300">15</span></div>
+          <div>🛡️ 防禦力: <span id="stat-def" class="text-blue-300">0</span></div>
+        </div>
+        <div id="inventory-grid" class="grid grid-cols-4 gap-2 mb-4 min-h-[120px]">
+          <!-- 動態渲染道具 -->
+        </div>
+        <div class="text-[10px] text-slate-400 border-t border-slate-800 pt-2">
+          提示：點擊藥水使用，點擊裝備可直接穿戴。
+        </div>
+      </div>
+    </div>
+
+    <!-- 村莊商店 Modal -->
+    <div id="shop-modal" class="hidden absolute inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border-4 border-amber-600 p-4 rounded-lg w-80 max-w-full text-xs">
+        <div class="flex justify-between items-center border-b border-amber-600/50 pb-2 mb-3">
+          <h3 class="text-amber-400 font-bold text-sm">🛒 村莊道具商店</h3>
+          <button id="btn-close-shop" class="text-slate-400 hover:text-white text-base">✕</button>
+        </div>
+        <div id="shop-grid" class="space-y-2 mb-4 max-h-60 overflow-y-auto pr-1">
+          <!-- 動態渲染商店商品 -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部操作列 (支援觸控 Touch 控制) -->
+  <footer class="w-full max-w-4xl flex justify-between items-center px-2 py-1 z-10">
+    <!-- 虛擬 D-Pad -->
+    <div class="grid grid-cols-3 gap-1 w-32 h-32 md:hidden">
+      <div></div>
+      <button id="btn-up" class="bg-slate-800 active:bg-slate-600 text-slate-200 rounded flex items-center justify-center text-lg font-bold border border-slate-700">▲</button>
+      <div></div>
+      <button id="btn-left" class="bg-slate-800 active:bg-slate-600 text-slate-200 rounded flex items-center justify-center text-lg font-bold border border-slate-700">◀</button>
+      <div class="bg-slate-900/50 rounded"></div>
+      <button id="btn-right" class="bg-slate-800 active:bg-slate-600 text-slate-200 rounded flex items-center justify-center text-lg font-bold border border-slate-700">▶</button>
+      <div></div>
+      <button id="btn-down" class="bg-slate-800 active:bg-slate-600 text-slate-200 rounded flex items-center justify-center text-lg font-bold border border-slate-700">▼</button>
+      <div></div>
+    </div>
+
+    <!-- 鍵盤操作說明 (Desktop) -->
+    <div class="hidden md:flex flex-wrap gap-3 text-[10px] text-slate-400 bg-slate-900/80 px-4 py-2 rounded-md border border-slate-800">
+      <div><span class="text-amber-400 font-bold">WASD</span> : 移動</div>
+      <div><span class="text-amber-400 font-bold">Space</span> : 揮劍/互動</div>
+      <div><span class="text-blue-400 font-bold">Q</span> : 火球術 (15 MP)</div>
+      <div><span class="text-amber-400 font-bold">E</span> : 背包</div>
+    </div>
+
+    <!-- 手機動作按鈕 -->
+    <div class="flex space-x-2 md:hidden">
+      <button id="btn-attack" class="w-14 h-14 bg-red-700 active:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-red-400 shadow-lg">⚔️ 揮劍</button>
+      <button id="btn-skill" class="w-14 h-14 bg-blue-700 active:bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-blue-400 shadow-lg">🔮 火球</button>
+      <button id="btn-interact" class="w-12 h-12 bg-amber-700 active:bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-amber-400 shadow-lg">💬 對話</button>
+    </div>
+  </footer>
+
+  <!-- 遊戲引擎邏輯 Script -->
+  <script>
+    // === 1. 復古音效與音樂合成器 (Web Audio API) ===
+    class RetroAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      playTone(freq, type, duration, startVol = 0.1, endVol = 0) {
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(Math.max(endVol, 0.0001), this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      playAttack() {
+        this.init();
+        this.playTone(300, 'sawtooth', 0.1, 0.2, 0.01);
+        setTimeout(() => this.playTone(150, 'square', 0.1, 0.15, 0.01), 40);
+      }
+      playMagic() {
+        this.init();
+        this.playTone(600, 'sine', 0.2, 0.2, 0.01);
+        setTimeout(() => this.playTone(850, 'triangle', 0.25, 0.15, 0.01), 60);
+      }
+      playHit() {
+        this.init();
+        this.playTone(120, 'square', 0.15, 0.25, 0.01);
+      }
+      playCoin() {
+        this.init();
+        this.playTone(987.77, 'sine', 0.08, 0.2, 0.01);
+        setTimeout(() => this.playTone(1318.51, 'sine', 0.15, 0.2, 0.01), 80);
+      }
+      playBuy() {
+        this.init();
+        this.playTone(523.25, 'triangle', 0.1, 0.2, 0.01);
+        setTimeout(() => this.playTone(659.25, 'sine', 0.15, 0.2, 0.01), 70);
+      }
+      playLevelUp() {
+        this.init();
+        const notes = [261.63, 329.63, 392.00, 523.25];
+        notes.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.15, 0.2, 0.01), i * 90);
+        });
+      }
+      playDialog() {
+        this.init();
+        this.playTone(400 + Math.random() * 200, 'sine', 0.04, 0.05, 0.001);
+      }
+    }
+    const sound = new RetroAudioEngine();
+
+    // === 2. 程序化像素繪圖器 ===
+    class PixelSpriteGenerator {
+      static createTileCanvas(width, height, drawFunc) {
+        const c = document.createElement('canvas');
+        c.width = width;
+        c.height = height;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        drawFunc(ctx);
+        return c;
+      }
+
+      static getPlayerSprite(dir = 'down', frame = 0) {
+        return this.createTileCanvas(16, 16, (ctx) => {
+          ctx.fillStyle = '#2563eb';
+          ctx.fillRect(4, 6, 8, 8);
+          ctx.fillStyle = '#fca5a5';
+          ctx.fillRect(4, 2, 8, 5);
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(4, 1, 8, 3);
+          ctx.fillStyle = '#0f172a';
+          if (dir === 'down') {
+            ctx.fillRect(5, 4, 2, 2);
+            ctx.fillRect(9, 4, 2, 2);
+          } else if (dir === 'left') {
+            ctx.fillRect(4, 4, 2, 2);
+          } else if (dir === 'right') {
+            ctx.fillRect(10, 4, 2, 2);
+          }
+          ctx.fillStyle = '#1e293b';
+          const offset = (frame % 2 === 0) ? 0 : 1;
+          ctx.fillRect(4 + offset, 14, 3, 2);
+          ctx.fillRect(9 - offset, 14, 3, 2);
+        });
+      }
+
+      static getSlimeSprite(frame = 0) {
+        return this.createTileCanvas(16, 16, (ctx) => {
+          const bounce = (frame % 2 === 0) ? 0 : 1;
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(2, 6 + bounce, 12, 8 - bounce);
+          ctx.fillRect(4, 4 + bounce, 8, 2);
+          ctx.fillStyle = '#86efac';
+          ctx.fillRect(4, 6 + bounce, 3, 2);
+          ctx.fillStyle = '#022c22';
+          ctx.fillRect(5, 8 + bounce, 2, 3);
+          ctx.fillRect(9, 8 + bounce, 2, 3);
+        });
+      }
+
+      static getGoblinSprite() {
+        return this.createTileCanvas(16, 16, (ctx) => {
+          ctx.fillStyle = '#15803d';
+          ctx.fillRect(4, 3, 8, 11);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(5, 5, 2, 2);
+          ctx.fillRect(9, 5, 2, 2);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(1, 7, 3, 6);
+        });
+      }
+
+      // BOSS 巨魔精靈 (24x24 大尺寸)
+      static getBossSprite(frame = 0) {
+        return this.createTileCanvas(24, 24, (ctx) => {
+          const pulse = (frame % 2 === 0) ? 0 : 1;
+          // 身體
+          ctx.fillStyle = '#991b1b';
+          ctx.fillRect(4, 4 + pulse, 16, 18 - pulse);
+          // 鎧甲
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(6, 10 + pulse, 12, 8);
+          // 頭角與紅眼
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(4, 2, 3, 4);
+          ctx.fillRect(17, 2, 3, 4);
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(7, 7 + pulse, 3, 3);
+          ctx.fillRect(14, 7 + pulse, 3, 3);
+          // 大戰斧
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(0, 4, 4, 16);
+          ctx.fillRect(0, 4, 8, 6);
+        });
+      }
+
+      static getNPCSprite() {
+        return this.createTileCanvas(16, 16, (ctx) => {
+          ctx.fillStyle = '#7e22ce';
+          ctx.fillRect(4, 5, 8, 10);
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(5, 6, 6, 6);
+          ctx.fillStyle = '#fde047';
+          ctx.fillRect(5, 3, 6, 3);
+        });
+      }
+
+      // 商人 NPC 精靈 (黃綠套裝)
+      static getMerchantSprite() {
+        return this.createTileCanvas(16, 16, (ctx) => {
+          ctx.fillStyle = '#047857';
+          ctx.fillRect(4, 5, 8, 10);
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(4, 2, 8, 3);
+          ctx.fillStyle = '#fed7aa';
+          ctx.fillRect(5, 5, 6, 3);
+        });
+      }
+
+      // 魔法火球精靈
+      static getFireballSprite() {
+        return this.createTileCanvas(8, 8, (ctx) => {
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(1, 1, 6, 6);
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(2, 2, 4, 4);
+        });
+      }
+    }
+
+    // === 3. 地圖Tile與關卡數據 ===
+    const TILE_SIZE = 16;
+    const MAP_WIDTH = 30;
+    const MAP_HEIGHT = 20;
+
+    // 村莊地圖 (加上商人 NPC 點位)
+    const MAP_VILLAGE = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,1,0,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,1,1,1,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,1,1,1,0,0,0,0,0,1],
+      [1,0,0,1,1,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,1,1,0,0,0,2,2,2,2,2,6,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,3,3,3,3,0,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,3,3,3,3,3,3,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,3,3,3,3,3,3,0,0,1],
+      [1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,3,3,3,3,0,0,0,1],
+      [1,0,0,1,1,1,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,1,1,1,0,0,2,2,2,2,2,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const MAP_DUNGEON = [
+      [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+      [4,5,5,5,5,5,4,5,5,5,5,5,5,5,5,5,5,5,5,4,5,5,5,5,5,5,5,7,5,4],
+      [4,5,5,5,5,5,4,5,5,5,5,5,5,5,5,5,5,5,5,4,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,4,4,4,5,5,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,4,5,5,5,5,5,5,4,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,4,4,5,5,4,4,4,4,4,5,5,5,5,5,5,4,4,4,4,4,5,5,4,4,4,4,4,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,4,4,4,5,5,5,5,5,5,6,5,5,5,5,5,5,5,5,4,4,4,5,5,5,5,5,4],
+      [4,5,5,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4],
+      [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+    ];
+
+    // === 4. 遊戲核心邏輯 (Game Engine) ===
+    class GameEngine {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = false;
+
+        this.canvas.width = 320;
+        this.canvas.height = 200;
+
+        this.camera = { x: 0, y: 0, width: 320, height: 200 };
+        this.currentMapType = 'village';
+        this.map = MAP_VILLAGE;
+        this.portalCooldown = 0;
+
+        // 玩家完整屬性數據
+        this.player = {
+          x: 13 * TILE_SIZE,
+          y: 7 * TILE_SIZE,
+          w: 12,
+          h: 12,
+          speed: 1.5,
+          dir: 'down',
+          animFrame: 0,
+          isAttacking: false,
+          attackTimer: 0,
+          hp: 100,
+          maxHp: 100,
+          mp: 50,
+          maxMp: 50,
+          level: 1,
+          exp: 0,
+          maxExp: 50,
+          gold: 0,
+          baseAtk: 15,
+          baseDef: 0,
+          equippedWeapon: null,
+          equippedArmor: null
+        };
+
+        // 實體與發射物陣列
+        this.enemies = [];
+        this.projectiles = [];
+        this.particles = [];
+        this.floatingTexts = [];
+
+        // 背包與裝備清單
+        this.inventory = [
+          { id: 'pot_hp', name: '紅藥水', count: 3, icon: '🧪', type: 'heal_hp', val: 30 },
+          { id: 'pot_mp', name: '藍藥水', count: 2, icon: '🧪', type: 'heal_mp', val: 30 }
+        ];
+
+        // 商店販售清單
+        this.shopItems = [
+          { id: 'pot_hp', name: '紅藥水', price: 15, icon: '🧪', type: 'heal_hp', val: 30, desc: '恢復 30 HP' },
+          { id: 'pot_mp', name: '藍藥水', price: 15, icon: '🧪', type: 'heal_mp', val: 30, desc: '恢復 30 MP' },
+          { id: 'sword_iron', name: '精鋼長劍', price: 100, icon: '⚔️', type: 'weapon', atk: 12, desc: '增加 12 點攻擊力' },
+          { id: 'armor_leather', name: '皮質胸甲', price: 120, icon: '🛡️', type: 'armor', def: 6, maxHp: 30, desc: '增加 6 防禦與 30 血量' }
+        ];
+
+        // 任務狀態
+        this.quest = {
+          title: '初臨冒險村',
+          targetSlimes: 3,
+          killedSlimes: 0,
+          bossDefeated: false,
+          completed: false
+        };
+
+        // NPC 點位數據
+        this.npcElder = { x: 12 * TILE_SIZE, y: 5 * TILE_SIZE, name: '長老 埃爾德' };
+        this.npcMerchant = { x: 18 * TILE_SIZE, y: 5 * TILE_SIZE, name: '商人 鮑勃' };
+
+        this.keys = {};
+
+        // 嘗試從 LocalStorage 載入舊存檔
+        this.loadGame();
+        this.initEnemies();
+        this.bindEvents();
+        this.updateUI();
+
+        // 自然恢復 MP (每 2 秒恢復 2 MP)
+        setInterval(() => {
+          if (this.player.mp < this.player.maxMp) {
+            this.player.mp = Math.min(this.player.maxMp, this.player.mp + 2);
+            this.updateUI();
+          }
+        }, 2000);
+      }
+
+      // 計算總攻擊與總防禦
+      get totalAtk() {
+        let weaponAtk = this.player.equippedWeapon ? this.player.equippedWeapon.atk : 0;
+        return this.player.baseAtk + weaponAtk;
+      }
+      get totalDef() {
+        let armorDef = this.player.equippedArmor ? this.player.equippedArmor.def : 0;
+        return this.player.baseDef + armorDef;
+      }
+
+      initEnemies() {
+        this.enemies = [];
+        if (this.currentMapType === 'village') {
+          this.enemies.push(
+            { id: 1, x: 5 * TILE_SIZE, y: 10 * TILE_SIZE, hp: 30, maxHp: 30, type: 'slime', atk: 5, speed: 0.5, dirX: 1, dirY: 0, timer: 0 },
+            { id: 2, x: 20 * TILE_SIZE, y: 4 * TILE_SIZE, hp: 30, maxHp: 30, type: 'slime', atk: 5, speed: 0.5, dirX: 0, dirY: 1, timer: 0 },
+            { id: 3, x: 22 * TILE_SIZE, y: 12 * TILE_SIZE, hp: 30, maxHp: 30, type: 'slime', atk: 5, speed: 0.5, dirX: -1, dirY: 0, timer: 0 }
+          );
+          document.getElementById('boss-hud').classList.add('hidden');
+        } else {
+          // 地下城普通小怪與 Boss
+          this.enemies.push(
+            { id: 10, x: 8 * TILE_SIZE, y: 4 * TILE_SIZE, hp: 60, maxHp: 60, type: 'goblin', atk: 12, speed: 0.8, dirX: 1, dirY: 0, timer: 0 },
+            { id: 11, x: 20 * TILE_SIZE, y: 7 * TILE_SIZE, hp: 60, maxHp: 60, type: 'goblin', atk: 12, speed: 0.8, dirX: 0, dirY: -1, timer: 0 }
+          );
+
+          // 如果 Boss 尚未被擊敗，生成大 Boss
+          if (!this.quest.bossDefeated) {
+            this.enemies.push(
+              { id: 99, x: 24 * TILE_SIZE, y: 3 * TILE_SIZE, hp: 300, maxHp: 300, type: 'boss', atk: 22, speed: 0.5, dirX: -1, dirY: 0, timer: 0 }
+            );
+            document.getElementById('boss-hud').classList.remove('hidden');
+            this.updateBossUI(300, 300);
+          }
+        }
+      }
+
+      bindEvents() {
+        window.addEventListener('keydown', (e) => {
+          this.keys[e.key.toLowerCase()] = true;
+          if (e.key === ' ') {
+            e.preventDefault();
+            this.handleActionKey();
+          }
+          if (e.key.toLowerCase() === 'q') {
+            this.castFireball();
+          }
+          if (e.key.toLowerCase() === 'e') {
+            this.toggleInventory();
+          }
+        });
+        window.addEventListener('keyup', (e) => {
+          this.keys[e.key.toLowerCase()] = false;
+        });
+
+        const bindBtn = (id, keyName) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          const start = (e) => { e.preventDefault(); this.keys[keyName] = true; };
+          const end = (e) => { e.preventDefault(); this.keys[keyName] = false; };
+          btn.addEventListener('touchstart', start);
+          btn.addEventListener('touchend', end);
+          btn.addEventListener('mousedown', start);
+          btn.addEventListener('mouseup', end);
+        };
+
+        bindBtn('btn-up', 'w');
+        bindBtn('btn-down', 's');
+        bindBtn('btn-left', 'a');
+        bindBtn('btn-right', 'd');
+
+        document.getElementById('btn-attack').addEventListener('click', () => this.playerAttack());
+        document.getElementById('btn-skill').addEventListener('click', () => this.castFireball());
+        document.getElementById('btn-interact').addEventListener('click', () => this.handleActionKey());
+        document.getElementById('btn-inventory').addEventListener('click', () => this.toggleInventory());
+        document.getElementById('btn-close-inv').addEventListener('click', () => this.toggleInventory());
+        document.getElementById('btn-close-shop').addEventListener('click', () => this.toggleShop(false));
+        document.getElementById('btn-save').addEventListener('click', () => this.saveGame(true));
+        
+        document.getElementById('btn-audio').addEventListener('click', () => {
+          sound.muted = !sound.muted;
+          document.getElementById('btn-audio').innerText = sound.muted ? '🔇' : '🔊';
+        });
+      }
+
+      updatePlayer() {
+        let dx = 0, dy = 0;
+        if (this.keys['w'] || this.keys['arrowup']) { dy -= 1; this.player.dir = 'up'; }
+        if (this.keys['s'] || this.keys['arrowdown']) { dy += 1; this.player.dir = 'down'; }
+        if (this.keys['a'] || this.keys['arrowleft']) { dx -= 1; this.player.dir = 'left'; }
+        if (this.keys['d'] || this.keys['arrowright']) { dx += 1; this.player.dir = 'right'; }
+
+        if (dx !== 0 || dy !== 0) {
+          const len = Math.hypot(dx, dy);
+          dx = (dx / len) * this.player.speed;
+          dy = (dy / len) * this.player.speed;
+
+          if (!this.checkCollision(this.player.x + dx, this.player.y)) this.player.x += dx;
+          if (!this.checkCollision(this.player.x, this.player.y + dy)) this.player.y += dy;
+          this.player.animFrame += 0.15;
+        }
+
+        if (this.player.isAttacking) {
+          this.player.attackTimer--;
+          if (this.player.attackTimer <= 0) this.player.isAttacking = false;
+        }
+
+        this.checkPortals();
+      }
+
+      castFireball() {
+        if (this.player.mp < 15) {
+          this.showToast('⚠️ MP 魔力不足 (需要 15 MP)!');
+          return;
+        }
+
+        this.player.mp -= 15;
+        sound.playMagic();
+        this.updateUI();
+
+        let vx = 0, vy = 0;
+        if (this.player.dir === 'up') vy = -3.5;
+        if (this.player.dir === 'down') vy = 3.5;
+        if (this.player.dir === 'left') vx = -3.5;
+        if (this.player.dir === 'right') vx = 3.5;
+
+        this.projectiles.push({
+          x: this.player.x + 4,
+          y: this.player.y + 4,
+          vx, vy,
+          life: 40,
+          damage: this.totalAtk + 10
+        });
+      }
+
+      updateProjectiles() {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+          const p = this.projectiles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life--;
+
+          // 撞牆銷毀
+          if (this.checkCollision(p.x, p.y)) {
+            this.projectiles.splice(i, 1);
+            continue;
+          }
+
+          // 碰撞怪物擊中判定
+          for (let enemy of this.enemies) {
+            const hitDist = (enemy.type === 'boss') ? 20 : 12;
+            if (Math.hypot(p.x - enemy.x, p.y - enemy.y) < hitDist) {
+              enemy.hp -= p.damage;
+              sound.playHit();
+              this.addFloatingText(`🔥${p.damage}`, enemy.x, enemy.y, '#f97316');
+
+              if (enemy.type === 'boss') this.updateBossUI(enemy.hp, enemy.maxHp);
+
+              if (enemy.hp <= 0) {
+                this.handleEnemyDefeat(enemy);
+              }
+
+              this.projectiles.splice(i, 1);
+              break;
+            }
+          }
+
+          if (p.life <= 0) this.projectiles.splice(i, 1);
+        }
+      }
+
+      checkCollision(x, y) {
+        const pSize = 10;
+        const points = [
+          { x: x + 2, y: y + 2 },
+          { x: x + pSize, y: y + 2 },
+          { x: x + 2, y: y + pSize },
+          { x: x + pSize, y: y + pSize }
+        ];
+
+        for (let p of points) {
+          const tileX = Math.floor(p.x / TILE_SIZE);
+          const tileY = Math.floor(p.y / TILE_SIZE);
+          if (tileY < 0 || tileY >= this.map.length || tileX < 0 || tileX >= (this.map[tileY] ? this.map[tileY].length : 0)) return true;
+          const tile = this.map[tileY][tileX];
+          if (tile === 1 || tile === 3 || tile === 4) return true;
+        }
+        return false;
+      }
+
+      checkPortals() {
+        if (this.portalCooldown > 0) {
+          this.portalCooldown--;
+          return;
+        }
+
+        const tileX = Math.floor((this.player.x + 8) / TILE_SIZE);
+        const tileY = Math.floor((this.player.y + 8) / TILE_SIZE);
+        const currentTile = (this.map[tileY] && this.map[tileY][tileX] !== undefined) ? this.map[tileY][tileX] : 0;
+
+        if (currentTile === 6) {
+          this.portalCooldown = 40;
+          if (this.currentMapType === 'village') {
+            this.currentMapType = 'dungeon';
+            this.map = MAP_DUNGEON;
+            this.player.x = 12 * TILE_SIZE;
+            this.player.y = 9 * TILE_SIZE;
+            this.showToast('⚠️ 進入黑暗地下城！');
+          } else {
+            this.currentMapType = 'village';
+            this.map = MAP_VILLAGE;
+            this.player.x = 13 * TILE_SIZE;
+            this.player.y = 7 * TILE_SIZE;
+            this.showToast('🏡 返回樹蔭村落');
+          }
+          this.initEnemies();
+          this.snapCameraToPlayer();
+        } else if (currentTile === 7) {
+          this.map[tileY][tileX] = 5;
+          this.player.gold += 80;
+          sound.playCoin();
+          this.addFloatingText('+80 金幣!', this.player.x, this.player.y, '#facc15');
+          this.updateUI();
+        }
+      }
+
+      updateCamera() {
+        const mapPixelWidth = (this.map[0] ? this.map[0].length : MAP_WIDTH) * TILE_SIZE;
+        const mapPixelHeight = this.map.length * TILE_SIZE;
+
+        let targetX = (this.player.x + 8) - this.camera.width / 2;
+        let targetY = (this.player.y + 8) - this.camera.height / 2;
+
+        targetX = Math.max(0, Math.min(targetX, mapPixelWidth - this.camera.width));
+        targetY = Math.max(0, Math.min(targetY, mapPixelHeight - this.camera.height));
+
+        this.camera.x += (targetX - this.camera.x) * 0.1;
+        this.camera.y += (targetY - this.camera.y) * 0.1;
+      }
+
+      snapCameraToPlayer() {
+        const mapPixelWidth = (this.map[0] ? this.map[0].length : MAP_WIDTH) * TILE_SIZE;
+        const mapPixelHeight = this.map.length * TILE_SIZE;
+
+        let targetX = (this.player.x + 8) - this.camera.width / 2;
+        let targetY = (this.player.y + 8) - this.camera.height / 2;
+
+        this.camera.x = Math.max(0, Math.min(targetX, mapPixelWidth - this.camera.width));
+        this.camera.y = Math.max(0, Math.min(targetY, mapPixelHeight - this.camera.height));
+      }
+
+      updateEnemies() {
+        this.enemies.forEach(enemy => {
+          enemy.timer++;
+          if (enemy.timer % 60 === 0) {
+            const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+            const d = dirs[Math.floor(Math.random() * dirs.length)];
+            enemy.dirX = d[0];
+            enemy.dirY = d[1];
+          }
+
+          const nextX = enemy.x + enemy.dirX * enemy.speed;
+          const nextY = enemy.y + enemy.dirY * enemy.speed;
+
+          if (!this.checkCollision(nextX, nextY)) {
+            enemy.x = nextX;
+            enemy.y = nextY;
+          } else {
+            enemy.dirX *= -1;
+            enemy.dirY *= -1;
+          }
+
+          const hitDist = (enemy.type === 'boss') ? 16 : 12;
+          if (Math.hypot(this.player.x - enemy.x, this.player.y - enemy.y) < hitDist) {
+            this.damagePlayer(enemy.atk);
+          }
+        });
+      }
+
+      playerAttack() {
+        if (this.player.isAttacking) return;
+        this.player.isAttacking = true;
+        this.player.attackTimer = 15;
+        sound.playAttack();
+
+        let hitBox = { x: this.player.x, y: this.player.y, w: 16, h: 16 };
+        if (this.player.dir === 'up') hitBox.y -= 14;
+        if (this.player.dir === 'down') hitBox.y += 14;
+        if (this.player.dir === 'left') hitBox.x -= 14;
+        if (this.player.dir === 'right') hitBox.x += 14;
+
+        this.particles.push({
+          x: hitBox.x + 4, y: hitBox.y + 4,
+          life: 8, color: '#fef08a'
+        });
+
+        this.enemies.forEach((enemy) => {
+          const enemySize = (enemy.type === 'boss') ? 24 : 16;
+          if (
+            hitBox.x < enemy.x + enemySize && hitBox.x + hitBox.w > enemy.x &&
+            hitBox.y < enemy.y + enemySize && hitBox.y + hitBox.h > enemy.y
+          ) {
+            const dmg = this.totalAtk + Math.floor(Math.random() * 6);
+            enemy.hp -= dmg;
+            sound.playHit();
+            this.addFloatingText(`-${dmg}`, enemy.x, enemy.y, '#ef4444');
+
+            if (enemy.type === 'boss') this.updateBossUI(enemy.hp, enemy.maxHp);
+
+            enemy.x += (hitBox.x - this.player.x) * 0.4;
+            enemy.y += (hitBox.y - this.player.y) * 0.4;
+
+            if (enemy.hp <= 0) {
+              this.handleEnemyDefeat(enemy);
+            }
+          }
+        });
+      }
+
+      handleEnemyDefeat(enemy) {
+        sound.playCoin();
+        const expGain = (enemy.type === 'boss') ? 150 : 20;
+        const goldGain = (enemy.type === 'boss') ? 200 : 15;
+
+        this.player.exp += expGain;
+        this.player.gold += goldGain;
+        this.addFloatingText(`+${expGain} EXP`, this.player.x, this.player.y - 10, '#34d399');
+
+        if (enemy.type === 'slime') {
+          this.quest.killedSlimes++;
+          this.checkQuestProgress();
+        } else if (enemy.type === 'boss') {
+          this.quest.bossDefeated = true;
+          document.getElementById('boss-hud').classList.add('hidden');
+          this.showToast('🎉 成功擊敗地下城巨魔 Boss！');
+        }
+
+        const idx = this.enemies.indexOf(enemy);
+        if (idx !== -1) this.enemies.splice(idx, 1);
+
+        this.checkLevelUp();
+        this.updateUI();
+      }
+
+      damagePlayer(amount) {
+        const netDamage = Math.max(1, amount - this.totalDef);
+        this.player.hp = Math.max(0, this.player.hp - netDamage);
+        sound.playHit();
+        this.addFloatingText(`-${netDamage}`, this.player.x, this.player.y, '#dc2626');
+        this.updateUI();
+
+        if (this.player.hp <= 0) {
+          this.showToast('💀 你陣亡了！正在村莊復活...');
+          this.player.hp = this.player.maxHp;
+          this.player.mp = this.player.maxMp;
+          this.currentMapType = 'village';
+          this.map = MAP_VILLAGE;
+          this.player.x = 13 * TILE_SIZE;
+          this.player.y = 6 * TILE_SIZE;
+          this.initEnemies();
+          this.updateUI();
+        }
+      }
+
+      checkLevelUp() {
+        if (this.player.exp >= this.player.maxExp) {
+          this.player.level++;
+          this.player.exp -= this.player.maxExp;
+          this.player.maxExp = Math.floor(this.player.maxExp * 1.5);
+          this.player.maxHp += 20;
+          this.player.maxMp += 10;
+          this.player.hp = this.player.maxHp;
+          this.player.mp = this.player.maxMp;
+          this.player.baseAtk += 4;
+          sound.playLevelUp();
+          this.showToast(`🎉 升級！達到 LV.${this.player.level}，屬性全面提升`);
+        }
+      }
+
+      handleActionKey() {
+        this.playerAttack();
+
+        // 檢查與長老 NPC
+        const distElder = Math.hypot(this.player.x - this.npcElder.x, this.player.y - this.npcElder.y);
+        if (this.currentMapType === 'village' && distElder < 24) {
+          sound.playDialog();
+          const dlgBox = document.getElementById('dialog-box');
+          const dlgText = document.getElementById('dialog-text');
+          document.getElementById('dialog-speaker').innerText = this.npcElder.name;
+
+          if (!this.quest.completed) {
+            dlgText.innerText = `勇者啊！村外史萊姆氾濫（討伐進度：${this.quest.killedSlimes}/3）。完成後請進入地圖南方傳送門擊敗地下城巨魔王！`;
+          } else if (!this.quest.bossDefeated) {
+            dlgText.innerText = `感謝你消滅史萊姆！現在請穿上武器裝備，前去討伐地下城的【巨魔 Boss】！`;
+          } else {
+            dlgText.innerText = `太完美了！你拯救了水晶王國，成為了村莊傳奇英雄！`;
+          }
+          dlgBox.classList.remove('hidden');
+          setTimeout(() => dlgBox.classList.add('hidden'), 4000);
+          return;
+        }
+
+        // 檢查與商人 NPC
+        const distMerchant = Math.hypot(this.player.x - this.npcMerchant.x, this.player.y - this.npcMerchant.y);
+        if (this.currentMapType === 'village' && distMerchant < 24) {
+          sound.playDialog();
+          this.toggleShop(true);
+        }
+      }
+
+      checkQuestProgress() {
+        if (!this.quest.completed && this.quest.killedSlimes >= this.quest.targetSlimes) {
+          this.quest.completed = true;
+          this.player.gold += 100;
+          this.player.exp += 50;
+          sound.playLevelUp();
+          this.showToast('🏆 任務完成！獲得 100 金幣與 50 EXP');
+          this.checkLevelUp();
+          this.updateUI();
+        }
+      }
+
+      render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.save();
+        this.ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
+
+        // 1. TileMap 繪製
+        for (let r = 0; r < this.map.length; r++) {
+          for (let c = 0; c < this.map[r].length; c++) {
+            const tile = this.map[r][c];
+            const px = c * TILE_SIZE;
+            const py = r * TILE_SIZE;
+
+            if (tile === 0) {
+              this.ctx.fillStyle = '#15803d';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+              this.ctx.fillStyle = '#16a34a';
+              if ((r + c) % 2 === 0) this.ctx.fillRect(px + 4, py + 4, 4, 4);
+            } else if (tile === 1) {
+              this.ctx.fillStyle = '#15803d';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+              this.ctx.fillStyle = '#065f46';
+              this.ctx.fillRect(px + 2, py + 2, 12, 12);
+            } else if (tile === 2) {
+              this.ctx.fillStyle = '#b45309';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+            } else if (tile === 3) {
+              this.ctx.fillStyle = '#0284c7';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+            } else if (tile === 4) {
+              this.ctx.fillStyle = '#334155';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+              this.ctx.fillStyle = '#1e293b';
+              this.ctx.fillRect(px + 1, py + 1, 14, 14);
+            } else if (tile === 5) {
+              this.ctx.fillStyle = '#0f172a';
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+            } else if (tile === 6) {
+              const pulse = Math.sin(Date.now() / 200) * 30;
+              this.ctx.fillStyle = `rgb(${168 + pulse}, ${85 + pulse}, 247)`;
+              this.ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+              this.ctx.fillStyle = '#f3e8ff';
+              this.ctx.fillRect(px + 4, py + 4, 8, 8);
+            } else if (tile === 7) {
+              this.ctx.fillStyle = '#eab308';
+              this.ctx.fillRect(px + 3, py + 4, 10, 8);
+            }
+          }
+        }
+
+        // 2. 繪製村莊雙 NPC
+        if (this.currentMapType === 'village') {
+          const elderSprite = PixelSpriteGenerator.getNPCSprite();
+          this.ctx.drawImage(elderSprite, this.npcElder.x, this.npcElder.y);
+
+          const merchantSprite = PixelSpriteGenerator.getMerchantSprite();
+          this.ctx.drawImage(merchantSprite, this.npcMerchant.x, this.npcMerchant.y);
+        }
+
+        // 3. 繪製怪物
+        this.enemies.forEach(e => {
+          let sprite;
+          if (e.type === 'slime') {
+            sprite = PixelSpriteGenerator.getSlimeSprite(Math.floor(Date.now() / 200));
+          } else if (e.type === 'goblin') {
+            sprite = PixelSpriteGenerator.getGoblinSprite();
+          } else if (e.type === 'boss') {
+            sprite = PixelSpriteGenerator.getBossSprite(Math.floor(Date.now() / 200));
+          }
+          if (sprite) this.ctx.drawImage(sprite, e.x, e.y);
+
+          // 一般怪血條
+          if (e.type !== 'boss' && e.hp < e.maxHp) {
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillRect(e.x, e.y - 4, 16, 2);
+            this.ctx.fillStyle = '#ef4444';
+            this.ctx.fillRect(e.x, e.y - 4, (e.hp / e.maxHp) * 16, 2);
+          }
+        });
+
+        // 4. 繪製火球發射物
+        const fireballSprite = PixelSpriteGenerator.getFireballSprite();
+        this.projectiles.forEach(p => {
+          this.ctx.drawImage(fireballSprite, p.x, p.y);
+        });
+
+        // 5. 繪製玩家 Hero
+        const playerSprite = PixelSpriteGenerator.getPlayerSprite(this.player.dir, Math.floor(this.player.animFrame));
+        this.ctx.drawImage(playerSprite, this.player.x, this.player.y);
+
+        // 6. 揮劍特效
+        if (this.player.isAttacking) {
+          this.ctx.fillStyle = '#fef08a';
+          let ax = this.player.x, ay = this.player.y;
+          if (this.player.dir === 'up') ay -= 10;
+          if (this.player.dir === 'down') ay += 10;
+          if (this.player.dir === 'left') ax -= 10;
+          if (this.player.dir === 'right') ax += 10;
+          this.ctx.fillRect(ax + 4, ay + 4, 8, 8);
+        }
+
+        // 7. 傷害浮動文字
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+          const ft = this.floatingTexts[i];
+          this.ctx.fillStyle = ft.color;
+          this.ctx.font = '10px "Press Start 2P"';
+          this.ctx.fillText(ft.text, ft.x, ft.y);
+          ft.y -= 0.5;
+          ft.life--;
+          if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+        }
+
+        this.ctx.restore();
+      }
+
+      addFloatingText(text, x, y, color = '#fff') {
+        this.floatingTexts.push({ text, x, y, color, life: 30 });
+      }
+
+      showToast(text) {
+        const banner = document.getElementById('quest-banner');
+        document.getElementById('quest-text').innerText = text;
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 3000);
+      }
+
+      updateUI() {
+        document.getElementById('ui-level').innerText = this.player.level;
+        document.getElementById('ui-hp-text').innerText = `${this.player.hp}/${this.player.maxHp}`;
+        document.getElementById('ui-hp-bar').style.width = `${(this.player.hp / this.player.maxHp) * 100}%`;
+        document.getElementById('ui-mp-text').innerText = `${this.player.mp}/${this.player.maxMp}`;
+        document.getElementById('ui-mp-bar').style.width = `${(this.player.mp / this.player.maxMp) * 100}%`;
+        document.getElementById('ui-exp-text').innerText = `${this.player.exp}/${this.player.maxExp}`;
+        document.getElementById('ui-exp-bar').style.width = `${(this.player.exp / this.player.maxExp) * 100}%`;
+        document.getElementById('ui-gold').innerText = this.player.gold;
+
+        document.getElementById('stat-atk').innerText = this.totalAtk;
+        document.getElementById('stat-def').innerText = this.totalDef;
+      }
+
+      updateBossUI(hp, maxHp) {
+        const bar = document.getElementById('boss-hp-bar');
+        if (bar) bar.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+      }
+
+      toggleShop(show) {
+        const modal = document.getElementById('shop-modal');
+        if (show) {
+          this.renderShopGrid();
+          modal.classList.remove('hidden');
+        } else {
+          modal.classList.add('hidden');
+        }
+      }
+
+      renderShopGrid() {
+        const container = document.getElementById('shop-grid');
+        container.innerHTML = '';
+
+        this.shopItems.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'bg-slate-800 border border-slate-700 p-2 rounded flex justify-between items-center';
+          row.innerHTML = `
+            <div class="flex items-center space-x-2">
+              <span class="text-xl">${item.icon}</span>
+              <div>
+                <div class="font-bold text-amber-300">${item.name}</div>
+                <div class="text-[9px] text-slate-400">${item.desc}</div>
+              </div>
+            </div>
+            <button class="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded text-[10px]">
+              🪙 ${item.price} 購買
+            </button>
+          `;
+          row.querySelector('button').onclick = () => this.buyItem(item);
+          container.appendChild(row);
+        });
+      }
+
+      buyItem(item) {
+        if (this.player.gold < item.price) {
+          this.showToast('❌ 金幣不足！');
+          return;
+        }
+
+        this.player.gold -= item.price;
+        sound.playBuy();
+
+        if (item.type === 'weapon') {
+          this.player.equippedWeapon = item;
+          this.showToast(`⚔️ 裝備了 ${item.name}! 攻擊力 +${item.atk}`);
+        } else if (item.type === 'armor') {
+          this.player.equippedArmor = item;
+          this.player.maxHp += item.maxHp;
+          this.player.hp += item.maxHp;
+          this.showToast(`🛡️ 裝備了 ${item.name}! 防禦力 +${item.def}`);
+        } else {
+          const existing = this.inventory.find(i => i.id === item.id);
+          if (existing) {
+            existing.count++;
+          } else {
+            this.inventory.push({ id: item.id, name: item.name, count: 1, icon: item.icon, type: item.type, val: item.val });
+          }
+          this.showToast(`🛍️ 購買了 ${item.name}`);
+        }
+
+        this.updateUI();
+        this.saveGame(false);
+      }
+
+      toggleInventory() {
+        const modal = document.getElementById('inventory-modal');
+        if (modal.classList.contains('hidden')) {
+          this.renderInventoryGrid();
+          modal.classList.remove('hidden');
+        } else {
+          modal.classList.add('hidden');
+        }
+      }
+
+      renderInventoryGrid() {
+        const grid = document.getElementById('inventory-grid');
+        grid.innerHTML = '';
+
+        this.inventory.forEach((item, index) => {
+          const slot = document.createElement('div');
+          slot.className = 'bg-slate-800 border-2 border-slate-600 rounded p-2 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400';
+          slot.innerHTML = `
+            <span class="text-2xl">${item.icon}</span>
+            <span class="text-[10px] mt-1 text-slate-300">${item.name}</span>
+            <span class="text-[9px] text-amber-400">x${item.count}</span>
+          `;
+          slot.onclick = () => {
+            if (item.type === 'heal_hp') {
+              this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.val);
+              item.count--;
+              sound.playCoin();
+              this.addFloatingText(`+${item.val} HP`, this.player.x, this.player.y, '#4ade80');
+            } else if (item.type === 'heal_mp') {
+              this.player.mp = Math.min(this.player.maxMp, this.player.mp + item.val);
+              item.count--;
+              sound.playCoin();
+              this.addFloatingText(`+${item.val} MP`, this.player.x, this.player.y, '#60a5fa');
+            }
+            if (item.count <= 0) this.inventory.splice(index, 1);
+            this.updateUI();
+            this.renderInventoryGrid();
+          };
+          grid.appendChild(slot);
+        });
+      }
+
+      saveGame(notify = true) {
+        const data = {
+          player: this.player,
+          inventory: this.inventory,
+          quest: this.quest
+        };
+        window.__galleryStorage.setItem('pixel_quest_save', JSON.stringify(data));
+        if (notify) this.showToast('💾 遊戲進度已保存！');
+      }
+
+      loadGame() {
+        const saved = window.__galleryStorage.getItem('pixel_quest_save');
+        if (saved) {
+          try {
+            const data = JSON.parse(saved);
+            this.player = { ...this.player, ...data.player };
+            this.inventory = data.inventory || this.inventory;
+            this.quest = { ...this.quest, ...data.quest };
+          } catch(e) {}
+        }
+      }
+
+      loop() {
+        this.updatePlayer();
+        this.updateProjectiles();
+        this.updateEnemies();
+        this.updateCamera();
+        this.render();
+        requestAnimationFrame(() => this.loop());
+      }
+    }
+
+    window.onload = () => {
+      const game = new GameEngine();
+      game.loop();
+    };
+  </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

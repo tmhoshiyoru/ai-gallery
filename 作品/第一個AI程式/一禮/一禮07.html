@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神秘塔羅牌線上占卜 - 深度靈魂指引</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes shuffleFancy {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            20% { transform: translateY(-30px) rotate(-15deg) scale(1.05); }
+            40% { transform: translateY(15px) rotate(10deg) scale(0.95); }
+            60% { transform: translateY(-20px) rotate(-8deg) scale(1.02); }
+            80% { transform: translateY(10px) rotate(5deg) scale(0.98); }
+            100% { transform: translateY(0) rotate(0deg) scale(1); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4), inset 0 0 10px rgba(168, 85, 247, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.8), inset 0 0 20px rgba(168, 85, 247, 0.5); }
+        }
+
+        @keyframes cardFlyIn {
+            from {
+                opacity: 0;
+                transform: translateY(-100px) scale(0.5) rotate(15deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1) rotate(0deg);
+            }
+        }
+
+        .animate-shuffle-fancy {
+            animation: shuffleFancy 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        .card-fly-in {
+            animation: cardFlyIn 0.5s ease-out forwards;
+        }
+
+        /* 3D 翻牌效果 */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 0.75rem;
+        }
+
+        .card-back {
+            transform: rotateY(0deg);
+        }
+
+        .card-front {
+            transform: rotateY(180deg);
+        }
+
+        .glowing-card {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+
+        .bg-mystic-gradient {
+            background: radial-gradient(circle at center, #1e112a 0%, #0b0712 100%);
+        }
+    </style>
+</head>
+<body class="bg-mystic-gradient text-slate-100 min-h-screen font-sans flex flex-col justify-between selection:bg-purple-500 selection:text-white">
+
+    <!-- Header Section -->
+    <header class="border-b border-purple-900/40 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-wand-magic-sparkles text-2xl text-purple-400 animate-pulse"></i>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-wider bg-gradient-to-r from-purple-300 via-pink-400 to-amber-300 bg-clip-text text-transparent">
+                    星啟塔羅 · 靈魂指引
+                </h1>
+            </div>
+            <button id="reset-btn" class="text-xs sm:text-sm bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/50 px-4 py-2 rounded-full transition duration-300 flex items-center gap-2 hover:shadow-lg hover:shadow-purple-900/50">
+                <i class="fa-solid fa-rotate-right"></i> 重新開始
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full flex flex-col items-center">
+        
+        <!-- 步驟 1: 輸入問題 -->
+        <section id="step-question" class="w-full max-w-xl bg-slate-900/80 border border-purple-800/50 rounded-2xl p-6 sm:p-10 shadow-2xl backdrop-blur-md text-center transition-all duration-500 my-auto">
+            <div class="w-20 h-20 bg-purple-900/40 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl border border-purple-500/40 shadow-lg shadow-purple-950">
+                <i class="fa-solid fa-crystal-ball"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-bold mb-3 text-purple-100">請在心中誠心默想您的問題</h2>
+            <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+                無情境限制。無論是愛情抉擇、事業轉機、人際困擾或未來走向，請明確簡潔地提問。
+            </p>
+            
+            <form id="question-form" class="space-y-4">
+                <div class="relative">
+                    <textarea id="question-input" rows="3" required placeholder="例如：我近期在事業發展上應該採取進攻還是守勢？有什麼注意事項？" class="w-full bg-slate-950/90 border border-purple-700/60 rounded-xl p-4 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 transition duration-300 text-sm sm:text-base leading-relaxed"></textarea>
+                </div>
+                
+                <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+                    <span><i class="fa-solid fa-sparkles text-amber-400 mr-1"></i>支援 AI 即時靈性解讀</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="ai-toggle" checked class="rounded border-purple-700 text-purple-600 focus:ring-purple-500 bg-slate-950">
+                        <span class="text-purple-300 font-medium">啟用 Gemini AI 智慧解讀</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-xl shadow-purple-950/60 transition duration-300 transform active:scale-95 text-base sm:text-lg flex items-center justify-center gap-2">
+                    凝聚能量，進入洗牌儀式 <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </section>
+
+        <!-- 步驟 2: 洗牌與抽牌體驗 -->
+        <section id="step-draw" class="w-full hidden flex-col items-center transition-all duration-500">
+            <div class="text-center mb-4">
+                <span class="text-xs uppercase tracking-widest text-purple-400 font-semibold bg-purple-950/80 border border-purple-800 px-3 py-1 rounded-full">求問之題</span>
+                <h2 id="display-question" class="text-xl sm:text-2xl font-bold text-amber-200 mt-2 italic px-4">"問題載入中..."</h2>
+            </div>
+
+            <!-- 洗牌控制與提示 -->
+            <div id="shuffle-container" class="text-center my-3 min-h-[50px] flex flex-col items-center justify-center">
+                <button id="shuffle-btn" class="px-8 py-3 bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-purple-200 border border-purple-500/50 rounded-full font-bold transition duration-300 flex items-center gap-3 shadow-lg hover:shadow-purple-700/30 active:scale-95">
+                    <i class="fa-solid fa-shuffle text-amber-400"></i> 開始洗牌儀式
+                </button>
+                <p id="draw-instruction" class="text-purple-300 text-sm hidden animate-pulse font-medium bg-purple-950/60 border border-purple-800/40 px-5 py-2 rounded-full">
+                    <i class="fa-solid fa-hand-pointer text-amber-400 mr-2"></i> 請憑直覺從下方扇形牌堆中選取 <span id="remaining-count" class="text-amber-300 text-lg font-bold mx-1">3</span> 張牌
+                </p>
+            </div>
+
+            <!-- 3D 牌堆視覺區 -->
+            <div id="deck-display" class="relative w-full max-w-2xl h-56 sm:h-64 my-2 flex justify-center items-center perspective-1000 overflow-visible">
+                <!-- JavaScript 將動態生成 3D 扇形排列卡牌 -->
+            </div>
+
+            <!-- 已抽出的卡牌擺放區 (三牌陣: 過去/現在/未來) -->
+            <div class="w-full mt-4">
+                <h3 class="text-center text-xs font-semibold text-slate-400 mb-3 tracking-widest uppercase">選取之牌陣 (時間軸聖三角)</h3>
+                <div class="grid grid-cols-3 gap-3 sm:gap-6 max-w-3xl mx-auto">
+                    
+                    <!-- 位置 1: 過去/根源 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-purple-300 mb-2 font-medium bg-slate-900/80 px-2 py-0.5 rounded border border-purple-800/40">1. 過去 / 根源</span>
+                        <div id="slot-0" class="w-24 h-40 sm:w-32 sm:h-52 border-2 border-dashed border-purple-800/60 rounded-xl flex items-center justify-center bg-slate-900/30 relative transition-all duration-300">
+                            <span class="text-xs text-slate-600">待選擇</span>
+                        </div>
+                    </div>
+
+                    <!-- 位置 2: 現在/現況 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-amber-300 mb-2 font-medium bg-slate-900/80 px-2 py-0.5 rounded border border-amber-800/40">2. 現在 / 現況</span>
+                        <div id="slot-1" class="w-24 h-40 sm:w-32 sm:h-52 border-2 border-dashed border-purple-800/60 rounded-xl flex items-center justify-center bg-slate-900/30 relative transition-all duration-300">
+                            <span class="text-xs text-slate-600">待選擇</span>
+                        </div>
+                    </div>
+
+                    <!-- 位置 3: 未來/指引 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs text-emerald-300 mb-2 font-medium bg-slate-900/80 px-2 py-0.5 rounded border border-emerald-800/40">3. 未來 / 指引</span>
+                        <div id="slot-2" class="w-24 h-40 sm:w-32 sm:h-52 border-2 border-dashed border-purple-800/60 rounded-xl flex items-center justify-center bg-slate-900/30 relative transition-all duration-300">
+                            <span class="text-xs text-slate-600">待選擇</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <button id="reveal-btn" class="mt-6 px-10 py-4 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-extrabold text-base sm:text-lg rounded-xl shadow-2xl transition duration-300 hidden transform active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-eye text-slate-950"></i> 翻開牌陣並開啟深度解讀
+            </button>
+        </section>
+
+        <!-- 步驟 3: 牌面展示與解讀報告 -->
+        <section id="step-result" class="w-full hidden flex-col items-center transition-all duration-500">
+            <div class="text-center mb-6">
+                <span class="text-xs uppercase tracking-widest text-amber-400 font-semibold bg-amber-950/60 border border-amber-800/50 px-3 py-1 rounded-full">神聖啟示</span>
+                <h2 id="result-question-display" class="text-xl sm:text-2xl font-bold text-slate-200 mt-2"></h2>
+            </div>
+
+            <!-- 翻牌與三張結果卡片展示區 (3D Perspective) -->
+            <div id="result-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-8 perspective-1000">
+                <!-- 由 JavaScript 生成 3D 翻牌結果 -->
+            </div>
+
+            <!-- 綜合深度解讀報告卡片 -->
+            <div class="w-full max-w-4xl bg-slate-900/90 border border-purple-800/50 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 text-purple-300 pointer-events-none">
+                    <i class="fa-solid fa-book-open text-9xl"></i>
+                </div>
+
+                <div class="flex items-center justify-between border-b border-purple-800/50 pb-4 mb-6">
+                    <h3 class="text-xl sm:text-2xl font-bold text-amber-300 flex items-center gap-3">
+                        <i class="fa-solid fa-scroll text-purple-400"></i> 神聖全貌深度指引
+                    </h3>
+                    <span id="ai-badge" class="hidden text-xs bg-purple-900/80 text-purple-200 border border-purple-500 px-3 py-1 rounded-full flex items-center gap-1.5">
+                        <i class="fa-solid fa-sparkles text-amber-300 animate-spin"></i> AI 智慧精準解讀
+                    </span>
+                </div>
+
+                <div id="loading-spinner" class="hidden flex-col items-center justify-center py-12 space-y-4">
+                    <div class="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-purple-300 text-sm font-medium animate-pulse">宇宙能量連結中，AI 正在分析牌面與提問脈絡...</p>
+                </div>
+
+                <div id="overall-interpretation" class="text-slate-200 leading-relaxed space-y-6 text-sm sm:text-base">
+                    <!-- 深度解讀內容將在此呈現 -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-purple-950 py-6 bg-slate-950 text-center text-xs text-slate-500">
+        <p>星啟塔羅線上占卜系統 &copy; 2026 | 答案已在心中，塔羅為您映照靈魂</p>
+    </footer>
+
+    <script>
+        // 完整 78 張塔羅牌資料庫 (22張大阿爾克那 + 56張小阿爾克那)
+        const MAJOR_ARCANA = [
+            { id: 0, name: "愚者", engName: "The Fool", suit: "Major", icon: "fa-user-ninja", element: "風", keywords: ["新開始", "冒險", "自由", "無限潛力"], up: "【正位】代表一個全新的起點與勇敢無懼的冒險。眼前充滿未知但也有無窮潛力，請放下內心的恐懼，懷抱純粹且樂觀的心勇敢跨出第一步，相信過程會帶給你寶貴的成長。", rev: "【逆位】警示輕率與盲目衝動。可能在尚未準備好或缺乏規劃的狀況下冒險，需要重新審視潛在風險，避免因過度樂觀而跌入坑洞。" },
+            { id: 1, name: "魔術師", engName: "The Magician", suit: "Major", icon: "fa-wand-magic-sparkles", element: "風", keywords: ["顯化力", "專業技能", "創造力", "資源整合"], up: "【正位】你已經具備實現目標所需的技能與資源。現在是展現才華、付諸行動的最佳時機，將想法化為現實的主導權完全掌握在你手中。", rev: "【逆位】暗示才華未被充分發揮，或是存在資訊不透明、話術欺騙或能量分散的問題。請確認自己的動機是否純粹，避免投機取巧。" },
+            { id: 2, name: "女祭司", engName: "The High Priestess", suit: "Major", icon: "fa-moon", element: "水", keywords: ["直覺", "深層智慧", "平靜觀察", "潛意識"], up: "【正位】答案其實早已存在於你的內心深處。此時宜靜不宜動，多聆聽你的直覺與內心聲音，靜下心來觀察形勢，時間會揭曉真相。", rev: "【逆位】代表忽略了內心直覺，或是情緒受壓抑、過度冷漠拒絕溝通，甚至忽視了表面下的潛在隱患與不真實訊息。" },
+            { id: 3, name: "女皇", engName: "The Empress", suit: "Major", icon: "fa-crown", element: "土", keywords: ["豐盛收穫", "滋養關懷", "愛與和諧", "富足"], up: "【正位】象徵收穫、豐盛與強大的生命力。你的努力將迎來甜美果實，在情感、事業與物質層面都能感受到滿滿的滋養與安全感。", rev: "【逆位】提醒防範過度依賴、缺乏安全感，或因過度包容與佔有慾而導致的資源浪費與自我消耗。需要重新找回內心的自律。" },
+            { id: 4, name: "皇帝", engName: "The Emperor", suit: "Major", icon: "fa-chess-king", element: "火", keywords: ["秩序建構", "控制力", "領導權威", "穩固基礎"], up: "【正位】你需要展現意志力與組織能力。建立清晰的邊界與規則，用理性、紀律與責任感去穩固目前的局勢，邁向掌控全局。", rev: "【逆位】警示固執僵化、過度控制慾與專制，或是因權力爭奪、缺乏彈性而引發的衝突與反抗。需要學會適度放權。" },
+            { id: 5, name: "教皇", engName: "The Hierophant", suit: "Major", icon: "fa-book-bible", element: "土", keywords: ["傳統規範", "貴人指引", "體制共識", "學習思考"], up: "【正位】適合尋求專業人士、前輩或體制內的幫助。遵守常規與既定規範能帶給你最穩妥的解答與安全感，學習傳統智慧是關鍵。", rev: "【逆位】暗示體制過於陳腐束縛，或是你需要跳脫傳統思維、質疑既定權威，尋求屬於自己的獨立信仰與非常規途徑。" },
+            { id: 6, name: "戀人", engName: "The Lovers", suit: "Major", icon: "fa-heart", element: "風", keywords: ["真摯契合", "重大抉擇", "價值觀選擇", "和諧"], up: "【正位】象徵深層的和諧、互信與吸引力，也代表人生中的重要抉擇。請以你最真實的內心價值觀作為決定依據，坦誠相對。", rev: "【逆位】暗示溝通不良、價值觀分歧，或是面臨抉擇時猶豫不決、產生衝突。需注意是否因外界誘惑而違背了初心。" },
+            { id: 7, name: "戰車", engName: "The Chariot", suit: "Major", icon: "fa-crosshairs", element: "火", keywords: ["強大意志", "突破障礙", "堅定勝利", "主導方向"], up: "【正位】即便眼前有矛盾或阻礙，只要憑藉強大的專注力、自律與意志力，就能化解分歧，掌控全局並贏得最終勝利。", rev: "【逆位】警示失去方向感、情緒失控，或是因為過於蠻幹衝動、缺乏計畫而導致事情脫軌失控。請先停下來重整旗鼓。" },
+            { id: 8, name: "力量", engName: "Strength", suit: "Major", icon: "fa-shield-cat", element: "火", keywords: ["內在堅韌", "以柔克剛", "包容理解", "耐心掌控"], up: "【正位】這不是野蠻的暴力，而是內心的強大與柔和。以無比的耐心、勇氣與同理心去化解對抗，能贏得真正的尊嚴與勝利。", rev: "【逆位】暗示內心焦慮、缺乏自信與懷疑自我，或是被情緒衝動驅使失去了掌控。你需要重新找回內心的平靜與力量。" },
+            { id: 9, name: "隱士", engName: "The Hermit", suit: "Major", icon: "fa-campground", element: "土", keywords: ["獨處內省", "尋求真理", "沈澱思考", "智慧指引"], up: "【正位】暫時退離外界的喧囂與躁動，給自己獨立思考的時間。內心的智慧與反思會如明燈般指引你找到正確的方向。", rev: "【逆位】警示過度孤立、孤芳自賞或逃避現實，或是沉溺於自己的固執想法中拒絕外界有益的協助。請適度敞開胸懷。" },
+            { id: 10, name: "命運之輪", engName: "Wheel of Fortune", suit: "Major", icon: "fa-dharma-wheel", element: "火", keywords: ["關鍵轉折", "順應時勢", "命運契機", "循環不息"], up: "【正位】運勢正處於關鍵的正向轉折期。順應局勢的流動並敏銳把握突如其來的機遇，這將為你帶來突破性的新局面。", rev: "【逆位】代表遇上不可控的短期阻礙、變動或順風車暫停。無需恐慌，保持彈性與耐心，靜待風暴過去與時機再次成熟。" },
+            { id: 11, name: "正義", engName: "Justice", suit: "Major", icon: "fa-scale-balanced", element: "風", keywords: ["客觀公正", "因果責任", "理性衡量", "真相判斷"], up: "【正位】一切講求公平、理性與事實真相。你的決定必須客觀且經得起檢驗，勇於承擔相應的責任，將獲得合理的結果。", rev: "【逆位】暗示不公平的對待、偏見誤導，或是試圖逃避責任而導致問題更加複雜。請務必保持坦誠，避免自欺欺人。" },
+            { id: 12, name: "倒吊人", engName: "The Hanged Man", suit: "Major", icon: "fa-person-falling-burst", element: "水", keywords: ["換位思考", "暫停等待", "臣服順應", "新視角"], up: "【正位】眼前的卡關是在提醒你換個角度看問題。學會放手與等待，暫時的停滯是在蓄積突破的能量，犧牲眼前利益將換來長遠價值。", rev: "【逆位】代表無謂的犧牲、無效的掙扎，或是固執於舊有思維而不願做出調整，陷入自怨自艾的無底洞。" },
+            { id: 13, name: "死神", engName: "Death", suit: "Major", icon: "fa-skull", element: "水", keywords: ["結束重生", "徹底轉變", "揮別過去", "新階段"], up: "【正位】舊有的模式、關係或階段已經告一段落。勇敢地揮別不再適合你的事物，才能為真正的新生與突破騰出空間。", rev: "【逆位】暗示恐懼改變、強行執著於已無意義的過去，這只會延長陣痛期並阻礙你迈向嶄新的未來。" },
+            { id: 14, name: "節制", engName: "Temperance", suit: "Major", icon: "fa-glass-water", element: "火", keywords: ["調和平衡", "溝通融合", "適度節制", "身心療癒"], up: "【正位】將不同的意見、極端狀態或資源進行和諧的調和。保持中庸、適度與耐心，事情會自然走向圓融順暢。", rev: "【逆位】警示失去平衡、情緒極端走偏，或是溝通出現斷層導致無法達成共識。需要重新調整生活作息與心理狀態。" },
+            { id: 15, name: "惡魔", engName: "The Devil", suit: "Major", icon: "fa-gem", element: "土", keywords: ["慾望束縛", "執念誘惑", "短期利益", "過度依賴"], up: "【正位】警惕是否被短期物質利益、不健康的習慣或強烈的控制欲所綁架。認清局限與虛幻的誘惑，你才能重獲自主權。", rev: "【逆位】代表覺醒的開始，你正在打破沉淪的連枷，擺脫過去的執念與束縛，逐步重獲自由與理智。" },
+            { id: 16, name: "高塔", engName: "The Tower", suit: "Major", icon: "fa-bolt-lightning", element: "火", keywords: ["突發衝擊", "虛妄破滅", "重塑信念", "劇烈變革"], up: "【正位】不合理的假象或不穩固的基礎被突發狀況打破。雖然過程震撼且帶來衝擊，但這能徹底清除隱患，重建真實穩固的基礎。", rev: "【逆位】暗示強行掩蓋問題或拖延必然的變革，只會讓終將發生的衝擊累積更大的破壞力。請勇敢面對現實。" },
+            { id: 17, name: "星星", engName: "The Star", suit: "Major", icon: "fa-star", element: "風", keywords: ["希望曙光", "靈感啟發", "身心療癒", "信心信心"], up: "【正位】經歷風暴後的平靜與曙光。心中充滿希望與靈感，保持信心，你的願景正在一步步清晰，得到身心的療癒。", rev: "【逆位】暗示暫時失去信心、焦慮過度，或是抱持不切實際的幻想而缺乏實踐行動。請重新踏實地找回內心錨點。" },
+            { id: 18, name: "月亮", engName: "The Moon", suit: "Major", icon: "fa-cloud-moon", element: "水", keywords: ["不安迷茫", "潛意識猜忌", "隱含變數", "直覺幻像"], up: "【正位】形勢尚未明朗，心中容易升起不安、猜忌與迷茫。請避免在資訊不明或情緒波動時盲目做出重大決策。", rev: "【逆位】代表迷霧逐漸散去，隱藏的真相浮出水面，心中的疑慮與恐懼開始消解，重新找回清晰的方向。" },
+            { id: 19, name: "太陽", engName: "The Sun", suit: "Major", icon: "fa-sun", element: "火", keywords: ["成功喜悅", "光明磊落", "活力充沛", "自信成功"], up: "【正位】非常積極強大的正向能量！目標明確且充滿光明，事情發展順遂，帶給你好心情、榮譽與成功的喜悅。", rev: "【逆位】僅代表暫時的陰霾、進度微幅延遲或過度自信帶來的盲點，總體發展方向依然保持積極良好。" },
+            { id: 20, name: "審判", engName: "Judgement", suit: "Major", icon: "fa-bullhorn", element: "火", keywords: ["重大覺醒", "關鍵決定", "反省重塑", "天啟召喚"], up: "【正位】到了總結過去經驗、做出重大決定的時刻。傾聽內心真正的召喚，邁向更高層次的人生起點與轉型。", rev: "【逆位】暗示自怨自艾、逃避面對過往的錯誤，因懷疑自我或猶豫不決而錯失蛻變與重生的良機。" },
+            { id: 21, name: "世界", engName: "The World", suit: "Major", icon: "fa-globe", element: "土", keywords: ["圓滿達成", "階段完成", "完美整合", "新視野"], up: "【正位】代表一個重要目標或生命的階段性完美落幕。你累積了寶貴經驗，準備迎向下一個更高階的全新循環。", rev: "【逆位】暗示臨門一腳欠缺、小延遲，或是事情尚未完全收尾，需要再補足最後的細節才能畫下完美句點。" }
+        ];
+
+        // 自動生成 56 張小阿爾克那
+        const SUITS = [
+            { name: "權杖", code: "Wands", icon: "fa-fire", element: "火", meaning: "行動力、熱情、事業與目標" },
+            { name: "聖杯", code: "Cups", icon: "fa-wine-glass", element: "水", meaning: "情感、人際關係、直覺與感受" },
+            { name: "寶劍", code: "Swords", icon: "fa-shield-halved", element: "風", meaning: "思考、溝通、決策與挑戰" },
+            { name: "錢幣", code: "Pentacles", icon: "fa-coins", element: "土", meaning: "物質、財務、現實資源與穩定" }
+        ];
+
+        const RANK_NAMES = ["首牌 Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "侍從 Page", "騎士 Knight", "王后 Queen", "國王 King"];
+
+        function generateMinorArcana() {
+            const minor = [];
+            let idCounter = 22;
+
+            SUITS.forEach(suit => {
+                RANK_NAMES.forEach((rank, idx) => {
+                    const cardName = `${suit.name}${rank}`;
+                    let keywords = [];
+                    let upMean = "";
+                    let revMean = "";
+
+                    if (idx === 0) { // Ace
+                        keywords = ["嶄新契機", "潛力萌芽", "能量注入", "突破"];
+                        upMean = `【正位】代表在${suit.meaning}方面獲得了一個嶄新的開始與突破性的能量契機。充滿原始動力與無窮潛能。`;
+                        revMean = `【逆位】暗示缺乏起步動機，或是關於${suit.name}的計畫有所延誤、能量受阻，難以發揮應有效果。`;
+                    } else if (idx < 10) { // 2 - 10
+                        keywords = [`${suit.name}發展`, "階段過程", "選擇調整", "經驗累積"];
+                        upMean = `【正位】反映出你在${suit.meaning}上的具體進展狀態，著重於行動與現實狀況的調和與積累。`;
+                        revMean = `【逆位】提示在${suit.name}對應領域遭遇小失衡、摩擦或延誤，需要重新盤點策略與心理狀態。`;
+                    } else { // 宮廷牌
+                        keywords = ["成熟特質", "專業態度", "溝通主導", "掌控力"];
+                        upMean = `【正位】展現出在${suit.meaning}上成熟穩健的處理態度與角色力量，具備導向成功的關鍵特質。`;
+                        revMean = `【逆位】暗示過度偏執、態度尚未成熟或情緒化，導致在${suit.name}相關事務上出現人際溝通摩擦。`;
+                    }
+
+                    minor.push({
+                        id: idCounter++,
+                        name: cardName,
+                        engName: `${rank} of ${suit.code}`,
+                        suit: suit.code,
+                        icon: suit.icon,
+                        element: suit.element,
+                        keywords: keywords,
+                        up: upMean,
+                        rev: revMean
+                    });
+                });
+            });
+
+            return minor;
+        }
+
+        const FULL_TAROT_DECK = [...MAJOR_ARCANA, ...generateMinorArcana()];
+
+        let currentDeck = [...FULL_TAROT_DECK];
+        let userQuestion = "";
+        let selectedCards = []; // { card, isReversed }
+        let isShuffling = false;
+
+        // 加密級真隨機洗牌演算法
+        function cryptoShuffle(array) {
+            const shuffled = [...array];
+            const getRandomIndex = (max) => {
+                const randomBuffer = new Uint32Array(1);
+                window.crypto.getRandomValues(randomBuffer);
+                return randomBuffer[0] % max;
+            };
+
+            for (let round = 0; round < 5; round++) { // 進行 5 輪徹底打亂
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = getRandomIndex(i + 1);
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+            }
+            return shuffled;
+        }
+
+        // DOM 元素引用
+        const stepQuestion = document.getElementById('step-question');
+        const stepDraw = document.getElementById('step-draw');
+        const stepResult = document.getElementById('step-result');
+        const questionForm = document.getElementById('question-form');
+        const questionInput = document.getElementById('question-input');
+        const displayQuestion = document.getElementById('display-question');
+        const resultQuestionDisplay = document.getElementById('result-question-display');
+        const shuffleBtn = document.getElementById('shuffle-btn');
+        const drawInstruction = document.getElementById('draw-instruction');
+        const remainingCount = document.getElementById('remaining-count');
+        const deckDisplay = document.getElementById('deck-display');
+        const revealBtn = document.getElementById('reveal-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const overallInterpretation = document.getElementById('overall-interpretation');
+        const aiToggle = document.getElementById('ai-toggle');
+        const aiBadge = document.getElementById('ai-badge');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        questionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            userQuestion = questionInput.value.trim();
+            if (!userQuestion) return;
+
+            displayQuestion.textContent = `"${userQuestion}"`;
+            resultQuestionDisplay.textContent = `提問主題：「${userQuestion}」`;
+            
+            stepQuestion.classList.add('hidden');
+            stepDraw.classList.remove('hidden');
+            stepDraw.classList.add('flex');
+
+            renderDeckVisual();
+        });
+
+        resetBtn.addEventListener('click', resetApp);
+
+        // 炫麗洗牌動畫與效果
+        shuffleBtn.addEventListener('click', () => {
+            if (isShuffling) return;
+            isShuffling = true;
+            shuffleBtn.disabled = true;
+            shuffleBtn.classList.add('opacity-50');
+
+            const deckCards = deckDisplay.querySelectorAll('.tarot-card-visual');
+            
+            // 播放洗牌視覺動畫
+            deckCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('animate-shuffle-fancy');
+                }, index * 20);
+            });
+
+            setTimeout(() => {
+                // 使用高級加密隨機重新洗牌 78 張牌
+                currentDeck = cryptoShuffle(FULL_TAROT_DECK);
+                
+                deckCards.forEach(card => {
+                    card.classList.remove('animate-shuffle-fancy');
+                });
+
+                isShuffling = false;
+                shuffleBtn.classList.add('hidden');
+                drawInstruction.classList.remove('hidden');
+            }, 1500);
+        });
+
+        // 渲染 3D 扇形動態牌堆
+        function renderDeckVisual() {
+            deckDisplay.innerHTML = '';
+            const totalVisualCards = 26; // 呈現適宜扇形卡牌數
+            
+            for (let i = 0; i < totalVisualCards; i++) {
+                const card = document.createElement('div');
+                card.className = 'tarot-card-visual absolute w-20 h-32 sm:w-24 sm:h-36 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 border border-purple-500/50 rounded-lg shadow-xl cursor-pointer transition-all duration-300 hover:-translate-y-4 hover:border-amber-400/80 flex items-center justify-center';
+                
+                const angle = (i - totalVisualCards / 2) * 3.5;
+                const offsetX = (i - totalVisualCards / 2) * 14;
+                const offsetY = Math.abs(i - totalVisualCards / 2) * 2;
+
+                card.style.transform = `translateX(${offsetX}px) translateY(${offsetY}px) rotate(${angle}deg)`;
+                
+                card.innerHTML = `
+                    <div class="w-full h-full border border-purple-400/20 rounded m-1 flex flex-col items-center justify-center bg-slate-950/40">
+                        <i class="fa-solid fa-eye text-purple-400/40 text-lg mb-1"></i>
+                        <span class="text-[9px] text-purple-300/40 font-mono tracking-tighter">TAROT</span>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => handleCardSelect(card));
+                deckDisplay.appendChild(card);
+            }
+        }
+
+        // 抽牌處理與動畫
+        function handleCardSelect(cardElement) {
+            if (isShuffling || shuffleBtn.checkVisibility() || selectedCards.length >= 3) return;
+
+            // 從加密洗好的牌堆取出牌
+            const cardData = currentDeck.pop();
+            
+            // 加密級隨機判定正逆位 (約 35% 機率逆位)
+            const randomBuffer = new Uint8Array(1);
+            window.crypto.getRandomValues(randomBuffer);
+            const isReversed = (randomBuffer[0] % 100) < 35;
+
+            selectedCards.push({ card: cardData, isReversed });
+            
+            // 消失點選卡片
+            cardElement.style.opacity = '0';
+            cardElement.style.transform += ' translateY(-60px) scale(0.5)';
+            cardElement.style.pointerEvents = 'none';
+
+            const remaining = 3 - selectedCards.length;
+            remainingCount.textContent = remaining;
+
+            const slotIndex = selectedCards.length - 1;
+            updateSlotWithAnimation(slotIndex);
+
+            if (selectedCards.length === 3) {
+                drawInstruction.classList.add('hidden');
+                revealBtn.classList.remove('hidden');
+            }
+        }
+
+        function updateSlotWithAnimation(index) {
+            const slot = document.getElementById(`slot-${index}`);
+            slot.innerHTML = `
+                <div class="w-full h-full bg-gradient-to-br from-purple-900 to-slate-900 border border-purple-400/60 rounded-xl flex items-center justify-center glowing-card card-fly-in">
+                    <i class="fa-solid fa-star text-amber-300/80 text-xl animate-spin"></i>
+                </div>
+            `;
+        }
+
+        revealBtn.addEventListener('click', () => {
+            stepDraw.classList.add('hidden');
+            stepResult.classList.remove('hidden');
+            stepResult.classList.add('flex');
+
+            render3DResults();
+        });
+
+        // 3D 翻牌結果渲染
+        function render3DResults() {
+            const resultContainer = document.getElementById('result-cards-container');
+            resultContainer.innerHTML = '';
+
+            const timeLabels = ["1. 過去 / 根源", "2. 現在 / 現況", "3. 未來 / 指引"];
+            const timeColors = ["border-purple-500/50", "border-amber-500/50", "border-emerald-500/50"];
+
+            selectedCards.forEach((item, index) => {
+                const { card, isReversed } = item;
+                const cardNode = document.createElement('div');
+                cardNode.className = 'w-full bg-slate-900/90 border border-purple-800/40 rounded-xl p-4 sm:p-5 flex flex-col items-center shadow-xl';
+
+                cardNode.innerHTML = `
+                    <span class="text-xs font-semibold text-purple-300 mb-3 px-3 py-1 bg-purple-950 border border-purple-800/60 rounded-full">
+                        ${timeLabels[index]}
+                    </span>
+                    
+                    <!-- 3D 翻牌卡片容器 -->
+                    <div class="w-32 h-52 sm:w-36 sm:h-56 mb-4 perspective-1000 cursor-pointer group" onclick="this.querySelector('.card-inner').classList.toggle('card-flipped')">
+                        <div class="card-inner">
+                            <!-- 牌背 -->
+                            <div class="card-back bg-gradient-to-br from-indigo-950 to-purple-950 border-2 ${timeColors[index]} rounded-xl flex items-center justify-center shadow-lg">
+                                <div class="text-center">
+                                    <i class="fa-solid fa-eye text-amber-400/60 text-2xl mb-1"></i>
+                                    <p class="text-[10px] text-purple-300/50">點擊翻牌</p>
+                                </div>
+                            </div>
+                            <!-- 牌面 -->
+                            <div class="card-front bg-slate-950 border-2 ${timeColors[index]} rounded-xl flex flex-col items-center justify-between p-3 shadow-inner ${isReversed ? 'rotate-180' : ''}">
+                                <span class="text-[10px] text-purple-300/60 font-mono self-start">${card.element}元素</span>
+                                <i class="fa-solid ${card.icon} text-4xl text-amber-300 my-auto"></i>
+                                <span class="text-xs font-bold text-slate-200 mt-auto">${card.name}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center w-full mt-1">
+                        <div class="flex items-center justify-center gap-2 mb-1">
+                            <h4 class="font-bold text-base sm:text-lg text-amber-200">${card.name}</h4>
+                            <span class="text-xs font-bold ${isReversed ? 'text-rose-400' : 'text-emerald-400'}">
+                                (${isReversed ? '逆位' : '正位'})
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mb-2">${card.engName}</p>
+                        <div class="flex flex-wrap gap-1 justify-center mb-3">
+                            ${card.keywords.map(k => `<span class="text-[10px] bg-purple-950 text-purple-300 border border-purple-800/40 px-2 py-0.5 rounded">${k}</span>`).join('')}
+                        </div>
+                        <p class="text-xs text-slate-300 text-left bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 leading-relaxed">
+                            ${isReversed ? card.rev : card.up}
+                        </p>
+                    </div>
+                `;
+                resultContainer.appendChild(cardNode);
+
+                // 自動延遲觸發翻牌動畫
+                setTimeout(() => {
+                    const cardInner = cardNode.querySelector('.card-inner');
+                    if (cardInner) cardInner.classList.add('card-flipped');
+                }, index * 300 + 400);
+            });
+
+            // 觸發解讀生成
+            if (aiToggle.checked) {
+                generateAIInterpretation();
+            } else {
+                generateDeepBuiltInInterpretation();
+            }
+        }
+
+        async function generateAIInterpretation() {
+            aiBadge.classList.remove('hidden');
+            loadingSpinner.classList.remove('hidden');
+            loadingSpinner.classList.add('flex');
+            overallInterpretation.innerHTML = '';
+
+            const prompt = `你是一位精通塔羅牌靈魂解讀與心理學諮商的資深大師。
+使用者提出的問題是：「${userQuestion}」
+
+抽出的三牌陣時間軸如下：
+1. 過去/根源：${selectedCards[0].card.name} (${selectedCards[0].isReversed ? '逆位' : '正位'}) - 代表起因脈絡與基礎
+2. 現在/現況：${selectedCards[1].card.name} (${selectedCards[1].isReversed ? '逆位' : '正位'}) - 代表當前挑戰與核心能量
+3. 未來/指引：${selectedCards[2].card.name} (${selectedCards[2].isReversed ? '逆位' : '正位'}) - 代表演變趨勢與最終建議
+
+請針對使用者的【具體問題】，提供一份長度充實（約 400-600 字）、語氣溫柔睿智且具體明確的分析報告。
+請依據以下架構進行解答，不要給予模糊空洞的套話：
+1. 【局勢脈絡剖析】：明確說明過去的事件或心態如何導致當前的狀況。
+2. 【現況核心挑戰與轉機】：指出當下最重要的課題，以及使用者需要留意的關鍵盲點。
+3. 【未來趨勢與具體行動建議】：給出 2-3 點可落實的具體步驟（事業/感情/心態上的明確作法），並說明最終演變走向。`;
+
+            try {
+                const apiKey = ""; // 使用預設免費金鑰
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                loadingSpinner.classList.add('hidden');
+                loadingSpinner.classList.remove('flex');
+
+                if (aiText) {
+                    // 格式化 AI 文字並顯示
+                    const formattedText = aiText
+                        .replace(/\n\n/g, '</p><p class="mt-4">')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-300">$1</strong>');
+
+                    overallInterpretation.innerHTML = `
+                        <div class="space-y-4 text-slate-200">
+                            <p>${formattedText}</p>
+                        </div>
+                    `;
+                } else {
+                    generateDeepBuiltInInterpretation();
+                }
+            } catch (err) {
+                console.warn("AI 解讀失敗，切換為深度內建解讀引擎:", err);
+                loadingSpinner.classList.add('hidden');
+                loadingSpinner.classList.remove('flex');
+                generateDeepBuiltInInterpretation();
+            }
+        }
+
+        // 深度內建高品質解讀引擎
+        function generateDeepBuiltInInterpretation() {
+            aiBadge.classList.add('hidden');
+            const [c1, c2, c3] = selectedCards;
+
+            const text = `
+                <div class="space-y-6">
+                    <p class="text-base sm:text-lg text-amber-300 font-medium bg-amber-950/30 border border-amber-800/40 p-4 rounded-xl">
+                        <i class="fa-solid fa-compass mr-2"></i>針對您所尋求解答的問題：「<span class="text-slate-100 italic">${userQuestion}</span>」
+                    </p>
+
+                    <!-- 時間軸 1: 過去起因 -->
+                    <div class="bg-slate-950/50 border-l-4 border-purple-500 p-4 sm:p-5 rounded-r-xl space-y-2">
+                        <h4 class="text-base font-bold text-purple-300 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left"></i> 1. 起因與能量根源 — ${c1.card.name} (${c1.isReversed ? '逆位' : '正位'})
+                        </h4>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            問題的起因深植於過去在「${c1.card.keywords.join('、')}」相關領域的累積。<sup>[${c1.card.element}元素]</sup>
+                        </p>
+                        <p class="text-slate-400 text-xs sm:text-sm bg-slate-900/60 p-3 rounded border border-slate-800">
+                            <strong>深層解析：</strong> ${c1.isReversed ? c1.card.rev : c1.card.up} 這說明了目前的處境並非偶然，而是先前決策或環境影響下的必然結果。
+                        </p>
+                    </div>
+
+                    <!-- 時間軸 2: 現在核心 -->
+                    <div class="bg-slate-950/50 border-l-4 border-amber-500 p-4 sm:p-5 rounded-r-xl space-y-2">
+                        <h4 class="text-base font-bold text-amber-300 flex items-center gap-2">
+                            <i class="fa-solid fa-bullseye"></i> 2. 當前核心課題 — ${c2.card.name} (${c2.isReversed ? '逆位' : '正位'})
+                        </h4>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            當前最關鍵的能量焦距於「${c2.card.keywords[0]}」與「${c2.card.keywords[1] || '現況調整'}」。<sup>[${c2.card.element}元素]</sup>
+                        </p>
+                        <p class="text-slate-400 text-xs sm:text-sm bg-slate-900/60 p-3 rounded border border-slate-800">
+                            <strong>現況指引：</strong> ${c2.isReversed ? c2.card.rev : c2.card.up} 這是你必須直面並妥善處理的核心焦點，切忌逃避或過度急躁。
+                        </p>
+                    </div>
+
+                    <!-- 時間軸 3: 未來突破 -->
+                    <div class="bg-slate-950/50 border-l-4 border-emerald-500 p-4 sm:p-5 rounded-r-xl space-y-2">
+                        <h4 class="text-base font-bold text-emerald-300 flex items-center gap-2">
+                            <i class="fa-solid fa-seedling"></i> 3. 未來演變與關鍵指引 — ${c3.card.name} (${c3.isReversed ? '逆位' : '正位'})
+                        </h4>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            順應目前的突破與調整，未來將朝向「${c3.card.name}」的階段演進。<sup>[${c3.card.element}元素]</sup>
+                        </p>
+                        <p class="text-slate-400 text-xs sm:text-sm bg-slate-900/60 p-3 rounded border border-slate-800">
+                            <strong>未來啟示：</strong> ${c3.isReversed ? c3.card.rev : c3.card.up} 只要保持清晰的信念，未來將帶給你關鍵的解答與成長。
+                        </p>
+                    </div>
+
+                    <!-- 綜合行動建議卡 -->
+                    <div class="mt-6 p-5 bg-gradient-to-r from-purple-950/80 to-indigo-950/80 border border-purple-700/50 rounded-xl text-slate-200 space-y-3">
+                        <h4 class="font-bold text-amber-300 flex items-center gap-2 text-base">
+                            <i class="fa-solid fa-lightbulb"></i> 大師級具體行動建議
+                        </h4>
+                        <ul class="list-disc list-inside text-xs sm:text-sm space-y-2 text-purple-100">
+                            <li><strong>關鍵決策點：</strong>從 ${c1.card.name} 的積累跨越到 ${c3.card.name}，核心鑰匙在於善用「${c2.card.keywords[0]}」的智慧。</li>
+                            <li><strong>具體作法：</strong>請在未來數週內優先梳理「${c2.card.keywords[1] || '眼前問題'}」，避免將能量浪費在無法控制的變數上。</li>
+                            <li><strong>心態建議：</strong>塔羅牌揭示的是能量趨勢而非不可逆的定局，命運始終掌握在您當下的選擇與勇氣之中。</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            overallInterpretation.innerHTML = text;
+        }
+
+        // 重置應用程式
+        function resetApp() {
+            currentDeck = cryptoShuffle(FULL_TAROT_DECK);
+            selectedCards = [];
+            userQuestion = "";
+            questionInput.value = "";
+            
+            shuffleBtn.classList.remove('hidden');
+            shuffleBtn.disabled = false;
+            shuffleBtn.classList.remove('opacity-50');
+            drawInstruction.classList.add('hidden');
+            revealBtn.classList.add('hidden');
+
+            for (let i = 0; i < 3; i++) {
+                const slot = document.getElementById(`slot-${i}`);
+                slot.innerHTML = `<span class="text-xs text-slate-600">待選擇</span>`;
+            }
+
+            stepResult.classList.add('hidden');
+            stepDraw.classList.add('hidden');
+            stepQuestion.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

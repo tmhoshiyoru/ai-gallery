@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CYBER RUNNER 2088</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      background-color: #080811;
+      color: #00f3ff;
+      font-family: 'Rajdhani', sans-serif;
+      overflow: hidden;
+    }
+    .pixel-font {
+      font-family: 'Press Start 2P', monospace;
+    }
+    .neon-text {
+      text-shadow: 0 0 8px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4);
+    }
+    .neon-pink {
+      color: #ff007f;
+      text-shadow: 0 0 8px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.4);
+    }
+    .neon-gold {
+      color: #ffd700;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    }
+    .neon-box {
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 15px rgba(0, 243, 255, 0.15);
+    }
+    canvas {
+      background: radial-gradient(circle at center, #0f0f26 0%, #05050d 100%);
+      box-shadow: 0 0 30px rgba(0, 243, 255, 0.25);
+    }
+    .crt::after {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 crt select-none">
+
+  <div class="w-full max-w-3xl flex flex-col items-center">
+    <!-- Header UI Bar -->
+    <div class="w-full neon-box bg-slate-950/80 rounded-lg p-3 mb-3 flex justify-between items-center text-xs sm:text-base border-cyan-500">
+      <div class="flex items-center space-x-3 sm:space-x-4">
+        <div><span class="text-slate-400">DIST:</span> <span id="distText" class="neon-text text-xl font-bold">0m</span></div>
+        <div><span class="text-slate-400">SCORE:</span> <span id="scoreText" class="neon-pink text-xl font-bold">0</span></div>
+        <div><span class="text-slate-400">LIFE:</span> <span id="livesText" class="text-xl font-bold">❤️❤️❤️</span></div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <div><span class="text-slate-400">CHIPS:</span> <span id="chipsText" class="neon-gold text-xl font-bold">💎 0</span></div>
+        <button id="soundToggle" class="bg-cyan-950 hover:bg-cyan-800 text-cyan-300 px-3 py-1 rounded border border-cyan-500 text-xs transition">
+          🔊 音效
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Canvas Box -->
+    <div class="relative w-full aspect-[16/9] max-h-[70vh] flex justify-center items-center rounded-lg overflow-hidden border-2 border-cyan-400/50">
+      <canvas id="gameCanvas" width="800" height="450" class="w-full h-full block rounded-lg"></canvas>
+
+      <!-- Start Modal -->
+      <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+        <h1 class="pixel-font text-2xl sm:text-4xl text-pink-400 mb-1 neon-pink tracking-wider">KAWAII RUNNER 2088</h1>
+        <p class="text-pink-200 text-xs sm:text-sm mb-4">
+          ✨ 帶領賽博萌喵穿梭霓虹都市！跳躍與滑行躲避障礙物 ✨
+        </p>
+        <div class="text-xs text-slate-300 mb-4 space-y-1 bg-slate-900/80 p-3 rounded-lg border border-pink-500/40 text-left w-full max-w-sm">
+          <p>🐾 角色：賽博萌喵 ฅ'ω'ฅ</p>
+          <p>🚀 跳躍：【Space】/【↑】/【W】（支援空中二段跳）</p>
+          <p>🔻 滑行：【↓】/【S】（躲避高空雷射與無人機）</p>
+        </div>
+
+        <!-- 難度選擇區塊 -->
+        <div class="mb-5 w-full max-w-sm">
+          <p class="text-xs text-cyan-300 mb-2 font-bold">🎯 選擇遊戲難度：</p>
+          <div class="grid grid-cols-3 gap-2" id="difficultyGroup">
+            <button class="diff-btn bg-slate-800 hover:bg-emerald-900 border border-emerald-400 text-emerald-300 text-xs py-2 rounded-lg font-bold transition" data-diff="easy">
+              🌱 輕鬆
+            </button>
+            <button class="diff-btn bg-pink-900/80 border-2 border-pink-400 text-pink-200 text-xs py-2 rounded-lg font-bold transition ring-2 ring-pink-400" data-diff="normal">
+              ⚡ 普通
+            </button>
+            <button class="diff-btn bg-slate-800 hover:bg-rose-900 border border-rose-500 text-rose-300 text-xs py-2 rounded-lg font-bold transition" data-diff="hard">
+              🔥 困難
+            </button>
+          </div>
+        </div>
+
+        <button id="startBtn" class="pixel-font bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer">
+          START RUN 🐾
+        </button>
+      </div>
+
+      <!-- Game Over Modal -->
+      <div id="gameOverOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+        <h2 class="pixel-font text-3xl sm:text-4xl neon-pink mb-2">CRASHED!</h2>
+        <p class="text-slate-300 text-lg mb-1">最終距離：<span id="finalDist" class="neon-text font-bold">0m</span></p>
+        <p class="text-slate-300 text-base mb-1">獲得晶片：<span id="finalChips" class="neon-gold font-bold">0</span></p>
+        <p class="text-slate-400 text-sm mb-6">最高紀錄：<span id="highDistText" class="neon-gold font-bold">0m</span></p>
+        <button id="restartBtn" class="pixel-font bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer">
+          RETRY
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="w-full flex gap-3 mt-3 sm:hidden">
+      <button id="btnTouchSlide" class="flex-1 bg-slate-900 border border-pink-500/50 active:bg-pink-900/50 text-pink-400 font-bold py-4 rounded-lg text-xl text-center select-none shadow">
+        🔻 滑行 (SLIDE)
+      </button>
+      <button id="btnTouchJump" class="flex-1 bg-slate-900 border border-cyan-500/50 active:bg-cyan-900/50 text-cyan-400 font-bold py-4 rounded-lg text-xl text-center select-none shadow">
+        🚀 跳躍 (JUMP)
+      </button>
+    </div>
+  </div>
+
+  <script>
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      playJump() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.12);
+        } catch(e){}
+      }
+      playCoin() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+          osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.2);
+        } catch(e){}
+      }
+      playShield() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.2);
+        } catch(e){}
+      }
+      playCrash() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.3);
+        } catch(e){}
+      }
+    }
+
+    const sound = new SoundFX();
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let gameRunning = false;
+    let distance = 0;
+    let score = 0;
+    let chipsCollected = 0;
+    let selectedDifficulty = "normal"; // easy, normal, hard
+    let baseSpeed = 6;
+    let gameSpeed = 6;
+    let highDistance = localStorage.getItem("runner_highdist") || 0;
+
+    let obstacles = [];
+    let items = [];
+    let particles = [];
+    let bgStars = [];
+    let bgBuildings = [];
+    let spawnObstacleTimer = 60;
+    let spawnItemTimer = 90;
+
+    const groundY = canvas.height - 70;
+    const gravity = 0.65;
+
+    // 可愛的賽博喵喵玩家狀態
+    const player = {
+      x: 90,
+      y: groundY - 50,
+      width: 38,
+      height: 48,
+      vy: 0,
+      isGrounded: false,
+      isSliding: false,
+      slideTimer: 0,
+      maxSlideTime: 35,
+      jumpsLeft: 2,
+      lives: 3,
+      invulnerableTimer: 0,
+      hasShield: false,
+      earAngle: 0,
+      tailAngle: 0,
+      expression: ">w<",
+      trail: []
+    };
+
+    function initBackground() {
+      bgStars = [];
+      for (let i = 0; i < 40; i++) {
+        bgStars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * (groundY - 50),
+          size: Math.random() * 2 + 1,
+          alpha: Math.random() * 0.8 + 0.2
+        });
+      }
+      bgBuildings = [];
+      for (let x = 0; x < canvas.width + 100; x += 60) {
+        bgBuildings.push({
+          x: x,
+          width: Math.random() * 40 + 30,
+          height: Math.random() * 120 + 80,
+          color: `hsl(${260 + Math.random() * 40}, 50%, ${10 + Math.random() * 10}%)`
+        });
+      }
+    }
+
+    function triggerJump() {
+      if (!gameRunning) return;
+      if (player.jumpsLeft > 0) {
+        player.vy = -11.5;
+        player.jumpsLeft--;
+        player.isGrounded = false;
+        player.isSliding = false;
+        sound.playJump();
+        createDust(player.x + player.width / 2, player.y + player.height, "#00f3ff");
+      }
+    }
+
+    function triggerSlide() {
+      if (!gameRunning) return;
+      if (player.isGrounded && !player.isSliding) {
+        player.isSliding = true;
+        player.slideTimer = player.maxSlideTime;
+        createDust(player.x, player.y + player.height, "#ff007f");
+      }
+    }
+
+    function spawnItem() {
+      const isShield = Math.random() < 0.2;
+      const itemY = Math.random() < 0.5 ? groundY - 35 : groundY - 95;
+      items.push({
+        x: canvas.width + 30,
+        y: itemY,
+        radius: 12,
+        type: isShield ? "SHIELD" : "CHIP"
+      });
+    }
+
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 16; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 8,
+          vy: (Math.random() - 0.5) * 8,
+          size: Math.random() * 6 + 3,
+          color: color,
+          alpha: 1,
+          life: 0.05
+        });
+      }
+    }
+
+    // Key Listeners
+    window.addEventListener("keydown", (e) => {
+      if (["Space", "ArrowUp", "KeyW"].includes(e.code)) {
+        e.preventDefault();
+        triggerJump();
+      } else if (["ArrowDown", "KeyS"].includes(e.code)) {
+        e.preventDefault();
+        triggerSlide();
+      }
+    });
+
+    // Touch Controls
+    document.getElementById("btnTouchJump").addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      triggerJump();
+    });
+    document.getElementById("btnTouchSlide").addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      triggerSlide();
+    });
+
+    canvas.addEventListener("touchstart", (e) => {
+      if (!gameRunning) return;
+      const touchY = e.touches[0].clientY;
+      const rect = canvas.getBoundingClientRect();
+      if (touchY - rect.top < rect.height / 2) {
+        triggerJump();
+      } else {
+        triggerSlide();
+      }
+    }, { passive: true });
+
+    // 難度選擇按鈕綁定
+    document.querySelectorAll(".diff-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        document.querySelectorAll(".diff-btn").forEach(b => {
+          b.classList.remove("border-2", "ring-2", "ring-pink-400", "bg-pink-900/80");
+          b.classList.add("bg-slate-800");
+        });
+        const target = e.currentTarget;
+        target.classList.remove("bg-slate-800");
+        target.classList.add("border-2", "ring-2", "ring-pink-400", "bg-pink-900/80");
+        selectedDifficulty = target.dataset.diff;
+      });
+    });
+
+    function createDust(x, y, color) {
+      const symbols = ["✨", "💖", "⭐", "🌸"];
+      for (let i = 0; i < 6; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 4 - gameSpeed * 0.3,
+          vy: (Math.random() - 0.5) * 3 - 1,
+          size: Math.random() * 12 + 8,
+          symbol: symbols[Math.floor(Math.random() * symbols.length)],
+          color,
+          alpha: 1,
+          life: 0.04
+        });
+      }
+    }
+
+    function spawnObstacle() {
+      const isHigh = Math.random() < (selectedDifficulty === 'hard' ? 0.5 : 0.35);
+      const moveSpeedY = selectedDifficulty === 'hard' ? (Math.random() > 0.5 ? 1.5 : -1.5) : 0;
+
+      if (isHigh) {
+        obstacles.push({
+          x: canvas.width + 50,
+          y: groundY - 80,
+          width: 45,
+          height: 35,
+          type: "HIGH",
+          color: "#ff007f",
+          vy: moveSpeedY,
+          baseY: groundY - 80
+        });
+      } else {
+        obstacles.push({
+          x: canvas.width + 50,
+          y: groundY - 45,
+          width: 40,
+          height: 45,
+          type: "LOW",
+          color: "#00f3ff",
+          vy: 0,
+          baseY: groundY - 45
+        });
+      }
+    }
+
+    function updatePhysics() {
+      if (!gameRunning) return;
+
+      // 遊戲難度隨「積分 (SCORE)」與「距離 (DIST)」動態成長
+      const scoreDiffBoost = Math.min(8, Math.floor(score / 250) * 0.6);
+      if (selectedDifficulty === "easy") {
+        gameSpeed = 5 + scoreDiffBoost * 0.6;
+      } else if (selectedDifficulty === "normal") {
+        gameSpeed = 6.5 + scoreDiffBoost * 0.8;
+      } else { // hard
+        gameSpeed = 8.5 + scoreDiffBoost;
+      }
+
+      distance += (0.15 * (gameSpeed / 7));
+      score = Math.floor(distance * 2) + chipsCollected * 50;
+
+      // 無敵閃爍倒數
+      if (player.invulnerableTimer > 0) {
+        player.invulnerableTimer--;
+      }
+
+      // 表情與姿勢變化
+      if (!player.isGrounded) {
+        player.expression = "^w^";
+      } else if (player.isSliding) {
+        player.expression = ">o<";
+      } else if (player.invulnerableTimer > 0) {
+        player.expression = ">_<";
+      } else {
+        player.expression = ">w<";
+      }
+
+      if (player.isSliding) {
+        player.height = 26;
+        player.slideTimer--;
+        if (player.slideTimer <= 0) player.isSliding = false;
+      } else {
+        player.height = 48;
+      }
+
+      // 紀錄移動前位置以計算平台頂部踏立
+      const prevPlayerY = player.y;
+
+      // 重力與運動
+      player.vy += gravity;
+      player.y += player.vy;
+
+      let standingOnBlock = false;
+
+      // 障礙物位置更新與踩踏/碰撞邏輯
+      obstacles.forEach((obs, idx) => {
+        obs.x -= gameSpeed;
+        if (obs.vy !== 0) {
+          obs.y += obs.vy;
+          if (Math.abs(obs.y - obs.baseY) > 25) obs.vy = -obs.vy;
+        }
+
+        const isHorizontalOverlap = player.x < obs.x + obs.width && player.x + player.width > obs.x;
+
+        if (isHorizontalOverlap) {
+          // 判定1：是否從上方落下並踏立在磚塊頂部
+          const fellFromAbove = (prevPlayerY + player.height <= obs.y + 12);
+          const isTouchTop = (player.y + player.height >= obs.y) && (player.y + player.height <= obs.y + obs.height);
+
+          if (fellFromAbove && isTouchTop && player.vy >= 0) {
+            player.y = obs.y - player.height;
+            player.vy = 0;
+            player.isGrounded = true;
+            player.jumpsLeft = 2;
+            standingOnBlock = true;
+          } 
+          // 判定2：若是從側面撞擊或下方撞擊，且非無敵狀態
+          else if (
+            player.y < obs.y + obs.height &&
+            player.y + player.height > obs.y &&
+            player.invulnerableTimer <= 0
+          ) {
+            if (player.hasShield) {
+              player.hasShield = false;
+              player.invulnerableTimer = 30; // 護盾抵擋短暫無敵
+              sound.playCrash();
+              createExplosion(obs.x + obs.width / 2, obs.y + obs.height / 2, obs.color);
+              obstacles.splice(idx, 1);
+            } else {
+              // 扣減生命值
+              player.lives--;
+              player.invulnerableTimer = 75; // 給予 ~1.2 秒無敵時間
+              sound.playCrash();
+              createExplosion(player.x + player.width / 2, player.y + player.height / 2, "#ff007f");
+
+              if (player.lives <= 0) {
+                // Game Over
+                gameRunning = false;
+                player.expression = "x_x";
+
+                let finalDistance = Math.floor(distance);
+                if (finalDistance > highDistance) {
+                  highDistance = finalDistance;
+                  localStorage.setItem("runner_highdist", highDistance);
+                }
+
+                document.getElementById("finalDist").innerText = `${finalDistance}m`;
+                document.getElementById("finalChips").innerText = chipsCollected;
+                document.getElementById("highDistText").innerText = `${highDistance}m`;
+                document.getElementById("gameOverOverlay").classList.remove("hidden");
+              }
+            }
+          }
+        }
+
+        if (obs.x < -60) {
+          obstacles.splice(idx, 1);
+        }
+      });
+
+      // 檢查地面碰撞 (若未站在磚塊上)
+      if (!standingOnBlock && player.y + player.height >= groundY) {
+        player.y = groundY - player.height;
+        player.vy = 0;
+        player.isGrounded = true;
+        player.jumpsLeft = 2;
+      }
+
+      // 殘影
+      player.trail.push({ x: player.x, y: player.y, w: player.width, h: player.height, alpha: 0.6 });
+      if (player.trail.length > 5) player.trail.shift();
+
+      // 障礙物產生頻率 (隨分數提高而更密集)
+      spawnObstacleTimer--;
+      if (spawnObstacleTimer <= 0) {
+        spawnObstacle();
+        const scoreSpeedAdj = Math.min(25, Math.floor(score / 300) * 3);
+        const minGap = selectedDifficulty === "hard" ? 35 : (selectedDifficulty === "normal" ? 50 : 65);
+        spawnObstacleTimer = Math.max(25, Math.floor(Math.random() * 40 + minGap - scoreSpeedAdj));
+      }
+
+      spawnItemTimer--;
+      if (spawnItemTimer <= 0) {
+        spawnItem();
+        spawnItemTimer = Math.floor(Math.random() * 70 + 60);
+      }
+
+      // 粒子更新
+      particles.forEach((p, idx) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.life;
+        if (p.alpha <= 0) particles.splice(idx, 1);
+      });
+
+      // 道具碰撞
+      items.forEach((item, idx) => {
+        item.x -= gameSpeed;
+        const dx = player.x + player.width / 2 - item.x;
+        const dy = player.y + player.height / 2 - item.y;
+        if (Math.sqrt(dx * dx + dy * dy) < player.width / 2 + item.radius) {
+          if (item.type === "CHIP") {
+            sound.playCoin();
+            chipsCollected++;
+            createDust(item.x, item.y, "#ffd700");
+          } else {
+            sound.playShield();
+            player.hasShield = true;
+            createDust(item.x, item.y, "#00f3ff");
+          }
+          items.splice(idx, 1);
+        } else if (item.x < -20) {
+          items.splice(idx, 1);
+        }
+      });
+
+      bgBuildings.forEach(b => {
+        b.x -= gameSpeed * 0.2;
+        if (b.x + b.width < 0) b.x = canvas.width + Math.random() * 50;
+      });
+
+      updateUI();
+    }
+
+    function drawPlayerCharacter(x, y, w, h) {
+      // 受傷無敵期間進行閃爍效果
+      if (player.invulnerableTimer > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
+        return;
+      }
+
+      ctx.save();
+
+      // 繪製賽博貓耳朵
+      ctx.fillStyle = player.hasShield ? "#00f3ff" : "#ff007f";
+      // 左耳
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y);
+      ctx.lineTo(x - 4, y - 12);
+      ctx.lineTo(x + 12, y);
+      ctx.fill();
+      // 右耳
+      ctx.beginPath();
+      ctx.moveTo(x + w - 4, y);
+      ctx.lineTo(x + w + 4, y - 12);
+      ctx.lineTo(x + w - 12, y);
+      ctx.fill();
+
+      // 耳朵內側粉紅亮色
+      ctx.fillStyle = "#ffb6c1";
+      ctx.beginPath();
+      ctx.moveTo(x + 5, y);
+      ctx.lineTo(x - 1, y - 8);
+      ctx.lineTo(x + 10, y);
+      ctx.fill();
+
+      // 身體 (Q版貓咪外觀)
+      ctx.fillStyle = player.hasShield ? "#1a2634" : "#2d122d";
+      ctx.strokeStyle = player.hasShield ? "#00f3ff" : "#ff3399";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, [12, 12, 6, 6]);
+      ctx.fill();
+      ctx.stroke();
+
+      // 發光頭帶 / LED 面罩
+      ctx.fillStyle = "#0d0d1a";
+      ctx.fillRect(x + 3, y + 6, w - 6, 16);
+      ctx.strokeStyle = "#00f3ff";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 3, y + 6, w - 6, 16);
+
+      // LED 貓咪表情 (>w<, ^w^, >o<, >_<)
+      ctx.fillStyle = "#00f3ff";
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(player.expression, x + w / 2, y + 18);
+
+      // 搖擺貓尾巴
+      const tailX = x - 6;
+      const tailY = y + h - 8;
+      const tailWave = Math.sin(Date.now() / 150) * 8;
+      ctx.strokeStyle = player.hasShield ? "#00f3ff" : "#ff007f";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(tailX + 6, tailY);
+      ctx.quadraticCurveTo(tailX - 10, tailY - 10 + tailWave, tailX - 12, tailY - 18 + tailWave);
+      ctx.stroke();
+
+      // 肉墊小腳爪
+      ctx.fillStyle = "#ff007f";
+      ctx.fillRect(x + 4, y + h - 4, 8, 4);
+      ctx.fillRect(x + w - 12, y + h - 4, 8, 4);
+
+      // 護盾光圈
+      if (player.hasShield) {
+        ctx.strokeStyle = "#00f3ff";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#00f3ff";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h/2, w*0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 星空背景
+      ctx.fillStyle = "#ffffff";
+      bgStars.forEach(star => {
+        ctx.globalAlpha = star.alpha;
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      });
+      ctx.globalAlpha = 1.0;
+
+      // 遠景建築
+      bgBuildings.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, canvas.height - b.height, b.width, b.height);
+      });
+
+      // 地面霓虹線
+      ctx.strokeStyle = "#ff007f";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      ctx.fillStyle = "#050510";
+      ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
+      // 動態滾動粉紫網格
+      ctx.strokeStyle = "rgba(255, 0, 127, 0.25)";
+      const gridOffset = (distance * 18) % 30;
+      for (let x = -gridOffset; x < canvas.width; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x - 40, canvas.height);
+        ctx.stroke();
+      }
+
+      // 繪製道具
+      items.forEach(item => {
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+        ctx.fillStyle = item.type === "CHIP" ? "#ffd700" : "#00f3ff";
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(item.type === "CHIP" ? "💎" : "🛡️", item.x, item.y + 4);
+      });
+
+      // 繪製磚塊與障礙物 (頂部亮條呈現平台感)
+      obstacles.forEach(obs => {
+        ctx.fillStyle = obs.color;
+        ctx.shadowColor = obs.color;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        
+        // 平台頂部可踩踏亮線指示
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(obs.x, obs.y, obs.width, 3);
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(obs.x + 1, obs.y + 1, obs.width - 2, obs.height - 2);
+        ctx.shadowBlur = 0;
+      });
+
+      // 繪製喵喵殘影
+      player.trail.forEach((t, i) => {
+        ctx.globalAlpha = t.alpha * 0.3;
+        drawPlayerCharacter(t.x - (player.trail.length - i) * 3, t.y, t.w, t.h);
+        ctx.globalAlpha = 1.0;
+      });
+
+      // 繪製賽博喵喵本體
+      drawPlayerCharacter(player.x, player.y, player.width, player.height);
+
+      // 繪製特效符號
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        if (p.symbol) {
+          ctx.font = `${p.size}px sans-serif`;
+          ctx.fillText(p.symbol, p.x, p.y);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+        }
+        ctx.restore();
+      });
+
+      updatePhysics();
+      requestAnimationFrame(draw);
+    }
+
+    function updateUI() {
+      document.getElementById("distText").innerText = `${Math.floor(distance)}m`;
+      document.getElementById("scoreText").innerText = score;
+      document.getElementById("chipsText").innerText = `💎 ${chipsCollected}`;
+      document.getElementById("livesText").innerText = "❤️".repeat(Math.max(0, player.lives));
+    }
+
+    function startGame() {
+      sound.init();
+      distance = 0;
+      score = 0;
+      chipsCollected = 0;
+      gameSpeed = 6;
+      obstacles = [];
+      items = [];
+      particles = [];
+
+      player.y = groundY - 50;
+      player.vy = 0;
+      player.lives = 3;
+      player.invulnerableTimer = 0;
+      player.isSliding = false;
+      player.hasShield = false;
+      player.jumpsLeft = 2;
+
+      spawnObstacleTimer = 60;
+      spawnItemTimer = 90;
+
+      gameRunning = true;
+      updateUI();
+      initBackground();
+
+      document.getElementById("startOverlay").classList.add("hidden");
+      document.getElementById("gameOverOverlay").classList.add("hidden");
+    }
+
+    // 事件監聽綁定
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("restartBtn").addEventListener("click", startGame);
+
+    document.getElementById("soundToggle").addEventListener("click", (e) => {
+      sound.enabled = !sound.enabled;
+      e.target.innerText = sound.enabled ? "🔊 音效" : "🔇 靜音";
+    });
+
+    initBackground();
+    draw();
+  </script>
+</body>
+</html>

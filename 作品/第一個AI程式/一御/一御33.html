@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太空科幻網球 - Galactic Cyber Tennis</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            background-color: #020617;
+            background-image: 
+                radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 20% 70%, rgba(225, 29, 72, 0.1) 0%, transparent 40%);
+            color: #e2e8f0;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* 網格背景 */
+        .cyber-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+        }
+
+        /* 畫布外框霓虹 */
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.35), 0 0 20px rgba(225, 29, 72, 0.25);
+            border: 2px solid rgba(56, 189, 248, 0.6);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #020617;
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 25px rgba(14, 165, 233, 0.5);
+        }
+
+        .neon-text-red {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 25px rgba(225, 29, 72, 0.5);
+        }
+
+        .btn-cyber {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.7);
+            transition: all 0.2s ease;
+        }
+
+        .btn-cyber:hover {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.5) 0%, rgba(139, 92, 246, 0.5) 100%);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-cyber:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen cyber-grid flex flex-col items-center justify-between p-2 md:p-4">
+
+    <!-- 頂部標題與模式選擇 -->
+    <header class="w-full max-w-2xl text-center mb-1">
+        <h1 class="text-2xl md:text-4xl font-black tracking-wider text-sky-400 neon-text-cyan flex items-center justify-center gap-3">
+            <i class="fa-solid fa-table-tennis-paddle-ball text-rose-500 animate-pulse"></i> GALACTIC TENNIS
+        </h1>
+        <p class="text-[11px] md:text-xs text-amber-400 mt-1 tracking-widest uppercase font-bold">火星紅土科幻網球聯賽 · 紅土滑步 · 隨機節奏發球</p>
+    </header>
+
+    <!-- 遊戲比分計分板 -->
+    <div class="w-full max-w-2xl bg-slate-900/90 backdrop-blur border border-sky-900/60 rounded-xl p-2.5 mb-2 flex justify-between items-center px-4 md:px-8 shadow-xl">
+        <!-- P2 / AI (Top) -->
+        <div class="text-center flex flex-col items-center">
+            <span id="p2Label" class="text-[10px] md:text-xs text-rose-400 uppercase tracking-widest font-bold block mb-1">
+                <i class="fa-solid fa-robot mr-1"></i>CYBER AI
+            </span>
+            <div class="flex items-center gap-2">
+                <span id="p2Sets" class="text-xs bg-rose-950/80 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-bold">GAMES: 0</span>
+                <span id="p2Score" class="text-2xl md:text-3xl font-black text-rose-500 neon-text-red">0</span>
+            </div>
+        </div>
+
+        <!-- VERSUS BADGE -->
+        <div class="text-center">
+            <span class="text-xs font-black text-amber-400 tracking-wider bg-slate-800/80 px-3 py-1 rounded-full border border-amber-500/40">VS</span>
+            <div id="serveIndicator" class="text-[10px] text-amber-300 mt-1 animate-pulse">P1 發球</div>
+        </div>
+
+        <!-- P1 (Bottom) -->
+        <div class="text-center flex flex-col items-center">
+            <span class="text-[10px] md:text-xs text-sky-400 uppercase tracking-widest font-bold block mb-1">
+                <i class="fa-solid fa-user-astronaut mr-1"></i>PLAYER 1
+            </span>
+            <div class="flex items-center gap-2">
+                <span id="p1Score" class="text-2xl md:text-3xl font-black text-sky-400 neon-text-cyan">0</span>
+                <span id="p1Sets" class="text-xs bg-sky-950/80 text-sky-300 border border-sky-800 px-2 py-0.5 rounded font-bold">GAMES: 0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 中央網球場畫布區域 -->
+    <main class="relative canvas-container w-full max-w-2xl aspect-[3/4] max-h-[65vh] flex items-center justify-center">
+        <canvas id="gameCanvas" width="600" height="800" class="w-full h-full"></canvas>
+
+        <!-- 遊戲開始 / 選單 / 暫停 / 勝負 Modal -->
+        <div id="overlayModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 transition-all duration-300">
+            <h2 id="modalTitle" class="text-3xl md:text-5xl font-black text-sky-400 neon-text-cyan mb-2">GALACTIC TENNIS</h2>
+            <p id="modalDesc" class="text-xs md:text-sm text-slate-300 mb-6 max-w-md leading-relaxed">
+                使用全方位鍵盤前進衝鋒，可在網前打出高速<span class="text-rose-400 font-bold">扣殺電漿球 (Power Smash)</span>！
+            </p>
+            
+            <!-- 模式選擇按鈕 -->
+            <div class="flex flex-col gap-3 w-full max-w-xs mb-4">
+                <div class="text-left text-xs text-sky-300 font-bold mb-0.5">🎮 對戰模式：</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="modePvAI" onclick="setMode('PvAI')" class="btn-cyber py-2 rounded-lg text-xs font-bold text-sky-300 border-sky-400">1P vs AI</button>
+                    <button id="modePvP" onclick="setMode('PvP')" class="btn-cyber py-2 rounded-lg text-xs font-bold text-slate-400 border-slate-700">2P 本地對戰</button>
+                </div>
+
+                <div id="aiDiffBox" class="flex flex-col gap-1 text-left">
+                    <div class="text-xs text-sky-300 font-bold mt-1">🤖 AI 難度：</div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button onclick="setDiff('EASY')" id="diffEasy" class="btn-cyber py-1.5 rounded text-[11px] font-bold text-emerald-400">簡單</button>
+                        <button onclick="setDiff('NORMAL')" id="diffNormal" class="btn-cyber py-1.5 rounded text-[11px] font-bold text-amber-400 border-amber-500">標準</button>
+                        <button onclick="setDiff('HARD')" id="diffHard" class="btn-cyber py-1.5 rounded text-[11px] font-bold text-rose-400">極限</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn" onclick="startGame()" class="btn-cyber px-8 py-3 rounded-full text-base md:text-lg font-bold text-sky-300 tracking-wider flex items-center gap-2 shadow-lg">
+                <i class="fa-solid fa-play"></i> 開始比賽
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部操作說明與行動裝置按鈕 -->
+    <footer class="w-full max-w-2xl mt-2 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div class="text-[11px] text-slate-400 text-center sm:text-left leading-relaxed">
+            <div><span class="text-sky-300 font-bold">1P Controls:</span> <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200">W A S D</span> 或 <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200">↑ ↓ ← →</span> 8方向移動</div>
+            <div id="p2ControlTip" class="hidden text-rose-300 font-bold mt-0.5">2P Controls: <span class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200">I J K L</span> 移動</div>
+        </div>
+
+        <!-- 觸控按鈕 / 暫停按鈕 -->
+        <div class="flex items-center justify-center gap-2 w-full sm:w-auto">
+            <button id="btnServe" onclick="triggerServe()" class="btn-cyber px-4 py-2 rounded-xl text-amber-300 text-xs font-bold flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt"></i> 發球 (SPACE)
+            </button>
+            <button id="btnPause" onclick="togglePause()" class="btn-cyber px-4 py-2 rounded-xl text-yellow-300 text-xs font-bold">
+                <i class="fa-solid fa-pause"></i> 暫停
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Web Audio API 音效產生器 (太空網球專用)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) { console.error(e); }
+            }
+
+            racketHit(isSmash = false) {
+                if (isSmash) {
+                    this.playTone(800, 'sawtooth', 0.12, 0.3);
+                    setTimeout(() => this.playTone(400, 'square', 0.15, 0.25), 40);
+                } else {
+                    this.playTone(450, 'triangle', 0.08, 0.2);
+                }
+            }
+
+            serve() {
+                this.playTone(350, 'sine', 0.08, 0.2);
+                setTimeout(() => this.playTone(600, 'sine', 0.1, 0.25), 60);
+            }
+
+            bounce() {
+                this.playTone(180, 'sine', 0.05, 0.12);
+            }
+
+            netHit() {
+                this.playTone(120, 'sawtooth', 0.15, 0.25);
+            }
+
+            pointScore() {
+                this.playTone(523.25, 'sine', 0.1, 0.2);
+                setTimeout(() => this.playTone(659.25, 'sine', 0.1, 0.2), 90);
+                setTimeout(() => this.playTone(783.99, 'sine', 0.15, 0.25), 180);
+            }
+
+            victory() {
+                if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.25, 0.25), idx * 110);
+                });
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI 元素
+        const p1ScoreElem = document.getElementById('p1Score');
+        const p2ScoreElem = document.getElementById('p2Score');
+        const p1SetsElem = document.getElementById('p1Sets');
+        const p2SetsElem = document.getElementById('p2Sets');
+        const p2Label = document.getElementById('p2Label');
+        const serveIndicator = document.getElementById('serveIndicator');
+        const overlayModal = document.getElementById('overlayModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDesc = document.getElementById('modalDesc');
+        const startBtn = document.getElementById('startBtn');
+        const p2ControlTip = document.getElementById('p2ControlTip');
+
+        // 遊戲狀態與設置
+        let gameState = 'START'; // START, SERVE, PLAYING, PAUSED, GAMEOVER
+        let gameMode = 'PvAI';   // 'PvAI' or 'PvP'
+        let aiDifficulty = 'NORMAL'; // 'EASY', 'NORMAL', 'HARD'
+        let aiServeTimer = null; // AI 隨機發球計時器
+
+        // 計分（標準網球比分模式）
+        const TENNIS_SCORES = ['0', '15', '30', '40', 'ADV'];
+        let p1Points = 0; // 0, 1, 2, 3, 4 (Game)
+        let p2Points = 0;
+        let p1Games = 0;
+        let p2Games = 0;
+        let currentServer = 1; // 1 = P1, 2 = P2
+
+        function updateScoreboardUI() {
+            let p1Text = TENNIS_SCORES[p1Points] || '40';
+            let p2Text = TENNIS_SCORES[p2Points] || '40';
+
+            // 平分 Deuce 與 優勢 ADV 邏輯判定
+            if (p1Points >= 3 && p2Points >= 3) {
+                if (p1Points === p2Points) {
+                    p1Text = '40';
+                    p2Text = '40';
+                } else if (p1Points === p2Points + 1) {
+                    p1Text = 'ADV';
+                    p2Text = '40';
+                } else if (p2Points === p1Points + 1) {
+                    p1Text = '40';
+                    p2Text = 'ADV';
+                }
+            }
+
+            if (p1ScoreElem) p1ScoreElem.textContent = p1Text;
+            if (p2ScoreElem) p2ScoreElem.textContent = p2Text;
+            if (p1SetsElem) p1SetsElem.textContent = `GAMES: ${p1Games}`;
+            if (p2SetsElem) p2SetsElem.textContent = `GAMES: ${p2Games}`;
+        }
+
+        function scorePoint(winner) {
+            sfx.pointScore();
+            createParticles(ball.x, ball.y, winner === 1 ? '#38bdf8' : '#f43f5e', 25);
+
+            if (winner === 1) {
+                p1Points++;
+            } else {
+                p2Points++;
+            }
+
+            // 檢查是否拿下該局 (Game Won)
+            let gameWon = false;
+            if (p1Points >= 4 && p1Points >= p2Points + 2) {
+                p1Games++;
+                gameWon = true;
+            } else if (p2Points >= 4 && p2Points >= p1Points + 2) {
+                p2Games++;
+                gameWon = true;
+            }
+
+            if (gameWon) {
+                p1Points = 0;
+                p2Points = 0;
+                // 輪替發球權
+                currentServer = currentServer === 1 ? 2 : 1;
+
+                // 率先拿下 3 局者獲得最終總冠軍
+                if (p1Games >= 3) {
+                    updateScoreboardUI();
+                    handleMatchEnd(1);
+                    return;
+                } else if (p2Games >= 3) {
+                    updateScoreboardUI();
+                    handleMatchEnd(2);
+                    return;
+                }
+            }
+
+            updateScoreboardUI();
+            resetServe(currentServer);
+        }
+
+        const stars = [];
+        const STAR_COUNT = 90;
+
+        function initStars() {
+            stars.length = 0;
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.5 + 0.4,
+                    alpha: Math.random(),
+                    speed: Math.random() * 0.03 + 0.01,
+                    twinkleSpeed: Math.random() * 0.05 + 0.02,
+                    color: Math.random() > 0.4 ? '#ffffff' : (Math.random() > 0.5 ? '#38bdf8' : '#f43f5e')
+                });
+            }
+        }
+
+        function updateAndDrawStars() {
+            stars.forEach(star => {
+                star.alpha += Math.sin(Date.now() * star.twinkleSpeed) * 0.02;
+                if (star.alpha < 0.2) star.alpha = 0.2;
+                if (star.alpha > 1.0) star.alpha = 1.0;
+
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = star.alpha;
+                ctx.fillStyle = star.color;
+                ctx.shadowBlur = star.radius * 3;
+                ctx.shadowColor = star.color;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 按鍵追蹤
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            up: false, down: false, left: false, right: false,
+            i: false, j: false, k: false, l: false
+        };
+
+        // 球場邊界資訊 (Court Layout)
+        const court = {
+            left: 50,
+            right: 550,
+            top: 60,
+            bottom: 740,
+            netY: 400
+        };
+
+        // 玩家 1 (下方 P1 Space Cruiser)
+        const p1 = {
+            x: canvas.width / 2 - 45,
+            y: 700,
+            width: 90,
+            height: 18,
+            speed: 7.5,
+            color: '#38bdf8',
+            vy: 0 // 追蹤推進速度以進行扣殺
+        };
+
+        // 玩家 2 / AI (上方 P2 / Cyber AI Space Ship)
+        const p2 = {
+            x: canvas.width / 2 - 45,
+            y: 80,
+            width: 90,
+            height: 18,
+            speed: 7.5,
+            color: '#f43f5e',
+            vy: 0
+        };
+
+        // 電漿網球 (Plasma Tennis Ball)
+        const ball = {
+            x: canvas.width / 2,
+            y: 680,
+            radius: 8,
+            baseSpeed: 7,
+            speed: 7,
+            dx: 0,
+            dy: 0,
+            isSmash: false,
+            trail: []
+        };
+
+        // 擊球粒子特效
+        let particles = [];
+
+        function createParticles(x, y, color, count = 12) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 8,
+                    dy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 3 + 1,
+                    color: color,
+                    alpha: 1,
+                    life: Math.random() * 15 + 10
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= 1 / p.life;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function updateAIMovement() {
+            if (gameMode !== 'PvAI') return;
+
+            // 根據難度設定 AI 反應延遲與移動速度
+            let aiSpeed = p2.speed;
+            let targetX = ball.x - p2.width / 2;
+            let targetY = 80;
+
+            if (aiDifficulty === 'EASY') {
+                aiSpeed = 4.2;
+                targetX += (Math.sin(Date.now() * 0.003) * 40); // 隨機誤判
+            } else if (aiDifficulty === 'NORMAL') {
+                aiSpeed = 6.0;
+            } else if (aiDifficulty === 'HARD') {
+                aiSpeed = 8.0;
+                // 高階 AI：預判球軌跡並適度向前壓迫扣殺
+                if (ball.dy < 0 && ball.y < court.netY) {
+                    targetY = Math.max(100, ball.y - 40);
+                }
+            }
+
+            // X 軸追球
+            if (p2.x < targetX - 5) {
+                p2.x += aiSpeed;
+            } else if (p2.x > targetX + 5) {
+                p2.x -= aiSpeed;
+            }
+
+            // Y 軸微調
+            if (p2.y < targetY - 5) {
+                p2.y += aiSpeed * 0.5;
+            } else if (p2.y > targetY + 5) {
+                p2.y -= aiSpeed * 0.5;
+            }
+
+            // 限制 AI 在上半場範圍
+            p2.x = Math.max(court.left, Math.min(court.right - p2.width, p2.x));
+            p2.y = Math.max(court.top, Math.min(court.netY - 60, p2.y));
+        }
+
+        function movePlayers() {
+            // P1 (WASD 或 方向鍵)
+            let p1MovedY = 0;
+            if (keys.a || keys.left) p1.x -= p1.speed;
+            if (keys.d || keys.right) p1.x += p1.speed;
+            if (keys.w || keys.up) { p1.y -= p1.speed; p1MovedY = -p1.speed; }
+            if (keys.s || keys.down) { p1.y += p1.speed; p1MovedY = p1.speed; }
+
+            p1.vy = p1MovedY;
+
+            // 限制 P1 在下半場
+            p1.x = Math.max(court.left, Math.min(court.right - p1.width, p1.x));
+            p1.y = Math.max(court.netY + 20, Math.min(court.bottom - p1.height, p1.y));
+
+            // P2 (若為 PvP 雙人對戰模式)
+            if (gameMode === 'PvP') {
+                let p2MovedY = 0;
+                if (keys.j) p2.x -= p2.speed;
+                if (keys.l) p2.x += p2.speed;
+                if (keys.i) { p2.y -= p2.speed; p2MovedY = -p2.speed; }
+                if (keys.k) { p2.y += p2.speed; p2MovedY = p2.speed; }
+
+                p2.vy = p2MovedY;
+
+                // 限制 P2 在上半場
+                p2.x = Math.max(court.left, Math.min(court.right - p2.width, p2.x));
+                p2.y = Math.max(court.top, Math.min(court.netY - 40, p2.y));
+            } else {
+                updateAIMovement();
+            }
+        }
+
+        function triggerServe() {
+            sfx.init();
+            if (gameState === 'SERVE') {
+                if (aiServeTimer) {
+                    clearTimeout(aiServeTimer);
+                    aiServeTimer = null;
+                }
+
+                if (currentServer === 2 && gameMode === 'PvAI') {
+                    executeAIServe();
+                    return;
+                }
+
+                gameState = 'PLAYING';
+                serveIndicator.textContent = '比賽進行中';
+                sfx.serve();
+
+                const dir = currentServer === 1 ? -1 : 1;
+                const angle = (Math.random() - 0.5) * 0.6;
+                ball.speed = ball.baseSpeed;
+                ball.dx = ball.speed * Math.sin(angle);
+                ball.dy = ball.speed * Math.cos(angle) * dir;
+                ball.isSmash = false;
+            }
+        }
+
+        function executeAIServe() {
+            if (gameState !== 'SERVE' || currentServer !== 2) return;
+            sfx.serve();
+            gameState = 'PLAYING';
+            serveIndicator.textContent = '比賽進行中';
+
+            // AI 隨機發球角度 (-25度 ~ +25度) 與速度變化
+            const angle = (Math.random() - 0.5) * 0.8;
+            const speedVar = ball.baseSpeed * (0.95 + Math.random() * 0.3);
+            ball.speed = speedVar;
+            ball.dx = ball.speed * Math.sin(angle);
+            ball.dy = ball.speed * Math.cos(angle); // 向下指向 P1
+            
+            // 25% 機率打出火星紅土高速電漿發球
+            ball.isSmash = Math.random() < 0.25;
+            if (ball.isSmash) {
+                ball.speed *= 1.35;
+                ball.dx *= 1.35;
+                ball.dy *= 1.35;
+                createParticles(ball.x, ball.y, '#ea580c', 20);
+            }
+        }
+
+        function resetServe(server = 1) {
+            if (aiServeTimer) {
+                clearTimeout(aiServeTimer);
+                aiServeTimer = null;
+            }
+
+            currentServer = server;
+            gameState = 'SERVE';
+            ball.trail = [];
+            ball.isSmash = false;
+
+            if (currentServer === 1) {
+                serveIndicator.textContent = 'P1 發球 (按 SPACE)';
+                ball.x = p1.x + p1.width / 2;
+                ball.y = p1.y - ball.radius - 2;
+            } else {
+                ball.x = p2.x + p2.width / 2;
+                ball.y = p2.y + p2.height + ball.radius + 2;
+
+                if (gameMode === 'PvAI') {
+                    // 0.8 秒 ~ 2.3 秒隨機發球時間
+                    const randomDelay = Math.floor(Math.random() * 1500 + 800);
+                    serveIndicator.textContent = 'AI 觀察防線發球中...';
+                    aiServeTimer = setTimeout(() => {
+                        executeAIServe();
+                    }, randomDelay);
+                } else {
+                    serveIndicator.textContent = 'P2 發球 (按 SPACE)';
+                }
+            }
+        }
+
+        function updateBall() {
+            if (gameState === 'SERVE') {
+                // 發球時球黏在發球方飛船前
+                if (currentServer === 1) {
+                    ball.x = p1.x + p1.width / 2;
+                    ball.y = p1.y - ball.radius - 2;
+                } else {
+                    ball.x = p2.x + p2.width / 2;
+                    ball.y = p2.y + p2.height + ball.radius + 2;
+                }
+                return;
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            // 記錄軌跡
+            ball.trail.push({ x: ball.x, y: ball.y, isSmash: ball.isSmash });
+            if (ball.trail.length > 8) ball.trail.shift();
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // 左右牆壁反彈（產生紅土濺起效果）
+            if (ball.x - ball.radius < court.left) {
+                ball.x = court.left + ball.radius;
+                ball.dx = -ball.dx;
+                sfx.bounce();
+                createParticles(ball.x, ball.y, '#ea580c', 8);
+            } else if (ball.x + ball.radius > court.right) {
+                ball.x = court.right - ball.radius;
+                ball.dx = -ball.dx;
+                sfx.bounce();
+                createParticles(ball.x, ball.y, '#ea580c', 8);
+            }
+
+            // 中場電漿網 (Plasma Net) 阻擋檢測
+            if (Math.abs(ball.y - court.netY) < 6) {
+                if (Math.random() < 0.05 && !ball.isSmash) {
+                    sfx.netHit();
+                    createParticles(ball.x, court.netY, '#f59e0b', 15);
+                    if (ball.dy > 0) scorePoint(1);
+                    else scorePoint(2);
+                    return;
+                }
+            }
+
+            // 玩家 1 (P1) 擊球碰撞判定
+            if (
+                ball.dy > 0 &&
+                ball.y + ball.radius >= p1.y &&
+                ball.y - ball.radius <= p1.y + p1.height &&
+                ball.x >= p1.x - 5 &&
+                ball.x <= p1.x + p1.width + 5
+            ) {
+                let hitPos = (ball.x - (p1.x + p1.width / 2)) / (p1.width / 2);
+                let angle = hitPos * (Math.PI / 3);
+
+                const isSmashHit = p1.vy < 0 || (p1.y < court.netY + 120);
+                ball.isSmash = isSmashHit;
+                ball.speed = isSmashHit ? ball.baseSpeed * 1.5 : ball.baseSpeed * 1.05;
+
+                ball.dx = ball.speed * Math.sin(angle);
+                ball.dy = -Math.abs(ball.speed * Math.cos(angle));
+                ball.y = p1.y - ball.radius;
+
+                sfx.racketHit(isSmashHit);
+                createParticles(ball.x, ball.y, isSmashHit ? '#f43f5e' : '#fb923c', isSmashHit ? 20 : 12);
+            }
+
+            // 玩家 2 / AI (P2) 擊球碰撞判定
+            if (
+                ball.dy < 0 &&
+                ball.y - ball.radius <= p2.y + p2.height &&
+                ball.y + ball.radius >= p2.y &&
+                ball.x >= p2.x - 5 &&
+                ball.x <= p2.x + p2.width + 5
+            ) {
+                let hitPos = (ball.x - (p2.x + p2.width / 2)) / (p2.width / 2);
+                let angle = hitPos * (Math.PI / 3);
+
+                const isSmashHit = p2.vy > 0 || (p2.y > court.netY - 120);
+                ball.isSmash = isSmashHit;
+                ball.speed = isSmashHit ? ball.baseSpeed * 1.5 : ball.baseSpeed * 1.05;
+
+                ball.dx = ball.speed * Math.sin(angle);
+                ball.dy = Math.abs(ball.speed * Math.cos(angle));
+                ball.y = p2.y + p2.height + ball.radius;
+
+                sfx.racketHit(isSmashHit);
+                createParticles(ball.x, ball.y, isSmashHit ? '#f43f5e' : '#ea580c', isSmashHit ? 20 : 12);
+            }
+
+            // 底線出界 / 得分判定
+            if (ball.y < court.top - 20) {
+                scorePoint(1);
+            } else if (ball.y > court.bottom + 20) {
+                scorePoint(2);
+            }
+        }
+
+        function drawCourt() {
+            ctx.save();
+
+            // 火星紅土場地底色 (Red Clay Court Gradient)
+            const clayGrad = ctx.createLinearGradient(0, court.top, 0, court.bottom);
+            clayGrad.addColorStop(0, '#5f1807');
+            clayGrad.addColorStop(0.5, '#83230a');
+            clayGrad.addColorStop(1, '#5f1807');
+            ctx.fillStyle = clayGrad;
+            ctx.fillRect(court.left, court.top, court.right - court.left, court.bottom - court.top);
+
+            // 紅土微粒質感 (Clay Grain Texture)
+            ctx.fillStyle = 'rgba(251, 146, 60, 0.08)';
+            for (let i = 0; i < 35; i++) {
+                const gx = court.left + Math.abs(Math.sin(i * 133)) * (court.right - court.left - 20);
+                const gy = court.top + ((i * 47) % (court.bottom - court.top - 10));
+                ctx.fillRect(gx, gy, 12, 2);
+            }
+
+            // 網球場邊界線條 (Cream White Lines with Clay Neon Glow)
+            ctx.strokeStyle = 'rgba(254, 243, 199, 0.9)';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ea580c';
+
+            // 外邊框
+            ctx.strokeRect(court.left, court.top, court.right - court.left, court.bottom - court.top);
+
+            // 發球線 (Service Lines)
+            ctx.strokeStyle = 'rgba(254, 243, 199, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // 上發球線
+            ctx.moveTo(court.left, court.netY - 160);
+            ctx.lineTo(court.right, court.netY - 160);
+            // 下發球線
+            ctx.moveTo(court.left, court.netY + 160);
+            ctx.lineTo(court.right, court.netY + 160);
+            // 中線
+            ctx.moveTo(canvas.width / 2, court.netY - 160);
+            ctx.lineTo(canvas.width / 2, court.netY + 160);
+            ctx.stroke();
+
+            // 中央高壓電漿網 (Glowing Orange Plasma Net)
+            ctx.strokeStyle = '#fb923c';
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = '#ea580c';
+
+            ctx.beginPath();
+            ctx.setLineDash([10, 8]);
+            ctx.moveTo(court.left - 15, court.netY);
+            ctx.lineTo(court.right + 15, court.netY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 電漿柱 (網柱)
+            ctx.fillStyle = '#f43f5e';
+            ctx.shadowColor = '#f43f5e';
+            ctx.fillRect(court.left - 20, court.netY - 6, 8, 12);
+            ctx.fillRect(court.right + 12, court.netY - 6, 8, 12);
+
+            ctx.restore();
+        }
+
+        function drawPlayers() {
+            // 繪製 P1 (Bottom Cruiser)
+            ctx.save();
+            const px1 = p1.x;
+            const py1 = p1.y;
+            const pw1 = p1.width;
+            const ph1 = p1.height;
+
+            // 推進尾焰
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(px1 + pw1 * 0.3, py1 + ph1);
+            ctx.lineTo(px1 + pw1 * 0.5, py1 + ph1 + 8 + Math.random() * 6);
+            ctx.lineTo(px1 + pw1 * 0.7, py1 + ph1);
+            ctx.fill();
+
+            // 戰艦拍面
+            const grad1 = ctx.createLinearGradient(0, py1, 0, py1 + ph1);
+            grad1.addColorStop(0, '#f8fafc');
+            grad1.addColorStop(0.5, '#38bdf8');
+            grad1.addColorStop(1, '#0284c7');
+
+            ctx.fillStyle = grad1;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#0284c7';
+            ctx.beginPath();
+            ctx.roundRect(px1, py1, pw1, ph1, 6);
+            ctx.fill();
+
+            // 繪製 P2 (Top Cruiser)
+            const px2 = p2.x;
+            const py2 = p2.y;
+            const pw2 = p2.width;
+            const ph2 = p2.height;
+
+            ctx.fillStyle = '#f43f5e';
+            ctx.shadowColor = '#f43f5e';
+            ctx.beginPath();
+            ctx.moveTo(px2 + pw2 * 0.3, py2);
+            ctx.lineTo(px2 + pw2 * 0.5, py2 - 8 - Math.random() * 6);
+            ctx.lineTo(px2 + pw2 * 0.7, py2);
+            ctx.fill();
+
+            const grad2 = ctx.createLinearGradient(0, py2, 0, py2 + ph2);
+            grad2.addColorStop(0, '#be123c');
+            grad2.addColorStop(0.5, '#f43f5e');
+            grad2.addColorStop(1, '#f8fafc');
+
+            ctx.fillStyle = grad2;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#e11d48';
+            ctx.beginPath();
+            ctx.roundRect(px2, py2, pw2, ph2, 6);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawBall() {
+            ctx.save();
+
+            // 繪製軌跡 (Smash 時為高熱紅色，平擊為藍色)
+            ball.trail.forEach((t, i) => {
+                const alpha = (i + 1) / ball.trail.length * 0.4;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, ball.radius * ((i + 1) / ball.trail.length), 0, Math.PI * 2);
+                ctx.fillStyle = t.isSmash ? `rgba(244, 63, 94, ${alpha})` : `rgba(56, 189, 248, ${alpha})`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = t.isSmash ? '#f43f5e' : '#38bdf8';
+                ctx.fill();
+            });
+
+            // 球體本體
+            const orbGrad = ctx.createRadialGradient(
+                ball.x - 2, ball.y - 2, 1,
+                ball.x, ball.y, ball.radius
+            );
+            
+            if (ball.isSmash) {
+                orbGrad.addColorStop(0, '#ffffff');
+                orbGrad.addColorStop(0.4, '#fb7185');
+                orbGrad.addColorStop(1, '#e11d48');
+            } else {
+                orbGrad.addColorStop(0, '#ffffff');
+                orbGrad.addColorStop(0.4, '#38bdf8');
+                orbGrad.addColorStop(1, '#0284c7');
+            }
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = orbGrad;
+            ctx.shadowBlur = ball.isSmash ? 25 : 15;
+            ctx.shadowColor = ball.isSmash ? '#f43f5e' : '#38bdf8';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function gameLoop() {
+            clearCanvas();
+
+            updateAndDrawStars();
+            drawCourt();
+
+            movePlayers();
+            updateBall();
+            updateAndDrawParticles();
+
+            drawPlayers();
+            drawBall();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setMode(mode) {
+            gameMode = mode;
+            const btnAI = document.getElementById('modePvAI');
+            const btnPvP = document.getElementById('modePvP');
+            const aiDiffBox = document.getElementById('aiDiffBox');
+
+            if (mode === 'PvAI') {
+                btnAI.className = 'btn-cyber py-2 rounded-lg text-xs font-bold text-sky-300 border-sky-400';
+                btnPvP.className = 'btn-cyber py-2 rounded-lg text-xs font-bold text-slate-400 border-slate-700';
+                aiDiffBox.classList.remove('hidden');
+                p2Label.innerHTML = '<i class="fa-solid fa-robot mr-1"></i>CYBER AI';
+                p2ControlTip.classList.add('hidden');
+            } else {
+                btnPvP.className = 'btn-cyber py-2 rounded-lg text-xs font-bold text-rose-300 border-rose-400';
+                btnAI.className = 'btn-cyber py-2 rounded-lg text-xs font-bold text-slate-400 border-slate-700';
+                aiDiffBox.classList.add('hidden');
+                p2Label.innerHTML = '<i class="fa-solid fa-user-astronaut mr-1"></i>PLAYER 2';
+                p2ControlTip.classList.remove('hidden');
+            }
+        }
+
+        function setDiff(diff) {
+            aiDifficulty = diff;
+            ['diffEasy', 'diffNormal', 'diffHard'].forEach(id => {
+                document.getElementById(id).classList.remove('border-sky-400', 'border-amber-500', 'border-rose-500');
+            });
+
+            if (diff === 'EASY') document.getElementById('diffEasy').classList.add('border-sky-400');
+            else if (diff === 'NORMAL') document.getElementById('diffNormal').classList.add('border-amber-500');
+            else if (diff === 'HARD') document.getElementById('diffHard').classList.add('border-rose-500');
+        }
+
+        function startGame() {
+            if (aiServeTimer) {
+                clearTimeout(aiServeTimer);
+                aiServeTimer = null;
+            }
+            sfx.init();
+            p1Points = 0;
+            p2Points = 0;
+            p1Games = 0;
+            p2Games = 0;
+            updateScoreboardUI();
+
+            // 戰艦重置
+            p1.x = canvas.width / 2 - p1.width / 2;
+            p1.y = 700;
+            p2.x = canvas.width / 2 - p2.width / 2;
+            p2.y = 80;
+
+            overlayModal.classList.add('hidden');
+            resetServe(1);
+        }
+
+        function togglePause() {
+            if (aiServeTimer) {
+                clearTimeout(aiServeTimer);
+                aiServeTimer = null;
+            }
+            if (gameState === 'PLAYING' || gameState === 'SERVE') {
+                gameState = 'PAUSED';
+                modalTitle.textContent = 'MATCH PAUSED';
+                modalDesc.textContent = '比賽已暫停，點擊按鈕返回星際紅土球場';
+                startBtn.innerHTML = '<i class="fa-solid fa-play"></i> 繼續比賽';
+                overlayModal.classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'SERVE';
+                overlayModal.classList.add('hidden');
+                resetServe(currentServer);
+            }
+        }
+
+        function handleMatchEnd(winner) {
+            if (aiServeTimer) {
+                clearTimeout(aiServeTimer);
+                aiServeTimer = null;
+            }
+            gameState = 'GAMEOVER';
+            sfx.victory();
+
+            if (winner === 1) {
+                modalTitle.textContent = 'PLAYER 1 VICTORY!';
+                modalDesc.textContent = `恭喜獲得火星紅土網球公開賽總冠軍！最終戰局比分：${p1Games} - ${p2Games}`;
+            } else {
+                modalTitle.textContent = gameMode === 'PvAI' ? 'CYBER AI WIN!' : 'PLAYER 2 VICTORY!';
+                modalDesc.textContent = `對手贏得了本次賽事！最終戰局比分：${p2Games} - ${p1Games}`;
+            }
+
+            startBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再次開戰';
+            overlayModal.classList.remove('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // P1
+            if (e.key === 'a' || e.key === 'A') keys.a = true;
+            if (e.key === 'd' || e.key === 'D') keys.d = true;
+            if (e.key === 'w' || e.key === 'W') keys.w = true;
+            if (e.key === 's' || e.key === 'S') keys.s = true;
+
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowUp') keys.up = true;
+            if (e.key === 'ArrowDown') keys.down = true;
+
+            // P2
+            if (e.key === 'j' || e.key === 'J') keys.j = true;
+            if (e.key === 'l' || e.key === 'L') keys.l = true;
+            if (e.key === 'i' || e.key === 'I') keys.i = true;
+            if (e.key === 'k' || e.key === 'K') keys.k = true;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                triggerServe();
+            }
+
+            if (e.key === 'p' || e.key === 'P') togglePause();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'a' || e.key === 'A') keys.a = false;
+            if (e.key === 'd' || e.key === 'D') keys.d = false;
+            if (e.key === 'w' || e.key === 'W') keys.w = false;
+            if (e.key === 's' || e.key === 'S') keys.s = false;
+
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowUp') keys.up = false;
+            if (e.key === 'ArrowDown') keys.down = false;
+
+            if (e.key === 'j' || e.key === 'J') keys.j = false;
+            if (e.key === 'l' || e.key === 'L') keys.l = false;
+            if (e.key === 'i' || e.key === 'I') keys.i = false;
+            if (e.key === 'k' || e.key === 'K') keys.k = false;
+        });
+
+        // 觸控跟隨
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const touchX = e.touches[0].clientX - rect.left;
+                const touchY = e.touches[0].clientY - rect.top;
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                p1.x = (touchX * scaleX) - p1.width / 2;
+                p1.y = (touchY * scaleY) - p1.height / 2;
+
+                p1.x = Math.max(court.left, Math.min(court.right - p1.width, p1.x));
+                p1.y = Math.max(court.netY + 20, Math.min(court.bottom - p1.height, p1.y));
+            }
+        }, { passive: true });
+
+        window.onload = function() {
+            initStars();
+            updateScoreboardUI();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

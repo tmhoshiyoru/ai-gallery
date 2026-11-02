@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 離線小恐龍遊戲 (Chrome Dino Game)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .game-card {
+            transition: background 0.8s ease, color 0.8s ease, border-color 0.8s ease;
+        }
+        /* Custom arcade button glow */
+        .btn-arcade {
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 #374151;
+        }
+        .btn-arcade:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #374151;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 text-gray-800">
+
+    <div class="w-full max-w-4xl">
+        <!-- Main Game Card -->
+        <div id="gameCard" class="game-card bg-gray-800 text-gray-100 rounded-2xl shadow-2xl p-6 border-4 border-gray-700 relative overflow-hidden flex flex-col items-center">
+            
+            <!-- Header Bar: Sky Phase & Score -->
+            <div class="w-full flex flex-col sm:flex-row justify-between items-center mb-4 px-2 gap-3 z-10">
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Dynamic Sky Mode Selector -->
+                    <div class="flex items-center gap-1 bg-gray-900/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-gray-700 text-xs">
+                        <label for="skySelect" class="whitespace-nowrap font-medium text-amber-300">🌅 天色:</label>
+                        <select id="skySelect" class="bg-gray-800 text-gray-100 text-xs rounded-lg px-2 py-1 outline-none cursor-pointer border border-gray-600 focus:ring-2 focus:ring-amber-400">
+                            <option value="600" selected>動態四時 (600分)</option>
+                            <option value="1000">動態四時 (1000分)</option>
+                            <option value="sunrise">固定日出</option>
+                            <option value="day">固定白天</option>
+                            <option value="sunset">固定夕陽</option>
+                            <option value="night">固定黑夜</option>
+                        </select>
+                    </div>
+
+                    <!-- Environment Theme Selector -->
+                    <div class="flex items-center gap-1 bg-gray-900/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-gray-700 text-xs">
+                        <label for="envSelect" class="whitespace-nowrap font-medium text-emerald-300">🏞️ 場景:</label>
+                        <select id="envSelect" class="bg-gray-800 text-gray-100 text-xs rounded-lg px-2 py-1 outline-none cursor-pointer border border-gray-600 focus:ring-2 focus:ring-emerald-400">
+                            <option value="random">🎲 動態隨機場景 (每250分)</option>
+                            <option value="desert" selected>🌵 經典荒漠</option>
+                            <option value="city">🏙️ 繁華都市</option>
+                            <option value="countryside">🌾 恬靜鄉村</option>
+                            <option value="school">🏫 活力校園</option>
+                            <option value="cyberpunk">🌃 賽博朋克</option>
+                        </select>
+                    </div>
+
+                    <!-- Weather Mode Selector -->
+                    <div class="flex items-center gap-1 bg-gray-900/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-gray-700 text-xs">
+                        <label for="weatherSelect" class="whitespace-nowrap font-medium text-sky-300">🌧️ 天氣:</label>
+                        <select id="weatherSelect" class="bg-gray-800 text-gray-100 text-xs rounded-lg px-2 py-1 outline-none cursor-pointer border border-gray-600 focus:ring-2 focus:ring-sky-400">
+                            <option value="dynamic" selected>動態隨機天氣</option>
+                            <option value="clear">晴朗無雨</option>
+                            <option value="rain">暴雨閃電 ⚡</option>
+                            <option value="snow">飄逸雪花 ❄️</option>
+                            <option value="fog">朦朧大霧 🌫️</option>
+                        </select>
+                    </div>
+
+                    <!-- Dino Color Selector -->
+                    <div class="flex items-center gap-1 bg-gray-900/60 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-gray-700 text-xs">
+                        <label for="dinoColorSelect" class="whitespace-nowrap font-medium text-emerald-300">🦖 恐龍顏色:</label>
+                        <select id="dinoColorSelect" class="bg-gray-800 text-gray-100 text-xs rounded-lg px-2 py-1 outline-none cursor-pointer border border-gray-600 focus:ring-2 focus:ring-emerald-400">
+                            <option value="auto" selected>預設 (環境對比色)</option>
+                            <option value="rainbow">🌈 炫彩七彩光</option>
+                            <option value="random_cycle">🎲 隨機煥彩 (每100分)</option>
+                            <option value="#22c55e">🟢 鮮豔綠 (Green)</option>
+                            <option value="#ec4899">🩷 夢幻粉 (Pink)</option>
+                            <option value="#3b82f6">🟦 蔚藍 (Blue)</option>
+                            <option value="#ef4444">🔴 熾焰紅 (Red)</option>
+                            <option value="#a855f7">🟣 魅惑紫 (Purple)</option>
+                            <option value="#eab308">🟡 檸檬黃 (Yellow)</option>
+                            <option value="#f97316">🟠 活力橘 (Orange)</option>
+                            <option value="#ffffff">⚪ 經典白 (White)</option>
+                            <option value="#1e293b">⚫ 酷炫黑 (Black)</option>
+                            <option value="custom">🎨 自訂任意顏色...</option>
+                        </select>
+                        <input type="color" id="customColorPicker" class="hidden w-6 h-6 p-0 border-0 rounded cursor-pointer bg-transparent" value="#10b981" title="點擊選擇任意顏色">
+                    </div>
+
+                    <!-- Randomize All Button -->
+                    <button id="randomizeAllBtn" class="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold border border-purple-400 transition shadow flex items-center gap-1">
+                        🎲 一鍵隨機
+                    </button>
+
+                    <!-- Sound Toggle Button -->
+                    <button id="soundBtn" class="px-2.5 py-1.5 rounded-xl bg-gray-900/60 hover:bg-gray-800 text-gray-200 text-xs font-medium border border-gray-700 transition">
+                        🔊 音效: 開
+                    </button>
+                    <!-- Mobile Touch Button for Ducking -->
+                    <button id="touchDuckBtn" class="sm:hidden px-3 py-1.5 bg-indigo-600 active:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow">
+                        蹲下 (Duck)
+                    </button>
+                </div>
+
+                <!-- High Score & Current Score Display -->
+                <div class="pixel-font text-sm sm:text-base flex items-center gap-4 bg-gray-900/80 px-4 py-2 rounded-xl border border-gray-700">
+                    <div class="text-gray-400">HI <span id="highScoreText">00000</span></div>
+                    <div class="text-amber-400" id="scoreText">00000</div>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full max-w-[800px] aspect-[8/3] bg-black rounded-xl overflow-hidden shadow-inner border border-gray-700">
+                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+                <!-- Start Overlay -->
+                <div id="startOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-white p-4">
+                    <div class="pixel-font text-lg sm:text-2xl text-amber-300 mb-2 drop-shadow-md text-center">PRESS SPACE TO START</div>
+                    <p class="text-sm text-gray-200 mb-4 text-center font-medium">按 [空白鍵] / [↑ 上鍵] 或 [點擊畫面] 開始跳躍</p>
+                    <button onclick="startGame()" class="btn-arcade bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-amber-700 text-sm tracking-wide">
+                        開始遊戲
+                    </button>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white p-4">
+                    <div class="pixel-font text-2xl sm:text-3xl text-red-400 mb-2 tracking-widest drop-shadow">GAME OVER</div>
+                    <p class="text-gray-300 mb-1 text-sm">最終得分: <span id="finalScore" class="font-bold text-amber-300 pixel-font">0</span></p>
+                    <p class="text-xs text-gray-400 mb-5">點擊畫面或按 [空白鍵] 即可重新開始</p>
+                    <button id="restartBtn" class="btn-arcade bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-indigo-800 text-sm flex items-center gap-2">
+                        🔄 重新開始
+                    </button>
+                </div>
+
+                <!-- Pause Overlay -->
+                <div id="pauseOverlay" class="hidden absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                    <div class="pixel-font text-2xl text-amber-400 mb-2">PAUSED</div>
+                    <p class="text-sm text-gray-300">按 [ P ] 鍵繼續遊戲</p>
+                </div>
+            </div>
+
+            <!-- Footer Controls Help -->
+            <div class="w-full flex justify-between items-center text-xs text-gray-400 mt-3 px-2">
+                <span>跳躍: <kbd class="px-1.5 py-0.5 bg-gray-700 text-gray-200 rounded">Space</kbd> / <kbd class="px-1.5 py-0.5 bg-gray-700 text-gray-200 rounded">↑</kbd></span>
+                <span>蹲下: <kbd class="px-1.5 py-0.5 bg-gray-700 text-gray-200 rounded">↓</kbd></span>
+                <span>暫停: <kbd class="px-1.5 py-0.5 bg-gray-700 text-gray-200 rounded">P</kbd></span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. AUDIO SYNTHESIZER (Web Audio API)
+           ========================================================================== */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playJump() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.12);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playScore() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                
+                [0, 0.08].forEach((delay, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(idx === 0 ? 880 : 1320, now + delay);
+                    
+                    gain.gain.setValueAtTime(0.1, now + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + delay);
+                    osc.stop(now + delay + 0.08);
+                });
+            }
+
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const sound = new SoundFX();
+
+        /* ==========================================================================
+           2. GAME ENGINE, REALISTIC SKY PHASES & WEATHER SYSTEM
+           ========================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 300;
+        const GROUND_Y = 250;
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // UI Elements
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const finalScoreText = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        const touchDuckBtn = document.getElementById('touchDuckBtn');
+        const skySelect = document.getElementById('skySelect');
+        const envSelect = document.getElementById('envSelect');
+        const weatherSelect = document.getElementById('weatherSelect');
+        const dinoColorSelect = document.getElementById('dinoColorSelect');
+        const customColorPicker = document.getElementById('customColorPicker');
+        const randomizeAllBtn = document.getElementById('randomizeAllBtn');
+
+        // Dynamic Random Switching State
+        const ENV_LIST = ['desert', 'city', 'countryside', 'school', 'cyberpunk'];
+        const COLOR_LIST = ['#22c55e', '#ec4899', '#3b82f6', '#ef4444', '#a855f7', '#eab308', '#f97316', '#ffffff', '#1e293b'];
+        let activeDynamicEnv = 'desert';
+        let activeDynamicColor = '#22c55e';
+
+        function getCurrentEnv() {
+            if (envSelect.value === 'random') {
+                return activeDynamicEnv;
+            }
+            return envSelect.value;
+        }
+
+        // Game State Variables
+        let isRunning = false;
+        let isPaused = false;
+        let isGameOver = false;
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('dino_high_score') || '0', 10);
+        let speed = 6;
+        let frameCount = 0;
+        let lastScoreMilestone = 0;
+
+        // Weather System State
+        let currentWeather = 'clear'; // 'clear', 'rain', 'snow', 'fog'
+        let weatherParticles = [];
+        let lightningFlashAlpha = 0;
+
+        highScoreText.textContent = String(highScore).padStart(5, '0');
+
+        /*
+           Realistic Sky Palettes for Sunrise, Day, Sunset, Night
+        */
+        const SKY_THEMES = {
+            sunrise: {
+                name: '日出 (Sunrise)',
+                topColor: '#2d1b4e',
+                midColor: '#8a4b6e',
+                bottomColor: '#f7aa7d',
+                sunColor: '#ff7e5f',
+                sunGlow: 'rgba(255, 126, 95, 0.4)',
+                dinoColor: '#2b1d28',
+                groundColor: '#a86b62',
+                isNight: false
+            },
+            day: {
+                name: '白天 (Daytime)',
+                topColor: '#3a7bd5',
+                midColor: '#5a9bd5',
+                bottomColor: '#70e1f5',
+                sunColor: '#fff176',
+                sunGlow: 'rgba(255, 241, 118, 0.5)',
+                dinoColor: '#2c3e50',
+                groundColor: '#507890',
+                isNight: false
+            },
+            sunset: {
+                name: '夕陽 (Sunset)',
+                topColor: '#1a1c4b',
+                midColor: '#833ab4',
+                bottomColor: '#fd1d1d',
+                sunColor: '#ff512f',
+                sunGlow: 'rgba(255, 81, 47, 0.5)',
+                dinoColor: '#21101d',
+                groundColor: '#7a3e5c',
+                isNight: false
+            },
+            night: {
+                name: '黑夜 (Night)',
+                topColor: '#0b0e17',
+                midColor: '#131927',
+                bottomColor: '#1c2536',
+                sunColor: '#f4f6f0', // Crescent Moon
+                sunGlow: 'rgba(244, 246, 240, 0.3)',
+                dinoColor: '#e2e8f0', // Bright contrast for night
+                groundColor: '#334155',
+                isNight: true
+            }
+        };
+
+        let currentSky = SKY_THEMES.day;
+
+        // Helper function for Dino Color Selection
+        function getActiveDinoColor(defaultSkyColor) {
+            const chosen = dinoColorSelect.value;
+            if (chosen === 'auto') return defaultSkyColor;
+            if (chosen === 'rainbow') {
+                const hue = (frameCount * 4) % 360;
+                return `hsl(${hue}, 85%, 60%)`;
+            }
+            if (chosen === 'random_cycle') {
+                return activeDynamicColor;
+            }
+            if (chosen === 'custom') {
+                return customColorPicker.value;
+            }
+            return chosen;
+        }
+
+        /* ==========================================================================
+           3. DINO PLAYER & ANIMATIONS
+           ========================================================================== */
+        const dino = {
+            x: 50,
+            y: GROUND_Y - 46,
+            width: 44,
+            height: 46,
+            velocityY: 0,
+            gravity: 0.6,
+            jumpStrength: -11.5,
+            isJumping: false,
+            isDucking: false,
+            legFrame: 0,
+            animTimer: 0,
+
+            reset() {
+                this.y = GROUND_Y - 46;
+                this.width = 44;
+                this.height = 46;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.isDucking = false;
+            },
+
+            jump() {
+                if (!this.isJumping) {
+                    this.velocityY = this.jumpStrength;
+                    this.isJumping = true;
+                    sound.playJump();
+                }
+            },
+
+            duck(ducking) {
+                if (this.isJumping) return;
+                
+                if (ducking && !this.isDucking) {
+                    this.isDucking = true;
+                    this.height = 26;
+                    this.width = 55;
+                    this.y = GROUND_Y - 26;
+                } else if (!ducking && this.isDucking) {
+                    this.isDucking = false;
+                    this.height = 46;
+                    this.width = 44;
+                    this.y = GROUND_Y - 46;
+                }
+            },
+
+            update() {
+                if (this.isJumping) {
+                    this.velocityY += this.gravity;
+                    this.y += this.velocityY;
+
+                    const currentHeight = this.isDucking ? 26 : 46;
+                    if (this.y >= GROUND_Y - currentHeight) {
+                        this.y = GROUND_Y - currentHeight;
+                        this.isJumping = false;
+                        this.velocityY = 0;
+                    }
+                }
+
+                this.animTimer++;
+                if (this.animTimer % 6 === 0) {
+                    this.legFrame = (this.legFrame + 1) % 2;
+                }
+            },
+
+            draw(defaultColor) {
+                const activeColor = getActiveDinoColor(defaultColor);
+                ctx.fillStyle = activeColor;
+
+                if (isGameOver) {
+                    this.drawStandingDino(activeColor, true);
+                    return;
+                }
+
+                if (this.isDucking) {
+                    this.drawDuckingDino(activeColor);
+                } else {
+                    this.drawStandingDino(activeColor, false);
+                }
+            },
+
+            drawStandingDino(color, dead) {
+                const x = this.x;
+                const y = this.y;
+
+                ctx.fillRect(x + 20, y, 22, 16);     // Head
+                ctx.fillRect(x + 36, y + 2, 4, 4);   // Snout details
+                ctx.fillRect(x + 16, y + 14, 24, 18); // Body
+                ctx.fillRect(x + 6, y + 18, 10, 10);  // Tail top
+                ctx.fillRect(x, y + 22, 8, 6);       // Tail tip
+                ctx.fillRect(x + 32, y + 20, 8, 4);   // Arm
+
+                // Eye cutout
+                ctx.fillStyle = currentSky.isNight ? '#0b0e17' : '#ffffff';
+                ctx.fillRect(x + 26, y + 4, 4, 4);
+
+                ctx.fillStyle = color; // Restore color
+
+                // Legs
+                if (this.isJumping) {
+                    ctx.fillRect(x + 18, y + 32, 4, 10);
+                    ctx.fillRect(x + 28, y + 32, 4, 10);
+                } else {
+                    if (this.legFrame === 0) {
+                        ctx.fillRect(x + 18, y + 32, 4, 14);
+                        ctx.fillRect(x + 28, y + 32, 8, 6);
+                    } else {
+                        ctx.fillRect(x + 18, y + 32, 8, 6);
+                        ctx.fillRect(x + 28, y + 32, 4, 14);
+                    }
+                }
+            },
+
+            drawDuckingDino(color) {
+                const x = this.x;
+                const y = this.y;
+
+                ctx.fillRect(x, y + 8, 45, 14);
+                ctx.fillRect(x + 35, y, 20, 12);
+                ctx.fillRect(x - 6, y + 10, 8, 6);
+
+                ctx.fillStyle = currentSky.isNight ? '#0b0e17' : '#ffffff';
+                ctx.fillRect(x + 42, y + 2, 3, 3);
+                ctx.fillStyle = color;
+
+                if (this.legFrame === 0) {
+                    ctx.fillRect(x + 12, y + 22, 6, 4);
+                    ctx.fillRect(x + 30, y + 22, 10, 4);
+                } else {
+                    ctx.fillRect(x + 12, y + 22, 10, 4);
+                    ctx.fillRect(x + 30, y + 22, 6, 4);
+                }
+            }
+        };
+
+        /* ==========================================================================
+           4. WEATHER ENGINE (Rain, Thunderstorm, Snow, Fog)
+           ========================================================================== */
+
+        function updateWeatherMode() {
+            const mode = weatherSelect.value;
+            if (mode !== 'dynamic') {
+                currentWeather = mode;
+            } else {
+                // Change weather every 400 points dynamically
+                const cycle = Math.floor(score / 350) % 4;
+                const weatherTypes = ['clear', 'rain', 'snow', 'fog'];
+                currentWeather = weatherTypes[cycle];
+            }
+        }
+
+        function initWeatherParticles() {
+            weatherParticles = [];
+            for (let i = 0; i < 80; i++) {
+                weatherParticles.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: Math.random() * CANVAS_HEIGHT,
+                    length: 10 + Math.random() * 12,
+                    speedY: 8 + Math.random() * 6,
+                    speedX: -2 + Math.random() * -1,
+                    radius: 1.5 + Math.random() * 2.5,
+                    opacity: 0.3 + Math.random() * 0.6,
+                    splashed: false
+                });
+            }
+        }
+        initWeatherParticles();
+
+        function updateAndDrawWeather() {
+            updateWeatherMode();
+
+            // 1. Rain & Lightning Weather
+            if (currentWeather === 'rain') {
+                // Occasional lightning strike flash
+                if (Math.random() < 0.008) {
+                    lightningFlashAlpha = 0.5 + Math.random() * 0.3;
+                }
+                if (lightningFlashAlpha > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${lightningFlashAlpha})`;
+                    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                    lightningFlashAlpha -= 0.05;
+                }
+
+                ctx.strokeStyle = 'rgba(186, 230, 253, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.fillStyle = 'rgba(186, 230, 253, 0.8)';
+
+                weatherParticles.forEach(p => {
+                    p.y += p.speedY;
+                    p.x += p.speedX;
+
+                    if (p.y >= GROUND_Y) {
+                        // Rain splash on ground
+                        ctx.fillRect(p.x, GROUND_Y - 1, 3, 1);
+                        p.y = -10;
+                        p.x = Math.random() * CANVAS_WIDTH;
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x + p.speedX, p.y + p.length);
+                    ctx.stroke();
+                });
+            }
+
+            // 2. Snow Weather
+            else if (currentWeather === 'snow') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                weatherParticles.forEach(p => {
+                    p.y += (p.speedY * 0.25);
+                    p.x += Math.sin(frameCount * 0.05 + p.y) * 0.8 - 0.5;
+
+                    if (p.y >= GROUND_Y) {
+                        p.y = -5;
+                        p.x = Math.random() * CANVAS_WIDTH;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            // 3. Fog Weather
+            else if (currentWeather === 'fog') {
+                const fogGrad = ctx.createLinearGradient(0, GROUND_Y - 120, 0, GROUND_Y);
+                fogGrad.addColorStop(0, 'rgba(200, 215, 230, 0)');
+                fogGrad.addColorStop(0.5, 'rgba(220, 230, 240, 0.35)');
+                fogGrad.addColorStop(1, 'rgba(200, 215, 230, 0.1)');
+
+                ctx.fillStyle = fogGrad;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Drifting fog clouds
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                const shift = (frameCount * 0.8) % CANVAS_WIDTH;
+                ctx.beginPath();
+                ctx.arc(150 - shift, GROUND_Y - 30, 80, 0, Math.PI * 2);
+                ctx.arc(550 - shift, GROUND_Y - 40, 110, 0, Math.PI * 2);
+                ctx.arc(950 - shift, GROUND_Y - 30, 90, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        /* ==========================================================================
+           5. OBSTACLES & ENVIRONMENT
+           ========================================================================== */
+        let obstacles = [];
+        let stars = [];
+
+        class Cactus {
+            constructor(type) {
+                this.type = type; // 0: Small, 1: Big, 2: Group
+                this.x = CANVAS_WIDTH + 20;
+                
+                if (type === 0) {
+                    this.width = 20;
+                    this.height = 38;
+                } else if (type === 1) {
+                    this.width = 26;
+                    this.height = 50;
+                } else {
+                    this.width = 48;
+                    this.height = 42;
+                }
+                this.y = GROUND_Y - this.height;
+            }
+
+            update() {
+                this.x -= speed;
+            }
+
+            draw(color) {
+                const env = getCurrentEnv();
+                ctx.fillStyle = color;
+
+                // 🏙️ CITY ENVIRONMENT OBSTACLES
+                if (env === 'city') {
+                    if (this.type === 0) { // Traffic Cone (三角錐)
+                        ctx.fillStyle = '#f97316'; // Orange
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 10, this.y);
+                        ctx.lineTo(this.x + 20, this.y + 38);
+                        ctx.lineTo(this.x, this.y + 38);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff'; // White stripe
+                        ctx.fillRect(this.x + 5, this.y + 16, 10, 6);
+                    } else if (this.type === 1) { // Fire Hydrant (消防栓)
+                        ctx.fillStyle = '#ef4444'; // Red
+                        ctx.fillRect(this.x + 4, this.y + 8, 18, 42);
+                        ctx.fillRect(this.x + 1, this.y + 16, 24, 8);
+                        ctx.fillStyle = '#fbbf24'; // Yellow top cap
+                        ctx.fillRect(this.x + 7, this.y, 12, 8);
+                    } else { // Construction Barrier (黃黑護欄)
+                        ctx.fillStyle = '#eab308';
+                        ctx.fillRect(this.x, this.y + 10, 48, 20);
+                        ctx.fillStyle = '#1e293b';
+                        for (let i = 0; i < 48; i += 12) {
+                            ctx.fillRect(this.x + i, this.y + 10, 6, 20);
+                        }
+                        ctx.fillStyle = '#475569'; // Support legs
+                        ctx.fillRect(this.x + 6, this.y + 30, 6, 12);
+                        ctx.fillRect(this.x + 36, this.y + 30, 6, 12);
+                    }
+                    return;
+                }
+
+                // 🌾 COUNTRYSIDE OBSTACLES
+                if (env === 'countryside') {
+                    if (this.type === 0) { // Hay Bale (圓形草堆)
+                        ctx.fillStyle = '#eab308';
+                        ctx.beginPath();
+                        ctx.arc(this.x + 10, this.y + 28, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#ca8a04';
+                        ctx.fillRect(this.x + 5, this.y + 26, 10, 4);
+                    } else if (this.type === 1) { // Wooden Fence (木籬笆)
+                        ctx.fillStyle = '#b45309';
+                        ctx.fillRect(this.x + 2, this.y, 6, 50);
+                        ctx.fillRect(this.x + 18, this.y, 6, 50);
+                        ctx.fillRect(this.x, this.y + 12, 26, 6);
+                        ctx.fillRect(this.x, this.y + 30, 26, 6);
+                    } else { // Stacked Wooden Crates (木箱)
+                        ctx.fillStyle = '#d97706';
+                        ctx.fillRect(this.x, this.y + 16, 24, 26);
+                        ctx.fillRect(this.x + 24, this.y + 16, 24, 26);
+                        ctx.fillRect(this.x + 12, this.y - 8, 24, 24);
+                        ctx.strokeStyle = '#78350f';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(this.x + 1, this.y + 17, 22, 24);
+                        ctx.strokeRect(this.x + 25, this.y + 17, 22, 24);
+                        ctx.strokeRect(this.x + 13, this.y - 7, 22, 22);
+                    }
+                    return;
+                }
+
+                // 🏫 SCHOOL OBSTACLES
+                if (env === 'school') {
+                    if (this.type === 0) { // School Desk (課桌)
+                        ctx.fillStyle = '#f59e0b';
+                        ctx.fillRect(this.x, this.y + 10, 20, 6);
+                        ctx.fillStyle = '#475569';
+                        ctx.fillRect(this.x + 2, this.y + 16, 4, 22);
+                        ctx.fillRect(this.x + 14, this.y + 16, 4, 22);
+                    } else if (this.type === 1) { // Vaulting Box (跳箱)
+                        ctx.fillStyle = '#d97706';
+                        ctx.fillRect(this.x, this.y + 10, 26, 40);
+                        ctx.fillStyle = '#38bdf8'; // Soft top padding
+                        ctx.fillRect(this.x - 2, this.y, 30, 10);
+                        ctx.fillStyle = '#92400e';
+                        ctx.fillRect(this.x, this.y + 22, 26, 3);
+                        ctx.fillRect(this.x, this.y + 34, 26, 3);
+                    } else { // Blackboard & Stand (小黑板)
+                        ctx.fillStyle = '#065f46'; // Board
+                        ctx.fillRect(this.x + 4, this.y, 40, 28);
+                        ctx.strokeStyle = '#b45309'; // Wooden frame
+                        ctx.strokeRect(this.x + 4, this.y, 40, 28);
+                        ctx.fillStyle = '#475569'; // Stand legs
+                        ctx.fillRect(this.x + 8, this.y + 28, 4, 14);
+                        ctx.fillRect(this.x + 36, this.y + 28, 4, 14);
+                    }
+                    return;
+                }
+
+                // 🌃 CYBERPUNK OBSTACLES
+                if (env === 'cyberpunk') {
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 8;
+                    if (this.type === 0) {
+                        ctx.fillRect(this.x + 6, this.y, 8, 38);
+                        ctx.fillStyle = '#ec4899';
+                        ctx.fillRect(this.x + 2, this.y + 10, 16, 4);
+                    } else if (this.type === 1) {
+                        ctx.fillStyle = '#a855f7';
+                        ctx.fillRect(this.x + 6, this.y, 14, 50);
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.fillRect(this.x + 2, this.y + 15, 22, 6);
+                    } else {
+                        ctx.fillStyle = '#ec4899';
+                        ctx.fillRect(this.x, this.y + 8, 48, 8);
+                        ctx.fillRect(this.x + 8, this.y + 16, 8, 26);
+                        ctx.fillRect(this.x + 32, this.y + 16, 8, 26);
+                    }
+                    ctx.shadowBlur = 0; // Reset shadow
+                    return;
+                }
+
+                // 🌵 CLASSIC DESERT (DEFAULT)
+                if (this.type === 0) {
+                    ctx.fillRect(this.x + 6, this.y, 6, this.height);
+                    ctx.fillRect(this.x, this.y + 10, 6, 14);
+                    ctx.fillRect(this.x, this.y + 20, 12, 4);
+                    ctx.fillRect(this.x + 12, this.y + 14, 6, 12);
+                    ctx.fillRect(this.x + 6, this.y + 22, 12, 4);
+                } else if (this.type === 1) {
+                    ctx.fillRect(this.x + 8, this.y, 8, this.height);
+                    ctx.fillRect(this.x, this.y + 12, 8, 20);
+                    ctx.fillRect(this.x, this.y + 28, 16, 4);
+                    ctx.fillRect(this.x + 16, this.y + 16, 8, 18);
+                    ctx.fillRect(this.x + 8, this.y + 30, 16, 4);
+                } else {
+                    ctx.fillRect(this.x + 4, this.y + 6, 6, 36);
+                    ctx.fillRect(this.x, this.y + 16, 12, 4);
+                    ctx.fillRect(this.x + 28, this.y, 8, 42);
+                    ctx.fillRect(this.x + 20, this.y + 14, 18, 4);
+                }
+            }
+        }
+
+        class Pterodactyl {
+            constructor() {
+                this.x = CANVAS_WIDTH + 20;
+                this.width = 42;
+                this.height = 30;
+                const heights = [GROUND_Y - 30, GROUND_Y - 52, GROUND_Y - 75];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                this.wingFrame = 0;
+                this.timer = 0;
+            }
+
+            update() {
+                this.x -= (speed + 0.8);
+                this.timer++;
+                if (this.timer % 12 === 0) {
+                    this.wingFrame = (this.wingFrame + 1) % 2;
+                }
+            }
+
+            draw(color) {
+                const env = getCurrentEnv();
+                ctx.fillStyle = color;
+                const x = this.x;
+                const y = this.y;
+
+                // 🏙️ CITY DRONE
+                if (env === 'city') {
+                    ctx.fillStyle = '#38bdf8'; // Drone body
+                    ctx.fillRect(x + 10, y + 10, 22, 10);
+                    ctx.fillStyle = '#0284c7'; // Rotors
+                    const propY = this.wingFrame === 0 ? y + 4 : y + 6;
+                    ctx.fillRect(x, propY, 12, 3);
+                    ctx.fillRect(x + 30, propY, 12, 3);
+                    ctx.fillStyle = '#ef4444'; // Signal light
+                    ctx.fillRect(x + 19, y + 12, 4, 4);
+                    return;
+                }
+
+                // 🏫 SCHOOL PAPER AIRPLANE
+                if (env === 'school') {
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.beginPath();
+                    ctx.moveTo(x + 40, y + 15);
+                    ctx.lineTo(x, y);
+                    ctx.lineTo(x + 10, y + 18);
+                    ctx.lineTo(x, y + 28);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.beginPath();
+                    ctx.moveTo(x + 40, y + 15);
+                    ctx.lineTo(x + 10, y + 18);
+                    ctx.lineTo(x + 2, y + 13);
+                    ctx.closePath();
+                    ctx.fill();
+                    return;
+                }
+
+                // 🌃 CYBERPUNK DRONE
+                if (env === 'cyberpunk') {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(x + 20, y + 15, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(x + 8, y + 13, 24, 4);
+                    ctx.shadowBlur = 0;
+                    return;
+                }
+
+                // 🌾 / 🌵 CLASSIC BIRDS & PTERODACTYL
+                ctx.fillRect(x + 12, y + 12, 18, 8);
+                ctx.fillRect(x, y + 14, 12, 4);
+                ctx.fillRect(x + 30, y + 8, 10, 8);
+                ctx.fillRect(x + 40, y + 12, 6, 4);
+
+                if (this.wingFrame === 0) {
+                    ctx.fillRect(x + 16, y, 6, 12);
+                    ctx.fillRect(x + 22, y - 4, 4, 8);
+                } else {
+                    ctx.fillRect(x + 16, y + 20, 6, 10);
+                    ctx.fillRect(x + 22, y + 24, 4, 6);
+                }
+            }
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 30; i++) {
+                stars.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: Math.random() * (GROUND_Y - 90),
+                    size: Math.random() > 0.6 ? 2 : 3,
+                    alpha: Math.random() * 0.8 + 0.2
+                });
+            }
+        }
+        initStars();
+
+        function spawnObstacle() {
+            if (obstacles.length > 0) {
+                const lastObs = obstacles[obstacles.length - 1];
+                if (CANVAS_WIDTH - lastObs.x < 220 + Math.random() * 180) {
+                    return;
+                }
+            }
+
+            if (score > 250 && Math.random() < 0.35) {
+                obstacles.push(new Pterodactyl());
+            } else {
+                const cactusType = Math.floor(Math.random() * 3);
+                obstacles.push(new Cactus(cactusType));
+            }
+        }
+
+        /* ==========================================================================
+           6. SKY & ENVIRONMENT SCENERY RENDERING
+           ========================================================================== */
+
+        function updateSkyCycle() {
+            const mode = skySelect.value;
+
+            if (mode in SKY_THEMES) {
+                currentSky = SKY_THEMES[mode];
+            } else {
+                const interval = parseInt(mode, 10) || 600;
+                const phaseDuration = interval / 4;
+                const phaseIndex = Math.floor((score % interval) / phaseDuration);
+
+                const phases = [SKY_THEMES.sunrise, SKY_THEMES.day, SKY_THEMES.sunset, SKY_THEMES.night];
+                currentSky = phases[phaseIndex];
+            }
+        }
+
+        function drawEnvironmentScenery() {
+            const env = getCurrentEnv();
+            const darkCoeff = currentSky.isNight ? 0.2 : 0.6;
+
+            // 🏙️ CITY SKYLINE
+            if (env === 'city') {
+                ctx.fillStyle = currentSky.isNight ? 'rgba(15, 23, 42, 0.85)' : 'rgba(71, 85, 105, 0.4)';
+                // Draw distant skyscraper silhouettes
+                const buildings = [
+                    { x: 20, w: 60, h: 120 },
+                    { x: 90, w: 80, h: 160 },
+                    { x: 180, w: 50, h: 100 },
+                    { x: 250, w: 90, h: 180 },
+                    { x: 360, w: 70, h: 130 },
+                    { x: 450, w: 100, h: 170 },
+                    { x: 570, w: 60, h: 110 },
+                    { x: 650, w: 85, h: 150 },
+                    { x: 750, w: 50, h: 90 }
+                ];
+
+                buildings.forEach(b => {
+                    ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
+                    // Lit windows
+                    ctx.fillStyle = currentSky.isNight ? '#fef08a' : '#ffffff';
+                    for (let wx = b.x + 8; wx < b.x + b.w - 8; wx += 14) {
+                        for (let wy = GROUND_Y - b.h + 12; wy < GROUND_Y - 10; wy += 18) {
+                            if ((wx + wy) % 3 === 0) {
+                                ctx.fillRect(wx, wy, 6, 8);
+                            }
+                        }
+                    }
+                    ctx.fillStyle = currentSky.isNight ? 'rgba(15, 23, 42, 0.85)' : 'rgba(71, 85, 105, 0.4)';
+                });
+            }
+
+            // 🌾 COUNTRYSIDE HILLS & WINDMILL
+            else if (env === 'countryside') {
+                // Rolling green hills
+                ctx.fillStyle = currentSky.isNight ? '#064e3b' : '#16a34a';
+                ctx.beginPath();
+                ctx.arc(150, GROUND_Y + 120, 200, 0, Math.PI * 2);
+                ctx.arc(500, GROUND_Y + 160, 250, 0, Math.PI * 2);
+                ctx.arc(800, GROUND_Y + 130, 220, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Windmill Silhouette
+                const wmX = 620;
+                const wmY = GROUND_Y - 90;
+                ctx.fillStyle = currentSky.isNight ? '#022c22' : '#15803d';
+                ctx.beginPath();
+                ctx.moveTo(wmX + 15, wmY);
+                ctx.lineTo(wmX + 30, wmY + 90);
+                ctx.lineTo(wmX, wmY + 90);
+                ctx.closePath();
+                ctx.fill();
+
+                // Rotating Windmill Blades
+                ctx.strokeStyle = currentSky.isNight ? '#a7f3d0' : '#fef08a';
+                ctx.lineWidth = 3;
+                const angle = frameCount * 0.03;
+                for (let i = 0; i < 4; i++) {
+                    const a = angle + (i * Math.PI / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(wmX + 15, wmY + 10);
+                    ctx.lineTo(wmX + 15 + Math.cos(a) * 35, wmY + 10 + Math.sin(a) * 35);
+                    ctx.stroke();
+                }
+            }
+
+            // 🏫 SCHOOL BUILDINGS
+            else if (env === 'school') {
+                ctx.fillStyle = currentSky.isNight ? '#1e1b4b' : '#4338ca';
+                // Main Campus Building
+                ctx.fillRect(120, GROUND_Y - 110, 260, 110);
+                ctx.fillRect(210, GROUND_Y - 150, 80, 40); // Clock Tower
+
+                // Clock Face
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(250, GROUND_Y - 130, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#1e1b4b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(250, GROUND_Y - 130);
+                ctx.lineTo(250, GROUND_Y - 138);
+                ctx.moveTo(250, GROUND_Y - 130);
+                ctx.lineTo(255, GROUND_Y - 130);
+                ctx.stroke();
+
+                // Windows grid
+                ctx.fillStyle = currentSky.isNight ? '#fde047' : '#93c5fd';
+                for (let x = 140; x < 360; x += 30) {
+                    if (x >= 210 && x <= 270) continue;
+                    for (let y = GROUND_Y - 95; y < GROUND_Y - 15; y += 25) {
+                        ctx.fillRect(x, y, 16, 14);
+                    }
+                }
+            }
+
+            // 🌃 CYBERPUNK SYNTHWAVE TOWERS
+            else if (env === 'cyberpunk') {
+                ctx.fillStyle = 'rgba(168, 85, 247, 0.25)';
+                ctx.fillRect(0, GROUND_Y - 140, CANVAS_WIDTH, 140);
+
+                ctx.strokeStyle = '#ec4899';
+                ctx.lineWidth = 1;
+                for (let x = 30; x < CANVAS_WIDTH; x += 70) {
+                    ctx.strokeRect(x, GROUND_Y - 120, 45, 120);
+                }
+            }
+        }
+
+        function drawSkyAndSun() {
+            // Draw Sky Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            skyGrad.addColorStop(0, currentSky.topColor);
+            skyGrad.addColorStop(0.5, currentSky.midColor);
+            skyGrad.addColorStop(1, currentSky.bottomColor);
+
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, GROUND_Y);
+
+            // Draw Stars in Night Sky
+            if (currentSky.isNight) {
+                stars.forEach(s => {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                    ctx.fillRect(s.x, s.y, s.size, s.size);
+                });
+            }
+
+            // Draw Celestial Orb (Sun or Moon)
+            let orbX = 680;
+            let orbY = 60;
+
+            if (currentSky === SKY_THEMES.sunrise) {
+                orbX = 620;
+                orbY = 130;
+            } else if (currentSky === SKY_THEMES.sunset) {
+                orbX = 680;
+                orbY = 140;
+            } else if (currentSky === SKY_THEMES.day) {
+                orbX = 650;
+                orbY = 50;
+            }
+
+            // Glow Aura
+            ctx.fillStyle = currentSky.sunGlow;
+            ctx.beginPath();
+            ctx.arc(orbX, orbY, 24, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main Orb
+            ctx.fillStyle = currentSky.sunColor;
+            ctx.beginPath();
+            ctx.arc(orbX, orbY, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crescent Moon cutout if Night
+            if (currentSky.isNight) {
+                ctx.fillStyle = currentSky.topColor;
+                ctx.beginPath();
+                ctx.arc(orbX + 5, orbY - 3, 12, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Render Scenery Skyline based on Environment
+            drawEnvironmentScenery();
+        }
+
+        function drawGround() {
+            const env = getCurrentEnv();
+
+            // 🏙️ CITY ASPHALT ROAD
+            if (env === 'city') {
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+                // Moving white lane dashes
+                ctx.fillStyle = '#f8fafc';
+                const offset = (frameCount * speed) % 40;
+                for (let x = -offset; x < CANVAS_WIDTH; x += 40) {
+                    ctx.fillRect(x, GROUND_Y + 22, 22, 4);
+                }
+                return;
+            }
+
+            // 🌾 COUNTRYSIDE GRASS PATH
+            if (env === 'countryside') {
+                ctx.fillStyle = '#78350f'; // Earth dirt
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+                ctx.fillStyle = '#22c55e'; // Green grass top line
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 6);
+                return;
+            }
+
+            // 🏫 SCHOOL RUNNING TRACK
+            if (env === 'school') {
+                ctx.fillStyle = '#9f1239'; // Red synthetic track
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+                ctx.fillStyle = '#ffffff'; // White lane lines
+                ctx.fillRect(0, GROUND_Y + 2, CANVAS_WIDTH, 3);
+                ctx.fillRect(0, GROUND_Y + 24, CANVAS_WIDTH, 3);
+                return;
+            }
+
+            // 🌃 CYBERPUNK NEON GRID
+            if (env === 'cyberpunk') {
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, GROUND_Y);
+                ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+                ctx.stroke();
+
+                // Moving grid lines
+                ctx.strokeStyle = 'rgba(236, 72, 153, 0.5)';
+                const offset = (frameCount * speed) % 30;
+                for (let x = -offset; x < CANVAS_WIDTH; x += 30) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, GROUND_Y);
+                    ctx.lineTo(x - 20, CANVAS_HEIGHT);
+                    ctx.stroke();
+                }
+                return;
+            }
+
+            // 🌵 CLASSIC DESERT GROUND
+            ctx.fillStyle = currentSky.groundColor;
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+
+            // Ground Line Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
+
+            // Animated ground pixels
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            const offset = (frameCount * speed) % 24;
+            for (let x = -offset; x < CANVAS_WIDTH; x += 24) {
+                if ((x / 24) % 2 === 0) {
+                    ctx.fillRect(x + 2, GROUND_Y + 8, 4, 2);
+                    ctx.fillRect(x + 14, GROUND_Y + 16, 2, 2);
+                } else {
+                    ctx.fillRect(x + 8, GROUND_Y + 12, 6, 2);
+                }
+            }
+        }
+
+        /* ==========================================================================
+           7. COLLISION & GAME LOOP
+           ========================================================================== */
+
+        function checkCollision(rect1, rect2) {
+            const pad = 4;
+            return (
+                rect1.x + pad < rect2.x + rect2.width - pad &&
+                rect1.x + rect1.width - pad > rect2.x + pad &&
+                rect1.y + pad < rect2.y + rect2.height - pad &&
+                rect1.y + rect1.height - pad > rect2.y + pad
+            );
+        }
+
+        function resetGame() {
+            dino.reset();
+            obstacles = [];
+            score = 0;
+            speed = 6;
+            frameCount = 0;
+            lastScoreMilestone = 0;
+            isGameOver = false;
+
+            gameOverOverlay.classList.add('hidden');
+            startOverlay.classList.add('hidden');
+            pauseOverlay.classList.add('hidden');
+
+            scoreText.textContent = '00000';
+            updateSkyCycle();
+            initWeatherParticles();
+        }
+
+        function startGame() {
+            sound.init();
+            resetGame();
+            isRunning = true;
+            isPaused = false;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            isRunning = false;
+            sound.playGameOver();
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('dino_high_score', highScore);
+                highScoreText.textContent = String(highScore).padStart(5, '0');
+            }
+
+            finalScoreText.textContent = String(score);
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (!isRunning || isGameOver) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseOverlay.classList.add('hidden');
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameLoop() {
+            if (!isRunning || isPaused) return;
+
+            frameCount++;
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 1. Logic Updates
+            dino.update();
+
+            if (frameCount % 5 === 0) {
+                score++;
+                scoreText.textContent = String(score).padStart(5, '0');
+
+                if (score > 0 && score % 100 === 0 && score !== lastScoreMilestone) {
+                    sound.playScore();
+                    lastScoreMilestone = score;
+
+                    // Trigger random color change every 100 pts
+                    if (dinoColorSelect.value === 'random_cycle') {
+                        activeDynamicColor = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
+                    }
+                }
+
+                // Trigger random environment change every 250 pts
+                if (score > 0 && score % 250 === 0 && frameCount % 5 === 0) {
+                    if (envSelect.value === 'random') {
+                        const remaining = ENV_LIST.filter(e => e !== activeDynamicEnv);
+                        activeDynamicEnv = remaining[Math.floor(Math.random() * remaining.length)];
+                    }
+                }
+
+                if (score % 150 === 0 && speed < 13) {
+                    speed += 0.4;
+                }
+            }
+
+            updateSkyCycle();
+
+            if (Math.random() < 0.02) {
+                spawnObstacle();
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.update();
+
+                if (checkCollision(dino, obs)) {
+                    drawSkyAndSun();
+                    drawGround();
+                    obstacles.forEach(o => o.draw(currentSky.dinoColor));
+                    dino.draw(currentSky.dinoColor);
+                    updateAndDrawWeather();
+                    triggerGameOver();
+                    return;
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // 2. Render Phase
+            drawSkyAndSun();
+            drawGround();
+
+            obstacles.forEach(obs => obs.draw(currentSky.dinoColor));
+            dino.draw(currentSky.dinoColor);
+
+            // Weather overlay effects
+            updateAndDrawWeather();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* ==========================================================================
+           8. INPUT LISTENERS
+           ========================================================================== */
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (!isRunning || isGameOver) {
+                    startGame();
+                } else {
+                    dino.jump();
+                }
+            }
+
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (isRunning && !isGameOver) {
+                    dino.duck(true);
+                }
+            }
+
+            if (e.code === 'KeyP') {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                if (isRunning) {
+                    dino.duck(false);
+                }
+            }
+        });
+
+        // Pointer/Touch interactions on Canvas
+        canvas.addEventListener('pointerdown', () => {
+            if (!isRunning || isGameOver) {
+                startGame();
+            } else if (!isPaused) {
+                dino.jump();
+            }
+        });
+
+        touchDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning && !isGameOver) {
+                dino.duck(true);
+            }
+        });
+
+        touchDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRunning) {
+                dino.duck(false);
+            }
+        });
+
+        function refreshCanvasPreview() {
+            if (!isRunning && !isGameOver) {
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                updateSkyCycle();
+                drawSkyAndSun();
+                drawGround();
+                dino.draw(currentSky.dinoColor);
+            }
+        }
+
+        function randomizeAllSettings() {
+            const skyOptions = ['600', '1000', 'sunrise', 'day', 'sunset', 'night'];
+            skySelect.value = skyOptions[Math.floor(Math.random() * skyOptions.length)];
+
+            const envOptions = ['random', 'desert', 'city', 'countryside', 'school', 'cyberpunk'];
+            envSelect.value = envOptions[Math.floor(Math.random() * envOptions.length)];
+
+            const weatherOptions = ['dynamic', 'clear', 'rain', 'snow', 'fog'];
+            weatherSelect.value = weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
+
+            const colorOptions = ['auto', 'rainbow', 'random_cycle', '#22c55e', '#ec4899', '#3b82f6', '#ef4444', '#a855f7', '#eab308', '#f97316', '#ffffff', '#1e293b'];
+            dinoColorSelect.value = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+
+            if (dinoColorSelect.value === 'custom') {
+                customColorPicker.classList.remove('hidden');
+            } else {
+                customColorPicker.classList.add('hidden');
+            }
+
+            activeDynamicColor = COLOR_LIST[Math.floor(Math.random() * COLOR_LIST.length)];
+            activeDynamicEnv = ENV_LIST[Math.floor(Math.random() * ENV_LIST.length)];
+
+            refreshCanvasPreview();
+        }
+
+        randomizeAllBtn.addEventListener('click', randomizeAllSettings);
+
+        skySelect.addEventListener('change', refreshCanvasPreview);
+        envSelect.addEventListener('change', refreshCanvasPreview);
+        weatherSelect.addEventListener('change', refreshCanvasPreview);
+        
+        dinoColorSelect.addEventListener('change', () => {
+            if (dinoColorSelect.value === 'custom') {
+                customColorPicker.classList.remove('hidden');
+                customColorPicker.click();
+            } else {
+                customColorPicker.classList.add('hidden');
+            }
+            refreshCanvasPreview();
+        });
+        customColorPicker.addEventListener('input', refreshCanvasPreview);
+
+        // Initial preview draw
+        window.onload = () => {
+            refreshCanvasPreview();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

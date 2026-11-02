@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典互動小遊戲遊樂場</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        glass: {
+                            bg: 'rgba(255, 255, 255, 0.12)',
+                            border: 'rgba(255, 255, 255, 0.25)',
+                            card: 'rgba(20, 20, 35, 0.65)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #f8fafc;
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .glass-button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-button:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        /* Memory Card Styles */
+        .card-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 sm:p-6">
+
+    <header class="w-full max-w-4xl flex flex-wrap justify-between items-center gap-4 mb-4 z-10">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchGame('menu')">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <i class="fa-solid font-black text-white text-xl">🎮</i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-400">ARCADE HUB</h1>
+                <p class="text-xs text-slate-400">迷你遊戲遊樂場</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" onclick="toggleAudio()" class="glass-button p-2.5 rounded-xl text-slate-200 hover:text-white" title="聲音切換">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-lg"></i>
+            </button>
+            <button onclick="switchGame('menu')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-house"></i> 遊戲大廳
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="w-full max-w-4xl flex-1 flex flex-col items-center justify-center relative my-2">
+
+        <div id="gameMenu" class="w-full grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+            <!-- Snake Card -->
+            <div onclick="switchGame('snake')" class="glass-panel rounded-3xl p-6 flex flex-col justify-between items-center text-center cursor-pointer group hover:border-emerald-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-500/20">
+                <div class="w-20 h-20 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition-transform">
+                    🐍
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-1 group-hover:text-emerald-400 transition-colors">貪食蛇</h3>
+                    <p class="text-xs text-slate-400 mb-4">經典滑順吃蘋果！挑戰最高長度與各種特殊果實。</p>
+                </div>
+                <div class="w-full glass-button py-2.5 rounded-xl font-semibold text-emerald-400 border-emerald-500/30 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                    開始遊戲
+                </div>
+            </div>
+
+            <!-- Breakout Card -->
+            <div onclick="switchGame('breakout')" class="glass-panel rounded-3xl p-6 flex flex-col justify-between items-center text-center cursor-pointer group hover:border-cyan-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20">
+                <div class="w-20 h-20 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition-transform">
+                    🧱
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-1 group-hover:text-cyan-400 transition-colors">打磚塊</h3>
+                    <p class="text-xs text-slate-400 mb-4">充滿炫目粒子的打磚塊，解鎖發射子彈與多球道具！</p>
+                </div>
+                <div class="w-full glass-button py-2.5 rounded-xl font-semibold text-cyan-400 border-cyan-500/30 group-hover:bg-cyan-500 group-hover:text-white transition-all">
+                    開始遊戲
+                </div>
+            </div>
+
+            <!-- Memory Card -->
+            <div onclick="switchGame('memory')" class="glass-panel rounded-3xl p-6 flex flex-col justify-between items-center text-center cursor-pointer group hover:border-purple-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/20">
+                <div class="w-20 h-20 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition-transform">
+                    🃏
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-1 group-hover:text-purple-400 transition-colors">記憶翻牌</h3>
+                    <p class="text-xs text-slate-400 mb-4">測試大腦記憶力！可愛 Emoji 翻牌，挑戰極速通關。</p>
+                </div>
+                <div class="w-full glass-button py-2.5 rounded-xl font-semibold text-purple-400 border-purple-500/30 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                    開始遊戲
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME STAGE CONTAINER -->
+        <div id="gameStage" class="hidden w-full flex-col items-center">
+            
+            <!-- TOP BAR CONTROL & SCORE -->
+            <div class="w-full glass-panel rounded-2xl p-3 sm:p-4 mb-4 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center gap-4">
+                    <span id="activeGameTitle" class="font-bold text-lg text-purple-300 border-b-2 border-purple-500 pb-0.5">貪食蛇</span>
+                    <div class="flex items-center gap-3 text-sm">
+                        <span class="text-slate-400">得分: <strong id="currentScore" class="text-white text-base">0</strong></span>
+                        <span class="text-slate-400">最高: <strong id="highScore" class="text-yellow-400 text-base">0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Custom Info Banner for Memory Game (Steps/Time) -->
+                <div id="memoryExtraStats" class="hidden flex items-center gap-4 text-sm">
+                    <span class="text-slate-400">步數: <strong id="memoryMoves" class="text-white">0</strong></span>
+                    <span class="text-slate-400">時間: <strong id="memoryTimer" class="text-cyan-300">0s</strong></span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button id="pauseBtn" onclick="togglePause()" class="glass-button px-3 py-1.5 rounded-lg text-sm text-yellow-300 flex items-center gap-1">
+                        <i class="fa-solid fa-pause"></i> 暫停
+                    </button>
+                    <button onclick="restartCurrentGame()" class="glass-button px-3 py-1.5 rounded-lg text-sm text-emerald-300 flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> 重來
+                    </button>
+                </div>
+            </div>
+
+            <!-- CANVAS CONTAINER FOR SNAKE / BREAKOUT -->
+            <div id="canvasWrapper" class="relative w-full flex justify-center items-center">
+                <canvas id="gameCanvas" class="glass-panel rounded-2xl shadow-2xl max-w-full border border-white/20 touch-none"></canvas>
+            </div>
+
+            <!-- MEMORY MATCH BOARD CONTAINER -->
+            <div id="memoryBoardWrapper" class="hidden w-full max-w-lg flex flex-col items-center">
+                <div class="flex gap-3 mb-4">
+                    <button onclick="setupMemoryGame(4)" id="memDifficulty4" class="glass-button px-4 py-1.5 rounded-xl text-sm font-semibold active">4x4 輕鬆</button>
+                    <button onclick="setupMemoryGame(6)" id="memDifficulty6" class="glass-button px-4 py-1.5 rounded-xl text-sm font-semibold">6x6 挑戰</button>
+                </div>
+                <div id="memoryGrid" class="grid gap-2.5 w-full aspect-square max-w-md p-2 glass-panel rounded-2xl"></div>
+            </div>
+
+            <div id="mobileControls" class="hidden w-full max-w-xs mt-4 grid grid-cols-3 gap-2">
+                <div></div>
+                <button onclick="handleMobileDir('UP')" class="glass-button p-4 rounded-2xl flex justify-center items-center text-xl text-white active:bg-white/40"><i class="fa-solid fa-chevron-up"></i></button>
+                <div></div>
+                <button onclick="handleMobileDir('LEFT')" class="glass-button p-4 rounded-2xl flex justify-center items-center text-xl text-white active:bg-white/40"><i class="fa-solid fa-chevron-left"></i></button>
+                <button onclick="handleMobileDir('DOWN')" class="glass-button p-4 rounded-2xl flex justify-center items-center text-xl text-white active:bg-white/40"><i class="fa-solid fa-chevron-down"></i></button>
+                <button onclick="handleMobileDir('RIGHT')" class="glass-button p-4 rounded-2xl flex justify-center items-center text-xl text-white active:bg-white/40"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </main>
+
+    <!-- OVERLAY / GAME OVER DIALOG -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-md hidden flex justify-center items-center z-50 p-4">
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center flex flex-col items-center border border-white/30 shadow-2xl animate-scale-up">
+            <div id="modalIcon" class="text-6xl mb-3">🏆</div>
+            <h2 id="modalTitle" class="text-2xl font-black mb-2">遊戲結束</h2>
+            <p id="modalMessage" class="text-slate-300 text-sm mb-6">太棒了！您的得分是 120 分</p>
+            
+            <div class="flex flex-col w-full gap-2.5">
+                <button onclick="restartCurrentGame()" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 font-bold hover:from-purple-600 hover:to-indigo-700 shadow-lg shadow-purple-500/30 transition-all">
+                    再玩一次
+                </button>
+                <button onclick="switchGame('menu')" class="w-full glass-button py-2.5 rounded-xl font-semibold text-slate-300">
+                    返回大廳
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="text-slate-500 text-xs text-center mt-4">
+        © 2026 Arcade Hub - 經典 HTML5 網頁互動遊戲集
+    </footer>
+
+    <script>
+        // Audio Synthesizer Engine
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            play(type) {
+                if (!this.enabled) return;
+                this.init();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'eat') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'hit') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'powerup') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.setValueAtTime(600, now + 0.08);
+                    osc.frequency.setValueAtTime(880, now + 0.16);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'flip') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'match') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'gameover') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'shoot') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                }
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        function toggleAudio() {
+            sfx.enabled = !sfx.enabled;
+            const icon = document.getElementById('soundIcon');
+            if (sfx.enabled) {
+                icon.className = "fa-solid fa-volume-high text-lg";
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-lg text-red-400";
+            }
+        }
+    </script>
+
+    <script>
+        let currentGame = 'menu';
+        let isPaused = false;
+        let score = 0;
+        let animationFrameId = null;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Helper functions
+        function getHighScore(gameKey) {
+            return parseInt(window.__galleryStorage.getItem(`arcade_highscore_${gameKey}`) || '0');
+        }
+
+        function setHighScore(gameKey, newScore) {
+            const current = getHighScore(gameKey);
+            if (newScore > current) {
+                window.__galleryStorage.setItem(`arcade_highscore_${gameKey}`, newScore);
+                return newScore;
+            }
+            return current;
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('currentScore').innerText = score;
+            document.getElementById('highScore').innerText = getHighScore(currentGame);
+        }
+
+        function showModal(title, message, icon = '🏆') {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('modalIcon').innerText = icon;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function togglePause() {
+            if (currentGame === 'menu') return;
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            if (isPaused) {
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> 繼續`;
+                btn.classList.add('bg-yellow-500/20');
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-pause"></i> 暫停`;
+                btn.classList.remove('bg-yellow-500/20');
+                if (currentGame === 'snake') snakeLoop();
+                if (currentGame === 'breakout') breakoutLoop();
+            }
+        }
+
+        function switchGame(game) {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            hideModal();
+            isPaused = false;
+            currentGame = game;
+            score = 0;
+
+            const menu = document.getElementById('gameMenu');
+            const stage = document.getElementById('gameStage');
+            const canvasWrap = document.getElementById('canvasWrapper');
+            const memoryWrap = document.getElementById('memoryBoardWrapper');
+            const mobileControls = document.getElementById('mobileControls');
+            const memoryStats = document.getElementById('memoryExtraStats');
+
+            if (game === 'menu') {
+                menu.classList.remove('hidden');
+                stage.classList.add('hidden');
+                return;
+            }
+
+            menu.classList.add('hidden');
+            stage.classList.remove('hidden');
+            
+            // Set Titles
+            const titles = { snake: '🐍 貪食蛇', breakout: '🧱 打磚塊', memory: '🃏 記憶翻牌' };
+            document.getElementById('activeGameTitle').innerText = titles[game];
+
+            // Reset view toggles
+            canvasWrap.classList.add('hidden');
+            memoryWrap.classList.add('hidden');
+            mobileControls.classList.add('hidden');
+            memoryStats.classList.add('hidden');
+
+            updateScoreDisplay();
+
+            if (game === 'snake') {
+                canvasWrap.classList.remove('hidden');
+                if ('ontouchstart' in window) mobileControls.classList.remove('hidden');
+                initSnake();
+            } else if (game === 'breakout') {
+                canvasWrap.classList.remove('hidden');
+                initBreakout();
+            } else if (game === 'memory') {
+                memoryWrap.classList.remove('hidden');
+                memoryStats.classList.remove('hidden');
+                setupMemoryGame(4);
+            }
+        }
+
+        function restartCurrentGame() {
+            switchGame(currentGame);
+        }
+
+        // Global Keyboard Event
+        window.addEventListener('keydown', (e) => {
+            if (currentGame === 'snake') handleSnakeKey(e);
+            if (currentGame === 'breakout') handleBreakoutKey(e, true);
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (currentGame === 'breakout') handleBreakoutKey(e, false);
+        });
+
+        function handleMobileDir(dir) {
+            if (currentGame === 'snake') {
+                handleSnakeDirChange(dir);
+            }
+        }
+    </script>
+
+    <script>
+        let snake = [];
+        let snakeDir = 'RIGHT';
+        let nextDir = 'RIGHT';
+        let food = {};
+        let gridSize = 20;
+        let tileCount = 20;
+        let snakeSpeed = 120; // ms
+        let lastSnakeStep = 0;
+
+        function initSnake() {
+            // Adaptive canvas size
+            const size = Math.min(window.innerWidth - 32, 480);
+            canvas.width = size;
+            canvas.height = size;
+            tileCount = 20;
+            gridSize = canvas.width / tileCount;
+
+            snake = [
+                {x: 10, y: 10},
+                {x: 9, y: 10},
+                {x: 8, y: 10}
+            ];
+            snakeDir = 'RIGHT';
+            nextDir = 'RIGHT';
+            spawnFood();
+            lastSnakeStep = performance.now();
+            requestAnimationFrame(snakeLoop);
+        }
+
+        function spawnFood() {
+            const types = ['normal', 'normal', 'normal', 'gold', 'speed'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount),
+                type: chosenType
+            };
+
+            // Don't spawn on snake body
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    spawnFood();
+                    break;
+                }
+            }
+        }
+
+        function handleSnakeKey(e) {
+            if (['ArrowUp', 'KeyW'].includes(e.code) && snakeDir !== 'DOWN') nextDir = 'UP';
+            if (['ArrowDown', 'KeyS'].includes(e.code) && snakeDir !== 'UP') nextDir = 'DOWN';
+            if (['ArrowLeft', 'KeyA'].includes(e.code) && snakeDir !== 'RIGHT') nextDir = 'LEFT';
+            if (['ArrowRight', 'KeyD'].includes(e.code) && snakeDir !== 'LEFT') nextDir = 'RIGHT';
+        }
+
+        function handleSnakeDirChange(dir) {
+            if (dir === 'UP' && snakeDir !== 'DOWN') nextDir = 'UP';
+            if (dir === 'DOWN' && snakeDir !== 'UP') nextDir = 'DOWN';
+            if (dir === 'LEFT' && snakeDir !== 'RIGHT') nextDir = 'LEFT';
+            if (dir === 'RIGHT' && snakeDir !== 'LEFT') nextDir = 'RIGHT';
+        }
+
+        function snakeLoop(timestamp) {
+            if (currentGame !== 'snake' || isPaused) return;
+
+            if (timestamp - lastSnakeStep > snakeSpeed) {
+                lastSnakeStep = timestamp;
+                snakeDir = nextDir;
+
+                let head = { ...snake[0] };
+                if (snakeDir === 'UP') head.y--;
+                if (snakeDir === 'DOWN') head.y++;
+                if (snakeDir === 'LEFT') head.x--;
+                if (snakeDir === 'RIGHT') head.x++;
+
+                // Collision with wall
+                if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                    sfx.play('gameover');
+                    const high = setHighScore('snake', score);
+                    showModal('蛇蛇撞牆啦！', `最終得分：${score}\n最高紀錄：${high}`, '💀');
+                    return;
+                }
+
+                // Self collision
+                for (let part of snake) {
+                    if (part.x === head.x && part.y === head.y) {
+                        sfx.play('gameover');
+                        const high = setHighScore('snake', score);
+                        showModal('咬到自己了！', `最終得分：${score}\n最高紀錄：${high}`, '🐍');
+                        return;
+                    }
+                }
+
+                snake.unshift(head);
+
+                // Eat Food
+                if (head.x === food.x && head.y === food.y) {
+                    if (food.type === 'normal') {
+                        score += 10;
+                        sfx.play('eat');
+                    } else if (food.type === 'gold') {
+                        score += 30;
+                        sfx.play('powerup');
+                    } else if (food.type === 'speed') {
+                        score += 20;
+                        sfx.play('powerup');
+                    }
+                    updateScoreDisplay();
+                    spawnFood();
+                } else {
+                    snake.pop();
+                }
+            }
+
+            // Draw Snake Canvas
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid Lines (Subtle)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            for (let i = 0; i < tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // Draw Food
+            ctx.shadowBlur = 10;
+            if (food.type === 'normal') {
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowColor = '#ef4444';
+            } else if (food.type === 'gold') {
+                ctx.fillStyle = '#eab308';
+                ctx.shadowColor = '#eab308';
+            } else if (food.type === 'speed') {
+                ctx.fillStyle = '#06b6d4';
+                ctx.shadowColor = '#06b6d4';
+            }
+            ctx.beginPath();
+            ctx.arc((food.x + 0.5) * gridSize, (food.y + 0.5) * gridSize, gridSize / 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw Snake
+            snake.forEach((part, index) => {
+                if (index === 0) {
+                    ctx.fillStyle = '#10b981'; // Head
+                } else {
+                    ctx.fillStyle = '#34d399'; // Body
+                }
+                ctx.beginPath();
+                ctx.roundRect(
+                    part.x * gridSize + 1,
+                    part.y * gridSize + 1,
+                    gridSize - 2,
+                    gridSize - 2,
+                    index === 0 ? 6 : 4
+                );
+                ctx.fill();
+            });
+
+            animationFrameId = requestAnimationFrame(snakeLoop);
+        }
+    </script>
+
+    <script>
+        let paddle = { x: 0, w: 80, h: 12, speed: 7 };
+        let balls = [];
+        let bricks = [];
+        let particles = [];
+        let powerups = [];
+        let bullets = [];
+        let shieldActive = false;
+        let keys = { left: false, right: false };
+
+        function initBreakout() {
+            const size = Math.min(window.innerWidth - 32, 480);
+            canvas.width = size;
+            canvas.height = size * 1.1;
+
+            paddle.w = canvas.width * 0.22;
+            paddle.x = (canvas.width - paddle.w) / 2;
+            paddle.y = canvas.height - 30;
+
+            balls = [{
+                x: canvas.width / 2,
+                y: paddle.y - 10,
+                dx: (Math.random() - 0.5) * 6,
+                dy: -5,
+                radius: 7
+            }];
+
+            shieldActive = false;
+            particles = [];
+            powerups = [];
+            bullets = [];
+
+            // Build Bricks
+            bricks = [];
+            const rows = 5;
+            const cols = 7;
+            const padding = 6;
+            const offsetTop = 40;
+            const offsetLeft = 10;
+            const brickWidth = (canvas.width - offsetLeft * 2 - (cols - 1) * padding) / cols;
+            const brickHeight = 18;
+
+            const colors = ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#38bdf8'];
+
+            for (let r = 0; r < rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    let hp = 1;
+                    if (r === 0) hp = 2; // Double hit brick
+                    bricks[r][c] = {
+                        x: offsetLeft + c * (brickWidth + padding),
+                        y: offsetTop + r * (brickHeight + padding),
+                        w: brickWidth,
+                        h: brickHeight,
+                        hp: hp,
+                        maxHp: hp,
+                        color: colors[r % colors.length]
+                    };
+                }
+            }
+
+            // Canvas touch controls for Breakout
+            canvas.ontouchmove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const touchX = e.touches[0].clientX - rect.left;
+                paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, touchX - paddle.w / 2));
+            };
+
+            requestAnimationFrame(breakoutLoop);
+        }
+
+        function handleBreakoutKey(e, isDown) {
+            if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = isDown;
+            if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = isDown;
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 5,
+                    dy: (Math.random() - 0.5) * 5,
+                    radius: Math.random() * 3 + 1,
+                    alpha: 1,
+                    color: color
+                });
+            }
+        }
+
+        function spawnPowerup(x, y) {
+            if (Math.random() > 0.35) return; // 35% drop rate
+            const types = ['EXTEND', 'MULTIBALL', 'SHIELD', 'LASER'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerups.push({ x: x, y: y, type: type, dy: 2, radius: 10 });
+        }
+
+        function breakoutLoop() {
+            if (currentGame !== 'breakout' || isPaused) return;
+
+            // Move Paddle
+            if (keys.left && paddle.x > 0) paddle.x -= paddle.speed;
+            if (keys.right && paddle.x < canvas.width - paddle.w) paddle.x += paddle.speed;
+
+            // Move Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.y -= 7;
+                if (b.y < 0) bullets.splice(i, 1);
+            }
+
+            // Move Balls & Logic
+            for (let i = balls.length - 1; i >= 0; i--) {
+                let ball = balls[i];
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // Wall collisions
+                if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                    ball.dx *= -1;
+                    sfx.play('hit');
+                }
+                if (ball.y - ball.radius < 0) {
+                    ball.dy *= -1;
+                    sfx.play('hit');
+                }
+
+                // Paddle collision
+                if (ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.h &&
+                    ball.x >= paddle.x && ball.x <= paddle.x + paddle.w) {
+                    
+                    ball.dy = -Math.abs(ball.dy);
+                    let hitPoint = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+                    ball.dx = hitPoint * 5;
+                    sfx.play('hit');
+                }
+
+                // Shield / Bottom boundary
+                if (ball.y + ball.radius > canvas.height) {
+                    if (shieldActive) {
+                        ball.dy *= -1;
+                        shieldActive = false;
+                        sfx.play('hit');
+                    } else {
+                        balls.splice(i, 1);
+                    }
+                }
+            }
+
+            // Check Game Over
+            if (balls.length === 0) {
+                sfx.play('gameover');
+                const high = setHighScore('breakout', score);
+                showModal('球掉落了！', `最終得分：${score}\n最高紀錄：${high}`, '💥');
+                return;
+            }
+
+            // Powerup Physics & Collection
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                let p = powerups[i];
+                p.y += p.dy;
+
+                // Paddle catch
+                if (p.y + p.radius >= paddle.y && p.x >= paddle.x && p.x <= paddle.x + paddle.w) {
+                    sfx.play('powerup');
+                    if (p.type === 'EXTEND') paddle.w = Math.min(canvas.width * 0.4, paddle.w + 20);
+                    if (p.type === 'SHIELD') shieldActive = true;
+                    if (p.type === 'MULTIBALL') {
+                        balls.push({
+                            x: paddle.x + paddle.w / 2,
+                            y: paddle.y - 10,
+                            dx: (Math.random() - 0.5) * 6,
+                            dy: -5,
+                            radius: 7
+                        });
+                    }
+                    if (p.type === 'LASER') {
+                        bullets.push({ x: paddle.x + 10, y: paddle.y });
+                        bullets.push({ x: paddle.x + paddle.w - 10, y: paddle.y });
+                        sfx.play('shoot');
+                    }
+                    powerups.splice(i, 1);
+                } else if (p.y > canvas.height) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Brick Collisions
+            let remainingBricks = 0;
+            for (let r = 0; r < bricks.length; r++) {
+                for (let c = 0; c < bricks[r].length; c++) {
+                    let b = bricks[r][c];
+                    if (b.hp > 0) {
+                        remainingBricks++;
+
+                        // Check balls
+                        balls.forEach(ball => {
+                            if (ball.x > b.x && ball.x < b.x + b.w &&
+                                ball.y - ball.radius < b.y + b.h && ball.y + ball.radius > b.y) {
+                                ball.dy *= -1;
+                                b.hp--;
+                                score += 15;
+                                createParticles(b.x + b.w / 2, b.y + b.h / 2, b.color);
+                                sfx.play('hit');
+                                if (b.hp <= 0) spawnPowerup(b.x + b.w / 2, b.y + b.h / 2);
+                                updateScoreDisplay();
+                            }
+                        });
+
+                        // Check bullets
+                        bullets.forEach((bullet, bi) => {
+                            if (bullet.x > b.x && bullet.x < b.x + b.w &&
+                                bullet.y < b.y + b.h && bullet.y > b.y) {
+                                b.hp--;
+                                score += 15;
+                                createParticles(b.x + b.w / 2, b.y + b.h / 2, b.color);
+                                bullets.splice(bi, 1);
+                                sfx.play('hit');
+                                if (b.hp <= 0) spawnPowerup(b.x + b.w / 2, b.y + b.h / 2);
+                                updateScoreDisplay();
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Win condition
+            if (remainingBricks === 0) {
+                sfx.play('powerup');
+                const high = setHighScore('breakout', score);
+                showModal('完美清空磚塊！', `恭喜通關！\n得分：${score}\n最高紀錄：${high}`, '🎉');
+                return;
+            }
+
+            // Clear Screen
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Bricks
+            for (let r = 0; r < bricks.length; r++) {
+                for (let c = 0; c < bricks[r].length; c++) {
+                    let b = bricks[r][c];
+                    if (b.hp > 0) {
+                        ctx.fillStyle = b.hp > 1 ? '#ffffff' : b.color;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.w, b.h, 4);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Draw Shield
+            if (shieldActive) {
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - 2);
+                ctx.lineTo(canvas.width, canvas.height - 2);
+                ctx.stroke();
+            }
+
+            // Draw Paddle
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+            ctx.fill();
+
+            // Draw Balls
+            balls.forEach(ball => {
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw Bullets
+            ctx.fillStyle = '#facc15';
+            bullets.forEach(b => {
+                ctx.fillRect(b.x - 2, b.y, 4, 10);
+            });
+
+            // Draw Powerups
+            powerups.forEach(p => {
+                ctx.fillStyle = p.type === 'EXTEND' ? '#38bdf8' : p.type === 'MULTIBALL' ? '#a855f7' : p.type === 'SHIELD' ? '#4ade80' : '#facc15';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Render & Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.dx;
+                pt.y += pt.dy;
+                pt.alpha -= 0.03;
+                if (pt.alpha <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    ctx.fillStyle = pt.color;
+                    ctx.globalAlpha = pt.alpha;
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(breakoutLoop);
+        }
+    </script>
+
+    <script>
+        let memoryGridSize = 4;
+        let memoryCards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let memoryMoves = 0;
+        let memoryTimer = 0;
+        let memoryInterval = null;
+
+        const emojiPool = ['🐶', '🐱', '🦊', '🐼', '🐨', '🐯', '🦁', '🐵', '🦄', '🐝', '🐙', '🦖', '🚀', '🎨', '🍦', '🍩', '🍔', '🍕'];
+
+        function setupMemoryGame(size) {
+            memoryGridSize = size;
+            document.getElementById('memDifficulty4').className = size === 4 ? "glass-button px-4 py-1.5 rounded-xl text-sm font-semibold bg-purple-500/30 border-purple-400 text-white" : "glass-button px-4 py-1.5 rounded-xl text-sm font-semibold";
+            document.getElementById('memDifficulty6').className = size === 6 ? "glass-button px-4 py-1.5 rounded-xl text-sm font-semibold bg-purple-500/30 border-purple-400 text-white" : "glass-button px-4 py-1.5 rounded-xl text-sm font-semibold";
+
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = '';
+            grid.className = `grid gap-2.5 w-full aspect-square max-w-md p-2 glass-panel rounded-2xl grid-cols-${size}`;
+
+            const totalPairs = (size * size) / 2;
+            const selectedEmojis = emojiPool.slice(0, totalPairs);
+            const cardDeck = [...selectedEmojis, ...selectedEmojis].sort(() => Math.random() - 0.5);
+
+            memoryCards = cardDeck;
+            flippedCards = [];
+            matchedPairs = 0;
+            memoryMoves = 0;
+            memoryTimer = 0;
+
+            document.getElementById('memoryMoves').innerText = memoryMoves;
+            document.getElementById('memoryTimer').innerText = '0s';
+
+            if (memoryInterval) clearInterval(memoryInterval);
+            memoryInterval = setInterval(() => {
+                if (!isPaused && currentGame === 'memory') {
+                    memoryTimer++;
+                    document.getElementById('memoryTimer').innerText = `${memoryTimer}s`;
+                }
+            }, 1000);
+
+            cardDeck.forEach((emoji, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card relative cursor-pointer aspect-square rounded-xl perspective-1000';
+                cardEl.dataset.index = index;
+                cardEl.innerHTML = `
+                    <div class="card-inner w-full h-full relative rounded-xl shadow-lg">
+                        <div class="card-front absolute inset-0 bg-gradient-to-tr from-slate-800 to-indigo-950 border border-white/20 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-bold">
+                            ❓
+                        </div>
+                        <div class="card-back absolute inset-0 bg-gradient-to-tr from-purple-600 to-pink-600 border border-white/40 rounded-xl flex items-center justify-center text-2xl sm:text-4xl shadow-inner">
+                            ${emoji}
+                        </div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', () => handleMemoryCardClick(cardEl, index, emoji));
+                grid.appendChild(cardEl);
+            });
+        }
+
+        function handleMemoryCardClick(cardEl, index, emoji) {
+            if (isPaused || cardEl.classList.contains('flipped') || flippedCards.length >= 2) return;
+
+            sfx.play('flip');
+            cardEl.classList.add('flipped');
+            flippedCards.push({ cardEl, index, emoji });
+
+            if (flippedCards.length === 2) {
+                memoryMoves++;
+                document.getElementById('memoryMoves').innerText = memoryMoves;
+
+                const [first, second] = flippedCards;
+                if (first.emoji === second.emoji) {
+                    sfx.play('match');
+                    matchedPairs++;
+                    score += 50;
+                    updateScoreDisplay();
+                    flippedCards = [];
+
+                    if (matchedPairs === (memoryGridSize * memoryGridSize) / 2) {
+                        clearInterval(memoryInterval);
+                        sfx.play('powerup');
+                        const timeBonus = Math.max(0, 300 - memoryTimer * 5);
+                        score += timeBonus;
+                        const high = setHighScore('memory', score);
+                        showModal('記憶大師！', `恭喜完成配對！\n耗時：${memoryTimer}秒\n步數：${memoryMoves}步\n總得分：${score}`, '🧠');
+                    }
+                } else {
+                    setTimeout(() => {
+                        first.cardEl.classList.remove('flipped');
+                        second.cardEl.classList.remove('flipped');
+                        flippedCards = [];
+                    }, 800);
+                }
+            }
+        }
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

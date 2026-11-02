@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>葉綠體光合作用：夢幻森林學術模擬器 (Fantasy Forest Photosynthesis)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Google Fonts: Cinzel for headers, Noto Serif TC & Plus Jakarta Sans for realism -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Noto+Serif+TC:wght@400;600;900&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Noto Serif TC"', 'serif'],
+            display: ['"Cinzel"', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            forest: {
+              950: '#030d0a',
+              900: '#061a14',
+              800: '#0c2d23',
+              700: '#134e3e',
+              emerald: '#10b981',
+              gold: '#f59e0b',
+              amber: '#d97706',
+              cyan: '#06b6d4',
+              glow: '#34d399'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Styling for Magical Realistic Forest Theme */
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Serif TC', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #0c2d23 0%, #061a14 60%, #030d0a 100%);
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(6, 26, 20, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(52, 211, 153, 0.18);
+      box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.37);
+      border-radius: 1.25rem;
+    }
+
+    .glass-btn {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.15));
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      backdrop-filter: blur(8px);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-btn:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(6, 182, 212, 0.3));
+      border-color: rgba(52, 211, 153, 0.6);
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+      transform: translateY(-2px);
+    }
+    .glass-btn:active {
+      transform: translateY(1px);
+    }
+
+    .gold-glow-text {
+      text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+    }
+
+    .emerald-glow-text {
+      text-shadow: 0 0 12px rgba(52, 211, 153, 0.6);
+    }
+
+    /* Custom range slider aesthetics */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(15, 45, 35, 0.8);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      border-radius: 8px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 10px #34d399;
+      cursor: pointer;
+      border: 2px solid #061a14;
+    }
+
+    canvas {
+      touch-action: none;
+    }
+
+    @keyframes subtlePulse {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.02); }
+    }
+    .buff-active {
+      animation: subtlePulse 2s infinite ease-in-out;
+      border-color: rgba(245, 158, 11, 0.8) !important;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.3) !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col p-2 sm:p-5">
+
+  <!-- Top Navigation Header -->
+  <header class="max-w-[1600px] w-full mx-auto mb-4 glass-panel p-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-2xl text-amber-300 shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-emerald-400/30">
+        <i class="fa-solid fa-leaf"></i>
+      </div>
+      <div>
+        <h1 class="font-display font-extrabold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200 tracking-wider">
+          CHLOROPLAST REALM
+          <span class="font-serif text-xs px-3 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 ml-2">夢幻森林與高中生物試煉 🌿</span>
+        </h1>
+        <p class="text-xs text-emerald-200/70 font-serif">拖拽神聖太陽調控光域，對抗極端氣候，通過高中生物試煉搶救酵素與葉綠素！</p>
+      </div>
+    </div>
+
+    <!-- Weather Controls -->
+    <div class="flex items-center gap-2 flex-wrap text-xs font-serif">
+      <span class="text-emerald-300/80 mr-1"><i class="fa-solid fa-cloud-sun text-amber-400 mr-1"></i>森林氣候情境：</span>
+      <button onclick="setWeather('clear')" class="glass-btn px-3 py-1.5 rounded-lg text-emerald-200 flex items-center gap-1.5">
+        <i class="fa-solid fa-sun text-amber-400"></i> 晨曦晴空
+      </button>
+      <button onclick="setWeather('mist')" class="glass-btn px-3 py-1.5 rounded-lg text-cyan-200 flex items-center gap-1.5">
+        <i class="fa-solid fa-cloud-rain text-cyan-400"></i> 霖雨霧靄
+      </button>
+      <button onclick="setWeather('blizzard')" class="glass-btn px-3 py-1.5 rounded-lg text-blue-200 flex items-center gap-1.5">
+        <i class="fa-solid fa-snowflake text-blue-300"></i> 寒冬霜雪
+      </button>
+      <button onclick="setWeather('scorching')" class="glass-btn px-3 py-1.5 rounded-lg text-rose-200 flex items-center gap-1.5">
+        <i class="fa-solid fa-fire text-rose-400"></i> 酷熱赤日
+      </button>
+
+      <button id="pauseBtn" onclick="togglePause()" class="glass-btn ml-3 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border-amber-500/40">
+        <i class="fa-solid fa-pause mr-1"></i> 暫停模擬
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- Left/Center Column: Canvas & Interactive Realm -->
+    <div class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- View Selector Tabs & Buff Banner -->
+      <div class="glass-panel p-2 flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <button id="tab-forest" onclick="switchView('forest')" class="glass-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-emerald-200 bg-emerald-500/30 border-emerald-400">
+            🌲 夢幻遠景與古樹果實
+          </button>
+          <button id="tab-thylakoid" onclick="switchView('thylakoid')" class="glass-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300">
+            ⚡ 光反應 (類囊體膜雙層結構)
+          </button>
+          <button id="tab-calvin" onclick="switchView('calvin')" class="glass-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300">
+            🔄 固碳反應 (基質卡爾文循環)
+          </button>
+        </div>
+
+        <!-- Optimal Environment Buff Indicator -->
+        <div id="buff-status" class="hidden text-xs font-serif font-bold text-amber-300 px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-500/50 flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400 animate-spin"></i>
+          <span>40秒最適宜黃金光照 & 酵素全效狀態中 (<span id="buff-timer">40</span>s)</span>
+        </div>
+      </div>
+
+      <!-- Main Canvas Container -->
+      <div class="glass-panel relative overflow-hidden min-h-[500px] flex-1 flex flex-col p-0 border border-emerald-500/20">
+        
+        <!-- Canvas Status Overlays -->
+        <div class="absolute top-4 left-4 z-10 flex flex-wrap gap-2 pointer-events-none">
+          <span id="weather-badge" class="glass-panel px-3 py-1 text-xs font-serif text-emerald-300 flex items-center gap-2">
+            <i class="fa-solid fa-sun text-amber-400"></i> 天氣：晨曦晴空
+          </span>
+          <span id="temp-badge" class="glass-panel px-3 py-1 text-xs font-serif text-rose-300 flex items-center gap-2">
+            <i class="fa-solid fa-temperature-half"></i> 溫度：25 °C
+          </span>
+          <span id="health-badge" class="glass-panel px-3 py-1 text-xs font-serif text-teal-300 flex items-center gap-2">
+            <i class="fa-solid fa-heart-pulse text-emerald-400"></i> 酵素與葉綠素活性：100%
+          </span>
+        </div>
+
+        <!-- Stage Progress Indicator (Tree Fruiting) -->
+        <div class="absolute top-4 right-4 z-10 pointer-events-none">
+          <span id="fruit-stage-badge" class="glass-panel px-3 py-1 text-xs font-serif text-amber-300 flex items-center gap-2 border-amber-500/30">
+            <i class="fa-solid fa-apple-whole text-amber-400"></i> 聖樹發育階段：繁花初綻 (0.0 / 100g 葡萄糖)
+          </span>
+        </div>
+
+        <!-- Canvas -->
+        <canvas id="realmCanvas" class="w-full h-full block flex-1 cursor-grab active:cursor-grabbing"></canvas>
+      </div>
+
+      <!-- Energy Pools & Biological Health Meters -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <!-- ATP Meter -->
+        <div class="glass-panel p-3 bg-amber-950/20 border-amber-500/20">
+          <div class="flex justify-between items-center text-xs font-serif text-amber-300 mb-1">
+            <span><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> ATP 能量池</span>
+            <span id="atp-val" class="font-extrabold">50%</span>
+          </div>
+          <div class="w-full bg-slate-900/80 rounded-full h-2.5 border border-amber-500/30 overflow-hidden">
+            <div id="atp-bar" class="bg-gradient-to-r from-amber-500 to-yellow-300 h-full transition-all duration-300" style="width: 50%"></div>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">光反應跨膜質子梯度驅動生成</p>
+        </div>
+
+        <!-- NADPH Meter -->
+        <div class="glass-panel p-3 bg-cyan-950/20 border-cyan-500/20">
+          <div class="flex justify-between items-center text-xs font-serif text-cyan-300 mb-1">
+            <span><i class="fa-solid fa-atom text-cyan-400 mr-1"></i> NADPH 還原力</span>
+            <span id="nadph-val" class="font-extrabold">50%</span>
+          </div>
+          <div class="w-full bg-slate-900/80 rounded-full h-2.5 border border-cyan-500/30 overflow-hidden">
+            <div id="nadph-bar" class="bg-gradient-to-r from-cyan-500 to-teal-300 h-full transition-all duration-300" style="width: 50%"></div>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">PSI 電子接受者 NADP⁺ 結合 H⁺ 形成</p>
+        </div>
+
+        <!-- Chlorophyll & Enzyme Health -->
+        <div class="glass-panel p-3 bg-emerald-950/20 border-emerald-500/20">
+          <div class="flex justify-between items-center text-xs font-serif text-emerald-300 mb-1">
+            <span><i class="fa-solid fa-shield-heart text-emerald-400 mr-1"></i> 酵素與色素健康度</span>
+            <span id="health-val" class="font-extrabold text-emerald-400">100%</span>
+          </div>
+          <div class="w-full bg-slate-900/80 rounded-full h-2.5 border border-emerald-500/30 overflow-hidden">
+            <div id="health-bar" class="bg-gradient-to-r from-emerald-500 to-green-300 h-full transition-all duration-300" style="width: 100%"></div>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">高溫/低溫/強光破壞，低於30%發動搶救</p>
+        </div>
+
+        <!-- Glucose & Fruit Progress -->
+        <div class="glass-panel p-3 bg-rose-950/20 border-rose-500/20">
+          <div class="flex justify-between items-center text-xs font-serif text-rose-300 mb-1">
+            <span><i class="fa-solid fa-apple-whole text-rose-400 mr-1"></i> 累積葡萄糖結晶</span>
+            <span id="glucose-total" class="font-extrabold text-amber-300">0.0 g</span>
+          </div>
+          <div class="w-full bg-slate-900/80 rounded-full h-2.5 border border-rose-500/30 overflow-hidden">
+            <div id="glucose-bar" class="bg-gradient-to-r from-amber-400 to-rose-400 h-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">達 100g 聖樹將產出滿樹聖果！</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Environmental Control Lab & High School Analytics -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- Environmental Parameter Tuning Box -->
+      <div class="glass-panel p-4 flex flex-col gap-3 border-emerald-500/30">
+        <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+          <h2 class="font-display font-bold text-emerald-200 text-sm sm:text-base flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-amber-400"></i> 生物環境實驗調控台
+          </h2>
+          <button onclick="resetParams()" class="glass-btn px-2.5 py-1 rounded-lg text-xs font-serif text-slate-300">
+            <i class="fa-solid fa-rotate-left mr-1"></i> 重置
+          </button>
+        </div>
+
+        <!-- Sun Light Intensity slider -->
+        <div>
+          <div class="flex justify-between text-xs font-serif mb-1">
+            <span class="text-amber-300"><i class="fa-solid fa-sun text-amber-400 mr-1"></i> 光照強度 (Intensity)</span>
+            <span id="lightText" class="text-amber-400">75 %</span>
+          </div>
+          <input type="range" id="lightRange" min="0" max="100" value="75" class="w-full h-2 cursor-pointer">
+        </div>
+
+        <!-- CO2 Slider -->
+        <div>
+          <div class="flex justify-between text-xs font-serif mb-1">
+            <span class="text-emerald-300"><i class="fa-solid fa-wind text-emerald-400 mr-1"></i> CO₂ 濃度 (ppm)</span>
+            <span id="co2Text" class="text-emerald-400">420 ppm</span>
+          </div>
+          <input type="range" id="co2Range" min="0" max="1200" step="20" value="420" class="w-full h-2 cursor-pointer">
+        </div>
+
+        <!-- Water Slider -->
+        <div>
+          <div class="flex justify-between text-xs font-serif mb-1">
+            <span class="text-cyan-300"><i class="fa-solid fa-droplet text-cyan-400 mr-1"></i> 組織水分供應</span>
+            <span id="waterText" class="text-cyan-400">85 %</span>
+          </div>
+          <input type="range" id="waterRange" min="0" max="100" value="85" class="w-full h-2 cursor-pointer">
+        </div>
+
+        <!-- Temp Slider -->
+        <div>
+          <div class="flex justify-between text-xs font-serif mb-1">
+            <span class="text-rose-300"><i class="fa-solid fa-temperature-full text-rose-400 mr-1"></i> 環境氣溫 (°C)</span>
+            <span id="tempText" class="text-rose-400">25 °C</span>
+          </div>
+          <input type="range" id="tempRange" min="-5" max="50" value="25" class="w-full h-2 cursor-pointer">
+        </div>
+
+        <!-- Limiting Factor Callout Box -->
+        <div id="limiting-box" class="p-3 rounded-xl bg-slate-900/80 border border-amber-500/30 text-xs font-serif text-slate-200 flex items-start gap-2.5">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base mt-0.5"></i>
+          <div>
+            <span class="block text-amber-300 font-bold">限制因子分析 (Limiting Factor)：</span>
+            <span id="limiting-text" class="text-slate-300">環境條件適宜，光反應與卡爾文循環穩定運轉。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Realtime Chart -->
+      <div class="glass-panel p-4 flex flex-col flex-1 min-h-[220px]">
+        <h3 class="font-display font-bold text-slate-200 text-xs sm:text-sm mb-2 flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+          <span><i class="fa-solid fa-chart-line text-cyan-400 mr-1"></i> 即時反應速率趨勢圖</span>
+          <span class="text-[10px] text-slate-400 font-serif">μmol / m²·s</span>
+        </h3>
+        <div class="flex-1 relative w-full h-full min-h-[150px]">
+          <canvas id="rateChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL 1: Automatic Rescue Prompt Modal (單題高中生物搶救) -->
+  <div id="rescueModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel max-w-lg w-full p-6 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.25)] flex flex-col gap-4">
+      <div class="flex items-center gap-3 border-b border-amber-500/30 pb-3">
+        <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl border border-amber-500/40">
+          <i class="fa-solid fa-kit-medical"></i>
+        </div>
+        <div>
+          <h3 class="font-display font-bold text-amber-300 text-lg">🚨 系統偵測：酵素與色素結構受損！</h3>
+          <p class="text-xs text-slate-300 font-serif">是否立即啟動【高中生物光合作用知識搶救】？</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-300 font-serif leading-relaxed">
+        環境異常導致 RuBisCO 酵素活性劇降或葉綠素受損。成功回答一題高中生物考題，即可獲得 <span class="text-amber-300 font-bold">40 秒「黃金最適宜環境 Buff」</span>，恢復 100% 活性並鎖定最佳生產光合狀態！
+      </p>
+
+      <!-- Quiz Area -->
+      <div id="rescue-quiz-container" class="space-y-3">
+        <p id="rescue-q-text" class="text-sm font-semibold text-emerald-200 font-serif bg-slate-900/60 p-3 rounded-lg border border-emerald-500/20"></p>
+        <div id="rescue-options" class="grid grid-cols-1 gap-2 text-xs font-serif"></div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-2 border-t border-slate-800 pt-3">
+        <button onclick="closeRescueModal(false)" class="px-4 py-2 rounded-lg text-xs font-serif text-slate-400 hover:text-slate-200">
+          放棄搶救 (活性繼續衰退)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Boss Biology Quiz Challenge (5題魔王大挑戰) -->
+  <div id="bossModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel max-w-2xl w-full p-6 border-rose-500/60 shadow-[0_0_60px_rgba(243,24,100,0.3)] flex flex-col gap-4">
+      <div class="flex items-center gap-3 border-b border-rose-500/30 pb-3">
+        <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl border border-rose-500/50">
+          <i class="fa-solid fa-skull"></i>
+        </div>
+        <div>
+          <h3 class="font-display font-bold text-rose-300 text-xl">💀 魔王關卡：葉綠體徹底失能大救贖</h3>
+          <p class="text-xs text-slate-300 font-serif">葉綠素活性歸零！必須通過 5 題高中生物魔王考題以甦醒古樹！</p>
+        </div>
+      </div>
+
+      <!-- Boss Quiz Progress -->
+      <div class="flex justify-between items-center text-xs font-serif text-slate-300">
+        <span>魔王考題進度：<span id="boss-q-num" class="text-rose-400 font-bold">1</span> / 5</span>
+        <span>當前答對數：<span id="boss-score" class="text-emerald-400 font-bold">0</span></span>
+      </div>
+
+      <!-- Boss Question Body -->
+      <div class="space-y-3 bg-slate-900/80 p-4 rounded-xl border border-rose-500/30">
+        <p id="boss-q-text" class="text-sm font-serif font-semibold text-rose-200 leading-relaxed"></p>
+        <div id="boss-options" class="grid grid-cols-1 gap-2.5 text-xs font-serif"></div>
+      </div>
+
+      <div id="boss-explanation" class="hidden text-xs font-serif p-3 bg-slate-900 rounded-lg text-amber-200 border border-amber-500/30"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Victory Fruit Modal (勝利滿樹聖果) -->
+  <div id="victoryModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-panel max-w-md w-full p-6 text-center border-amber-500/60 shadow-[0_0_60px_rgba(245,158,11,0.4)] flex flex-col items-center gap-4">
+      <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 text-slate-950 flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(245,158,11,0.8)] border-2 border-amber-300">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <h2 class="font-display font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-500">
+        聖樹結實纍纍！光合作用成功！
+      </h2>
+      <p class="text-xs font-serif text-slate-300 leading-relaxed">
+        您成功克服了極端氣候與酵素危機，帶領葉綠體合成了 <span class="text-amber-300 font-bold">100g 葡萄糖</span>！夢幻森林重現生機！
+      </p>
+      <button onclick="closeVictoryModal()" class="glass-btn px-6 py-2.5 rounded-xl font-serif text-sm font-bold text-amber-300 bg-amber-500/20 border-amber-500/40">
+        繼續無盡模式實驗
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       HIGH SCHOOL BIOLOGY PHOTOSYNTHESIS QUESTION BANK (台灣高中生物考點題庫)
+       ========================================================================= */
+    const highSchoolQuestionBank = [
+      {
+        q: "關於光合作用中的「水的光解 (Photolysis)」，下列敘述何者正確？",
+        options: [
+          "發生於葉綠體基質中，產生 ATP",
+          "於類囊體腔側發生，釋放 O₂、H⁺ 與電子",
+          "由 PSI 直接催化，將 CO₂ 還原",
+          "主要目的是消耗過多的 NADPH"
+        ],
+        answer: 1,
+        explain: "解析：水的光解發生在類囊體膜內部（腔側），PSII 催化 $2H_2O \\rightarrow 4H^+ + 4e^- + O_2$，產生的電子用於補充 PSII 反射中心釋出的電子。"
+      },
+      {
+        q: "卡爾文循環（固碳反應）中，催化 CO₂ 與 RuBP 結合的關鍵酵素為：",
+        options: [
+          "ATP 合成酶 (ATP Synthase)",
+          "RuBisCO (核酮糖-1,5-二磷酸羧化酶/加氧酶)",
+          "DNA 聚合酶",
+          "過氧化氫酶 (Catalase)"
+        ],
+        answer: 1,
+        explain: "解析：RuBisCO 是地球上含量最豐富的酵素，催化 1 分子 CO₂ 與 1 分子 5碳糖 RuBP 結合生成 3碳化合物 (PGA)。"
+      },
+      {
+        q: "光反應產生的質子 (H⁺) 梯度主要累積於何處？驅動何種酵素運作？",
+        options: [
+          "累積於葉綠體基質，驅動 RuBisCO",
+          "累積於類囊體腔，驅動 ATP 合成酶",
+          "累積於葉綠體雙層膜間隙，驅動電子傳遞鏈",
+          "累積於細胞質，驅動葡萄糖分解"
+        ],
+        answer: 1,
+        explain: "解析：電子傳遞鏈與水的光解使 H⁺ 累積於類囊體腔內，形成跨膜濃度差，H⁺ 順濃度梯度經由 ATP 合成酶流向基質並合成 ATP。"
+      },
+      {
+        q: "關於光系統 I (PSI) 與光系統 II (PSII) 的反應中心色素，何者正確？",
+        options: [
+          "PSII 吸收波長 700nm 光，PSI 吸收波長 680nm 光",
+          "PSII 反應中心為 P680，PSI 反應中心為 P700",
+          "PSI 直接參與水的光解",
+          "兩者皆不具備葉綠素 a"
+        ],
+        answer: 1,
+        explain: "解析：PSII 的反應中心色素吸收峰值為 680nm (P680)，PSI 的反應中心色素吸收峰值為 700nm (P700)。"
+      },
+      {
+        q: "若植物遭遇「光抑制 (Photoinhibition)」，通常是因為：",
+        options: [
+          "光照過度強烈超過光飽和點，損傷 PSII 反應中心蛋白",
+          "CO₂ 濃度過高導致酵素停擺",
+          "溫度過低導致水分子凝固",
+          "光照波長不符合葉綠素吸收光譜"
+        ],
+        answer: 0,
+        explain: "解析：過強光照會使 PSII 吸收過多能量產生活性氧類 (ROS)，損壞 PSII 中的 D1 蛋白，導致光合作用效率不升反降。"
+      },
+      {
+        q: "卡爾文循環中，每淨合成 1 分子 G3P (3碳糖)，需要消耗多少分子 CO₂、ATP 與 NADPH？",
+        options: [
+          "1 CO₂, 3 ATP, 2 NADPH",
+          "3 CO₂, 9 ATP, 6 NADPH",
+          "6 CO₂, 18 ATP, 12 NADPH",
+          "3 CO₂, 3 ATP, 3 NADPH"
+        ],
+        answer: 1,
+        explain: "解析：卡爾文循環固定 3 分子 CO₂，經還原與再生階段需消耗 9 分子 ATP 與 6 分子 NADPH，可淨輸出 1 分子 G3P。"
+      },
+      {
+        q: "關於 NADPH 在光合作用中的角色，下列何者描述最精確？",
+        options: [
+          "於類囊體膜腔側產生，提供氧化力",
+          "於基質側生成，在卡爾文循環中提供還原力 (高能電子)",
+          "直接與 CO₂ 結合形成葡萄糖",
+          "作為吸收光能的主力主要色素"
+        ],
+        answer: 1,
+        explain: "解析：NADP⁺ 在電子傳遞鏈末端（基質側）獲得電子與 H⁺ 還原為 NADPH，隨後在卡爾文循環將 PGA 還原為 G3P。"
+      }
+    ];
+
+    /* =========================================================================
+       SIMULATION STATE & ENGINE (夢幻森林模擬器核心)
+       ========================================================================= */
+    const state = {
+      light: 75,
+      co2: 420,
+      water: 85,
+      temp: 25,
+      weather: 'clear', // 'clear', 'mist', 'blizzard', 'scorching'
+      isPaused: false,
+      currentView: 'forest', // 'forest', 'thylakoid', 'calvin'
+      
+      // Health & Energy Pools
+      atpPool: 50,
+      nadphPool: 50,
+      health: 100, // Chlorophyll & Enzyme Health (0-100)
+      glucoseTotal: 0, // Target: 100g
+
+      // Rates
+      lightRate: 0,
+      calvinRate: 0,
+      limitingFactor: '無',
+
+      // Rescue & Buff System
+      buffTimer: 0, // 40s when active
+      rescueCooldown: 0,
+      rescueModalOpen: false,
+
+      // Boss Quiz System
+      bossModalOpen: false,
+      bossIndex: 0,
+      bossScore: 0,
+      bossQuestions: []
+    };
+
+    // Interactive Sun Physics
+    const sun = {
+      x: 200,
+      y: 120,
+      radius: 45,
+      isDragging: false,
+      dragOffsetX: 0,
+      dragOffsetY: 0
+    };
+
+    // Particle Collections
+    let rainDrops = [];
+    let snowFlakes = [];
+    let lightRays = [];
+    let biolumSpores = [];
+    let glucoseCrystals = [];
+
+    // Canvas & Chart global refs
+    let canvas, ctx, rateChart;
+    let timeTick = 0;
+
+    window.onload = function() {
+      canvas = document.getElementById('realmCanvas');
+      ctx = canvas.getContext('2d');
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      setupInputs();
+      initChart();
+      setupSunDrag();
+      initSpores();
+
+      // Start main game animation loop
+      requestAnimationFrame(gameLoop);
+    };
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = Math.max(rect.height, 500);
+    }
+
+    function setupInputs() {
+      document.getElementById('lightRange').addEventListener('input', (e) => {
+        if (state.buffTimer > 0) return;
+        state.light = parseFloat(e.target.value);
+        document.getElementById('lightText').innerText = state.light + ' %';
+      });
+      document.getElementById('co2Range').addEventListener('input', (e) => {
+        if (state.buffTimer > 0) return;
+        state.co2 = parseFloat(e.target.value);
+        document.getElementById('co2Text').innerText = state.co2 + ' ppm';
+      });
+      document.getElementById('waterRange').addEventListener('input', (e) => {
+        if (state.buffTimer > 0) return;
+        state.water = parseFloat(e.target.value);
+        document.getElementById('waterText').innerText = state.water + ' %';
+      });
+      document.getElementById('tempRange').addEventListener('input', (e) => {
+        if (state.buffTimer > 0) return;
+        state.temp = parseFloat(e.target.value);
+        document.getElementById('tempText').innerText = state.temp + ' °C';
+      });
+    }
+
+    function setupSunDrag() {
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+
+      function startDrag(e) {
+        if (state.currentView !== 'forest') return;
+        const pos = getPos(e);
+        const dist = Math.hypot(pos.x - sun.x, pos.y - sun.y);
+        if (dist <= sun.radius + 20) {
+          sun.isDragging = true;
+          sun.dragOffsetX = pos.x - sun.x;
+          sun.dragOffsetY = pos.y - sun.y;
+        }
+      }
+
+      function doDrag(e) {
+        if (!sun.isDragging || state.buffTimer > 0) return;
+        const pos = getPos(e);
+        sun.x = Math.max(60, Math.min(canvas.width - 60, pos.x - sun.dragOffsetX));
+        sun.y = Math.max(60, Math.min(canvas.height - 200, pos.y - sun.dragOffsetY));
+
+        // Sun height & distance controls light intensity dynamically
+        const heightFactor = Math.round((1 - sun.y / (canvas.height * 0.7)) * 100);
+        state.light = Math.max(10, Math.min(100, heightFactor));
+        document.getElementById('lightRange').value = state.light;
+        document.getElementById('lightText').innerText = state.light + ' %';
+      }
+
+      function endDrag() { sun.isDragging = false; }
+
+      canvas.addEventListener('mousedown', startDrag);
+      canvas.addEventListener('mousemove', doDrag);
+      window.addEventListener('mouseup', endDrag);
+
+      canvas.addEventListener('touchstart', startDrag, { passive: true });
+      canvas.addEventListener('touchmove', doDrag, { passive: true });
+      window.addEventListener('touchend', endDrag);
+    }
+
+    function initSpores() {
+      biolumSpores = [];
+      for (let i = 0; i < 35; i++) {
+        biolumSpores.push({
+          x: Math.random() * (canvas ? canvas.width : 1000),
+          y: Math.random() * (canvas ? canvas.height : 600),
+          r: 1.5 + Math.random() * 2.5,
+          alpha: 0.2 + Math.random() * 0.6,
+          vy: -0.2 - Math.random() * 0.4
+        });
+      }
+    }
+
+    function computeBiologicalEngine() {
+      // 1. Buff System Timer Logic
+      if (state.buffTimer > 0) {
+        state.buffTimer -= 1 / 60; // 60 FPS
+        document.getElementById('buff-timer').innerText = Math.ceil(state.buffTimer);
+        if (state.buffTimer <= 0) {
+          document.getElementById('buff-status').classList.add('hidden');
+          document.querySelector('.glass-panel').classList.remove('buff-active');
+        }
+      }
+
+      // Weather Auto Effects
+      if (state.weather === 'mist') {
+        state.water = Math.min(100, state.water + 0.08);
+      } else if (state.weather === 'blizzard') {
+        state.temp = Math.max(-5, state.temp - 0.15);
+      } else if (state.weather === 'scorching') {
+        state.temp = Math.min(50, state.temp + 0.15);
+        state.water = Math.max(0, state.water - 0.15);
+      }
+
+      // Update UI Slider Values
+      document.getElementById('waterRange').value = Math.round(state.water);
+      document.getElementById('waterText').innerText = Math.round(state.water) + ' %';
+      document.getElementById('tempRange').value = Math.round(state.temp);
+      document.getElementById('tempText').innerText = Math.round(state.temp) + ' °C';
+
+      // 2. Health & Denaturation Mechanics
+      if (state.buffTimer <= 0) {
+        if (state.temp > 42) {
+          state.health = Math.max(0, state.health - 0.15); // Heat Denaturation
+        } else if (state.temp < 5) {
+          state.health = Math.max(0, state.health - 0.08); // Freezing
+        } else if (state.light > 92) {
+          state.health = Math.max(0, state.health - 0.1); // Photoinhibition
+        } else if (state.water < 25) {
+          state.health = Math.max(0, state.health - 0.08); // Severe Drought
+        } else {
+          state.health = Math.min(100, state.health + 0.05); // Slow Natural Repair
+        }
+      } else {
+        state.health = 100; // Full health during Buff
+      }
+
+      // 3. Automatic Rescue Trigger Check
+      if (state.health < 30 && state.health > 0 && !state.rescueModalOpen && !state.bossModalOpen && state.rescueCooldown <= 0) {
+        openRescueModal();
+      }
+      if (state.rescueCooldown > 0) state.rescueCooldown--;
+
+      // 4. Boss Challenge Trigger (Health = 0)
+      if (state.health <= 0 && !state.bossModalOpen) {
+        openBossModal();
+      }
+
+      // 5. Enzyme Efficiency & Photosynthetic Rate Calculation
+      let tempFactor = 0;
+      if (state.temp < 0) tempFactor = 0.05;
+      else if (state.temp <= 30) tempFactor = Math.sin((state.temp / 30) * (Math.PI / 2));
+      else if (state.temp <= 44) tempFactor = Math.cos(((state.temp - 30) / 14) * (Math.PI / 2));
+      else tempFactor = 0; // Completely denatured
+
+      const healthFactor = state.health / 100;
+      const lightFactor = (state.light / (state.light + 20));
+      const waterFactor = state.water / 100;
+      
+      // Light Reaction Rate (O2 & H+ generation)
+      state.lightRate = 100 * lightFactor * waterFactor * (0.2 + 0.8 * tempFactor) * healthFactor;
+
+      // Calvin Cycle Rate (Glucose Synthesis)
+      const co2Factor = state.co2 / (state.co2 + 220);
+      const energyFactor = Math.min(state.atpPool / 20, state.nadphPool / 20, 1.0);
+      state.calvinRate = 100 * co2Factor * tempFactor * energyFactor * healthFactor;
+
+      // Pool Equilibrium
+      state.atpPool = Math.min(100, Math.max(0, state.atpPool + (state.lightRate * 0.1 - state.calvinRate * 0.09)));
+      state.nadphPool = Math.min(100, Math.max(0, state.nadphPool + (state.lightRate * 0.09 - state.calvinRate * 0.08)));
+
+      if (!state.isPaused) {
+        state.glucoseTotal += state.calvinRate * 0.0018;
+      }
+
+      // Check Fruit Stage Progress
+      updateFruitBadge();
+
+      // Limiting Factor Diagnostic
+      if (state.temp > 42) state.limitingFactor = "🔥 高溫致使 RuBisCO 酵素發生熱變性！";
+      else if (state.temp < 5) state.limitingFactor = "❄️ 低溫凍結酵素分子動能，反應停止！";
+      else if (state.light > 92) state.limitingFactor = "⚡ 極端強光引起 PSII 光抑制 (Photoinhibition)！";
+      else if (state.water < 25) state.limitingFactor = "💧 嚴重缺水，水的光解與 H⁺ 供應停擺！";
+      else if (state.light < 30) state.limitingFactor = "☁️ 光照低於補償點，ATP 與 NADPH 供應匱乏！";
+      else if (state.co2 < 200) state.limitingFactor = "💨 CO₂ 氣體不足，卡爾文循環碳固定卡關！";
+      else state.limitingFactor = "🌿 環境條件極佳，光能轉換效率極高！";
+
+      // UI Text Updates
+      document.getElementById('limiting-text').innerText = state.limitingFactor;
+      document.getElementById('temp-badge').innerHTML = `<i class="fa-solid fa-temperature-half"></i> 氣溫：${Math.round(state.temp)} °C`;
+      document.getElementById('health-val').innerText = Math.round(state.health) + '%';
+      document.getElementById('health-bar').style.width = state.health + '%';
+
+      document.getElementById('atp-val').innerText = Math.round(state.atpPool) + '%';
+      document.getElementById('atp-bar').style.width = state.atpPool + '%';
+      document.getElementById('nadph-val').innerText = Math.round(state.nadphPool) + '%';
+      document.getElementById('nadph-bar').style.width = state.nadphPool + '%';
+
+      document.getElementById('glucose-total').innerText = state.glucoseTotal.toFixed(1) + ' g';
+      document.getElementById('glucose-bar').style.width = Math.min(100, (state.glucoseTotal / 100) * 100) + '%';
+
+      if (state.glucoseTotal >= 100) {
+        openVictoryModal();
+      }
+    }
+
+    function updateFruitBadge() {
+      const g = state.glucoseTotal;
+      let stage = "🌸 階段一：繁花初綻 (幼芽期)";
+      if (g > 75) stage = "🍎 階段四：聖樹結實纍纍 (熟果期)";
+      else if (g > 50) stage = "🍏 階段三：青翠幼果蓬勃 (結實期)";
+      else if (g > 25) stage = "🌼 階段二：繁花盛開 (授粉期)";
+
+      document.getElementById('fruit-stage-badge').innerHTML = `<i class="fa-solid fa-apple-whole text-amber-400"></i> ${stage} (${g.toFixed(1)} / 100g)`;
+    }
+
+    function setWeather(w) {
+      state.weather = w;
+      const b = document.getElementById('weather-badge');
+      if (w === 'clear') {
+        b.innerHTML = `<i class="fa-solid fa-sun text-amber-400"></i> 天氣：晨曦晴空`;
+        state.light = 80; state.temp = 25;
+      } else if (w === 'mist') {
+        b.innerHTML = `<i class="fa-solid fa-cloud-rain text-cyan-400"></i> 天氣：霖雨霧靄`;
+        state.light = 40;
+      } else if (w === 'blizzard') {
+        b.innerHTML = `<i class="fa-solid fa-snowflake text-blue-300"></i> 天氣：寒冬霜雪`;
+      } else if (w === 'scorching') {
+        b.innerHTML = `<i class="fa-solid fa-fire text-rose-400"></i> 天氣：酷熱赤日`;
+      }
+    }
+
+    /* Rescue Modal Handlers */
+    function openRescueModal() {
+      state.rescueModalOpen = true;
+      document.getElementById('rescueModal').classList.remove('hidden');
+
+      // Pick random High School Biology question
+      const q = highSchoolQuestionBank[Math.floor(Math.random() * highSchoolQuestionBank.length)];
+      document.getElementById('rescue-q-text').innerText = q.q;
+
+      const optsDiv = document.getElementById('rescue-options');
+      optsDiv.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-2.5 rounded-lg bg-slate-800/80 hover:bg-emerald-700/40 border border-emerald-500/20 text-slate-200 transition-all";
+        btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+        btn.onclick = () => answerRescueQuiz(idx === q.answer);
+        optsDiv.appendChild(btn);
+      });
+    }
+
+    function answerRescueQuiz(isCorrect) {
+      document.getElementById('rescueModal').classList.add('hidden');
+      state.rescueModalOpen = false;
+
+      if (isCorrect) {
+        // Trigger 40s Optimal Environment Buff
+        state.buffTimer = 40;
+        state.temp = 25;
+        state.light = 80;
+        state.water = 90;
+        state.co2 = 600;
+        state.health = 100;
+        document.getElementById('buff-status').classList.remove('hidden');
+        document.querySelector('.glass-panel').classList.add('buff-active');
+      } else {
+        state.rescueCooldown = 600; // 10s cooldown before next rescue prompt
+      }
+    }
+
+    function closeRescueModal(accepted) {
+      document.getElementById('rescueModal').classList.add('hidden');
+      state.rescueModalOpen = false;
+      state.rescueCooldown = 600;
+    }
+
+    /* Boss Quiz Challenge Handlers */
+    function openBossModal() {
+      state.bossModalOpen = true;
+      state.bossIndex = 0;
+      state.bossScore = 0;
+      // Shuffle question bank and take 5
+      state.bossQuestions = [...highSchoolQuestionBank].sort(() => Math.random() - 0.5).slice(0, 5);
+      document.getElementById('bossModal').classList.remove('hidden');
+      renderBossQuestion();
+    }
+
+    function renderBossQuestion() {
+      const q = state.bossQuestions[state.bossIndex];
+      document.getElementById('boss-q-num').innerText = state.bossIndex + 1;
+      document.getElementById('boss-score').innerText = state.bossScore;
+      document.getElementById('boss-q-text').innerText = q.q;
+      document.getElementById('boss-explanation').classList.add('hidden');
+
+      const optsDiv = document.getElementById('boss-options');
+      optsDiv.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-3 rounded-lg bg-slate-800 hover:bg-rose-900/40 border border-rose-500/30 text-slate-200 transition-all";
+        btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+        btn.onclick = () => handleBossAnswer(idx === q.answer, q.explain);
+        optsDiv.appendChild(btn);
+      });
+    }
+
+    function handleBossAnswer(isCorrect, explainText) {
+      if (isCorrect) state.bossScore++;
+
+      const expBox = document.getElementById('boss-explanation');
+      expBox.classList.remove('hidden');
+      expBox.innerHTML = `<span class="font-bold">${isCorrect ? '✅ 答對了！' : '❌ 答錯了！'}</span> ${explainText}`;
+
+      setTimeout(() => {
+        state.bossIndex++;
+        if (state.bossIndex < 5) {
+          renderBossQuestion();
+        } else {
+          // Finish Boss Challenge
+          document.getElementById('bossModal').classList.add('hidden');
+          state.bossModalOpen = false;
+
+          if (state.bossScore >= 4) {
+            state.health = 100;
+            state.temp = 25;
+            state.water = 80;
+          } else {
+            state.health = 50; // Partial resurrection
+          }
+        }
+      }, 2200);
+    }
+
+    function openVictoryModal() {
+      document.getElementById('victoryModal').classList.remove('hidden');
+    }
+    function closeVictoryModal() {
+      document.getElementById('victoryModal').classList.add('hidden');
+      state.glucoseTotal = 0; // reset for infinite mode
+    }
+
+    function resetParams() {
+      setWeather('clear');
+      state.water = 85;
+      state.co2 = 420;
+    }
+
+    function togglePause() {
+      state.isPaused = !state.isPaused;
+      document.getElementById('pauseBtn').innerHTML = state.isPaused ? `<i class="fa-solid fa-play mr-1"></i> 繼續模擬` : `<i class="fa-solid fa-pause mr-1"></i> 暫停模擬`;
+    }
+
+    function switchView(viewName) {
+      state.currentView = viewName;
+      ['forest', 'thylakoid', 'calvin'].forEach(v => {
+        const btn = document.getElementById(`tab-${v}`);
+        if (v === viewName) {
+          btn.className = "glass-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-emerald-200 bg-emerald-500/30 border-emerald-400";
+        } else {
+          btn.className = "glass-btn px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300";
+        }
+      });
+    }
+
+    function drawForestRealm() {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Atmospheric Sky Gradient
+      let skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      if (state.weather === 'blizzard') {
+        skyGrad.addColorStop(0, '#0f172a'); skyGrad.addColorStop(1, '#1e293b');
+      } else if (state.weather === 'mist') {
+        skyGrad.addColorStop(0, '#06201b'); skyGrad.addColorStop(1, '#0c382d');
+      } else if (state.weather === 'scorching') {
+        skyGrad.addColorStop(0, '#2a080c'); skyGrad.addColorStop(1, '#1a0d0e');
+      } else {
+        skyGrad.addColorStop(0, '#041d1a'); skyGrad.addColorStop(1, '#0c3e33');
+      }
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Render Bioluminescent Floating Spores
+      ctx.fillStyle = 'rgba(52, 211, 153, 0.4)';
+      biolumSpores.forEach(s => {
+        s.y += s.vy;
+        if (s.y < 0) s.y = h;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Interactive Volumetric Sun (God Rays)
+      ctx.save();
+      ctx.translate(sun.x, sun.y);
+
+      // Radial Volumetric Glow
+      let sunGlow = ctx.createRadialGradient(0, 0, 10, 0, 0, sun.radius * 3);
+      sunGlow.addColorStop(0, 'rgba(253, 224, 71, 0.8)');
+      sunGlow.addColorStop(0.4, 'rgba(245, 158, 11, 0.3)');
+      sunGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, sun.radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sun Core
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(0, 0, sun.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // God Ray Beams from Sun to Ancient Tree
+      const treeX = w * 0.5;
+      const treeY = h * 0.75;
+
+      if (state.light > 15) {
+        let beamGrad = ctx.createLinearGradient(sun.x, sun.y, treeX, treeY - 80);
+        beamGrad.addColorStop(0, 'rgba(254, 240, 138, 0.25)');
+        beamGrad.addColorStop(1, 'rgba(52, 211, 153, 0.05)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(sun.x - 25, sun.y);
+        ctx.lineTo(sun.x + 25, sun.y);
+        ctx.lineTo(treeX + 100, treeY - 50);
+        ctx.lineTo(treeX - 100, treeY - 50);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Draw Ancient Chloroplast Fantasy Tree
+      ctx.save();
+      ctx.translate(treeX, treeY);
+
+      // Trunk
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.moveTo(-35, 100);
+      ctx.lineTo(-20, -20);
+      ctx.lineTo(20, -20);
+      ctx.lineTo(35, 100);
+      ctx.closePath();
+      ctx.fill();
+
+      // Foliage Canopy (Glows green/amber based on health)
+      let foliageColor = '#10b981';
+      if (state.health < 30) foliageColor = '#b45309'; // Withered
+      else if (state.buffTimer > 0) foliageColor = '#f59e0b'; // Buff Glowing Gold
+
+      ctx.fillStyle = foliageColor;
+      ctx.shadowColor = foliageColor;
+      ctx.shadowBlur = state.health > 50 ? 25 : 5;
+
+      ctx.beginPath();
+      ctx.arc(0, -90, 95, 0, Math.PI * 2);
+      ctx.arc(-65, -60, 70, 0, Math.PI * 2);
+      ctx.arc(65, -60, 70, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Golden Magical Fruits Hanging on Tree based on Glucose
+      const fruitCount = Math.min(12, Math.floor(state.glucoseTotal / 8));
+      for (let i = 0; i < fruitCount; i++) {
+        let angle = (i * Math.PI * 2) / 12;
+        let fx = Math.cos(angle) * 65;
+        let fy = -80 + Math.sin(angle) * 45;
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.shadowColor = '#fef08a';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.restore();
+
+      // Weather Rain / Snow Particle Rendering
+      if (state.weather === 'mist' && Math.random() < 0.6) {
+        rainDrops.push({ x: Math.random() * w, y: 0, speed: 7 + Math.random() * 5 });
+      }
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      for (let i = rainDrops.length - 1; i >= 0; i--) {
+        let r = rainDrops[i];
+        r.y += r.speed;
+        ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(r.x - 1, r.y + 10); ctx.stroke();
+        if (r.y > h) rainDrops.splice(i, 1);
+      }
+    }
+
+    function drawThylakoidView() {
+      const w = canvas.width; const h = canvas.height;
+      ctx.fillStyle = '#061a14'; ctx.fillRect(0, 0, w, h);
+
+      const memY = h * 0.5; const memH = 70;
+
+      // Lipid Bilayer Membrane
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+      ctx.fillRect(0, memY, w, memH);
+      ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2;
+      ctx.strokeRect(0, memY, w, memH);
+
+      // Section Labels
+      ctx.fillStyle = '#34d399'; ctx.font = '600 14px "Noto Serif TC"';
+      ctx.fillText('葉綠體基質 (Stroma) - H⁺ 濃度低 (pH ~8.0)', 30, 50);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('類囊體腔 (Thylakoid Lumen) - H⁺ 質子累積 (pH ~5.5)', 30, memY + memH + 50);
+
+      // Photosystem II (P680)
+      ctx.fillStyle = '#059669';
+      ctx.beginPath(); ctx.roundRect(w * 0.2, memY - 25, 90, 120, 16); ctx.fill();
+      ctx.strokeStyle = '#6ee7b7'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('PS II (P680)', w * 0.2 + 45, memY + 25);
+      ctx.font = '11px sans-serif'; ctx.fillText('水的光解 💧', w * 0.2 + 45, memY + 45);
+
+      // Photosystem I (P700)
+      ctx.fillStyle = '#047857';
+      ctx.beginPath(); ctx.roundRect(w * 0.55, memY - 25, 90, 120, 16); ctx.fill();
+      ctx.strokeStyle = '#34d399'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('PS I (P700)', w * 0.55 + 45, memY + 25);
+      ctx.font = '11px sans-serif'; ctx.fillText('NADP⁺ 還原', w * 0.55 + 45, memY + 45);
+
+      // ATP Synthase Rotor
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath(); ctx.arc(w * 0.82, memY - 10, 36, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fef08a'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('ATP 合成酶', w * 0.82, memY - 10);
+
+      // Animated H+ Protons Diffusing
+      if (!state.isPaused) {
+        ctx.fillStyle = '#f43f5e';
+        for (let i = 0; i < 8; i++) {
+          let px = w * 0.15 + (i * w * 0.1);
+          let py = memY + memH + 20 + Math.sin(timeTick * 0.1 + i) * 8;
+          ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    function drawCalvinView() {
+      const w = canvas.width; const h = canvas.height;
+      const cx = w * 0.5; const cy = h * 0.5; const r = 130;
+
+      ctx.fillStyle = '#03140e'; ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 18px "Cinzel"'; ctx.textAlign = 'center';
+      ctx.fillText('CALVIN CYCLE (基質碳固定三階段)', cx, 50);
+
+      // Cycle Ring
+      ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+      // RuBisCO Center Node
+      ctx.fillStyle = state.health < 30 ? '#ef4444' : '#10b981';
+      ctx.beginPath(); ctx.arc(cx, cy - r, 38, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2; ctx.stroke();
+
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('RuBisCO', cx, cy - r + 4);
+
+      // Cycle Stage Labels
+      ctx.fillStyle = '#34d399'; ctx.font = '12px "Noto Serif TC"';
+      ctx.fillText('1. CO₂ 碳固定 (Carbon Fixation)', cx + r + 60, cy - 40);
+      ctx.fillText('2. PGA 還原為 G3P (Reduction)', cx, cy + r + 40);
+      ctx.fillText('3. RuBP 五碳糖再生 (Regeneration)', cx - r - 60, cy - 40);
+    }
+
+    function gameLoop() {
+      if (!state.isPaused) {
+        timeTick++;
+        computeBiologicalEngine();
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (state.currentView === 'forest') drawForestRealm();
+      else if (state.currentView === 'thylakoid') drawThylakoidView();
+      else drawCalvinView();
+
+      if (timeTick % 30 === 0 && rateChart) {
+        updateChart();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function initChart() {
+      const chartCtx = document.getElementById('rateChart').getContext('2d');
+      rateChart = new Chart(chartCtx, {
+        type: 'line',
+        data: {
+          labels: Array(12).fill(''),
+          datasets: [
+            {
+              label: '光反應速率 (O₂)',
+              data: Array(12).fill(0),
+              borderColor: '#38bdf8',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            },
+            {
+              label: '固碳反應速率 (G3P)',
+              data: Array(12).fill(0),
+              borderColor: '#34d399',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function updateChart() {
+      const d1 = rateChart.data.datasets[0].data;
+      const d2 = rateChart.data.datasets[1].data;
+      d1.shift(); d1.push(state.lightRate);
+      d2.shift(); d2.push(state.calvinRate);
+      rateChart.update('none');
+    }
+  </script>
+</body>
+</html>

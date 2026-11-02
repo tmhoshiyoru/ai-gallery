@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 賽博極速：極限超越 (Cyber Runner Ultra)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', 'Orbitron', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #030712;
+        }
+
+        #game-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 25px rgba(56, 189, 248, 0.6);
+        }
+
+        .neon-text-red {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 25px rgba(244, 63, 94, 0.6);
+        }
+
+        .touch-btn:active {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: scale(0.92);
+        }
+
+        /* Speed lines effect overlay during high speed */
+        #speed-overlay {
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 60%, rgba(56, 189, 248, 0.15) 100%);
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body class="text-white relative">
+
+    <!-- Speed Overlay Effect -->
+    <div id="speed-overlay" class="absolute inset-0 z-0 opacity-0"></div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD / In-Game Overlay -->
+    <div id="hud" class="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start pointer-events-none z-10 hidden">
+        <!-- Score & Multiplier -->
+        <div class="glass p-3 md:p-4 rounded-2xl flex flex-col gap-1 min-w-[150px]">
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-slate-400 font-bold tracking-wider uppercase">SCORE</span>
+                <span id="level-indicator" class="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full font-bold">LV.1</span>
+            </div>
+            <span id="score-display" class="text-2xl md:text-3xl font-black text-cyan-400 font-mono">000000</span>
+            <div class="flex items-center justify-between gap-2 mt-1">
+                <div class="flex items-center gap-1">
+                    <span class="text-xs text-slate-400 font-bold">COINS:</span>
+                    <span id="coin-display" class="text-sm font-bold text-yellow-400 font-mono">0</span>
+                </div>
+                <span id="multiplier-display" class="text-xs font-black text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-500/40">1x</span>
+            </div>
+        </div>
+
+        <!-- Active Buffs Status -->
+        <div id="buff-container" class="flex flex-wrap gap-2 max-w-[50%] justify-end">
+            <div id="buff-magnet" class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 border-amber-500/50 hidden">
+                <i class="fa-solid fa-magnet text-amber-400 animate-pulse"></i>
+                <span class="text-xs font-bold text-amber-300">磁鐵</span>
+            </div>
+            <div id="buff-shield" class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 border-emerald-500/50 hidden">
+                <i class="fa-solid fa-shield-halved text-emerald-400 animate-pulse"></i>
+                <span class="text-xs font-bold text-emerald-300">護盾</span>
+            </div>
+            <div id="buff-boost" class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 border-purple-500/50 hidden">
+                <i class="fa-solid fa-bolt text-purple-400 animate-bounce"></i>
+                <span class="text-xs font-bold text-purple-300">衝刺</span>
+            </div>
+            <div id="buff-slow" class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 border-sky-500/50 hidden">
+                <i class="fa-solid fa-hourglass-half text-sky-400 animate-spin"></i>
+                <span class="text-xs font-bold text-sky-300">時緩</span>
+            </div>
+            <div id="buff-jump" class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 border-pink-500/50 hidden">
+                <i class="fa-solid fa-angles-up text-pink-400 animate-pulse"></i>
+                <span class="text-xs font-bold text-pink-300">二段跳</span>
+            </div>
+        </div>
+
+        <!-- Pause Button -->
+        <button id="btn-pause" class="glass p-3 rounded-2xl hover:bg-slate-800/80 transition active:scale-95 pointer-events-auto">
+            <i class="fa-solid fa-pause text-xl text-slate-200"></i>
+        </button>
+    </div>
+
+    <!-- START MENU SCREEN -->
+    <div id="start-screen" class="absolute inset-0 flex items-center justify-center z-20 p-4">
+        <div class="glass p-6 md:p-8 rounded-3xl max-w-lg w-full text-center flex flex-col items-center gap-5 shadow-2xl border border-slate-700/50">
+            <!-- Title -->
+            <div class="space-y-1">
+                <h1 class="text-4xl md:text-5xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 neon-text-blue">
+                    賽博極速：極限
+                </h1>
+                <p class="text-xs md:text-sm text-cyan-300/80 tracking-widest font-bold uppercase">CYBER RUNNER ULTRA</p>
+            </div>
+
+            <!-- Character / Ability Selection -->
+            <div class="w-full space-y-2">
+                <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">選擇英雄與天賦</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button class="char-select-btn p-3 rounded-2xl glass border-2 border-cyan-400 flex flex-col items-center gap-1 transition" data-char="runner">
+                        <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-slate-950 font-black text-lg"><i class="fa-solid fa-person-running"></i></div>
+                        <span class="text-xs font-bold">疾鋒</span>
+                        <span class="text-[10px] text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded">內建二段跳</span>
+                    </button>
+                    <button class="char-select-btn p-3 rounded-2xl glass border-2 border-transparent hover:border-slate-500 flex flex-col items-center gap-1 transition" data-char="robot">
+                        <div class="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center text-slate-950 font-black text-lg"><i class="fa-solid fa-robot"></i></div>
+                        <span class="text-xs font-bold">機甲</span>
+                        <span class="text-[10px] text-pink-300 bg-pink-950 px-1.5 py-0.5 rounded">開局帶護盾</span>
+                    </button>
+                    <button class="char-select-btn p-3 rounded-2xl glass border-2 border-transparent hover:border-slate-500 flex flex-col items-center gap-1 transition" data-char="cyber">
+                        <div class="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center text-slate-950 font-black text-lg"><i class="fa-solid fa-bolt"></i></div>
+                        <span class="text-xs font-bold">閃光</span>
+                        <span class="text-[10px] text-amber-300 bg-amber-950 px-1.5 py-0.5 rounded">得分&金幣1.5倍</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- High Score Display -->
+            <div class="flex justify-between w-full px-4 py-2 bg-slate-900/80 rounded-xl text-sm border border-slate-800">
+                <span class="text-slate-400 font-bold">歷史最高紀錄:</span>
+                <span id="high-score" class="font-mono text-cyan-400 font-bold">000000</span>
+            </div>
+
+            <!-- Start Game Button -->
+            <button id="btn-start" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-black text-lg tracking-wider shadow-lg shadow-cyan-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0">
+                展開極速挑戰
+            </button>
+
+            <!-- Guide -->
+            <div class="text-xs text-slate-400 flex flex-col gap-1 items-center">
+                <p><span class="text-slate-200 font-bold">← / → / A / D</span> : 換道 &nbsp;|&nbsp; <span class="text-slate-200 font-bold">↑ / W / Space</span> : 跳躍/二段跳</p>
+                <p><span class="text-slate-200 font-bold">↓ / S</span> : 滑行避開高空擺斧或快速下墜</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="absolute inset-0 flex items-center justify-center z-20 p-4 hidden">
+        <div class="glass p-6 md:p-8 rounded-3xl max-w-md w-full text-center flex flex-col items-center gap-5 shadow-2xl border border-red-500/30">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-3xl border border-red-500/40 animate-pulse">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            
+            <h2 class="text-3xl md:text-4xl font-black text-red-500 tracking-wider neon-text-red">系統崩潰</h2>
+
+            <div class="w-full bg-slate-900/80 rounded-2xl p-4 space-y-3 border border-slate-800">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">最終得分</span>
+                    <span id="final-score" class="text-2xl font-black text-cyan-400 font-mono">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">收集金幣</span>
+                    <span id="final-coins" class="text-xl font-bold text-yellow-400 font-mono">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">到達階段</span>
+                    <span id="final-level" class="text-md font-bold text-purple-400">LV.1</span>
+                </div>
+                <div id="new-high-score-badge" class="hidden py-1 px-3 bg-gradient-to-r from-amber-500 to-yellow-300 text-slate-950 font-black text-xs rounded-full uppercase tracking-wider text-center">
+                    🎉 刷新最高紀錄！
+                </div>
+            </div>
+
+            <button id="btn-restart" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-lg tracking-wider shadow-lg shadow-emerald-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0">
+                再次挑戰
+            </button>
+        </div>
+    </div>
+
+    <!-- PAUSE MENU -->
+    <div id="pause-screen" class="absolute inset-0 flex items-center justify-center z-20 p-4 hidden">
+        <div class="glass p-8 rounded-3xl max-w-xs w-full text-center flex flex-col items-center gap-4">
+            <h3 class="text-2xl font-black text-slate-200">遊戲暫停</h3>
+            <button id="btn-resume" class="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition">繼續遊戲</button>
+            <button id="btn-quit" class="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">返回主選單</button>
+        </div>
+    </div>
+
+    <!-- MOBILE TOUCH CONTROLS -->
+    <div id="touch-controls" class="absolute bottom-6 left-0 right-0 px-6 flex justify-between items-end pointer-events-none z-10 md:hidden">
+        <div class="flex gap-3 pointer-events-auto">
+            <button id="touch-left" class="touch-btn w-16 h-16 rounded-2xl glass flex items-center justify-center text-2xl text-cyan-400 active:bg-cyan-500/30">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button id="touch-right" class="touch-btn w-16 h-16 rounded-2xl glass flex items-center justify-center text-2xl text-cyan-400 active:bg-cyan-500/30">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-3 pointer-events-auto">
+            <button id="touch-jump" class="touch-btn w-16 h-16 rounded-2xl glass flex items-center justify-center text-2xl text-emerald-400 active:bg-emerald-500/30">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+            <button id="touch-slide" class="touch-btn w-16 h-16 rounded-2xl glass flex items-center justify-center text-2xl text-amber-400 active:bg-amber-500/30">
+                <i class="fa-solid fa-arrow-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME ENGINE & ENHANCED CONFIGURATION ---
+        
+        const LANES = [-2.6, 0, 2.6];
+        const INITIAL_SPEED = 0.42;
+        const MAX_SPEED = 1.15;
+        const ACCELERATION = 0.00008;
+        const JUMP_FORCE = 0.32;
+        const GRAVITY = 0.015;
+
+        // Sound Synthesis Setup (AudioContext with Web Audio API)
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'coin') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1046.5, now); // C6
+                    osc.frequency.exponentialRampToValueAtTime(1567.98, now + 0.1); // G6
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now); osc.stop(now + 0.12);
+                } else if (type === 'jump') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(520, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now); osc.stop(now + 0.15);
+                } else if (type === 'buff') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.exponentialRampToValueAtTime(950, now + 0.25);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                } else if (type === 'crash') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.35);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now); osc.stop(now + 0.35);
+                }
+            } catch (e) {
+                console.warn('Audio playback error:', e);
+            }
+        }
+
+        // Game State Variables
+        let gameState = 'MENU';
+        let selectedCharacter = 'runner';
+        let score = 0;
+        let coins = 0;
+        let currentLevel = 1;
+        let scoreMultiplier = 1;
+        let highScore = parseInt(localStorage.getItem('cyber_runner_ultra_highscore') || '0');
+        let speed = INITIAL_SPEED;
+
+        // Physics State
+        let currentLane = 1;
+        let targetX = LANES[1];
+        let playerY = 0;
+        let velocityY = 0;
+        let jumpCount = 0;
+        let maxJumps = 1; // Double jump allowed if 2
+        let isGrounded = true;
+        let isSliding = false;
+        let slideTimer = 0;
+        let shakeFrames = 0;
+
+        // Buff Timers & States
+        let activeBuffs = {
+            magnet: 0,
+            shield: false,
+            boost: 0,
+            slow: 0,
+            doubleJump: 0
+        };
+
+        // Three.js Scene Variables
+        let scene, camera, renderer;
+        let playerGroup, playerBody, shieldMesh, trailParticles = [];
+        let trackSegments = [];
+        let obstacles = [];
+        let collectibles = [];
+        let animatedObstacles = []; // Dynamic traps like swinging axes
+
+        const COLOR_THEME = {
+            runner: 0x00f3ff,
+            robot: 0xf43f5e,
+            cyber: 0xf59e0b,
+            track: 0x090d16,
+            grid: 0x1e293b,
+            coin: 0xffd700
+        };
+
+        window.onload = function() {
+            initThree();
+            setupEventListeners();
+            updateHighScoreDisplay();
+            animate();
+        };
+
+        // --- THREE.JS GRAPHICS SETUP ---
+        function initThree() {
+            const canvas = document.getElementById('game-canvas');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x030712);
+            scene.fog = new THREE.FogExp2(0x030712, 0.015);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(0, 3.8, 7.5);
+            camera.lookAt(0, 1.2, -5);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(12, 25, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            scene.add(dirLight);
+
+            // Neon Dynamic Point Lights
+            const cyanLight = new THREE.PointLight(0x00f3ff, 2.5, 25);
+            cyanLight.position.set(-6, 3, -12);
+            scene.add(cyanLight);
+
+            const pinkLight = new THREE.PointLight(0xf43f5e, 2.5, 25);
+            pinkLight.position.set(6, 3, -12);
+            scene.add(pinkLight);
+
+            buildPlayer();
+            buildTrack();
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        // --- PLAYER CREATION ---
+        function buildPlayer() {
+            playerGroup = new THREE.Group();
+            scene.add(playerGroup);
+
+            // Cybernetic Body Torso
+            const bodyGeo = new THREE.BoxGeometry(0.75, 1.1, 0.45);
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: COLOR_THEME[selectedCharacter], 
+                roughness: 0.25, 
+                metalness: 0.85 
+            });
+            playerBody = new THREE.Mesh(bodyGeo, bodyMat);
+            playerBody.position.y = 0.95;
+            playerBody.castShadow = true;
+            playerGroup.add(playerBody);
+
+            // Head / Visor
+            const visorGeo = new THREE.BoxGeometry(0.55, 0.22, 0.25);
+            const visorMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const visor = new THREE.Mesh(visorGeo, visorMat);
+            visor.position.set(0, 1.25, -0.18);
+            playerGroup.add(visor);
+
+            // Thruster Trail Glow (Backpack)
+            const jetGeo = new THREE.BoxGeometry(0.35, 0.5, 0.2);
+            const jetMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9 });
+            const jetpack = new THREE.Mesh(jetGeo, jetMat);
+            jetpack.position.set(0, 0.95, 0.3);
+            playerGroup.add(jetpack);
+
+            // Shield Bubble Effect
+            const shieldGeo = new THREE.IcosahedronGeometry(1.3, 2);
+            const shieldMat = new THREE.MeshBasicMaterial({ 
+                color: 0x10b981, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            shieldMesh.position.y = 1;
+            shieldMesh.visible = false;
+            playerGroup.add(shieldMesh);
+        }
+
+        function updatePlayerSkin() {
+            if (playerBody) {
+                playerBody.material.color.setHex(COLOR_THEME[selectedCharacter]);
+            }
+        }
+
+        // --- ENVIRONMENT & TRACK BUILDER ---
+        function buildTrack() {
+            for (let i = 0; i < 12; i++) {
+                createTrackSegment(-i * 20);
+            }
+        }
+
+        function createTrackSegment(zPos) {
+            const segmentGroup = new THREE.Group();
+            segmentGroup.position.z = zPos;
+
+            // Main Floor
+            const floorGeo = new THREE.PlaneGeometry(9.5, 20);
+            const floorMat = new THREE.MeshStandardMaterial({ color: COLOR_THEME.track, roughness: 0.7 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            segmentGroup.add(floor);
+
+            // Grid Lines
+            for (let i = -1; i <= 1; i += 2) {
+                const lineGeo = new THREE.PlaneGeometry(0.08, 20);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(i * (LANES[2] / 2 + 0.65), 0.01, 0);
+                segmentGroup.add(line);
+            }
+
+            // Glowing Edge Barriers
+            const borderGeo = new THREE.BoxGeometry(0.25, 0.5, 20);
+            const borderMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+            
+            const leftBorder = new THREE.Mesh(borderGeo, borderMat);
+            leftBorder.position.set(-4.75, 0.25, 0);
+            segmentGroup.add(leftBorder);
+
+            const rightBorder = new THREE.Mesh(borderGeo, borderMat);
+            rightBorder.position.set(4.75, 0.25, 0);
+            segmentGroup.add(rightBorder);
+
+            scene.add(segmentGroup);
+            trackSegments.push(segmentGroup);
+        }
+
+        // --- HIGH-DIFFICULTY OBSTACLE & TRAP SPANNER ---
+        function spawnObstaclePattern(zPos) {
+            const levelMultiplier = Math.min(3, 1 + (currentLevel - 1) * 0.3);
+            const rand = Math.random();
+
+            if (rand < 0.25) {
+                // High & Low Dual Hazard
+                const lane = Math.floor(Math.random() * 3);
+                createObstacle('low', LANES[lane], zPos);
+                createObstacle('high', LANES[(lane + 1) % 3], zPos);
+            } else if (rand < 0.45) {
+                // Dynamic Swinging Pendulum / Blade
+                const lane = Math.floor(Math.random() * 3);
+                createDynamicSwingingBlade(LANES[lane], zPos);
+            } else if (rand < 0.65) {
+                // Pitfall Hole on Runway (Missing floor visual + death pit)
+                const holeLane = Math.floor(Math.random() * 3);
+                createObstacle('hole', LANES[holeLane], zPos);
+            } else if (rand < 0.85) {
+                // Double Wall Blockade
+                const freeLane = Math.floor(Math.random() * 3);
+                for (let l = 0; l < 3; l++) {
+                    if (l !== freeLane) createObstacle('wall', LANES[l], zPos);
+                }
+            } else {
+                // Coin Arc Trail
+                spawnCoinArc(LANES[Math.floor(Math.random() * 3)], zPos);
+            }
+
+            // Power-up Spawning (Lower chance at higher levels to increase difficulty)
+            if (Math.random() < Math.max(0.08, 0.2 - currentLevel * 0.02)) {
+                const types = ['magnet', 'shield', 'boost', 'slow', 'jump'];
+                const itemType = types[Math.floor(Math.random() * types.length)];
+                const freeLane = LANES[Math.floor(Math.random() * 3)];
+                spawnPowerUp(itemType, freeLane, zPos - 6);
+            }
+        }
+
+        function createObstacle(type, x, z) {
+            let mesh;
+            if (type === 'low') {
+                const geo = new THREE.BoxGeometry(2.1, 1.1, 0.8);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.2, metalness: 0.6 });
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, 0.55, z);
+            } else if (type === 'high') {
+                const geo = new THREE.BoxGeometry(2.1, 1.6, 0.8);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2 });
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, 2.2, z); // High clearance requiring slide
+            } else if (type === 'wall') {
+                const geo = new THREE.BoxGeometry(2.1, 2.8, 0.8);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.3 });
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, 1.4, z);
+            } else if (type === 'hole') {
+                // Visual Black Pit Hole
+                const geo = new THREE.BoxGeometry(2.2, 0.1, 3.5);
+                const mat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, 0.02, z);
+            }
+
+            mesh.castShadow = true;
+            mesh.userData = { type: type, box: new THREE.Box3() };
+            scene.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        function createDynamicSwingingBlade(x, z) {
+            const pendulumGroup = new THREE.Group();
+            pendulumGroup.position.set(x, 4.0, z);
+
+            // Overhead Beam Structure
+            const beamGeo = new THREE.CylinderGeometry(0.08, 0.08, 3.5);
+            const beamMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            pendulumGroup.add(beam);
+
+            // Sharp Disc Blade at bottom
+            const bladeGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.1, 16);
+            const bladeMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+            const blade = new THREE.Mesh(bladeGeo, bladeMat);
+            blade.rotation.x = Math.PI / 2;
+            blade.position.set(0, -1.8, 0);
+            pendulumGroup.add(blade);
+
+            pendulumGroup.userData = { 
+                type: 'blade', 
+                baseX: x, 
+                z: z, 
+                swingSpeed: 0.05 + Math.random() * 0.03, 
+                box: new THREE.Box3() 
+            };
+
+            scene.add(pendulumGroup);
+            obstacles.push(pendulumGroup);
+            animatedObstacles.push(pendulumGroup);
+        }
+
+        function spawnCoinArc(x, startZ) {
+            for (let i = 0; i < 5; i++) {
+                const geo = new THREE.CylinderGeometry(0.32, 0.32, 0.08, 16);
+                const mat = new THREE.MeshStandardMaterial({ color: COLOR_THEME.coin, metalness: 0.9, roughness: 0.1 });
+                const coin = new THREE.Mesh(geo, mat);
+                coin.rotation.x = Math.PI / 2;
+
+                // Parabolic Arc Height
+                const height = Math.sin((i / 4) * Math.PI) * 1.8 + 0.6;
+                coin.position.set(x, height, startZ - (i * 2));
+                coin.castShadow = true;
+                coin.userData = { type: 'coin', box: new THREE.Box3() };
+                scene.add(coin);
+                collectibles.push(coin);
+            }
+        }
+
+        function spawnPowerUp(type, x, z) {
+            const geo = new THREE.OctahedronGeometry(0.45);
+            let color = 0x3b82f6;
+            if (type === 'shield') color = 0x10b981;
+            if (type === 'boost') color = 0xa855f7;
+            if (type === 'slow') color = 0x38bdf8;
+            if (type === 'jump') color = 0xec4899;
+
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.1, metalness: 0.8 });
+            const item = new THREE.Mesh(geo, mat);
+            item.position.set(x, 1.0, z);
+            item.userData = { type: type, box: new THREE.Box3() };
+            scene.add(item);
+            collectibles.push(item);
+        }
+
+        // --- INPUT & CONTROLS ---
+        function setupEventListeners() {
+            window.addEventListener('keydown', (e) => {
+                if (gameState !== 'PLAYING') return;
+
+                if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && currentLane > 0) {
+                    currentLane--;
+                } else if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && currentLane < 2) {
+                    currentLane++;
+                } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+                    handleJump();
+                } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                    handleSlide();
+                }
+                targetX = LANES[currentLane];
+            });
+
+            // Touch Buttons
+            document.getElementById('touch-left').addEventListener('click', () => {
+                if (gameState === 'PLAYING' && currentLane > 0) { currentLane--; targetX = LANES[currentLane]; }
+            });
+            document.getElementById('touch-right').addEventListener('click', () => {
+                if (gameState === 'PLAYING' && currentLane < 2) { currentLane++; targetX = LANES[currentLane]; }
+            });
+            document.getElementById('touch-jump').addEventListener('click', () => {
+                if (gameState === 'PLAYING') handleJump();
+            });
+            document.getElementById('touch-slide').addEventListener('click', () => {
+                if (gameState === 'PLAYING') handleSlide();
+            });
+
+            // Swipe Detection
+            let touchStartX = 0, touchStartY = 0;
+            window.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+
+            window.addEventListener('touchend', (e) => {
+                if (gameState !== 'PLAYING') return;
+                const diffX = e.changedTouches[0].clientX - touchStartX;
+                const diffY = e.changedTouches[0].clientY - touchStartY;
+
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 30 && currentLane < 2) currentLane++;
+                    else if (diffX < -30 && currentLane > 0) currentLane--;
+                    targetX = LANES[currentLane];
+                } else {
+                    if (diffY < -30) handleJump();
+                    else if (diffY > 30) handleSlide();
+                }
+            });
+
+            // UI Actions
+            document.getElementById('btn-start').addEventListener('click', startGame);
+            document.getElementById('btn-restart').addEventListener('click', startGame);
+            document.getElementById('btn-pause').addEventListener('click', pauseGame);
+            document.getElementById('btn-resume').addEventListener('click', resumeGame);
+            document.getElementById('btn-quit').addEventListener('click', quitToMenu);
+
+            // Character Selector Buttons
+            document.querySelectorAll('.char-select-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.char-select-btn').forEach(b => {
+                        b.classList.remove('border-cyan-400');
+                        b.classList.add('border-transparent');
+                    });
+                    const target = e.currentTarget;
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-cyan-400');
+                    selectedCharacter = target.getAttribute('data-char');
+                    updatePlayerSkin();
+                });
+            });
+        }
+
+        function handleJump() {
+            if (isGrounded) {
+                velocityY = JUMP_FORCE;
+                isGrounded = false;
+                jumpCount = 1;
+                playSound('jump');
+            } else if (jumpCount < maxJumps) {
+                // Perform Mid-Air Double Jump
+                velocityY = JUMP_FORCE * 0.9;
+                jumpCount++;
+                playSound('jump');
+            }
+        }
+
+        function handleSlide() {
+            if (!isGrounded) {
+                // Fast drop to ground
+                velocityY = -JUMP_FORCE * 1.2;
+            }
+            isSliding = true;
+            slideTimer = 22;
+            playerGroup.scale.set(1, 0.35, 1);
+        }
+
+        // --- GAMEPLAY CONTROLLER & LOOPS ---
+        function startGame() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            gameState = 'PLAYING';
+            score = 0;
+            coins = 0;
+            currentLevel = 1;
+            speed = INITIAL_SPEED;
+            currentLane = 1;
+            targetX = LANES[1];
+            playerY = 0;
+            velocityY = 0;
+            isGrounded = true;
+            isSliding = false;
+
+            // Character Trait Defaults
+            scoreMultiplier = (selectedCharacter === 'cyber') ? 1.5 : 1.0;
+            maxJumps = (selectedCharacter === 'runner') ? 2 : 1;
+            activeBuffs = {
+                magnet: 0,
+                shield: (selectedCharacter === 'robot'), // Robot spawns with shield
+                boost: 0,
+                slow: 0,
+                doubleJump: 0
+            };
+
+            // Clear Scene Objects
+            obstacles.forEach(o => scene.remove(o));
+            collectibles.forEach(c => scene.remove(c));
+            obstacles = [];
+            collectibles = [];
+            animatedObstacles = [];
+
+            // Reset Track Position
+            trackSegments.forEach((seg, idx) => {
+                seg.position.z = -idx * 20;
+            });
+
+            // UI Adjustments
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+
+            updateHUD();
+        }
+
+        function pauseGame() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pause-screen').classList.remove('hidden');
+            }
+        }
+
+        function resumeGame() {
+            if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('pause-screen').classList.add('hidden');
+            }
+        }
+
+        function quitToMenu() {
+            gameState = 'MENU';
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        function triggerCameraShake() {
+            shakeFrames = 15;
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playSound('crash');
+
+            let isNewHigh = false;
+            if (score > highScore) {
+                highScore = Math.floor(score);
+                localStorage.setItem('cyber_runner_ultra_highscore', highScore.toString());
+                isNewHigh = true;
+            }
+
+            document.getElementById('final-score').innerText = Math.floor(score).toString().padStart(6, '0');
+            document.getElementById('final-coins').innerText = coins;
+            document.getElementById('final-level').innerText = `LV.${currentLevel}`;
+
+            const badge = document.getElementById('new-high-score-badge');
+            if (isNewHigh) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            updateHighScoreDisplay();
+        }
+
+        function updateHighScoreDisplay() {
+            document.getElementById('high-score').innerText = highScore.toString().padStart(6, '0');
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = Math.floor(score).toString().padStart(6, '0');
+            document.getElementById('coin-display').innerText = coins;
+            document.getElementById('level-indicator').innerText = `LV.${currentLevel}`;
+            document.getElementById('multiplier-display').innerText = `${scoreMultiplier.toFixed(1)}x`;
+
+            const magBadge = document.getElementById('buff-magnet');
+            const shdBadge = document.getElementById('buff-shield');
+            const bstBadge = document.getElementById('buff-boost');
+            const slwBadge = document.getElementById('buff-slow');
+            const jmpBadge = document.getElementById('buff-jump');
+
+            if (activeBuffs.magnet > 0) magBadge.classList.remove('hidden'); else magBadge.classList.add('hidden');
+            if (activeBuffs.shield) shdBadge.classList.remove('hidden'); else shdBadge.classList.add('hidden');
+            if (activeBuffs.boost > 0) bstBadge.classList.remove('hidden'); else bstBadge.classList.add('hidden');
+            if (activeBuffs.slow > 0) slwBadge.classList.remove('hidden'); else slwBadge.classList.add('hidden');
+            if (activeBuffs.doubleJump > 0 || maxJumps > 1) jmpBadge.classList.remove('hidden'); else jmpBadge.classList.add('hidden');
+
+            shieldMesh.visible = activeBuffs.shield;
+
+            // Speed overlay visual update
+            const speedOverlay = document.getElementById('speed-overlay');
+            if (activeBuffs.boost > 0 || speed > 0.8) {
+                speedOverlay.style.opacity = '1';
+            } else {
+                speedOverlay.style.opacity = '0';
+            }
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameState === 'PLAYING') {
+                updateGameplay();
+            }
+
+            // Camera Shake Handler
+            if (shakeFrames > 0) {
+                shakeFrames--;
+                camera.position.x = (Math.random() - 0.5) * 0.25;
+                camera.position.y = 3.8 + (Math.random() - 0.5) * 0.25;
+            } else {
+                camera.position.x = 0;
+                camera.position.y = 3.8;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateGameplay() {
+            // Level Progression Logic
+            currentLevel = Math.floor(score / 3000) + 1;
+
+            // Effective Speed Calculation
+            let effectiveSpeed = speed;
+            if (activeBuffs.slow > 0) effectiveSpeed *= 0.55;
+            if (activeBuffs.boost > 0) effectiveSpeed = MAX_SPEED * 1.35;
+
+            // Speed Acceleration
+            speed = Math.min(MAX_SPEED, speed + ACCELERATION);
+            score += effectiveSpeed * 3 * scoreMultiplier;
+
+            // Active Powerup Timers
+            if (activeBuffs.magnet > 0) activeBuffs.magnet--;
+            if (activeBuffs.boost > 0) activeBuffs.boost--;
+            if (activeBuffs.slow > 0) activeBuffs.slow--;
+            if (activeBuffs.doubleJump > 0) {
+                activeBuffs.doubleJump--;
+                if (activeBuffs.doubleJump <= 0 && selectedCharacter !== 'runner') maxJumps = 1;
+            }
+
+            // Smooth Horizontal Lane Transition
+            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.28;
+
+            // Vertical Jump Physics
+            playerY += velocityY;
+            velocityY -= GRAVITY;
+
+            if (playerY <= 0) {
+                playerY = 0;
+                velocityY = 0;
+                isGrounded = true;
+                jumpCount = 0;
+            }
+            playerGroup.position.y = playerY;
+
+            // Slide Logic
+            if (isSliding) {
+                slideTimer--;
+                if (slideTimer <= 0) {
+                    isSliding = false;
+                    playerGroup.scale.set(1, 1, 1);
+                }
+            }
+
+            // Move Track Segments
+            trackSegments.forEach((segment) => {
+                segment.position.z += effectiveSpeed;
+                if (segment.position.z > 10) {
+                    segment.position.z -= 240;
+                    spawnObstaclePattern(segment.position.z);
+                }
+            });
+
+            // Animate Swinging Traps
+            animatedObstacles.forEach(obs => {
+                if (obs.userData.type === 'blade') {
+                    const time = Date.now() * obs.userData.swingSpeed;
+                    obs.rotation.z = Math.sin(time) * 1.2; // Swinging motion
+                }
+            });
+
+            // Check Obstacle Collisions
+            const playerBox = new THREE.Box3().setFromObject(playerBody);
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.position.z += effectiveSpeed;
+                obs.userData.box.setFromObject(obs);
+
+                // Pitfall Hole Fall Checking
+                if (obs.userData.type === 'hole') {
+                    if (Math.abs(playerGroup.position.x - obs.position.x) < 1.1 && 
+                        Math.abs(playerGroup.position.z - obs.position.z) < 1.5 && 
+                        playerY < 0.2) {
+                        // Player fell into pitfall hole
+                        triggerCameraShake();
+                        gameOver();
+                        return;
+                    }
+                    continue;
+                }
+
+                // Standard Collisions
+                if (playerBox.intersectsBox(obs.userData.box)) {
+                    if (activeBuffs.boost > 0) {
+                        // Destroy Obstacle when boosted
+                        scene.remove(obs);
+                        obstacles.splice(i, 1);
+                        triggerCameraShake();
+                        continue;
+                    }
+
+                    if (activeBuffs.shield) {
+                        // Consume Shield
+                        activeBuffs.shield = false;
+                        scene.remove(obs);
+                        obstacles.splice(i, 1);
+                        playSound('crash');
+                        triggerCameraShake();
+                        continue;
+                    }
+
+                    // Collision Dead
+                    triggerCameraShake();
+                    gameOver();
+                    return;
+                }
+
+                if (obs.position.z > 10) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Check Collectibles
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.position.z += effectiveSpeed;
+                item.rotation.y += 0.04;
+
+                // Magnet Attraction Logic
+                if (activeBuffs.magnet > 0 && item.userData.type === 'coin') {
+                    const distSq = item.position.distanceToSquared(playerGroup.position);
+                    if (distSq < 45) {
+                        item.position.x += (playerGroup.position.x - item.position.x) * 0.22;
+                        item.position.y += (playerGroup.position.y + 0.8 - item.position.y) * 0.22;
+                    }
+                }
+
+                item.userData.box.setFromObject(item);
+
+                if (playerBox.intersectsBox(item.userData.box)) {
+                    if (item.userData.type === 'coin') {
+                        coins += (selectedCharacter === 'cyber') ? 2 : 1;
+                        score += 80 * scoreMultiplier;
+                        playSound('coin');
+                    } else if (item.userData.type === 'magnet') {
+                        activeBuffs.magnet = 350;
+                        playSound('buff');
+                    } else if (item.userData.type === 'shield') {
+                        activeBuffs.shield = true;
+                        playSound('buff');
+                    } else if (item.userData.type === 'boost') {
+                        activeBuffs.boost = 220;
+                        playSound('buff');
+                    } else if (item.userData.type === 'slow') {
+                        activeBuffs.slow = 250;
+                        playSound('buff');
+                    } else if (item.userData.type === 'jump') {
+                        activeBuffs.doubleJump = 300;
+                        maxJumps = 2;
+                        playSound('buff');
+                    }
+
+                    scene.remove(item);
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                if (item.position.z > 10) {
+                    scene.remove(item);
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            updateHUD();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>

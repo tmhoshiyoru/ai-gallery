@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>粉色點點翻牌配對遊戲</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      /* 粉色點點花紋背景 */
+      background-color: #ffb6c1;
+      background-image: radial-gradient(#ffffff 20%, transparent 20%);
+      background-size: 30px 30px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 右上角計分器 */
+    .score-board {
+      position: fixed;
+      top: 20px;
+      right: 25px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px 24px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+      border: 3px solid #ff69b4;
+      font-size: 22px;
+      font-weight: bold;
+      color: #ff1493;
+      z-index: 10;
+    }
+
+    h1 {
+      margin-bottom: 25px;
+      color: #ff1493;
+      text-shadow: 2px 2px 0px #ffffff, 4px 4px 10px rgba(0,0,0,0.15);
+      letter-spacing: 2px;
+      font-size: 36px;
+    }
+
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(5, 110px);
+      grid-gap: 15px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 4px solid #ff69b4;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(255, 105, 180, 0.2);
+      backdrop-filter: blur(5px);
+      position: relative;
+    }
+
+    .card {
+      width: 110px;
+      height: 150px;
+      perspective: 1000px;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.4s ease-in-out;
+      transform-style: preserve-3d;
+    }
+
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    /* 撲克牌背面 */
+    .card-back {
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      border: 3px solid #ffffff;
+    }
+    .card-back::after {
+      content: '♥';
+      font-size: 45px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* 撲克牌正面 */
+    .card-front {
+      background-color: #ffffff;
+      transform: rotateY(180deg);
+      border: 3px solid #ffb6c1;
+    }
+
+    .symbol {
+      font-size: 50px;
+      font-weight: bold;
+    }
+
+    /* 花色色彩設定 */
+    .symbol-spade   { color: #2d3436; }
+    .symbol-heart   { color: #ff0055; }
+    .symbol-diamond { color: #0984e3; }
+    .symbol-club    { color: #00b894; }
+    .symbol-star    { color: #fdcb6e; }
+
+    /* 配對成功效果 */
+    .card.matched .card-front {
+      background-color: #fff0f5;
+      border: 3px solid #ff1493;
+    }
+
+    /* 分數增減動態提示飄字 */
+    .score-pop {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      font-weight: 900;
+      pointer-events: none;
+      z-index: 50;
+      animation: popFade 1.5s ease-out forwards;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .score-plus {
+      color: #00b894;
+    }
+    .score-minus {
+      color: #d63031;
+    }
+
+    @keyframes popFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -20%) scale(0.7);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -60%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -80%) scale(0.8);
+      }
+    }
+
+    /* 勝利彈窗 */
+    .win-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 182, 193, 0.9);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .congrats-text {
+      font-size: 52px;
+      font-weight: bold;
+      margin-bottom: 25px;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+    }
+
+    /* 彩色字母組合 */
+    .char-0 { color: #ff3366; }
+    .char-1 { color: #ff9933; }
+    .char-2 { color: #e6c200; }
+    .char-3 { color: #2ed573; }
+    .char-4 { color: #1e90ff; }
+    .char-5 { color: #a55eea; }
+    .char-6 { color: #ff4757; }
+
+    .restart-btn {
+      padding: 14px 36px;
+      font-size: 22px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      color: #ffffff;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 5px 20px rgba(255, 20, 147, 0.4);
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .restart-btn:hover {
+      transform: scale(1.08);
+      background: linear-gradient(135deg, #ff1493, #ff69b4);
+    }
+  </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body>
+
+  <!-- 右上角計分器 -->
+  <div class="score-board">得分: <span id="score">0</span></div>
+
+  <h1>PINK MEMORY MATCH</h1>
+  
+  <div class="game-board" id="board"></div>
+
+  <!-- 勝利彈窗 -->
+  <div class="win-overlay" id="winOverlay">
+    <div class="congrats-text" id="congratsContainer"></div>
+    <button class="restart-btn" onclick="initGame()">再玩一次</button>
+  </div>
+
+  <script>
+    const suits = [
+      { icon: '♠', class: 'symbol-spade' },
+      { icon: '♥', class: 'symbol-heart' },
+      { icon: '♦', class: 'symbol-diamond' },
+      { icon: '♣', class: 'symbol-club' },
+      { icon: '★', class: 'symbol-star' }
+    ];
+
+    let cardsData = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let score = 0;
+    let isBoardLocked = false;
+
+    // 更新計分器顯示
+    function updateScoreDisplay() {
+      document.getElementById('score').textContent = score;
+    }
+
+    // 顯示 +100 或 -10 浮動文字
+    function showScoreEffect(text, isPlus) {
+      const pop = document.createElement('div');
+      pop.className = `score-pop ${isPlus ? 'score-plus' : 'score-minus'}`;
+      pop.textContent = text;
+      document.body.appendChild(pop);
+
+      setTimeout(() => {
+        pop.remove();
+      }, 1500);
+    }
+
+    // 初始化遊戲
+    function initGame() {
+      const board = document.getElementById('board');
+      const winOverlay = document.getElementById('winOverlay');
+      
+      board.innerHTML = '';
+      winOverlay.style.display = 'none';
+      flippedCards = [];
+      matchedPairs = 0;
+      score = 0;
+      isBoardLocked = false;
+      updateScoreDisplay();
+
+      // 建立 5 對卡牌（共 10 張）並洗牌
+      cardsData = [...suits, ...suits];
+      cardsData.sort(() => Math.random() - 0.5);
+
+      // 渲染卡牌
+      cardsData.forEach((suit, index) => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.index = index;
+
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="card-back"></div>
+            <div class="card-front">
+              <span class="symbol ${suit.class}">${suit.icon}</span>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => handleCardClick(card, suit));
+        board.appendChild(card);
+      });
+    }
+
+    // 點擊卡牌邏輯
+    function handleCardClick(card, suit) {
+      if (isBoardLocked) return;
+      if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      // 翻牌
+      card.classList.add('flipped');
+      flippedCards.push({ card, suit });
+
+      if (flippedCards.length === 2) {
+        isBoardLocked = true;
+        const [first, second] = flippedCards;
+
+        if (first.suit.icon === second.suit.icon) {
+          // 配對成功：維持 1.5 秒並顯示 +100 分
+          showScoreEffect('+100', true);
+          score += 100;
+          updateScoreDisplay();
+
+          setTimeout(() => {
+            first.card.classList.add('matched');
+            second.card.classList.add('matched');
+            flippedCards = [];
+            matchedPairs++;
+            isBoardLocked = false;
+
+            if (matchedPairs === 5) {
+              showWinScreen();
+            }
+          }, 1500);
+        } else {
+          // 配對失敗：維持 1.5 秒並顯示 -10 分，之後翻回背面
+          showScoreEffect('-10', false);
+          score -= 10;
+          updateScoreDisplay();
+
+          setTimeout(() => {
+            first.card.classList.remove('flipped');
+            second.card.classList.remove('flipped');
+            flippedCards = [];
+            isBoardLocked = false;
+          }, 1500);
+        }
+      }
+    }
+
+    // 顯示勝利畫面與彩色字體
+    function showWinScreen() {
+      const text = "CONGRATULATIONS!";
+      const container = document.getElementById('congratsContainer');
+      container.innerHTML = '';
+
+      [...text].forEach((char, idx) => {
+        const span = document.createElement('span');
+        span.textContent = char;
+        span.classList.add(`char-${idx % 7}`);
+        container.appendChild(span);
+      });
+
+      document.getElementById('winOverlay').style.display = 'flex';
+    }
+
+    // 啟動遊戲
+    initGame();
+  </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

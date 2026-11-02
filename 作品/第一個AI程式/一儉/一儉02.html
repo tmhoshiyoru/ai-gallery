@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Neon Breakout - 霓虹加速打磚塊</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Orbitron & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05040b;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Glow Utilities */
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+        .neon-text-magenta {
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.4);
+        }
+        .neon-text-gold {
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        .neon-button {
+            background: linear-gradient(135deg, rgba(255, 0, 127, 0.85), rgba(121, 40, 202, 0.85));
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+            transition: all 0.2s ease-in-out;
+        }
+        .neon-button:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.8);
+        }
+        .neon-button:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        /* Canvas CRT Line Overlay */
+        .scanlines {
+            position: relative;
+            overflow: hidden;
+        }
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        /* Screen Shake Animation Class */
+        .shake {
+            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-[#05040b] p-2 md:p-4 select-none">
+
+    <!-- Game Container Header / HUD -->
+    <div class="w-full max-w-4xl flex flex-col items-center mb-2 md:mb-3">
+        <!-- Top Title Bar & Toggles -->
+        <div class="w-full flex justify-between items-center mb-2 px-2">
+            <h1 class="text-2xl md:text-3xl font-black font-orbitron tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-yellow-400 neon-text-cyan">
+                CYBER<span class="text-white">BREAK</span> <span class="text-xs px-2 py-0.5 rounded bg-pink-600/80 text-white font-sans align-middle ml-1">ULTRA</span>
+            </h1>
+            
+            <div class="flex items-center gap-2">
+                <!-- Speed Toggle Button -->
+                <button id="speedToggleBtn" class="text-xs md:text-sm px-3 py-1.5 rounded-full bg-slate-900/90 text-yellow-300 border border-yellow-500/50 hover:bg-yellow-500/20 transition flex items-center gap-1 font-orbitron font-semibold shadow-[0_0_10px_rgba(255,215,0,0.2)]">
+                    ⚡ 速度: <span id="speedMultiplierText" class="text-white">1.0x</span>
+                </button>
+                <!-- Sound Toggle Button -->
+                <button id="soundToggleBtn" class="text-xs md:text-sm px-3 py-1.5 rounded-full bg-slate-900/90 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500/20 transition flex items-center gap-1">
+                    <span id="soundIcon">🔊</span> <span id="soundStatus">音效: 開</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard / HUD Panel -->
+        <div class="w-full bg-slate-900/80 backdrop-blur-md rounded-xl p-3 md:p-4 border border-cyan-500/30 flex flex-wrap justify-between items-center gap-2 shadow-2xl">
+            <!-- Score -->
+            <div class="flex flex-col">
+                <span class="text-[10px] md:text-xs text-slate-400 font-semibold tracking-wider uppercase">Score</span>
+                <span id="scoreDisplay" class="text-2xl md:text-3xl font-orbitron font-bold text-cyan-400">0000</span>
+            </div>
+
+            <!-- Combo Multiplier -->
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] md:text-xs text-slate-400 font-semibold tracking-wider uppercase">Combo</span>
+                <span id="comboDisplay" class="text-xl md:text-2xl font-orbitron font-bold text-pink-500 neon-text-magenta">0x</span>
+            </div>
+
+            <!-- Ball Speed Bar Indicator -->
+            <div class="flex flex-col items-center min-w-[90px]">
+                <span class="text-[10px] md:text-xs text-slate-400 font-semibold tracking-wider uppercase">Ball Speed</span>
+                <div class="w-24 h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 mt-1">
+                    <div id="speedBar" class="h-full bg-gradient-to-r from-cyan-400 via-yellow-400 to-pink-500 transition-all duration-200" style="width: 20%;"></div>
+                </div>
+            </div>
+
+            <!-- Level -->
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] md:text-xs text-slate-400 font-semibold tracking-wider uppercase">Level</span>
+                <span id="levelDisplay" class="text-lg md:text-xl font-orbitron font-semibold text-purple-400">1</span>
+            </div>
+
+            <!-- Lives -->
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] md:text-xs text-slate-400 font-semibold tracking-wider uppercase mb-0.5">Lives</span>
+                <div id="livesContainer" class="flex gap-1.5 text-xl">
+                    <!-- Dynamic Hearts -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Canvas Container -->
+    <div id="gameWrapper" class="relative w-full max-w-4xl scanlines rounded-2xl overflow-hidden border-2 border-cyan-500/40 shadow-[0_0_50px_rgba(0,243,255,0.15)] bg-[#030208]">
+        <!-- Canvas Element -->
+        <canvas id="gameCanvas" class="block w-full h-auto cursor-none"></canvas>
+
+        <!-- Frenzy Mode Banner Banner -->
+        <div id="frenzyBanner" class="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none transition-all duration-300 transform -translate-y-12 opacity-0 z-20">
+            <span class="px-6 py-2 rounded-full font-orbitron font-black text-sm md:text-lg bg-gradient-to-r from-pink-600 via-purple-600 to-yellow-500 text-white shadow-[0_0_25px_rgba(255,0,127,0.9)] tracking-widest border border-white/40 uppercase animate-bounce">
+                💥 Frenzy Mode 貫穿爆破 💥
+            </span>
+        </div>
+
+        <!-- Launch Overlay Hint -->
+        <div id="launchHint" class="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-center pointer-events-none transition-opacity duration-300 opacity-100">
+            <p class="text-xs md:text-sm font-orbitron font-bold text-cyan-300 animate-pulse bg-slate-900/90 px-4 py-2 rounded-full border border-cyan-500/50 shadow-lg">
+                按下 <span class="text-yellow-300">空白鍵</span> 或 <span class="text-yellow-300">點擊螢幕</span> 發射小球
+            </p>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pauseOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center hidden z-20">
+            <h2 class="text-4xl font-black font-orbitron text-cyan-400 mb-4 tracking-widest neon-text-cyan">GAME PAUSED</h2>
+            <p class="text-slate-300 text-sm mb-6">按下 <span class="text-yellow-400 font-bold">Space</span> 鍵恢復遊戲</p>
+        </div>
+
+        <!-- Game Over / Level Clear Modal -->
+        <div id="modalOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-lg flex flex-col items-center justify-center hidden z-30 p-6 text-center">
+            <div class="bg-slate-900/90 p-8 rounded-2xl border-2 border-pink-500/60 shadow-[0_0_40px_rgba(255,0,127,0.4)] max-w-md w-full flex flex-col items-center">
+                <h2 id="modalTitle" class="text-3xl md:text-4xl font-black font-orbitron text-pink-500 mb-2 neon-text-magenta">
+                    GAME OVER
+                </h2>
+                <p id="modalSub" class="text-slate-400 text-sm mb-6">護盾崩潰！能量核心已被摧毀</p>
+
+                <div class="w-full bg-slate-950/60 rounded-xl p-4 mb-6 border border-slate-800 flex justify-around">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">最終得分</div>
+                        <div id="finalScore" class="text-2xl font-orbitron text-cyan-400 font-bold">0</div>
+                    </div>
+                    <div class="border-r border-slate-800"></div>
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">最高紀錄</div>
+                        <div id="finalHighScore" class="text-2xl font-orbitron text-yellow-400 font-bold">0</div>
+                    </div>
+                </div>
+
+                <button id="restartBtn" class="w-full py-3.5 px-6 rounded-xl font-orbitron font-bold text-lg text-white neon-button tracking-wider uppercase">
+                    🚀 重新開始 (Restart)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls / Speed Instructions -->
+    <div class="w-full max-w-4xl flex flex-wrap justify-between items-center mt-3 px-1 text-slate-400 text-xs gap-2">
+        <div class="flex items-center gap-2">
+            <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-300">← / →</span>
+            <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-300">A / D</span>
+            <span>移動滑塊</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-yellow-300 font-bold">長按 Shift</span>
+            <span>長壓極速加速 (Fast-Forward)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-300">SPACE</span>
+            <span>發球 / 暫停</span>
+        </div>
+    </div>
+
+    <!-- Game Logic JavaScript -->
+    <script>
+        /**
+         * Web Audio API Synthesizer Sound Engine
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playHitPaddle() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(280, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playHitBrick(combo = 0) {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                
+                // Pitch rises higher with higher Combo
+                const baseFreq = 380 + Math.min(combo * 40, 600);
+                osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, this.ctx.currentTime + 0.09);
+                
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.09);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.09);
+            }
+
+            playPowerup() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [400, 600, 900, 1200];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.04);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.04 + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.04);
+                    osc.stop(this.ctx.currentTime + i * 0.04 + 0.1);
+                });
+            }
+
+            playLoseLife() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(70, this.ctx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [160, 130, 100, 80];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.12);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + index * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.12 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.12);
+                    osc.stop(this.ctx.currentTime + index * 0.12 + 0.2);
+                });
+            }
+
+            playLevelUp() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [300, 400, 500, 700, 900];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.07);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + index * 0.07);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.07 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.07);
+                    osc.stop(this.ctx.currentTime + index * 0.07 + 0.12);
+                });
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        /**
+         * Main Game Engine Class
+         */
+        class CyberBreakout {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.wrapper = document.getElementById('gameWrapper');
+
+                // HUD Elements
+                this.scoreEl = document.getElementById('scoreDisplay');
+                this.highScoreEl = document.getElementById('highScoreDisplay');
+                this.levelEl = document.getElementById('levelDisplay');
+                this.comboEl = document.getElementById('comboDisplay');
+                this.speedBar = document.getElementById('speedBar');
+                this.speedMultiplierText = document.getElementById('speedMultiplierText');
+                this.livesContainer = document.getElementById('livesContainer');
+                this.launchHint = document.getElementById('launchHint');
+                this.frenzyBanner = document.getElementById('frenzyBanner');
+                this.pauseOverlay = document.getElementById('pauseOverlay');
+                this.modalOverlay = document.getElementById('modalOverlay');
+                this.modalTitle = document.getElementById('modalTitle');
+                this.modalSub = document.getElementById('modalSub');
+                this.finalScore = document.getElementById('finalScore');
+                this.finalHighScore = document.getElementById('finalHighScore');
+
+                // Canvas Dimensions
+                this.width = 800;
+                this.height = 550;
+
+                // Game State Logic
+                this.score = 0;
+                this.highScore = parseInt(localStorage.getItem('cyber_breakout_hi')) || 0;
+                this.lives = 3;
+                this.maxLives = 3;
+                this.level = 1;
+                this.combo = 0;
+
+                // Speed & Acceleration Systems
+                this.baseSpeed = 5.2;      // Initial level 1 speed
+                this.currentSpeed = 5.2;   // Calculated speed
+                this.maxSpeed = 12.5;      // Cap to prevent clipping/tunneling
+                this.userSpeedMultiplier = 1.0; // Button toggle multiplier (1.0x / 1.5x / 2.0x)
+                this.isShiftAccelerating = false; // Hold Shift key boost
+
+                // Frenzy Powerup State
+                this.frenzyTimer = 0;      // Frenzy Mode active frames
+
+                // State Flags
+                this.isBallAttached = true;
+                this.isPaused = false;
+                this.isGameOver = false;
+
+                // Inputs
+                this.keys = { left: false, right: false };
+
+                // Game Entities
+                this.paddle = {
+                    x: 0,
+                    y: 0,
+                    width: 110,
+                    height: 14,
+                    speed: 9.0,
+                    color: '#00f3ff'
+                };
+
+                this.ball = {
+                    x: 0,
+                    y: 0,
+                    radius: 7,
+                    dx: 0,
+                    dy: 0,
+                    trail: []
+                };
+
+                this.bricks = [];
+                this.particles = [];
+                this.powerups = [];
+                this.bgParticles = [];
+
+                this.brickRows = 4;
+                this.brickCols = 9;
+                this.brickPadding = 8;
+                this.brickOffsetTop = 60;
+                this.brickOffsetLeft = 25;
+
+                // Neon Colors for Bricks
+                this.brickColors = [
+                    { border: '#ff007f', fill: 'rgba(255, 0, 127, 0.35)', pts: 40, isSpeedBrick: true },
+                    { border: '#00f3ff', fill: 'rgba(0, 243, 255, 0.35)', pts: 30 },
+                    { border: '#ffe600', fill: 'rgba(255, 230, 0, 0.35)', pts: 20 },
+                    { border: '#a855f7', fill: 'rgba(168, 85, 247, 0.35)', pts: 10 }
+                ];
+
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                this.setupEventListeners();
+                this.initBackgroundParticles();
+                this.resetGameTotal();
+                this.updateHUD();
+
+                // Start Main Animation Loop
+                requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+            }
+
+            resizeCanvas() {
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            }
+
+            initBackgroundParticles() {
+                this.bgParticles = [];
+                for (let i = 0; i < 50; i++) {
+                    this.bgParticles.push({
+                        x: Math.random() * this.width,
+                        y: Math.random() * this.height,
+                        radius: Math.random() * 1.5 + 0.5,
+                        alpha: Math.random() * 0.5 + 0.1,
+                        dy: -(Math.random() * 0.4 + 0.1)
+                    });
+                }
+            }
+
+            resetGameTotal() {
+                this.score = 0;
+                this.level = 1;
+                this.lives = this.maxLives;
+                this.combo = 0;
+                this.frenzyTimer = 0;
+                this.isGameOver = false;
+                this.isPaused = false;
+                this.modalOverlay.classList.add('hidden');
+                this.pauseOverlay.classList.add('hidden');
+                this.resetLevel();
+                this.updateHUD();
+            }
+
+            resetLevel() {
+                this.paddle.width = Math.max(75, 110 - (this.level - 1) * 6);
+                this.paddle.x = (this.width - this.paddle.width) / 2;
+                this.paddle.y = this.height - 35;
+
+                // Base speed increases with Level
+                this.baseSpeed = 5.2 + (this.level - 1) * 0.6;
+                this.currentSpeed = this.baseSpeed;
+                this.combo = 0;
+
+                this.resetBall();
+                this.createBricks();
+            }
+
+            resetBall() {
+                this.isBallAttached = true;
+                this.ball.x = this.paddle.x + this.paddle.width / 2;
+                this.ball.y = this.paddle.y - this.ball.radius - 2;
+                this.ball.dx = 0;
+                this.ball.dy = 0;
+                this.ball.trail = [];
+                this.frenzyTimer = 0;
+                this.launchHint.style.opacity = '1';
+                this.frenzyBanner.classList.add('opacity-0', '-translate-y-12');
+            }
+
+            launchBall() {
+                if (!this.isBallAttached || this.isPaused || this.isGameOver) return;
+                audio.init();
+
+                this.isBallAttached = false;
+                const angle = (Math.random() * 50 - 25) * (Math.PI / 180);
+                const actualSpeed = this.getEffectiveSpeed();
+
+                this.ball.dx = actualSpeed * Math.sin(angle);
+                this.ball.dy = -actualSpeed * Math.cos(angle);
+
+                this.launchHint.style.opacity = '0';
+            }
+
+            getEffectiveSpeed() {
+                // Effective speed considers base, combo acceleration, user multiplier, and shift key boost
+                let speed = this.currentSpeed;
+                speed *= this.userSpeedMultiplier;
+                if (this.isShiftAccelerating) speed *= 1.4;
+                return Math.min(speed, this.maxSpeed * 1.5); // Hard limit for rendering/physics
+            }
+
+            createBricks() {
+                this.bricks = [];
+                const totalPaddingX = this.brickPadding * (this.brickCols - 1);
+                const availableWidth = this.width - (this.brickOffsetLeft * 2) - totalPaddingX;
+                const brickWidth = availableWidth / this.brickCols;
+                const brickHeight = 22;
+
+                const rowsToGenerate = Math.min(6, 3 + Math.floor((this.level - 1) / 2));
+
+                for (let r = 0; r < rowsToGenerate; r++) {
+                    this.bricks[r] = [];
+                    const colorScheme = this.brickColors[r % this.brickColors.length];
+
+                    for (let c = 0; c < this.brickCols; c++) {
+                        let hp = 1;
+                        if (this.level >= 2 && r === 0 && c % 2 === 0) hp = 2; // Hardened Bricks
+
+                        this.bricks[r][c] = {
+                            x: this.brickOffsetLeft + c * (brickWidth + this.brickPadding),
+                            y: this.brickOffsetTop + r * (brickHeight + this.brickPadding),
+                            width: brickWidth,
+                            height: brickHeight,
+                            color: colorScheme,
+                            hp: hp,
+                            maxHp: hp,
+                            status: 1,
+                            isSpeedBrick: colorScheme.isSpeedBrick || false
+                        };
+                    }
+                }
+            }
+
+            setupEventListeners() {
+                // Keyboard Controls
+                window.addEventListener('keydown', (e) => {
+                    audio.init();
+                    if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.keys.left = true;
+                    if (e.code === 'ArrowRight' || e.code === 'KeyD') this.keys.right = true;
+                    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.isShiftAccelerating = true;
+                    
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        if (this.isBallAttached) {
+                            this.launchBall();
+                        } else if (!this.isGameOver) {
+                            this.togglePause();
+                        }
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.keys.left = false;
+                    if (e.code === 'ArrowRight' || e.code === 'KeyD') this.keys.right = false;
+                    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.isShiftAccelerating = false;
+                });
+
+                // Pointer / Touch Controls
+                const handlePointerMove = (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const scaleX = this.canvas.width / rect.width;
+                    const pointerX = (e.clientX - rect.left) * scaleX;
+                    
+                    this.paddle.x = pointerX - this.paddle.width / 2;
+
+                    if (this.paddle.x < 0) this.paddle.x = 0;
+                    if (this.paddle.x + this.paddle.width > this.width) {
+                        this.paddle.x = this.width - this.paddle.width;
+                    }
+
+                    if (this.isBallAttached) {
+                        this.ball.x = this.paddle.x + this.paddle.width / 2;
+                    }
+                };
+
+                this.canvas.addEventListener('mousemove', handlePointerMove);
+                this.canvas.addEventListener('touchmove', (e) => {
+                    if (e.touches.length > 0) {
+                        handlePointerMove(e.touches[0]);
+                    }
+                }, { passive: true });
+
+                this.canvas.addEventListener('click', () => {
+                    if (this.isBallAttached) {
+                        this.launchBall();
+                    }
+                });
+
+                // UI Toggle Buttons
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    audio.init();
+                    this.resetGameTotal();
+                });
+
+                document.getElementById('speedToggleBtn').addEventListener('click', () => {
+                    if (this.userSpeedMultiplier === 1.0) {
+                        this.userSpeedMultiplier = 1.5;
+                        this.speedMultiplierText.textContent = '1.5x';
+                    } else if (this.userSpeedMultiplier === 1.5) {
+                        this.userSpeedMultiplier = 2.0;
+                        this.speedMultiplierText.textContent = '2.0x';
+                    } else {
+                        this.userSpeedMultiplier = 1.0;
+                        this.speedMultiplierText.textContent = '1.0x';
+                    }
+                });
+
+                document.getElementById('soundToggleBtn').addEventListener('click', () => {
+                    audio.enabled = !audio.enabled;
+                    document.getElementById('soundIcon').textContent = audio.enabled ? '🔊' : '🔇';
+                    document.getElementById('soundStatus').textContent = audio.enabled ? '音效: 開' : '音效: 關';
+                });
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                if (this.isPaused) {
+                    this.pauseOverlay.classList.remove('hidden');
+                } else {
+                    this.pauseOverlay.classList.add('hidden');
+                }
+            }
+
+            triggerScreenShake() {
+                this.wrapper.classList.remove('shake');
+                void this.wrapper.offsetWidth;
+                this.wrapper.classList.add('shake');
+            }
+
+            addParticles(x, y, color, count = 12) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 1.5;
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        dx: Math.cos(angle) * speed,
+                        dy: Math.sin(angle) * speed,
+                        radius: Math.random() * 3 + 1.5,
+                        color: color,
+                        alpha: 1
+                    });
+                }
+            }
+
+            spawnPowerup(x, y, type) {
+                this.powerups.push({
+                    x: x,
+                    y: y,
+                    type: type, // 'frenzy' or 'speed'
+                    dy: 2.2,
+                    radius: 10
+                });
+            }
+
+            handleBallDrop() {
+                audio.playLoseLife();
+                this.triggerScreenShake();
+                this.lives--;
+                this.combo = 0;
+                this.updateHUD();
+
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.resetBall();
+                }
+            }
+
+            gameOver() {
+                this.isGameOver = true;
+                audio.playGameOver();
+
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('cyber_breakout_hi', this.highScore);
+                }
+
+                this.modalTitle.textContent = "GAME OVER";
+                this.modalTitle.className = "text-3xl md:text-4xl font-black font-orbitron text-pink-500 mb-2 neon-text-magenta";
+                this.modalSub.textContent = "護盾崩潰！能量核心已被摧毀";
+                this.finalScore.textContent = this.score;
+                this.finalHighScore.textContent = this.highScore;
+                this.modalOverlay.classList.remove('hidden');
+            }
+
+            checkVictory() {
+                let allCleared = true;
+                for (let r = 0; r < this.bricks.length; r++) {
+                    for (let c = 0; c < this.bricks[r].length; c++) {
+                        if (this.bricks[r][c].status === 1) {
+                            allCleared = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (allCleared) {
+                    audio.playLevelUp();
+                    this.level++;
+                    this.updateHUD();
+                    this.resetLevel();
+                }
+            }
+
+            updateHUD() {
+                this.scoreEl.textContent = this.score.toString().padStart(4, '0');
+                this.highScoreEl.textContent = this.highScore.toString().padStart(4, '0');
+                this.levelEl.textContent = this.level;
+                this.comboEl.textContent = `${this.combo}x`;
+
+                // Update Speed Bar HUD
+                const currentEffSpeed = this.getEffectiveSpeed();
+                const speedPercent = Math.min(100, Math.max(10, ((currentEffSpeed - 4) / (this.maxSpeed * 1.2 - 4)) * 100));
+                this.speedBar.style.width = `${speedPercent}%`;
+
+                // Render Neon Hearts
+                this.livesContainer.innerHTML = '';
+                for (let i = 0; i < this.maxLives; i++) {
+                    const heart = document.createElement('span');
+                    if (i < this.lives) {
+                        heart.className = 'text-pink-500 drop-shadow-[0_0_8px_rgba(255,0,127,0.8)] animate-pulse';
+                        heart.textContent = '♥';
+                    } else {
+                        heart.className = 'text-slate-700';
+                        heart.textContent = '♡';
+                    }
+                    this.livesContainer.appendChild(heart);
+                }
+            }
+
+            update() {
+                if (this.isPaused || this.isGameOver) return;
+
+                // 1. Paddle Movement via Keyboard
+                if (this.keys.left) {
+                    this.paddle.x -= this.paddle.speed;
+                    if (this.paddle.x < 0) this.paddle.x = 0;
+                }
+                if (this.keys.right) {
+                    this.paddle.x += this.paddle.speed;
+                    if (this.paddle.x + this.paddle.width > this.width) {
+                        this.paddle.x = this.width - this.paddle.width;
+                    }
+                }
+
+                // 2. Ball Attached Mode
+                if (this.isBallAttached) {
+                    this.ball.x = this.paddle.x + this.paddle.width / 2;
+                    this.ball.y = this.paddle.y - this.ball.radius - 2;
+                    return;
+                }
+
+                // Update Frenzy Timer
+                if (this.frenzyTimer > 0) {
+                    this.frenzyTimer--;
+                    if (this.frenzyTimer <= 0) {
+                        this.frenzyBanner.classList.add('opacity-0', '-translate-y-12');
+                    }
+                }
+
+                // 3. Normalize Ball Speed with Multipliers
+                const targetSpeed = this.getEffectiveSpeed();
+                const currentVelocity = Math.hypot(this.ball.dx, this.ball.dy);
+                if (currentVelocity > 0) {
+                    const ratio = targetSpeed / currentVelocity;
+                    this.ball.dx *= ratio;
+                    this.ball.dy *= ratio;
+                }
+
+                // Update Ball Trail (Trail length increases with speed)
+                const trailLength = Math.min(18, Math.floor(6 + targetSpeed * 0.8));
+                this.ball.trail.push({ x: this.ball.x, y: this.ball.y });
+                while (this.ball.trail.length > trailLength) {
+                    this.ball.trail.shift();
+                }
+
+                // Move Ball
+                this.ball.x += this.ball.dx;
+                this.ball.y += this.ball.dy;
+
+                // 4. Wall Collisions (Left, Right, Top)
+                if (this.ball.x - this.ball.radius < 0) {
+                    this.ball.x = this.ball.radius;
+                    this.ball.dx *= -1;
+                    audio.playHitPaddle();
+                } else if (this.ball.x + this.ball.radius > this.width) {
+                    this.ball.x = this.width - this.ball.radius;
+                    this.ball.dx *= -1;
+                    audio.playHitPaddle();
+                }
+
+                if (this.ball.y - this.ball.radius < 0) {
+                    this.ball.y = this.ball.radius;
+                    this.ball.dy *= -1;
+                    audio.playHitPaddle();
+                } else if (this.ball.y + this.ball.radius > this.height) {
+                    // Ball Fell Below Bottom Boundary
+                    this.handleBallDrop();
+                    return;
+                }
+
+                // 5. Paddle Collision Physics (Angle based on hit point)
+                if (
+                    this.ball.y + this.ball.radius >= this.paddle.y &&
+                    this.ball.y - this.ball.radius <= this.paddle.y + this.paddle.height &&
+                    this.ball.x >= this.paddle.x &&
+                    this.ball.x <= this.paddle.x + this.paddle.width &&
+                    this.ball.dy > 0
+                ) {
+                    audio.playHitPaddle();
+
+                    // Speed decay slightly on paddle rebound if ball speed is very high
+                    if (this.currentSpeed > this.baseSpeed + 1.5) {
+                        this.currentSpeed *= 0.96;
+                    }
+
+                    const hitPoint = (this.ball.x - (this.paddle.x + this.paddle.width / 2)) / (this.paddle.width / 2);
+                    const maxAngle = (65 * Math.PI) / 180;
+                    const bounceAngle = hitPoint * maxAngle;
+
+                    this.ball.dx = targetSpeed * Math.sin(bounceAngle);
+                    this.ball.dy = -targetSpeed * Math.cos(bounceAngle);
+                    this.ball.y = this.paddle.y - this.ball.radius;
+                }
+
+                // 6. Brick Collisions
+                for (let r = 0; r < this.bricks.length; r++) {
+                    for (let c = 0; c < this.bricks[r].length; c++) {
+                        const b = this.bricks[r][c];
+                        if (b.status === 1) {
+                            if (
+                                this.ball.x + this.ball.radius > b.x &&
+                                this.ball.x - this.ball.radius < b.x + b.width &&
+                                this.ball.y + this.ball.radius > b.y &&
+                                this.ball.y - this.ball.radius < b.y + b.height
+                            ) {
+                                // If NOT in Frenzy Mode, bounce off
+                                if (this.frenzyTimer <= 0) {
+                                    this.ball.dy *= -1;
+                                }
+
+                                b.hp--;
+
+                                if (b.hp <= 0) {
+                                    b.status = 0;
+                                    this.combo++;
+                                    
+                                    // Combo Speed-up Increment
+                                    this.currentSpeed = Math.min(this.maxSpeed, this.currentSpeed + 0.12);
+
+                                    // Score calculation with Combo Bonus
+                                    const gainedPts = b.color.pts + (this.combo - 1) * 5;
+                                    this.score += gainedPts;
+
+                                    this.addParticles(b.x + b.width / 2, b.y + b.height / 2, b.color.border, 14);
+                                    audio.playHitBrick(this.combo);
+
+                                    // Random Powerup Drop Chance
+                                    if (Math.random() < 0.22) {
+                                        this.spawnPowerup(b.x + b.width / 2, b.y + b.height / 2, Math.random() < 0.5 ? 'frenzy' : 'speed');
+                                    }
+
+                                    this.checkVictory();
+                                } else {
+                                    audio.playHitBrick(this.combo);
+                                }
+
+                                this.updateHUD();
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 7. Powerups Logic & Pickup Collisions
+                for (let i = this.powerups.length - 1; i >= 0; i--) {
+                    const p = this.powerups[i];
+                    p.y += p.dy;
+
+                    // Catching Powerup with Paddle
+                    if (
+                        p.y + p.radius >= this.paddle.y &&
+                        p.y - p.radius <= this.paddle.y + this.paddle.height &&
+                        p.x >= this.paddle.x &&
+                        p.x <= this.paddle.x + this.paddle.width
+                    ) {
+                        audio.playPowerup();
+                        if (p.type === 'frenzy') {
+                            this.frenzyTimer = 300; // ~5 Seconds of Frenzy Piercing Mode
+                            this.frenzyBanner.classList.remove('opacity-0', '-translate-y-12');
+                        } else {
+                            this.score += 150; // Speed Boost Bonus
+                            this.currentSpeed = Math.min(this.maxSpeed, this.currentSpeed + 1.2);
+                        }
+                        this.addParticles(p.x, p.y, '#ffe600', 16);
+                        this.powerups.splice(i, 1);
+                        this.updateHUD();
+                        continue;
+                    }
+
+                    // Remove if fallen past bottom
+                    if (p.y > this.height) {
+                        this.powerups.splice(i, 1);
+                    }
+                }
+
+                // 8. Particles Animation
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    p.alpha -= 0.025;
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+
+                // 9. Background Particles Float
+                this.bgParticles.forEach(p => {
+                    p.y += p.dy;
+                    if (p.y < 0) {
+                        p.y = this.height;
+                        p.x = Math.random() * this.width;
+                    }
+                });
+            }
+
+            render() {
+                // Background Clean
+                this.ctx.fillStyle = '#030208';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                // Grid Lines
+                this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.035)';
+                this.ctx.lineWidth = 1;
+                const gridSize = 40;
+                for (let x = 0; x < this.width; x += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.height; y += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.width, y);
+                    this.ctx.stroke();
+                }
+
+                // Background Dust
+                this.bgParticles.forEach(p => {
+                    this.ctx.fillStyle = `rgba(0, 243, 255, ${p.alpha})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Render Bricks
+                for (let r = 0; r < this.bricks.length; r++) {
+                    for (let c = 0; c < this.bricks[r].length; c++) {
+                        const b = this.bricks[r][c];
+                        if (b.status === 1) {
+                            this.ctx.save();
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.shadowColor = b.color.border;
+                            
+                            this.ctx.fillStyle = b.color.fill;
+                            this.ctx.strokeStyle = b.color.border;
+                            this.ctx.lineWidth = 2;
+
+                            this.ctx.beginPath();
+                            this.ctx.roundRect(b.x, b.y, b.width, b.height, 4);
+                            this.ctx.fill();
+                            this.ctx.stroke();
+
+                            if (b.maxHp > 1 && b.hp < b.maxHp) {
+                                this.ctx.strokeStyle = '#ffffff';
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(b.x + 6, b.y + 6);
+                                this.ctx.lineTo(b.x + b.width - 6, b.y + b.height - 6);
+                                this.ctx.stroke();
+                            }
+
+                            this.ctx.restore();
+                        }
+                    }
+                }
+
+                // Render Powerups
+                this.powerups.forEach(p => {
+                    this.ctx.save();
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = p.type === 'frenzy' ? '#ff007f' : '#ffe600';
+                    this.ctx.fillStyle = p.type === 'frenzy' ? '#ff007f' : '#ffe600';
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Text Icon Inside Drop
+                    this.ctx.fillStyle = '#000000';
+                    this.ctx.font = 'bold 10px Inter';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(p.type === 'frenzy' ? '💥' : '⚡', p.x, p.y);
+                    this.ctx.restore();
+                });
+
+                // Render Paddle
+                this.ctx.save();
+                this.ctx.shadowBlur = 16;
+                this.ctx.shadowColor = this.frenzyTimer > 0 ? '#ff007f' : this.paddle.color;
+                this.ctx.fillStyle = this.frenzyTimer > 0 ? '#ff007f' : this.paddle.color;
+                this.ctx.beginPath();
+                this.ctx.roundRect(this.paddle.x, this.paddle.y, this.paddle.width, this.paddle.height, 7);
+                this.ctx.fill();
+                this.ctx.restore();
+
+                // Dynamic Ball Neon Trail
+                for (let i = 0; i < this.ball.trail.length; i++) {
+                    const pt = this.ball.trail[i];
+                    const alpha = (i + 1) / this.ball.trail.length * 0.55;
+                    const radius = this.ball.radius * ((i + 1) / this.ball.trail.length);
+                    
+                    this.ctx.fillStyle = this.frenzyTimer > 0 
+                        ? `rgba(255, 0, 127, ${alpha})` 
+                        : `rgba(0, 243, 255, ${alpha})`;
+                        
+                    this.ctx.beginPath();
+                    this.ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+
+                // Render Ball
+                this.ctx.save();
+                this.ctx.shadowBlur = 18;
+                this.ctx.shadowColor = this.frenzyTimer > 0 ? '#ff007f' : '#00f3ff';
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.beginPath();
+                this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+
+                // Render Particles
+                this.particles.forEach(p => {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = p.alpha;
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = p.color;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+
+            gameLoop(timestamp) {
+                this.update();
+                this.render();
+                requestAnimationFrame((ts) => this.gameLoop(ts));
+            }
+        }
+
+        // Initialize Game On Page Load
+        window.addEventListener('load', () => {
+            new CyberBreakout();
+        });
+    </script>
+</body>
+</html>

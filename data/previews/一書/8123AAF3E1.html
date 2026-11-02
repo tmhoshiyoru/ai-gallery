@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-950">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Royal Casino & Arcade Hub</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'monospace', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        casino: {
+                            gold: '#fbbf24',
+                            goldDark: '#b45309',
+                            purple: '#4c1d95',
+                            felt: '#064e3b',
+                            feltDark: '#022c22'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        canvas {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .pulse-glow {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(0.98); }
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4), inset 0 0 15px rgba(168, 85, 247, 0.2);
+        }
+        .gold-glow {
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+        }
+        .card-shadow {
+            box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+        }
+        @keyframes dealCard {
+            from { opacity: 0; transform: translateY(-40px) scale(0.9) rotate(-3deg); }
+            to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+        }
+        .animate-deal {
+            animation: dealCard 0.28s ease-out forwards;
+        }
+        @keyframes slotSpin {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+        }
+        .spinning-reel {
+            animation: slotSpin 0.15s linear infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col justify-between items-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-purple-100 font-sans p-2 sm:p-4 select-none">
+
+    <!-- Casino Header Navigation -->
+    <header class="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center py-3 px-4 bg-purple-900/40 backdrop-blur-md border border-purple-500/30 rounded-2xl shadow-2xl gap-3 mb-4">
+        
+        <!-- Logo & Brand -->
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-purple-600 flex items-center justify-center text-white shadow-lg gold-glow font-pixel text-xl">
+                🎰
+            </div>
+            <div>
+                <h1 class="text-base sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-100 to-purple-300 font-sans flex items-center gap-2">
+                    NEON ROYAL CASINO
+                </h1>
+                <p class="text-[11px] text-purple-300 font-mono flex items-center gap-2">
+                    <span>VIP TIER: <strong id="vip-level-display" class="text-amber-400 font-bold">GOLD VIP</strong></span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Bankroll & Bonus Controls -->
+        <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            
+            <!-- Global Bankroll Balance -->
+            <div class="bg-slate-950/90 px-4 py-2 rounded-xl border border-amber-500/50 flex items-center gap-3 shadow-inner">
+                <span class="text-xl">💰</span>
+                <div class="flex flex-col">
+                    <span class="text-[9px] uppercase tracking-wider text-purple-400 font-semibold">Casino Bankroll</span>
+                    <span id="global-bankroll" class="text-emerald-400 font-black font-pixel text-sm sm:text-base">$2,500</span>
+                </div>
+            </div>
+
+            <!-- Reload / Daily Free Chips -->
+            <button onclick="claimDailyBonus()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black text-xs transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5">
+                <span>🎁</span> FREE CHIPS
+            </button>
+
+            <!-- Sound Toggle -->
+            <button id="sound-btn" class="px-3 py-2 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-white transition border border-purple-600/50 font-semibold text-xs shadow-sm flex items-center gap-1">
+                <span>🔊</span> ON
+            </button>
+        </div>
+    </header>
+
+    <!-- Game Switcher Navigation Bar -->
+    <nav class="w-full max-w-6xl mb-4 overflow-x-auto pb-2">
+        <div class="flex items-center justify-start md:justify-center gap-2 min-w-max px-2">
+            <button id="tab-bj" onclick="switchGame('bj')" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 bg-purple-600 text-white shadow-lg border border-purple-400/40">
+                ♠️ Blackjack 21
+            </button>
+            <button id="tab-slots" onclick="switchGame('slots')" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 text-purple-300 hover:text-white hover:bg-purple-800/50 border border-transparent">
+                🎰 777 Slots
+            </button>
+            <button id="tab-roulette" onclick="switchGame('roulette')" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 text-purple-300 hover:text-white hover:bg-purple-800/50 border border-transparent">
+                🎡 Roulette
+            </button>
+            <button id="tab-baccarat" onclick="switchGame('baccarat')" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 text-purple-300 hover:text-white hover:bg-purple-800/50 border border-transparent">
+                🎴 Baccarat
+            </button>
+            <button id="tab-trex" onclick="switchGame('trex')" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 text-purple-300 hover:text-white hover:bg-purple-800/50 border border-transparent">
+                🦖 Dino Lounge
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Casino Interactive Arena -->
+    <main class="w-full max-w-6xl my-auto flex flex-col items-center">
+
+        <!-- ========================================== -->
+        <!-- GAME 1: BLACKJACK (21點)                  -->
+        <!-- ========================================== -->
+        <div id="game-container-bj" class="w-full flex flex-col items-center">
+            <div class="w-full bg-gradient-to-b from-emerald-950 via-casino-felt to-slate-950 border-4 border-amber-500/70 rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[520px] gold-glow">
+                
+                <!-- Table Header Banner -->
+                <div class="flex justify-between items-center border-b border-emerald-700/50 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-3xl">♠️</span>
+                        <div>
+                            <h2 class="text-lg sm:text-2xl font-black text-amber-300 tracking-wide">HIGH ROLLERS BLACKJACK</h2>
+                            <p class="text-[10px] text-emerald-300 font-mono">BLACKJACK PAYS 3:2 • DEALER STANDS ON 17</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-amber-500/40 text-right">
+                        <span class="text-[9px] text-amber-400 uppercase font-sans font-bold">Current Bet</span>
+                        <div id="bj-current-bet" class="text-amber-300 font-black font-pixel text-sm sm:text-base">$0</div>
+                    </div>
+                </div>
+
+                <!-- Dealer Cards -->
+                <div class="my-3 flex flex-col items-center">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs uppercase font-extrabold text-emerald-200 tracking-wider">Dealer's Hand</span>
+                        <span id="dealer-score-badge" class="hidden text-xs bg-emerald-900 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/50">0</span>
+                    </div>
+                    <div id="dealer-cards" class="flex justify-center gap-2 sm:gap-4 min-h-[140px] sm:min-h-[170px] items-center">
+                        <div class="text-emerald-300/60 text-xs italic font-medium">Place your bet & press Deal</div>
+                    </div>
+                </div>
+
+                <!-- Status Banner -->
+                <div class="text-center my-1 h-9 flex items-center justify-center">
+                    <div id="bj-status-msg" class="text-xs sm:text-sm font-black font-pixel text-amber-300 bg-slate-950/90 px-6 py-2 rounded-full border border-amber-500/60 shadow-xl">
+                        SELECT CHIPS & CLICK DEAL
+                    </div>
+                </div>
+
+                <!-- Player Cards -->
+                <div class="my-3 flex flex-col items-center">
+                    <div id="player-cards" class="flex justify-center gap-2 sm:gap-4 min-h-[140px] sm:min-h-[170px] items-center">
+                        <div class="text-emerald-300/60 text-xs italic font-medium">Waiting for round start...</div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="text-xs uppercase font-extrabold text-emerald-200 tracking-wider">Your Hand</span>
+                        <span id="player-score-badge" class="hidden text-xs bg-emerald-900 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/50">0</span>
+                    </div>
+                </div>
+
+                <!-- Blackjack Controls & Chips -->
+                <div class="pt-4 border-t border-emerald-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div id="bj-chip-controls" class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-emerald-200 mr-1">Bet:</span>
+                        <button onclick="addBet('bj', 10)" class="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$10</button>
+                        <button onclick="addBet('bj', 50)" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$50</button>
+                        <button onclick="addBet('bj', 100)" class="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$100</button>
+                        <button onclick="addBet('bj', 500)" class="w-10 h-10 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$500</button>
+                        <button onclick="clearBet('bj')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-[11px] border border-slate-700 ml-1">Clear</button>
+                    </div>
+
+                    <div id="bj-actions" class="flex items-center gap-2">
+                        <button id="btn-bj-deal" onclick="bjDeal()" class="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-400/30 transition disabled:opacity-40">DEAL 🃏</button>
+                        <button id="btn-bj-hit" onclick="bjHit()" disabled class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-lg transition disabled:opacity-40">HIT</button>
+                        <button id="btn-bj-stand" onclick="bjStand()" disabled class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold text-xs sm:text-sm shadow-lg transition disabled:opacity-40">STAND</button>
+                        <button id="btn-bj-double" onclick="bjDouble()" disabled class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-lg transition disabled:opacity-40">DOUBLE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- GAME 2: 777 NEON SLOTS MACHINE             -->
+        <!-- ========================================== -->
+        <div id="game-container-slots" class="hidden w-full flex flex-col items-center">
+            <div class="w-full bg-gradient-to-b from-purple-950 via-slate-900 to-purple-950 border-4 border-amber-500/70 rounded-3xl p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[520px] gold-glow">
+                
+                <div class="flex justify-between items-center border-b border-purple-800/60 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-3xl">🎰</span>
+                        <div>
+                            <h2 class="text-lg sm:text-2xl font-black text-amber-300 tracking-wide">777 NEON MEGA SLOTS</h2>
+                            <p class="text-[10px] text-purple-300 font-mono">3 REEL CLASSIC • JACKPOT PAYS 50X MULTIPLIER</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-amber-500/40 text-right">
+                        <span class="text-[9px] text-amber-400 uppercase font-sans font-bold">Slot Bet</span>
+                        <div id="slots-bet-display" class="text-amber-300 font-black font-pixel text-sm sm:text-base">$0</div>
+                    </div>
+                </div>
+
+                <!-- Slot Machine Reels Housing -->
+                <div class="my-auto py-6 flex flex-col items-center">
+                    
+                    <!-- Reels Box -->
+                    <div class="bg-slate-950 p-4 sm:p-6 rounded-3xl border-4 border-amber-400 shadow-2xl flex justify-center gap-3 sm:gap-6 relative neon-border">
+                        <div id="reel-1" class="w-24 h-32 sm:w-32 sm:h-40 bg-gradient-to-b from-purple-900 to-slate-900 rounded-2xl border-2 border-purple-500 flex items-center justify-center text-5xl sm:text-7xl shadow-inner font-pixel">
+                            7️⃣
+                        </div>
+                        <div id="reel-2" class="w-24 h-32 sm:w-32 sm:h-40 bg-gradient-to-b from-purple-900 to-slate-900 rounded-2xl border-2 border-purple-500 flex items-center justify-center text-5xl sm:text-7xl shadow-inner font-pixel">
+                            🎰
+                        </div>
+                        <div id="reel-3" class="w-24 h-32 sm:w-32 sm:h-40 bg-gradient-to-b from-purple-900 to-slate-900 rounded-2xl border-2 border-purple-500 flex items-center justify-center text-5xl sm:text-7xl shadow-inner font-pixel">
+                            7️⃣
+                        </div>
+                    </div>
+
+                    <!-- Payout Status -->
+                    <div id="slots-status-msg" class="mt-4 text-xs sm:text-sm font-black font-pixel text-amber-300 bg-slate-950/90 px-6 py-2 rounded-full border border-amber-500/60 shadow-xl">
+                        SPIN TO WIN THE JACKPOT!
+                    </div>
+                </div>
+
+                <!-- Slot Controls -->
+                <div class="pt-4 border-t border-purple-800/60 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div id="slots-chip-controls" class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-purple-300 mr-1">Place Bet:</span>
+                        <button onclick="addSlotBet(10)" class="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$10</button>
+                        <button onclick="addSlotBet(50)" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$50</button>
+                        <button onclick="addSlotBet(100)" class="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$100</button>
+                        <button onclick="addSlotBet(500)" class="w-10 h-10 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-black text-xs border-2 border-dashed border-white shadow-lg active:scale-95 transition flex items-center justify-center">$500</button>
+                        <button onclick="clearSlotBet()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-[11px] border border-slate-700 ml-1">Clear</button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button id="btn-spin-slots" onclick="spinSlots()" class="px-8 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-sm sm:text-base shadow-xl gold-glow transition">
+                            SPIN REELS 🎰
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- GAME 3: EUROPEAN ROULETTES                -->
+        <!-- ========================================== -->
+        <div id="game-container-roulette" class="hidden w-full flex flex-col items-center">
+            <div class="w-full bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 border-4 border-amber-500/70 rounded-3xl p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[520px] gold-glow">
+                
+                <div class="flex justify-between items-center border-b border-purple-800/60 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-3xl">🎡</span>
+                        <div>
+                            <h2 class="text-lg sm:text-2xl font-black text-amber-300 tracking-wide">EUROPEAN ROULETTE</h2>
+                            <p class="text-[10px] text-purple-300 font-mono">SINGLE ZERO (0) • 35:1 STRAIGHT BET PAYOUT</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-amber-500/40 text-right">
+                        <span class="text-[9px] text-amber-400 uppercase font-sans font-bold">Total Bet</span>
+                        <div id="roulette-total-bet" class="text-amber-300 font-black font-pixel text-sm sm:text-base">$0</div>
+                    </div>
+                </div>
+
+                <!-- Wheel & Betting Grid Display -->
+                <div class="my-4 flex flex-col lg:flex-row items-center justify-around gap-6">
+                    
+                    <!-- Spinning Wheel Canvas -->
+                    <div class="flex flex-col items-center">
+                        <canvas id="rouletteCanvas" width="260" height="260" class="rounded-full shadow-2xl border-4 border-amber-400"></canvas>
+                        <div id="roulette-status-msg" class="mt-3 text-xs font-black font-pixel text-amber-300 bg-slate-950/90 px-4 py-1.5 rounded-full border border-amber-500/50">
+                            PLACE YOUR BETS & SPIN
+                        </div>
+                    </div>
+
+                    <!-- Outside & Special Bets Buttons -->
+                    <div class="flex flex-col gap-2 w-full max-w-md text-xs">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="placeRouletteBet('RED', 2)" class="py-2.5 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl border border-red-300 shadow">RED (1:1)</button>
+                            <button onclick="placeRouletteBet('BLACK', 2)" class="py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl border border-slate-700 shadow">BLACK (1:1)</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="placeRouletteBet('EVEN', 2)" class="py-2 bg-purple-900 hover:bg-purple-800 text-purple-200 font-bold rounded-xl border border-purple-700">EVEN (1:1)</button>
+                            <button onclick="placeRouletteBet('ODD', 2)" class="py-2 bg-purple-900 hover:bg-purple-800 text-purple-200 font-bold rounded-xl border border-purple-700">ODD (1:1)</button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="placeRouletteBet('1ST12', 3)" class="py-2 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 font-bold rounded-xl border border-indigo-700">1st 12 (2:1)</button>
+                            <button onclick="placeRouletteBet('2ND12', 3)" class="py-2 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 font-bold rounded-xl border border-indigo-700">2nd 12 (2:1)</button>
+                            <button onclick="placeRouletteBet('3RD12', 3)" class="py-2 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 font-bold rounded-xl border border-indigo-700">3rd 12 (2:1)</button>
+                        </div>
+                        <div id="roulette-bet-summary" class="text-[11px] text-purple-300 bg-slate-950 p-2 rounded-xl border border-purple-800/50 min-h-[40px] text-center flex items-center justify-center font-mono">
+                            No active bets placed
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Bar -->
+                <div class="pt-4 border-t border-purple-800/60 flex justify-between items-center gap-4">
+                    <button onclick="clearRouletteBets()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-600">Clear Bets</button>
+                    <button id="btn-spin-roulette" onclick="spinRoulette()" class="px-8 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-lg gold-glow">
+                        SPIN WHEEL 🎡
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- GAME 4: BACCARAT (百家樂)                  -->
+        <!-- ========================================== -->
+        <div id="game-container-baccarat" class="hidden w-full flex flex-col items-center">
+            <div class="w-full bg-gradient-to-b from-indigo-950 via-purple-950 to-slate-950 border-4 border-amber-500/70 rounded-3xl p-4 sm:p-6 shadow-2xl relative flex flex-col justify-between min-h-[520px] gold-glow">
+                
+                <div class="flex justify-between items-center border-b border-indigo-800/60 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-3xl">🎴</span>
+                        <div>
+                            <h2 class="text-lg sm:text-2xl font-black text-amber-300 tracking-wide">ROYAL BACCARAT</h2>
+                            <p class="text-[10px] text-indigo-300 font-mono">PLAYER (1:1) • BANKER (0.95:1) • TIE (8:1)</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-amber-500/40 text-right">
+                        <span class="text-[9px] text-amber-400 uppercase font-sans font-bold">Baccarat Bet</span>
+                        <div id="bac-current-bet" class="text-amber-300 font-black font-pixel text-sm sm:text-base">$0</div>
+                    </div>
+                </div>
+
+                <!-- Baccarat Felt Play Area -->
+                <div class="my-4 flex flex-col md:flex-row justify-around items-center gap-4">
+                    
+                    <!-- Player Side -->
+                    <div class="w-full md:w-5/12 bg-blue-950/60 p-4 rounded-2xl border-2 border-blue-500/50 flex flex-col items-center">
+                        <h3 class="text-blue-300 font-black tracking-wider text-sm mb-2">PLAYER HAND</h3>
+                        <div id="bac-player-cards" class="flex gap-2 min-h-[120px] items-center">
+                            <span class="text-xs text-blue-300/60 italic">Waiting...</span>
+                        </div>
+                        <span id="bac-player-score" class="mt-2 text-xs font-bold bg-blue-900 text-blue-200 px-3 py-0.5 rounded-full">0</span>
+                    </div>
+
+                    <!-- VS Divider -->
+                    <div class="text-amber-400 font-pixel font-bold text-lg">VS</div>
+
+                    <!-- Banker Side -->
+                    <div class="w-full md:w-5/12 bg-red-950/60 p-4 rounded-2xl border-2 border-red-500/50 flex flex-col items-center">
+                        <h3 class="text-red-300 font-black tracking-wider text-sm mb-2">BANKER HAND</h3>
+                        <div id="bac-banker-cards" class="flex gap-2 min-h-[120px] items-center">
+                            <span class="text-xs text-red-300/60 italic">Waiting...</span>
+                        </div>
+                        <span id="bac-banker-score" class="mt-2 text-xs font-bold bg-red-900 text-red-200 px-3 py-0.5 rounded-full">0</span>
+                    </div>
+                </div>
+
+                <!-- Status Banner -->
+                <div class="text-center my-1 h-8 flex items-center justify-center">
+                    <div id="bac-status-msg" class="text-xs sm:text-sm font-black font-pixel text-amber-300 bg-slate-950/90 px-6 py-1.5 rounded-full border border-amber-500/60">
+                        CHOOSE PLAYER, BANKER OR TIE
+                    </div>
+                </div>
+
+                <!-- Betting Selection & Deal Button -->
+                <div class="pt-4 border-t border-indigo-800/60 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button id="btn-bac-p" onclick="selectBaccaratTarget('PLAYER')" class="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl border border-blue-400">BET PLAYER</button>
+                        <button id="btn-bac-t" onclick="selectBaccaratTarget('TIE')" class="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl border border-emerald-400">BET TIE</button>
+                        <button id="btn-bac-b" onclick="selectBaccaratTarget('BANKER')" class="flex-1 sm:flex-none px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-black text-xs rounded-xl border border-red-400">BET BANKER</button>
+                    </div>
+                    <button id="btn-deal-bac" onclick="dealBaccarat()" class="w-full sm:w-auto px-8 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm rounded-xl shadow-lg gold-glow">
+                        DEAL HAND 🎴
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- GAME 5: T-REX DINOSAUR RUNNER LOUNGE       -->
+        <!-- ========================================== -->
+        <div id="game-container-trex" class="hidden w-full flex flex-col items-center">
+            
+            <div class="w-full flex flex-wrap justify-between items-center mb-2 px-2 text-xs font-mono">
+                <span id="weather-status-display" class="text-amber-300 font-bold bg-purple-900/60 px-3 py-1 rounded-full border border-purple-700/40">WEATHER: SUNNY | TIME: DAY</span>
+                <div class="flex gap-2">
+                    <button id="weather-btn" class="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-amber-300 transition text-[11px] border border-slate-700">🌩️ Weather</button>
+                    <button id="sky-btn" class="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-purple-300 transition text-[11px] border border-slate-700">🌅 Sky</button>
+                </div>
+            </div>
+
+            <div class="w-full bg-purple-950/70 border-4 border-purple-600/80 rounded-2xl p-3 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+                
+                <div id="monster-alert" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-red-600/90 text-white text-[10px] sm:text-xs px-4 py-1.5 rounded-full border border-red-300 pulse-glow font-pixel">
+                    👾 SKY MONSTER SPOTTED! CLICK MONSTER & BUBBLES TO SHOOT & POP! 🫧
+                </div>
+
+                <canvas id="gameCanvas" width="800" height="260" class="w-full h-auto block rounded-xl cursor-crosshair shadow-inner"></canvas>
+                
+                <div id="mobile-controls" class="flex justify-between mt-3 sm:hidden text-xs gap-3">
+                    <button id="mobile-duck" class="flex-1 py-3 bg-indigo-700 active:bg-indigo-800 text-white rounded-xl text-center font-bold">👇 DUCK</button>
+                    <button id="mobile-jump" class="flex-1 py-3 bg-red-600 active:bg-red-700 text-white rounded-xl text-center font-bold">🚀 JUMP / START</button>
+                </div>
+            </div>
+
+            <div class="mt-3 text-[10px] sm:text-xs text-purple-200 text-center space-y-1 max-w-2xl bg-purple-900/40 p-3 rounded-xl border border-purple-700/40">
+                <p><kbd class="px-1.5 py-0.5 bg-purple-950 rounded">Space</kbd> / <kbd class="px-1.5 py-0.5 bg-purple-950 rounded">▲</kbd> Jump | <kbd class="px-1.5 py-0.5 bg-purple-950 rounded">▼</kbd> Duck | 🎯 Left-Click Monster (+200) & Bubbles (+50)</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-2 text-[10px] text-purple-400 tracking-wider text-center">
+        NEON ROYAL CASINO PLATFORM • ALL GAMES INTEGRATED WITH SYNTH AUDIO
+    </footer>
+
+    <script>
+        // Web Audio Synthesizer Engine
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+            }
+
+            playChipClink() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(2200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.06);
+                gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.06);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.06);
+            }
+
+            playCardSlide() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * 0.08;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                noise.start(); noise.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playWinFanfare() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                    const startTime = this.ctx.currentTime + (idx * 0.08);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0.15, startTime); gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(startTime); osc.stop(startTime + 0.2);
+                });
+            }
+
+            playSlotSpin() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playJump() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playHit() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playLaser() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playBubble() {
+                if (!this.enabled) return; this.init(); if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.12);
+            }
+        }
+
+        const audio = new SoundFX();
+
+        // Bankroll State Management
+        let bankroll = parseInt(window.__galleryStorage.getItem('casinoBankroll') || '2500', 10);
+
+        function updateBankrollUI() {
+            document.getElementById('global-bankroll').textContent = `$${bankroll.toLocaleString()}`;
+            window.__galleryStorage.setItem('casinoBankroll', bankroll.toString());
+        }
+
+        function claimDailyBonus() {
+            bankroll += 500;
+            audio.playWinFanfare();
+            updateBankrollUI();
+        }
+
+        // Navigation Engine
+        let activeGame = 'bj';
+        function switchGame(gameKey) {
+            activeGame = gameKey;
+            const games = ['bj', 'slots', 'roulette', 'baccarat', 'trex'];
+            games.forEach(g => {
+                const container = document.getElementById(`game-container-${g}`);
+                const tab = document.getElementById(`tab-${g}`);
+                if (g === gameKey) {
+                    container.classList.remove('hidden');
+                    tab.className = 'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 bg-purple-600 text-white shadow-lg border border-purple-400/40';
+                } else {
+                    container.classList.add('hidden');
+                    tab.className = 'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-2 text-purple-300 hover:text-white hover:bg-purple-800/50 border border-transparent';
+                }
+            });
+            if (gameKey === 'roulette') drawRouletteWheel(0);
+        }
+
+        document.getElementById('sound-btn').addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            document.getElementById('sound-btn').innerHTML = audio.enabled ? '<span>🔊</span> ON' : '<span>🔇</span> OFF';
+        });
+
+        // =========================================================================
+        // GAME 1: BLACKJACK LOGIC
+        // =========================================================================
+        let bjBet = 0;
+        let bjDeck = [];
+        let playerHand = [];
+        let dealerHand = [];
+        let bjState = 'BETTING';
+
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        function addBet(game, amount) {
+            if (game === 'bj' && bjState === 'BETTING') {
+                if (bankroll >= amount) {
+                    bankroll -= amount;
+                    bjBet += amount;
+                    audio.playChipClink();
+                    updateBankrollUI();
+                    document.getElementById('bj-current-bet').textContent = `$${bjBet}`;
+                }
+            }
+        }
+
+        function clearBet(game) {
+            if (game === 'bj' && bjState === 'BETTING') {
+                bankroll += bjBet;
+                bjBet = 0;
+                audio.playChipClink();
+                updateBankrollUI();
+                document.getElementById('bj-current-bet').textContent = `$0`;
+            }
+        }
+
+        function createDeck() {
+            let deck = [];
+            for (let s of SUITS) for (let v of VALUES) deck.push({ suit: s, value: v });
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        function calcHand(hand) {
+            let sum = 0, aces = 0;
+            for (let c of hand) {
+                if (c.value === 'A') { aces++; sum += 11; }
+                else if (['K', 'Q', 'J'].includes(c.value)) sum += 10;
+                else sum += parseInt(c.value, 10);
+            }
+            while (sum > 21 && aces > 0) { sum -= 10; aces--; }
+            return sum;
+        }
+
+        function bjDeal() {
+            if (bjBet <= 0) {
+                document.getElementById('bj-status-msg').textContent = "PLACE A BET FIRST!";
+                return;
+            }
+            audio.playCardSlide();
+            bjState = 'PLAYING';
+            bjDeck = createDeck();
+            playerHand = [bjDeck.pop(), bjDeck.pop()];
+            dealerHand = [bjDeck.pop(), bjDeck.pop()];
+
+            renderHand('player-cards', playerHand, false);
+            renderHand('dealer-cards', dealerHand, true);
+
+            document.getElementById('player-score-badge').textContent = calcHand(playerHand);
+            document.getElementById('player-score-badge').classList.remove('hidden');
+            document.getElementById('dealer-score-badge').classList.add('hidden');
+            document.getElementById('bj-status-msg').textContent = "HIT OR STAND?";
+
+            if (calcHand(playerHand) === 21) bjFinishRound('BLACKJACK');
+            updateBJControls();
+        }
+
+        function bjHit() {
+            if (bjState !== 'PLAYING') return;
+            audio.playCardSlide();
+            playerHand.push(bjDeck.pop());
+            renderHand('player-cards', playerHand, false);
+            const score = calcHand(playerHand);
+            document.getElementById('player-score-badge').textContent = score;
+
+            if (score > 21) bjFinishRound('BUST');
+            else if (score === 21) bjStand();
+        }
+
+        function bjDouble() {
+            if (bjState !== 'PLAYING' || playerHand.length !== 2) return;
+            if (bankroll < bjBet) return;
+            bankroll -= bjBet;
+            bjBet *= 2;
+            updateBankrollUI();
+            document.getElementById('bj-current-bet').textContent = `$${bjBet}`;
+            bjHit();
+            if (bjState === 'PLAYING') bjStand();
+        }
+
+        function bjStand() {
+            if (bjState !== 'PLAYING') return;
+            bjState = 'DEALER_TURN';
+            updateBJControls();
+
+            renderHand('dealer-cards', dealerHand, false);
+            let dealerScore = calcHand(dealerHand);
+            document.getElementById('dealer-score-badge').textContent = dealerScore;
+            document.getElementById('dealer-score-badge').classList.remove('hidden');
+
+            const dealerInterval = setInterval(() => {
+                dealerScore = calcHand(dealerHand);
+                if (dealerScore < 17) {
+                    audio.playCardSlide();
+                    dealerHand.push(bjDeck.pop());
+                    renderHand('dealer-cards', dealerHand, false);
+                    document.getElementById('dealer-score-badge').textContent = calcHand(dealerHand);
+                } else {
+                    clearInterval(dealerInterval);
+                    const pScore = calcHand(playerHand);
+                    const dScore = calcHand(dealerHand);
+                    if (dScore > 21) bjFinishRound('DEALER_BUST');
+                    else if (pScore > dScore) bjFinishRound('WIN');
+                    else if (pScore < dScore) bjFinishRound('LOSE');
+                    else bjFinishRound('PUSH');
+                }
+            }, 600);
+        }
+
+        function bjFinishRound(outcome) {
+            bjState = 'FINISHED';
+            renderHand('dealer-cards', dealerHand, false);
+            document.getElementById('dealer-score-badge').textContent = calcHand(dealerHand);
+            document.getElementById('dealer-score-badge').classList.remove('hidden');
+
+            const msg = document.getElementById('bj-status-msg');
+            if (outcome === 'BLACKJACK') {
+                const win = Math.floor(bjBet * 2.5);
+                bankroll += win;
+                msg.textContent = `🎉 BLACKJACK! WON $${win - bjBet}!`;
+                audio.playWinFanfare();
+            } else if (outcome === 'WIN' || outcome === 'DEALER_BUST') {
+                bankroll += bjBet * 2;
+                msg.textContent = outcome === 'DEALER_BUST' ? `💥 DEALER BUST! WON $${bjBet}!` : `✨ YOU WIN $${bjBet}!`;
+                audio.playWinFanfare();
+            } else if (outcome === 'PUSH') {
+                bankroll += bjBet;
+                msg.textContent = "🤝 PUSH - BET RETURNED";
+            } else {
+                msg.textContent = outcome === 'BUST' ? "💥 BUST OVER 21!" : "❌ DEALER WINS";
+                audio.playHit();
+            }
+            bjBet = 0;
+            document.getElementById('bj-current-bet').textContent = `$0`;
+            updateBankrollUI();
+            updateBJControls();
+        }
+
+        function renderHand(elementId, hand, hideFirstCard = false) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            hand.forEach((card, idx) => {
+                const isRed = card.suit === '♥' || card.suit === '♦';
+                const cardDiv = document.createElement('div');
+                if (hideFirstCard && idx === 0) {
+                    cardDiv.className = 'w-20 h-32 sm:w-28 sm:h-40 bg-gradient-to-br from-purple-800 to-purple-950 border-2 border-amber-400 rounded-2xl flex items-center justify-center text-3xl card-shadow animate-deal';
+                    cardDiv.innerHTML = '♠️';
+                } else {
+                    cardDiv.className = `w-20 h-32 sm:w-28 sm:h-40 bg-white border-2 border-slate-300 rounded-2xl p-2.5 flex flex-col justify-between shadow-2xl animate-deal ${isRed ? 'text-red-600' : 'text-slate-900'}`;
+                    cardDiv.innerHTML = `
+                        <div class="text-xs sm:text-base font-extrabold leading-none">${card.value}<br>${card.suit}</div>
+                        <div class="text-center text-3xl sm:text-4xl font-black">${card.suit}</div>
+                        <div class="text-xs sm:text-base font-extrabold leading-none text-right rotate-180">${card.value}<br>${card.suit}</div>
+                    `;
+                }
+                container.appendChild(cardDiv);
+            });
+        }
+
+        function updateBJControls() {
+            document.getElementById('btn-bj-deal').disabled = bjState === 'PLAYING' || bjState === 'DEALER_TURN';
+            document.getElementById('btn-bj-hit').disabled = bjState !== 'PLAYING';
+            document.getElementById('btn-bj-stand').disabled = bjState !== 'PLAYING';
+            document.getElementById('btn-bj-double').disabled = bjState !== 'PLAYING' || playerHand.length !== 2;
+            if (bjState === 'FINISHED') bjState = 'BETTING';
+        }
+
+        // =========================================================================
+        // GAME 2: 777 SLOTS LOGIC
+        // =========================================================================
+        let slotBet = 0;
+        const SLOT_SYMBOLS = ['7️⃣', '💎', '👑', '🍒', '🔔', '🍇', '🍋'];
+
+        function addSlotBet(amount) {
+            if (bankroll >= amount) {
+                bankroll -= amount;
+                slotBet += amount;
+                audio.playChipClink();
+                updateBankrollUI();
+                document.getElementById('slots-bet-display').textContent = `$${slotBet}`;
+                document.getElementById('slots-status-msg').textContent = "BET PLACED! READY TO SPIN";
+            }
+        }
+
+        function clearSlotBet() {
+            bankroll += slotBet;
+            slotBet = 0;
+            audio.playChipClink();
+            updateBankrollUI();
+            document.getElementById('slots-bet-display').textContent = `$0`;
+            document.getElementById('slots-status-msg').textContent = "SELECT CHIPS TO PLACE A BET";
+        }
+
+        function spinSlots() {
+            if (slotBet <= 0) {
+                document.getElementById('slots-status-msg').textContent = "PLEASE PLACE A BET FIRST!";
+                return;
+            }
+
+            const activeBet = slotBet;
+            const btn = document.getElementById('btn-spin-slots');
+            btn.disabled = true;
+            document.getElementById('slots-status-msg').textContent = "SPINNING...";
+
+            let count = 0;
+            const spinInterval = setInterval(() => {
+                count++;
+                audio.playSlotSpin();
+                document.getElementById('reel-1').textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+                document.getElementById('reel-2').textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+                document.getElementById('reel-3').textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+
+                if (count > 20) {
+                    clearInterval(spinInterval);
+                    const s1 = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+                    const s2 = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+                    const s3 = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+
+                    document.getElementById('reel-1').textContent = s1;
+                    document.getElementById('reel-2').textContent = s2;
+                    document.getElementById('reel-3').textContent = s3;
+
+                    if (s1 === s2 && s2 === s3) {
+                        const winAmt = activeBet * (s1 === '7️⃣' ? 50 : 15);
+                        bankroll += winAmt;
+                        document.getElementById('slots-status-msg').textContent = `🎉 JACKPOT! WON $${winAmt}!`;
+                        audio.playWinFanfare();
+                    } else if (s1 === s2 || s2 === s3 || s1 === s3) {
+                        const winAmt = activeBet * 2;
+                        bankroll += winAmt;
+                        document.getElementById('slots-status-msg').textContent = `✨ PAIR MATCH! WON $${winAmt}!`;
+                        audio.playWinFanfare();
+                    } else {
+                        document.getElementById('slots-status-msg').textContent = "NO MATCH! PLACE A BET TO SPIN AGAIN";
+                    }
+
+                    slotBet = 0;
+                    document.getElementById('slots-bet-display').textContent = `$0`;
+                    updateBankrollUI();
+                    btn.disabled = false;
+                }
+            }, 80);
+        }
+
+        // =========================================================================
+        // GAME 3: EUROPEAN ROULETTE LOGIC
+        // =========================================================================
+        let rouletteBets = {};
+        let rouletteAngle = 0;
+
+        function placeRouletteBet(type, payoutMult) {
+            if (bankroll < 50) return;
+            bankroll -= 50;
+            updateBankrollUI();
+            rouletteBets[type] = (rouletteBets[type] || 0) + 50;
+            audio.playChipClink();
+            document.getElementById('roulette-total-bet').textContent = `$${Object.values(rouletteBets).reduce((a,b)=>a+b,0)}`;
+            document.getElementById('roulette-bet-summary').textContent = Object.entries(rouletteBets).map(([k,v]) => `${k}: $${v}`).join(' | ');
+        }
+
+        function clearRouletteBets() {
+            const total = Object.values(rouletteBets).reduce((a,b)=>a+b,0);
+            bankroll += total;
+            rouletteBets = {};
+            updateBankrollUI();
+            document.getElementById('roulette-total-bet').textContent = `$0`;
+            document.getElementById('roulette-bet-summary').textContent = "No active bets placed";
+        }
+
+        function drawRouletteWheel(rotationAngle) {
+            const canvasR = document.getElementById('rouletteCanvas');
+            const ctxR = canvasR.getContext('2d');
+            const cx = 130, cy = 130, radius = 120;
+            ctxR.clearRect(0,0,260,260);
+
+            ctxR.save();
+            ctxR.translate(cx, cy);
+            ctxR.rotate(rotationAngle);
+
+            const totalSlots = 37;
+            const slice = (Math.PI * 2) / totalSlots;
+
+            for(let i = 0; i < totalSlots; i++) {
+                ctxR.beginPath();
+                ctxR.moveTo(0,0);
+                ctxR.arc(0, 0, radius, i * slice, (i+1) * slice);
+                ctxR.fillStyle = i === 0 ? '#16a34a' : (i % 2 === 0 ? '#dc2626' : '#0f172a');
+                ctxR.fill();
+                ctxR.stroke();
+            }
+            ctxR.restore();
+
+            // Center Pin
+            ctxR.fillStyle = '#fbbf24';
+            ctxR.beginPath(); ctxR.arc(cx, cy, 20, 0, Math.PI * 2); ctxR.fill();
+        }
+
+        function spinRoulette() {
+            const totalBet = Object.values(rouletteBets).reduce((a,b)=>a+b,0);
+            if (totalBet === 0) return;
+
+            const btn = document.getElementById('btn-spin-roulette');
+            btn.disabled = true;
+
+            let speed = 0.4;
+            const animateSpin = () => {
+                rouletteAngle += speed;
+                speed *= 0.98;
+                drawRouletteWheel(rouletteAngle);
+
+                if (speed > 0.005) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    btn.disabled = false;
+                    const winNum = Math.floor(Math.random() * 37);
+                    const isRed = winNum !== 0 && winNum % 2 === 0;
+                    
+                    let winnings = 0;
+                    if (rouletteBets['RED'] && isRed) winnings += rouletteBets['RED'] * 2;
+                    if (rouletteBets['BLACK'] && !isRed && winNum !== 0) winnings += rouletteBets['BLACK'] * 2;
+                    if (rouletteBets['EVEN'] && winNum !== 0 && winNum % 2 === 0) winnings += rouletteBets['EVEN'] * 2;
+                    if (rouletteBets['ODD'] && winNum % 2 !== 0) winnings += rouletteBets['ODD'] * 2;
+
+                    if (winnings > 0) {
+                        bankroll += winnings;
+                        audio.playWinFanfare();
+                        document.getElementById('roulette-status-msg').textContent = `LUCKY ${winNum}! WON $${winnings}!`;
+                    } else {
+                        document.getElementById('roulette-status-msg').textContent = `RESULT: ${winNum}! BETTER LUCK NEXT SPIN`;
+                    }
+
+                    rouletteBets = {};
+                    document.getElementById('roulette-total-bet').textContent = `$0`;
+                    updateBankrollUI();
+                }
+            };
+            requestAnimationFrame(animateSpin);
+        }
+
+        // =========================================================================
+        // GAME 4: BACCARAT LOGIC
+        // =========================================================================
+        let bacBetTarget = null;
+        let bacBetAmt = 100;
+
+        function selectBaccaratTarget(target) {
+            bacBetTarget = target;
+            document.getElementById('bac-status-msg').textContent = `BETTING $100 ON ${target}`;
+            document.getElementById('bac-current-bet').textContent = `$100`;
+        }
+
+        function dealBaccarat() {
+            if (!bacBetTarget || bankroll < 100) return;
+            bankroll -= 100;
+            updateBankrollUI();
+
+            const pCards = [Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1];
+            const bCards = [Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1];
+
+            const pScore = (pCards[0] + pCards[1]) % 10;
+            const bScore = (bCards[0] + bCards[1]) % 10;
+
+            document.getElementById('bac-player-cards').innerHTML = pCards.map(c => `<div class="w-12 h-16 bg-white text-slate-900 border font-bold flex items-center justify-center rounded-lg text-lg">${c}</div>`).join('');
+            document.getElementById('bac-banker-cards').innerHTML = bCards.map(c => `<div class="w-12 h-16 bg-white text-slate-900 border font-bold flex items-center justify-center rounded-lg text-lg">${c}</div>`).join('');
+
+            document.getElementById('bac-player-score').textContent = pScore;
+            document.getElementById('bac-banker-score').textContent = bScore;
+
+            let winner = pScore > bScore ? 'PLAYER' : (bScore > pScore ? 'BANKER' : 'TIE');
+
+            if (bacBetTarget === winner) {
+                const payout = winner === 'TIE' ? 900 : 200;
+                bankroll += payout;
+                document.getElementById('bac-status-msg').textContent = `🎉 WINNER ${winner}! WON $${payout - 100}!`;
+                audio.playWinFanfare();
+            } else {
+                document.getElementById('bac-status-msg').textContent = `HOUSE WINS (${winner})`;
+            }
+            updateBankrollUI();
+        }
+
+        // =========================================================================
+        // GAME 5: DINOSAUR RUNNER LOUNGE LOGIC
+        // =========================================================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const CANVAS_WIDTH = 800, CANVAS_HEIGHT = 260, GROUND_Y = 210;
+
+        let gameState = 'START', score = 0, gameSpeed = 6, frameCount = 0;
+        let clouds = [], obstacles = [], rainDrops = [], splashes = [], shootingStars = [], skyMonster = null, monsterBubbles = [];
+
+        const dino = { x: 50, y: GROUND_Y - 47, width: 44, height: 47, vy: 0, gravity: 0.6, jumpForce: -11.5, grounded: true, isDucking: false };
+
+        function handleJump() {
+            if (activeGame !== 'trex') return;
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                gameState = 'PLAYING'; score = 0; gameSpeed = 6; obstacles = []; skyMonster = null;
+            } else if (dino.grounded) {
+                dino.vy = dino.jumpForce; dino.grounded = false; audio.playJump();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') handleJump();
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                if (activeGame === 'trex' && dino.grounded) {
+                    dino.isDucking = true;
+                    dino.height = 28;
+                    dino.y = GROUND_Y - 28;
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                if (activeGame === 'trex') {
+                    dino.isDucking = false;
+                    dino.height = 47;
+                    dino.y = GROUND_Y - 47;
+                }
+            }
+        });
+
+        // Touch / Mobile ducking setup
+        const mobDuck = document.getElementById('mobile-duck');
+        if (mobDuck) {
+            mobDuck.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (activeGame === 'trex' && dino.grounded) {
+                    dino.isDucking = true; dino.height = 28; dino.y = GROUND_Y - 28;
+                }
+            });
+            mobDuck.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (activeGame === 'trex') {
+                    dino.isDucking = false; dino.height = 47; dino.y = GROUND_Y - 47;
+                }
+            });
+        }
+        const mobJump = document.getElementById('mobile-jump');
+        if (mobJump) {
+            mobJump.addEventListener('click', () => handleJump());
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (activeGame !== 'trex') return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+            const clickY = (e.clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
+
+            if (skyMonster && clickX >= skyMonster.x && clickX <= skyMonster.x + 50 && clickY >= skyMonster.y && clickY <= skyMonster.y + 40) {
+                skyMonster = null;
+                score += 200;
+                audio.playLaser();
+                document.getElementById('monster-alert').classList.add('hidden');
+            } else if (gameState !== 'PLAYING') handleJump();
+        });
+
+        function drawGoogleDino(ctx, x, y, grounded, ducking, frame) {
+            ctx.save();
+            ctx.fillStyle = '#535353'; // Iconic Google Chrome Dino Charcoal
+
+            const p = 2; // Pixel scale factor
+
+            if (ducking) {
+                // Ducking T-Rex Pose
+                ctx.fillRect(x + 14 * p, y + 2 * p, 16 * p, 8 * p); // Extended snout head
+                ctx.fillRect(x + 26 * p, y + 6 * p, 8 * p, 4 * p);  // Jaw
+                ctx.fillStyle = '#38bdf8'; // Eye cutout matching sky background
+                ctx.fillRect(x + 22 * p, y + 4 * p, 2 * p, 2 * p);
+                ctx.fillStyle = '#535353';
+
+                // Extended Body & Tail
+                ctx.fillRect(x + 4 * p, y + 4 * p, 18 * p, 8 * p);
+                ctx.fillRect(x, y + 2 * p, 6 * p, 5 * p);
+
+                // Ducking Legs
+                const legFrame = Math.floor(frame / 5) % 2;
+                if (!grounded) {
+                    ctx.fillRect(x + 8 * p, y + 12 * p, 3 * p, 3 * p);
+                    ctx.fillRect(x + 16 * p, y + 12 * p, 3 * p, 3 * p);
+                } else if (legFrame === 0) {
+                    ctx.fillRect(x + 8 * p, y + 12 * p, 3 * p, 3 * p);
+                    ctx.fillRect(x + 16 * p, y + 12 * p, 3 * p, 2 * p);
+                } else {
+                    ctx.fillRect(x + 8 * p, y + 12 * p, 3 * p, 2 * p);
+                    ctx.fillRect(x + 16 * p, y + 12 * p, 3 * p, 3 * p);
+                }
+            } else {
+                // Standing / Running Google Chrome T-Rex Sprite
+                // Head
+                ctx.fillRect(x + 10 * p, y + 0 * p, 11 * p, 8 * p);
+                ctx.fillRect(x + 10 * p, y + 2 * p, 13 * p, 6 * p);
+                ctx.fillRect(x + 10 * p, y + 8 * p, 8 * p, 2 * p);
+
+                // Eye (Cutout)
+                ctx.fillStyle = '#38bdf8'; 
+                ctx.fillRect(x + 12 * p, y + 2 * p, 2 * p, 2 * p);
+                ctx.fillStyle = '#535353';
+
+                // Neck & Torso
+                ctx.fillRect(x + 8 * p, y + 8 * p, 6 * p, 4 * p);
+                ctx.fillRect(x + 6 * p, y + 10 * p, 10 * p, 8 * p);
+                ctx.fillRect(x + 6 * p, y + 18 * p, 8 * p, 2 * p);
+
+                // Small Front Arm
+                ctx.fillRect(x + 15 * p, y + 11 * p, 3 * p, 2 * p);
+                ctx.fillRect(x + 17 * p, y + 13 * p, 1 * p, 2 * p);
+
+                // Tail
+                ctx.fillRect(x + 4 * p, y + 10 * p, 3 * p, 5 * p);
+                ctx.fillRect(x + 2 * p, y + 8 * p, 3 * p, 4 * p);
+                ctx.fillRect(x + 0 * p, y + 6 * p, 3 * p, 3 * p);
+
+                // Animated Legs
+                const legFrame = Math.floor(frame / 5) % 2;
+                if (!grounded) {
+                    // Both legs down
+                    ctx.fillRect(x + 7 * p, y + 20 * p, 2 * p, 5 * p);
+                    ctx.fillRect(x + 7 * p, y + 24 * p, 4 * p, 2 * p);
+                    ctx.fillRect(x + 12 * p, y + 20 * p, 2 * p, 5 * p);
+                    ctx.fillRect(x + 12 * p, y + 24 * p, 4 * p, 2 * p);
+                } else if (legFrame === 0) {
+                    // Left leg forward, right leg back
+                    ctx.fillRect(x + 7 * p, y + 20 * p, 2 * p, 6 * p);
+                    ctx.fillRect(x + 7 * p, y + 25 * p, 4 * p, 2 * p);
+                    ctx.fillRect(x + 12 * p, y + 20 * p, 3 * p, 3 * p);
+                } else {
+                    // Right leg forward, left leg back
+                    ctx.fillRect(x + 7 * p, y + 20 * p, 3 * p, 3 * p);
+                    ctx.fillRect(x + 12 * p, y + 20 * p, 2 * p, 6 * p);
+                    ctx.fillRect(x + 12 * p, y + 25 * p, 4 * p, 2 * p);
+                }
+            }
+            ctx.restore();
+        }
+
+        function updateTRex() {
+            if (gameState !== 'PLAYING') return;
+            frameCount++; score += 0.15; gameSpeed += 0.0005;
+
+            if (!dino.grounded) {
+                dino.vy += dino.gravity;
+                dino.y += dino.vy;
+                const targetY = GROUND_Y - dino.height;
+                if (dino.y >= targetY) { dino.y = targetY; dino.grounded = true; }
+            }
+
+            if (Math.random() < 0.002 && !skyMonster) {
+                skyMonster = { x: CANVAS_WIDTH, y: 40, width: 48, height: 32 };
+                document.getElementById('monster-alert').classList.remove('hidden');
+            }
+
+            if (skyMonster) {
+                skyMonster.x -= 2;
+                if (skyMonster.x < -50) skyMonster = null;
+            }
+
+            if (Math.random() < 0.015 && obstacles.length < 3) {
+                obstacles.push({ x: CANVAS_WIDTH, y: GROUND_Y - 32, width: 18, height: 32 });
+            }
+
+            obstacles.forEach(obs => {
+                obs.x -= gameSpeed;
+                if (dino.x < obs.x + obs.width && dino.x + dino.width > obs.x && dino.y < obs.y + obs.height && dino.y + dino.height > obs.y) {
+                    gameState = 'GAMEOVER'; audio.playHit();
+                }
+            });
+            obstacles = obstacles.filter(o => o.x > -30);
+        }
+
+        function drawTRex() {
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Ground line
+            ctx.fillStyle = '#166534';
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 50);
+
+            // Authentic Chrome T-Rex rendering
+            drawGoogleDino(ctx, dino.x, dino.y, dino.grounded, dino.isDucking, frameCount);
+
+            // Cactus Obstacles
+            ctx.fillStyle = '#15803d';
+            obstacles.forEach(o => {
+                ctx.fillRect(o.x, o.y, o.width, o.height);
+                ctx.fillRect(o.x - 3, o.y + 6, 4, 10);
+                ctx.fillRect(o.x + o.width - 1, o.y + 10, 4, 10);
+            });
+
+            // Sky Monster
+            if (skyMonster) {
+                ctx.fillStyle = '#a855f7';
+                ctx.fillRect(skyMonster.x, skyMonster.y, skyMonster.width, skyMonster.height);
+            }
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '12px "Press Start 2P"';
+            ctx.fillText(`SCORE: ${Math.floor(score)}`, CANVAS_WIDTH - 170, 30);
+
+            if (gameState === 'START') {
+                ctx.fillText('PRESS SPACE / TAP TO JUMP', CANVAS_WIDTH / 2 - 140, CANVAS_HEIGHT / 2);
+            } else if (gameState === 'GAMEOVER') {
+                ctx.fillText('GAME OVER - CLICK TO RESTART', CANVAS_WIDTH / 2 - 170, CANVAS_HEIGHT / 2);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') handleJump();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (activeGame !== 'trex') return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+            const clickY = (e.clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
+
+            if (skyMonster && clickX >= skyMonster.x && clickX <= skyMonster.x + 50 && clickY >= skyMonster.y && clickY <= skyMonster.y + 40) {
+                skyMonster = null;
+                score += 200;
+                audio.playLaser();
+                document.getElementById('monster-alert').classList.add('hidden');
+            } else if (gameState !== 'PLAYING') handleJump();
+        });
+
+        function updateTRex() {
+            if (gameState !== 'PLAYING') return;
+            frameCount++; score += 0.15; gameSpeed += 0.0005;
+
+            if (!dino.grounded) {
+                dino.vy += dino.gravity;
+                dino.y += dino.vy;
+                if (dino.y >= GROUND_Y - dino.height) { dino.y = GROUND_Y - dino.height; dino.grounded = true; }
+            }
+
+            if (Math.random() < 0.002 && !skyMonster) {
+                skyMonster = { x: CANVAS_WIDTH, y: 40, width: 48, height: 32 };
+                document.getElementById('monster-alert').classList.remove('hidden');
+            }
+
+            if (skyMonster) {
+                skyMonster.x -= 2;
+                if (skyMonster.x < -50) skyMonster = null;
+            }
+
+            if (Math.random() < 0.015 && obstacles.length < 3) {
+                obstacles.push({ x: CANVAS_WIDTH, y: GROUND_Y - 30, width: 20, height: 30 });
+            }
+
+            obstacles.forEach(obs => {
+                obs.x -= gameSpeed;
+                if (dino.x < obs.x + obs.width && dino.x + dino.width > obs.x && dino.y < obs.y + obs.height && dino.y + dino.height > obs.y) {
+                    gameState = 'GAMEOVER'; audio.playHit();
+                }
+            });
+            obstacles = obstacles.filter(o => o.x > -30);
+        }
+
+        function drawTRex() {
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            ctx.fillStyle = '#166534';
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 50);
+
+            // Dino Red
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+            // Obstacles
+            ctx.fillStyle = '#15803d';
+            obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
+
+            // Sky Monster
+            if (skyMonster) {
+                ctx.fillStyle = '#a855f7';
+                ctx.fillRect(skyMonster.x, skyMonster.y, skyMonster.width, skyMonster.height);
+            }
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '12px "Press Start 2P"';
+            ctx.fillText(`SCORE: ${Math.floor(score)}`, CANVAS_WIDTH - 150, 30);
+        }
+
+        function mainLoop() {
+            if (activeGame === 'trex') { updateTRex(); drawTRex(); }
+            requestAnimationFrame(mainLoop);
+        }
+
+        window.onload = () => {
+            updateBankrollUI();
+            drawRouletteWheel(0);
+            requestAnimationFrame(mainLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

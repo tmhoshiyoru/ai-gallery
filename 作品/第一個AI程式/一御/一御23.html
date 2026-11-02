@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太空科幻打磚塊 (Space Sci-Fi Breakout)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif']
+                    },
+                    colors: {
+                        'space-dark': '#060913',
+                        'space-accent': '#00f0ff',
+                        'space-pink': '#ff007f',
+                        'space-purple': '#7928ca',
+                        'space-gold': '#ffd700'
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.5), 0 0 30px rgba(0, 240, 255, 0.2)',
+                        'neon-pink': '0 0 15px rgba(255, 0, 127, 0.5), 0 0 30px rgba(255, 0, 127, 0.2)',
+                        'neon-gold': '0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.3)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #04060f;
+            color: #e2e8f0;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #060913;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f0ff;
+            border-radius: 3px;
+        }
+        @keyframes glowPulse {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.8)); }
+            50% { filter: drop-shadow(0 0 18px rgba(0, 240, 255, 1)); }
+        }
+        .glow-title {
+            animation: glowPulse 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-rajdhani flex flex-col justify-between items-center p-2 sm:p-4 overflow-x-hidden bg-gradient-to-b from-[#03050c] via-[#080d21] to-[#04060f]">
+
+    <header class="text-center my-2 sm:my-3">
+        <h1 class="font-orbitron text-2xl sm:text-4xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-space-accent via-cyan-200 to-space-pink glow-title flex items-center justify-center gap-2 sm:gap-3">
+            <i class="fa-solid fa-shuttle-space text-space-accent text-xl sm:text-3xl"></i>
+            SPACE SCI-FI BREAKOUT
+        </h1>
+        <p class="text-slate-400 text-xs sm:text-sm font-semibold tracking-wider mt-1">
+            太空科幻打磚塊 · 避開隕石 · 捕捉星球
+        </p>
+    </header>
+
+    <main class="w-full max-w-4xl flex flex-col items-center">
+        <!-- HUD Control / Score Bar -->
+        <div class="w-full bg-slate-900/80 border border-space-accent/30 rounded-xl p-3 mb-3 backdrop-blur-md shadow-neon-cyan flex flex-wrap justify-between items-center gap-2 text-sm sm:text-base">
+            <div class="flex items-center gap-4 sm:gap-6">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-space-gold"></i>
+                    <span class="text-slate-400">最高分:</span>
+                    <span id="highScore" class="font-orbitron font-bold text-space-gold text-base sm:text-lg">0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-star text-space-accent"></i>
+                    <span class="text-slate-400">目前分數:</span>
+                    <span id="score" class="font-orbitron font-bold text-space-accent text-base sm:text-lg">0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 sm:gap-6">
+                <div class="hidden sm:flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span class="text-slate-400">球速:</span>
+                    <span id="speedMultiplier" class="font-orbitron text-amber-400 font-bold">1.0x</span>
+                </div>
+                <div id="buffContainer" class="hidden flex items-center gap-1.5 text-xs bg-space-pink/20 border border-space-pink text-space-pink px-2.5 py-1 rounded-full animate-pulse">
+                    <i class="fa-solid fa-arrows-left-right"></i>
+                    <span class="font-bold">護盾擴張:</span>
+                    <span id="buffTimer" class="font-orbitron font-bold">5s</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs sm:text-sm">護盾生命:</span>
+                    <div id="lives" class="flex gap-1 text-space-pink text-base sm:text-lg">
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative rounded-2xl overflow-hidden border-2 border-space-accent/40 shadow-neon-cyan p-1 bg-slate-950/90 max-w-full">
+            <canvas id="gameCanvas" width="800" height="500" tabindex="0" class="rounded-xl block max-w-full h-auto bg-slate-950 cursor-pointer focus:outline-none focus:ring-2 focus:ring-space-accent"></canvas>
+
+            <div id="excellentSplash" class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 transform scale-50 z-20">
+                <div class="px-8 py-4 rounded-2xl bg-slate-950/80 border-2 border-space-gold backdrop-blur-md shadow-[0_0_50px_rgba(255,215,0,0.8)] text-center pointer-events-none">
+                    <h2 class="font-orbitron text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-space-gold via-amber-200 to-space-accent tracking-widest drop-shadow-[0_0_30px_rgba(255,215,0,1)] animate-bounce">
+                        EXCELLENT!
+                    </h2>
+                    <p class="font-orbitron text-space-gold text-sm sm:text-lg font-bold tracking-wider mt-1">
+                        <i class="fa-solid fa-globe text-space-accent"></i> 星球捕捉成功 +50
+                    </p>
+                </div>
+            </div>
+
+            <div id="watchOutSplash" class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 transform scale-50 z-20">
+                <div class="px-8 py-4 rounded-2xl bg-red-950/85 border-2 border-red-500 backdrop-blur-md shadow-[0_0_50px_rgba(255,0,0,0.8)] text-center pointer-events-none">
+                    <h2 class="font-orbitron text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-400 to-amber-300 tracking-widest drop-shadow-[0_0_30px_rgba(255,0,0,1)] animate-bounce">
+                        WATCH OUT!
+                    </h2>
+                    <p class="font-orbitron text-red-400 text-sm sm:text-lg font-bold tracking-wider mt-1">
+                        <i class="fa-solid fa-meteor text-red-500"></i> 撞擊隕石 -10 分
+                    </p>
+                </div>
+            </div>
+
+            <div id="overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300">
+                <div class="max-w-md w-full bg-slate-900/90 border border-space-accent/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute -top-10 -left-10 w-32 h-32 bg-space-accent/20 rounded-full blur-2xl"></div>
+                    <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-space-pink/20 rounded-full blur-2xl"></div>
+
+                    <div id="overlayIcon" class="text-5xl sm:text-6xl text-space-accent mb-4 animate-pulse">
+                        <i class="fa-solid fa-shuttle-space"></i>
+                    </div>
+                    <h2 id="overlayTitle" class="font-orbitron text-2xl sm:text-3xl font-bold tracking-wide text-white mb-2">
+                        太空星際打磚塊
+                    </h2>
+                    <p id="overlayDesc" class="text-slate-300 text-xs sm:text-sm mb-6 leading-relaxed">
+                        使用 <span class="text-space-accent font-semibold">← / → 方向鍵</span> 或 <span class="text-space-accent font-semibold">滑鼠/觸控</span> 移動太空船<br>
+                        <span class="text-space-gold font-bold text-sm underline decoration-space-gold">按下【空白鍵 (Space)】或【點擊畫面】發射能量球！</span><br>
+                        <span class="text-xs text-amber-300/80 mt-1 block">每擊碎 5 個磚塊，能量球速度即提升一次！</span>
+                    </p>
+                    <button id="startBtn" class="w-full py-3.5 px-6 rounded-xl font-orbitron font-bold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 shadow-neon-cyan transform transition duration-150 active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-play"></i> <span id="btnText">開始遊戲 (START GAME)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full flex justify-between items-center mt-3 px-1">
+            <div class="flex gap-2">
+                <button id="restartBtn" class="px-4 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs sm:text-sm font-semibold transition flex items-center gap-2 cursor-pointer shadow-md active:scale-95">
+                    <i class="fa-solid fa-rotate-right text-space-accent"></i> 重新開始 (Restart)
+                </button>
+                <button id="soundToggle" class="px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-space-accent"></i>
+                </button>
+            </div>
+            <div class="text-slate-400 text-xs hidden sm:block">
+                按 <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-space-accent font-mono">SPACE</kbd> 發射球
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-4 text-center text-xs text-slate-500 font-mono">
+        SPACE SCI-FI BREAKOUT &copy; 2026 · HYPERSPACE GAME ENGINE
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const livesEl = document.getElementById('lives');
+        const speedMultiplierEl = document.getElementById('speedMultiplier');
+        const buffContainer = document.getElementById('buffContainer');
+        const buffTimerEl = document.getElementById('buffTimer');
+        const excellentSplash = document.getElementById('excellentSplash');
+        const watchOutSplash = document.getElementById('watchOutSplash');
+        const overlay = document.getElementById('overlay');
+        const overlayIcon = document.getElementById('overlayIcon');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayDesc = document.getElementById('overlayDesc');
+        const startBtn = document.getElementById('startBtn');
+        const btnText = document.getElementById('btnText');
+        const restartBtn = document.getElementById('restartBtn');
+        const soundToggle = document.getElementById('soundToggle');
+        const soundIcon = document.getElementById('soundIcon');
+
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        soundToggle.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high text-space-accent' : 'fa-solid fa-volume-xmark text-slate-500';
+        });
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'bounce') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'hit') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'powerup') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.25);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'planet') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(1400, now + 0.35);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'asteroid') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'launch') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'lifeLost') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch (e) {}
+        }
+
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('space_breakout_highscore')) || 0;
+        let lives = 3;
+        let gameRunning = false;
+        let ballLaunched = false;
+        let animationFrameId = null;
+        let hitCount = 0;
+
+        const basePaddleWidth = 110;
+        const paddleHeight = 16;
+        let paddleWidth = basePaddleWidth;
+        let paddleX = (canvas.width - paddleWidth) / 2;
+        let paddleSpeed = 8;
+        let buffTimer = 0;
+        let buffInterval = null;
+
+        const ballRadius = 8;
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height - 30;
+        let baseSpeed = 4.5;
+        let currentSpeed = baseSpeed;
+        let ballSpeedX = currentSpeed;
+        let ballSpeedY = -currentSpeed;
+
+        const stars = [];
+        const starCount = 80;
+        for (let i = 0; i < starCount; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 0.5,
+                alpha: Math.random(),
+                speed: Math.random() * 0.02 + 0.005
+            });
+        }
+
+        const brickRowCount = 6;
+        const brickColumnCount = 8;
+        const brickPadding = 10;
+        const brickOffsetTop = 50;
+        const brickOffsetLeft = 35;
+        const brickWidth = (canvas.width - (brickOffsetLeft * 2) - (brickPadding * (brickColumnCount - 1))) / brickColumnCount;
+        const brickHeight = 20;
+
+        const rowColors = [
+            { bg: '#ff007f', border: '#ff66b3', glow: 'rgba(255, 0, 127, 0.6)' },
+            { bg: '#9d00ff', border: '#c866ff', glow: 'rgba(157, 0, 255, 0.6)' },
+            { bg: '#00f0ff', border: '#80f8ff', glow: 'rgba(0, 240, 255, 0.6)' },
+            { bg: '#00ff88', border: '#80ffc4', glow: 'rgba(0, ff, 136, 0.6)' },
+            { bg: '#ffaa00', border: '#ffcc66', glow: 'rgba(255, 170, 0, 0.6)' },
+            { bg: '#ffd700', border: '#ffea80', glow: 'rgba(255, 215, 0, 0.6)' }
+        ];
+
+        let bricks = [];
+        let particles = [];
+        let powerups = [];
+        let planets = [];
+        let asteroids = [];
+
+        let rightPressed = false;
+        let leftPressed = false;
+
+        const planetTypes = [
+            { color: '#00f0ff', secondary: '#0055ff', ring: true, name: '冰核星' },
+            { color: '#ff007f', secondary: '#880044', ring: false, name: '緋紅星' },
+            { color: '#ffaa00', secondary: '#ff3300', ring: true, name: '巨木星' },
+            { color: '#00ff88', secondary: '#006633', ring: false, name: '翡翠星' }
+        ];
+
+        function updateHUD() {
+            scoreEl.textContent = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('space_breakout_highscore', highScore);
+            }
+            highScoreEl.textContent = highScore;
+
+            let livesHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < lives) {
+                    livesHTML += '<i class="fa-solid fa-heart text-space-pink"></i>';
+                } else {
+                    livesHTML += '<i class="fa-solid fa-heart text-slate-700"></i>';
+                }
+            }
+            livesEl.innerHTML = livesHTML;
+
+            const mult = (currentSpeed / baseSpeed).toFixed(1);
+            speedMultiplierEl.textContent = `${mult}x`;
+        }
+
+        function initBricks() {
+            bricks = [];
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r] = { x: 0, y: 0, status: 1, row: r };
+                }
+            }
+        }
+
+        function resetBallAndPaddle() {
+            ballLaunched = false;
+            paddleX = (canvas.width - paddleWidth) / 2;
+            ballX = paddleX + paddleWidth / 2;
+            ballY = canvas.height - paddleHeight - ballRadius - 4;
+            ballSpeedX = currentSpeed * (Math.random() > 0.5 ? 1 : -1);
+            ballSpeedY = -currentSpeed;
+        }
+
+        function launchBall() {
+            if (!ballLaunched && gameRunning) {
+                ballLaunched = true;
+                playSound('launch');
+            }
+        }
+
+        function activatePowerup() {
+            paddleWidth = basePaddleWidth * 1.5;
+            buffTimer = 5;
+            buffContainer.classList.remove('hidden');
+            buffTimerEl.textContent = `${buffTimer}s`;
+
+            if (buffInterval) clearInterval(buffInterval);
+
+            buffInterval = setInterval(() => {
+                buffTimer--;
+                if (buffTimer > 0) {
+                    buffTimerEl.textContent = `${buffTimer}s`;
+                } else {
+                    clearInterval(buffInterval);
+                    paddleWidth = basePaddleWidth;
+                    buffContainer.classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function triggerExcellentSplash() {
+            playSound('planet');
+            excellentSplash.classList.remove('opacity-0', 'scale-50');
+            excellentSplash.classList.add('opacity-100', 'scale-100');
+            setTimeout(() => {
+                excellentSplash.classList.remove('opacity-100', 'scale-100');
+                excellentSplash.classList.add('opacity-0', 'scale-50');
+            }, 1000);
+        }
+
+        function triggerWatchOutSplash() {
+            playSound('asteroid');
+            watchOutSplash.classList.remove('opacity-0', 'scale-50');
+            watchOutSplash.classList.add('opacity-100', 'scale-100');
+            setTimeout(() => {
+                watchOutSplash.classList.remove('opacity-100', 'scale-100');
+                watchOutSplash.classList.add('opacity-0', 'scale-50');
+            }, 1000);
+        }
+
+        function triggerGameOver(isWin = false) {
+            gameRunning = false;
+            if (isWin) {
+                overlayIcon.innerHTML = '<i class="fa-solid fa-trophy text-space-gold"></i>';
+                overlayTitle.textContent = '任務成功！勝利！';
+                overlayDesc.innerHTML = `恭喜清除所有磚塊！<br>最終得分：<span class="text-space-gold font-orbitron font-bold text-lg">${score}</span>`;
+                btnText.textContent = '再次挑戰 (PLAY AGAIN)';
+            } else {
+                overlayIcon.innerHTML = '<i class="fa-solid fa-skull-crossbones text-space-pink"></i>';
+                overlayTitle.textContent = 'GAME OVER';
+                overlayDesc.innerHTML = `護盾崩壞，太空船已被毀滅！<br>最終得分：<span class="text-space-accent font-orbitron font-bold text-lg">${score}</span>`;
+                btnText.textContent = '重新開始 (RETRY)';
+            }
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('opacity-100');
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    size: Math.random() * 3 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 0.03
+                });
+            }
+        }
+
+        function drawBackground() {
+            stars.forEach(s => {
+                s.alpha += s.speed;
+                if (s.alpha > 1 || s.alpha < 0.2) s.speed = -s.speed;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(s.alpha)})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawBricks() {
+            let activeBricks = 0;
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (b.status === 1) {
+                        activeBricks++;
+                        const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                        const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                        b.x = brickX;
+                        b.y = brickY;
+
+                        const style = rowColors[r % rowColors.length];
+
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = style.glow;
+
+                        ctx.fillStyle = style.bg;
+                        ctx.beginPath();
+                        ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 4);
+                        ctx.fill();
+
+                        ctx.strokeStyle = style.border;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                        ctx.fillRect(brickX + 2, brickY + 2, brickWidth - 4, 3);
+                    }
+                }
+            }
+            ctx.shadowBlur = 0;
+
+            if (activeBricks === 0 && gameRunning) {
+                triggerGameOver(true);
+            }
+        }
+
+        function drawPaddle() {
+            const paddleY = canvas.height - paddleHeight - 8;
+
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00f0ff';
+
+            const grad = ctx.createLinearGradient(paddleX, paddleY, paddleX, paddleY + paddleHeight);
+            grad.addColorStop(0, '#00f0ff');
+            grad.addColorStop(0.5, '#0088ff');
+            grad.addColorStop(1, '#0033aa');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(paddleX, paddleY, paddleWidth, paddleHeight, 8);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillRect(paddleX + 10, paddleY + 3, paddleWidth - 20, 2);
+
+            ctx.fillStyle = '#ff007f';
+            ctx.fillRect(paddleX + 5, paddleY + paddleHeight - 3, 10, 3);
+            ctx.fillRect(paddleX + paddleWidth - 15, paddleY + paddleHeight - 3, 10, 3);
+
+            ctx.shadowBlur = 0;
+        }
+
+        function drawBall() {
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#00f0ff';
+
+            const grad = ctx.createRadialGradient(ballX, ballY, 1, ballX, ballY, ballRadius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, '#00f0ff');
+            grad.addColorStop(1, '#0055ff');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+
+            if (!ballLaunched && gameRunning) {
+                ctx.font = 'bold 12px Rajdhani, sans-serif';
+                ctx.fillStyle = '#ffd700';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#ffd700';
+                ctx.fillText('按下【空白鍵】發射能量球', ballX, ballY - 18);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function trySpawnPlanet() {
+            if (Math.random() < 0.003) {
+                const type = planetTypes[Math.floor(Math.random() * planetTypes.length)];
+                planets.push({
+                    x: Math.random() * (canvas.width - 60) + 30,
+                    y: -30,
+                    radius: Math.random() * 8 + 14,
+                    vy: Math.random() * 1.2 + 1.2,
+                    type: type,
+                    rot: 0
+                });
+            }
+        }
+
+        function drawPlanets() {
+            planets.forEach((p, index) => {
+                p.y += p.vy;
+                p.rot += 0.02;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = p.type.color;
+
+                const grad = ctx.createRadialGradient(-p.radius*0.3, -p.radius*0.3, p.radius*0.1, 0, 0, p.radius);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.5, p.type.color);
+                grad.addColorStop(1, p.type.secondary);
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.type.ring) {
+                    ctx.save();
+                    ctx.rotate(0.4);
+                    ctx.strokeStyle = p.type.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.radius * 1.7, p.radius * 0.4, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                ctx.restore();
+
+                const paddleY = canvas.height - paddleHeight - 8;
+                if (
+                    p.y + p.radius >= paddleY &&
+                    p.y - p.radius <= paddleY + paddleHeight &&
+                    p.x >= paddleX &&
+                    p.x <= paddleX + paddleWidth
+                ) {
+                    score += 50;
+                    updateHUD();
+                    triggerExcellentSplash();
+                    createExplosion(p.x, p.y, p.type.color);
+                    planets.splice(index, 1);
+                } else if (p.y - p.radius > canvas.height) {
+                    planets.splice(index, 1);
+                }
+            });
+        }
+
+        function drawPowerups() {
+            powerups.forEach((pu, index) => {
+                pu.y += pu.vy;
+
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff007f';
+
+                ctx.fillStyle = '#ff007f';
+                ctx.beginPath();
+                ctx.roundRect(pu.x - 12, pu.y - 8, 24, 16, 8);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('P', pu.x, pu.y);
+
+                ctx.shadowBlur = 0;
+
+                const paddleY = canvas.height - paddleHeight - 8;
+                if (
+                    pu.y + 8 >= paddleY &&
+                    pu.y - 8 <= paddleY + paddleHeight &&
+                    pu.x >= paddleX &&
+                    pu.x <= paddleX + paddleWidth
+                ) {
+                    playSound('powerup');
+                    activatePowerup();
+                    createExplosion(pu.x, pu.y, '#ff007f');
+                    powerups.splice(index, 1);
+                } else if (pu.y > canvas.height) {
+                    powerups.splice(index, 1);
+                }
+            });
+        }
+
+        function trySpawnAsteroid() {
+            if (Math.random() < 0.005) {
+                const radius = Math.random() * 8 + 12;
+                const points = [];
+                const pointCount = 7;
+                for (let i = 0; i < pointCount; i++) {
+                    const angle = (i / pointCount) * Math.PI * 2;
+                    const dist = radius * (0.7 + Math.random() * 0.5);
+                    points.push({ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
+                }
+
+                asteroids.push({
+                    x: Math.random() * (canvas.width - 60) + 30,
+                    y: -30,
+                    radius: radius,
+                    vy: Math.random() * 1.2 + 1.5,
+                    vx: (Math.random() - 0.5) * 0.8,
+                    rotSpeed: (Math.random() - 0.5) * 0.05,
+                    angle: Math.random() * Math.PI * 2,
+                    points: points
+                });
+            }
+        }
+
+        function drawAsteroids() {
+            asteroids.forEach((ast, index) => {
+                ast.y += ast.vy;
+                ast.x += ast.vx;
+                ast.angle += ast.rotSpeed;
+
+                ctx.save();
+                ctx.translate(ast.x, ast.y);
+                ctx.rotate(ast.angle);
+
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff3300';
+
+                ctx.fillStyle = '#4a3b32';
+                ctx.strokeStyle = '#ff6633';
+                ctx.lineWidth = 1.5;
+
+                ctx.beginPath();
+                ast.points.forEach((pt, i) => {
+                    if (i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#2d221c';
+                ctx.beginPath();
+                ctx.arc(-ast.radius * 0.3, -ast.radius * 0.2, ast.radius * 0.25, 0, Math.PI * 2);
+                ctx.arc(ast.radius * 0.2, ast.radius * 0.3, ast.radius * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+
+                const dxBall = ballX - ast.x;
+                const dyBall = ballY - ast.y;
+                const distBall = Math.sqrt(dxBall * dxBall + dyBall * dyBall);
+                if (distBall < ballRadius + ast.radius && ballLaunched) {
+                    createExplosion(ast.x, ast.y, '#ff4400');
+                    playSound('hit');
+                    asteroids.splice(index, 1);
+                    return;
+                }
+
+                const paddleY = canvas.height - paddleHeight - 8;
+                if (
+                    ast.y + ast.radius >= paddleY &&
+                    ast.y - ast.radius <= paddleY + paddleHeight &&
+                    ast.x >= paddleX &&
+                    ast.x <= paddleX + paddleWidth
+                ) {
+                    score = Math.max(0, score - 10);
+                    updateHUD();
+                    triggerWatchOutSplash();
+                    createExplosion(ast.x, ast.y, '#ff0000');
+                    asteroids.splice(index, 1);
+                } else if (ast.y - ast.radius > canvas.height) {
+                    asteroids.splice(index, 1);
+                }
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.life;
+
+                if (p.alpha <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            });
+        }
+
+        function collisionDetection() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (b.status === 1) {
+                        if (
+                            ballX > b.x &&
+                            ballX < b.x + brickWidth &&
+                            ballY > b.y &&
+                            ballY < b.y + brickHeight
+                        ) {
+                            ballSpeedY = -ballSpeedY;
+                            b.status = 0;
+                            score += 10;
+                            hitCount++;
+
+                            if (hitCount % 5 === 0) {
+                                currentSpeed += 0.6;
+                                ballSpeedX = (ballSpeedX > 0 ? 1 : -1) * currentSpeed;
+                                ballSpeedY = (ballSpeedY > 0 ? 1 : -1) * currentSpeed;
+                            }
+
+                            playSound('hit');
+                            updateHUD();
+
+                            const color = rowColors[r % rowColors.length].bg;
+                            createExplosion(b.x + brickWidth / 2, b.y + brickHeight / 2, color);
+
+                            if (Math.random() < 0.20) {
+                                powerups.push({
+                                    x: b.x + brickWidth / 2,
+                                    y: b.y + brickHeight / 2,
+                                    vy: 2
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawBackground();
+            drawBricks();
+            drawPaddle();
+            drawBall();
+            drawPowerups();
+            drawPlanets();
+            drawAsteroids();
+            drawParticles();
+
+            if (gameRunning) {
+                if (rightPressed && paddleX < canvas.width - paddleWidth) {
+                    paddleX += paddleSpeed;
+                } else if (leftPressed && paddleX > 0) {
+                    paddleX -= paddleSpeed;
+                }
+
+                if (!ballLaunched) {
+                    ballX = paddleX + paddleWidth / 2;
+                    ballY = canvas.height - paddleHeight - ballRadius - 8;
+                } else {
+                    ballX += ballSpeedX;
+                    ballY += ballSpeedY;
+
+                    if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
+                        ballSpeedX = -ballSpeedX;
+                        playSound('bounce');
+                    }
+
+                    if (ballY - ballRadius < 0) {
+                        ballSpeedY = -ballSpeedY;
+                        playSound('bounce');
+                    }
+
+                    const paddleY = canvas.height - paddleHeight - 8;
+                    if (
+                        ballY + ballRadius >= paddleY &&
+                        ballY - ballRadius <= paddleY + paddleHeight &&
+                        ballX >= paddleX &&
+                        ballX <= paddleX + paddleWidth &&
+                        ballSpeedY > 0
+                    ) {
+                        const hitPoint = (ballX - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+                        const maxAngle = Math.PI / 3;
+                        const bounceAngle = hitPoint * maxAngle;
+
+                        ballSpeedX = currentSpeed * Math.sin(bounceAngle);
+                        ballSpeedY = -currentSpeed * Math.cos(bounceAngle);
+
+                        playSound('bounce');
+                    }
+
+                    if (ballY + ballRadius > canvas.height) {
+                        lives--;
+                        playSound('lifeLost');
+                        updateHUD();
+
+                        if (lives <= 0) {
+                            triggerGameOver(false);
+                        } else {
+                            resetBallAndPaddle();
+                        }
+                    }
+
+                    collisionDetection();
+                    trySpawnPlanet();
+                    trySpawnAsteroid();
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(draw);
+        }
+
+        function initGame() {
+            score = 0;
+            lives = 3;
+            hitCount = 0;
+            currentSpeed = baseSpeed;
+            paddleWidth = basePaddleWidth;
+            buffTimer = 0;
+            if (buffInterval) clearInterval(buffInterval);
+            buffContainer.classList.add('hidden');
+
+            updateHUD();
+            initBricks();
+            resetBallAndPaddle();
+            powerups = [];
+            planets = [];
+            asteroids = [];
+            particles = [];
+        }
+
+        function startGame() {
+            initGame();
+            gameRunning = true;
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            overlay.classList.remove('opacity-100');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = true;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = true;
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                launchBall();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = false;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = false;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const relativeX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddleX = relativeX - paddleWidth / 2;
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const relativeX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddleX = relativeX - paddleWidth / 2;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('click', () => {
+            launchBall();
+        });
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        window.onload = function() {
+            initGame();
+            draw();
+        };
+    </script>
+</body>
+</html>

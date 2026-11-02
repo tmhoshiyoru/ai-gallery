@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>星際征途 Stellar Strike - 2D豎版太空射擊遊戲</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', 'Orbitron', sans-serif;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-arcade {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .glow-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+        .glow-text-pink {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.5);
+        }
+        canvas {
+            border: 2px solid rgba(14, 165, 233, 0.4);
+            box-shadow: 0 0 35px rgba(14, 165, 233, 0.25);
+            background: #030712;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 overflow-x-hidden select-none">
+
+    <!-- Navigation Header -->
+    <header class="w-full max-w-lg flex justify-between items-center mb-2 px-3 py-2 bg-slate-900/90 backdrop-blur border border-cyan-900/50 rounded-xl shadow-lg">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-fuchsia-600 flex items-center justify-center text-lg shadow-md shadow-cyan-500/30">
+                <i class="fa-solid fa-jet-fighter text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-arcade text-base sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-400 to-fuchsia-400">
+                    STELLAR STRIKE
+                </h1>
+                <p class="text-[10px] text-cyan-400/80 hidden sm:block">2D 豎版太空射擊遊戲</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button id="audioBtn" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition text-xs flex items-center gap-1">
+                <i id="audioIcon" class="fa-solid fa-volume-high text-cyan-400"></i>
+                <span class="hidden sm:inline">音效</span>
+            </button>
+            <button id="pauseBtn" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition text-xs flex items-center gap-1">
+                <i class="fa-solid fa-pause text-amber-400"></i>
+                <span class="hidden sm:inline">暫停</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Game Dashboard -->
+    <div class="w-full max-w-lg grid grid-cols-3 gap-2 mb-2 font-arcade">
+        <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 uppercase tracking-widest">Score 分數</span>
+            <span id="scoreDisplay" class="text-lg sm:text-2xl font-bold text-cyan-400 glow-text-cyan">0</span>
+        </div>
+        <div class="bg-slate-900/90 border border-cyan-900/40 p-2 rounded-xl flex flex-col items-center relative overflow-hidden">
+            <span class="text-[10px] text-pink-400/80 uppercase tracking-widest flex items-center gap-1">
+                <i class="fa-solid fa-trophy text-[10px] text-amber-400"></i> HIGH 最高分
+            </span>
+            <span id="highScoreDisplay" class="text-lg sm:text-2xl font-bold text-pink-400 glow-text-pink">0</span>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-xl flex flex-col items-center">
+            <span class="text-[10px] text-slate-400 uppercase tracking-widest">Shield 生命</span>
+            <div id="livesDisplay" class="flex gap-1 mt-1 text-rose-500 text-sm sm:text-lg">
+                <i class="fa-solid fa-heart"></i>
+                <i class="fa-solid fa-heart"></i>
+                <i class="fa-solid fa-heart"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Viewport Wrapper -->
+    <div class="relative w-full max-w-lg flex-grow flex items-center justify-center">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="480" height="640" class="w-full h-auto max-h-[70vh] rounded-2xl object-contain cursor-crosshair touch-none"></canvas>
+
+        <!-- Start Game Overlay -->
+        <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+            <div class="w-16 h-16 mb-4 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-fuchsia-600 flex items-center justify-center text-3xl shadow-lg shadow-cyan-500/50 animate-pulse">
+                <i class="fa-solid fa-rocket text-white"></i>
+            </div>
+            <h2 class="font-arcade text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-300 to-fuchsia-400 mb-2">
+                STELLAR STRIKE
+            </h2>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-xs mb-6">
+                駕駛高級戰艦，消滅迎面而來的外星艦隊！
+            </p>
+
+            <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl mb-6 text-xs text-slate-300 text-left max-w-xs w-full space-y-1.5">
+                <div class="flex items-center gap-2"><i class="fa-solid fa-keyboard text-cyan-400 w-4"></i> <span><b>[A / D] 或 [方向鍵]</b>：左右移動戰艦</span></div>
+                <div class="flex items-center gap-2"><i class="fa-solid fa-space-bar text-cyan-400 w-4"></i> <span><b>[空白鍵]</b>：擊發光子子彈</span></div>
+                <div class="flex items-center gap-2"><i class="fa-solid fa-hand-pointer text-cyan-400 w-4"></i> <span><b>觸控 / 滑鼠</b>：可直接拖曳戰艦移動</span></div>
+                <div class="flex items-center gap-2 text-amber-400 mt-2"><i class="fa-solid fa-circle-exclamation w-4"></i> <span>敵機突破防線或撞擊將扣 1 點生命！</span></div>
+            </div>
+
+            <button id="startGameBtn" class="px-8 py-3.5 bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-600 hover:opacity-90 text-white font-bold text-base sm:text-lg rounded-xl shadow-lg shadow-cyan-500/30 transition transform hover:scale-105 active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-play mr-2"></i> 出擊開戰
+            </button>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="gameOverModal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="w-16 h-16 mb-3 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-3xl text-rose-500">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            <h2 class="font-arcade text-3xl font-bold text-rose-500 mb-1">MISSION FAILED</h2>
+            <p class="text-slate-400 text-xs mb-4">戰艦遭到毀滅！重新準備再次出擊！</p>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl mb-6 w-56">
+                <div class="text-xs text-slate-400">最終得分</div>
+                <div id="finalScore" class="font-arcade text-3xl font-bold text-cyan-400 glow-text-cyan">0</div>
+            </div>
+            <button id="retryBtn" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition transform hover:scale-105 cursor-pointer">
+                <i class="fa-solid fa-rotate-right mr-2"></i> 再次挑戰
+            </button>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pauseOverlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-20">
+            <h2 class="font-arcade text-2xl font-bold text-cyan-400 mb-6 tracking-widest">GAME PAUSED</h2>
+            <button id="resumeBtn" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-600/30 transition cursor-pointer">
+                繼續遊戲
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile On-Screen Controls -->
+    <div class="w-full max-w-lg flex justify-between items-center gap-3 mt-3 px-1 sm:hidden">
+        <div class="flex gap-2">
+            <button id="btnLeft" class="w-16 h-14 bg-slate-800/90 active:bg-cyan-600 border border-slate-700 text-cyan-400 rounded-xl text-xl flex items-center justify-center shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="btnRight" class="w-16 h-14 bg-slate-800/90 active:bg-cyan-600 border border-slate-700 text-cyan-400 rounded-xl text-xl flex items-center justify-center shadow-lg active:scale-95 transition">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+        <button id="btnFire" class="flex-grow h-14 bg-gradient-to-r from-red-600 to-amber-600 active:from-red-500 active:to-amber-500 text-white font-black rounded-xl text-lg flex items-center justify-center shadow-lg active:scale-95 transition border border-amber-500/50">
+            <i class="fa-solid fa-crosshairs mr-2"></i> 發射子彈
+        </button>
+    </div>
+
+    <script>
+        // Web Audio API Sound Synthesizer
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playShoot() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch (e) {}
+            }
+
+            playExplosion() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const bufferSize = this.ctx.sampleRate * 0.25;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+                    filter.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.25);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start();
+                } catch (e) {}
+            }
+
+            playHitPlayer() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                } catch (e) {}
+            }
+        }
+
+        const sounds = new SoundEngine();
+
+        const CANVAS_WIDTH = 480;
+        const CANVAS_HEIGHT = 640;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('stellar_strike_high_score') || '0', 10);
+        let lives = 3;
+        let isGameRunning = false;
+        let isPaused = false;
+        let animationFrameId = null;
+
+        document.getElementById('highScoreDisplay').innerText = highScore;
+
+        // Background Starfield
+        const stars = [];
+        for (let i = 0; i < 90; i++) {
+            stars.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: Math.random() * CANVAS_HEIGHT,
+                size: Math.random() * 2 + 0.5,
+                speed: Math.random() * 2.5 + 0.5,
+                alpha: Math.random()
+            });
+        }
+
+        // Player Ship Object
+        class Player {
+            constructor() {
+                this.width = 44;
+                this.height = 48;
+                this.x = (CANVAS_WIDTH - this.width) / 2;
+                this.y = CANVAS_HEIGHT - 70;
+                this.speed = 7;
+                this.dx = 0;
+                this.invincibleTimer = 0;
+                this.enginePulse = 0;
+            }
+
+            draw() {
+                ctx.save();
+                this.enginePulse += 0.25;
+
+                // Invincibility flashing when hit
+                if (this.invincibleTimer > 0) {
+                    this.invincibleTimer--;
+                    if (Math.floor(this.invincibleTimer / 4) % 2 === 0) {
+                        ctx.globalAlpha = 0.4;
+                    }
+                }
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                // Thruster Flames
+                const flameLength = 10 + Math.sin(this.enginePulse) * 4;
+                const flameGrad = ctx.createLinearGradient(cx, this.y + this.height, cx, this.y + this.height + flameLength);
+                flameGrad.addColorStop(0, '#38bdf8');
+                flameGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = flameGrad;
+                ctx.beginPath();
+                ctx.moveTo(cx - 8, this.y + this.height);
+                ctx.lineTo(cx, this.y + this.height + flameLength);
+                ctx.lineTo(cx + 8, this.y + this.height);
+                ctx.fill();
+
+                // Ship Body Base Glow
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#06b6d4';
+
+                // Metallic gradient ship body
+                const bodyGrad = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+                bodyGrad.addColorStop(0, '#e0f2fe');
+                bodyGrad.addColorStop(0.5, '#0284c7');
+                bodyGrad.addColorStop(1, '#0f172a');
+
+                ctx.fillStyle = bodyGrad;
+                ctx.beginPath();
+                ctx.moveTo(cx, this.y); // Nose
+                ctx.lineTo(this.x + this.width, this.y + this.height * 0.75); // Right wing tip
+                ctx.lineTo(this.x + this.width * 0.7, this.y + this.height * 0.7);
+                ctx.lineTo(this.x + this.width * 0.6, this.y + this.height);
+                ctx.lineTo(this.x + this.width * 0.4, this.y + this.height);
+                ctx.lineTo(this.x + this.width * 0.3, this.y + this.height * 0.7);
+                ctx.lineTo(this.x, this.y + this.height * 0.75); // Left wing tip
+                ctx.closePath();
+                ctx.fill();
+
+                // Cockpit Glass
+                ctx.fillStyle = '#38bdf8';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#38bdf8';
+                ctx.beginPath();
+                ctx.ellipse(cx, this.y + 18, 5, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            move() {
+                this.x += this.dx;
+                if (this.x < 5) this.x = 5;
+                if (this.x + this.width > CANVAS_WIDTH - 5) this.x = CANVAS_WIDTH - 5 - this.width;
+            }
+        }
+
+        // Bullet Class
+        class Bullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 4;
+                this.height = 14;
+                this.speed = 12;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#38bdf8';
+                ctx.fillStyle = '#bae6fd';
+                ctx.fillRect(this.x - this.width / 2, this.y, this.width, this.height);
+                ctx.restore();
+            }
+
+            update() {
+                this.y -= this.speed;
+            }
+        }
+
+        // Enemy Ship Class
+        class Enemy {
+            constructor() {
+                this.type = Math.random() > 0.8 ? 2 : 1; // Type 1: Normal, Type 2: Fast
+                this.width = this.type === 2 ? 30 : 38;
+                this.height = this.type === 2 ? 30 : 38;
+                this.x = Math.random() * (CANVAS_WIDTH - this.width - 20) + 10;
+                this.y = -this.height;
+                this.speed = this.type === 2 ? (Math.random() * 1.5 + 3.8) : (Math.random() * 1.2 + 2.2);
+                this.color = this.type === 2 ? '#f43f5e' : '#a855f7';
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                if (this.type === 1) {
+                    // Octagonal Fighter shape
+                    ctx.moveTo(cx, this.y + this.height);
+                    ctx.lineTo(this.x + this.width, this.y + this.height * 0.3);
+                    ctx.lineTo(this.x + this.width * 0.8, this.y);
+                    ctx.lineTo(this.x + this.width * 0.2, this.y);
+                    ctx.lineTo(this.x, this.y + this.height * 0.3);
+                } else {
+                    // Fast Interceptor Wedge
+                    ctx.moveTo(cx, this.y + this.height);
+                    ctx.lineTo(this.x + this.width, this.y);
+                    ctx.lineTo(cx, this.y + 8);
+                    ctx.lineTo(this.x, this.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Core Light
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(cx, cy - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+        }
+
+        // Particle Class for Explosion Effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 1;
+                this.dx = Math.cos(angle) * speed;
+                this.dy = Math.sin(angle) * speed;
+                this.color = color;
+                this.size = Math.random() * 3 + 2;
+                this.life = 25 + Math.random() * 15;
+                this.maxLife = this.life;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.life--;
+            }
+        }
+
+        let player = new Player();
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let enemySpawnTimer = 0;
+        let lastShootTime = 0;
+
+        function createExplosion(x, y, color = '#f97316', count = 22) {
+            sounds.playExplosion();
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function resetGame() {
+            player = new Player();
+            bullets = [];
+            enemies = [];
+            particles = [];
+            score = 0;
+            lives = 3;
+            enemySpawnTimer = 0;
+            updateLivesUI();
+            document.getElementById('scoreDisplay').innerText = '0';
+        }
+
+        function updatePhysics() {
+            if (!isGameRunning || isPaused) return;
+
+            player.move();
+
+            // Background Star Scrolling
+            stars.forEach(star => {
+                star.y += star.speed;
+                if (star.y > CANVAS_HEIGHT) {
+                    star.y = 0;
+                    star.x = Math.random() * CANVAS_WIDTH;
+                }
+            });
+
+            // Update Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].update();
+                if (bullets[i].y < -20) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Spawn Enemies continuously
+            enemySpawnTimer++;
+            const spawnRate = Math.max(25, 60 - Math.floor(score / 100) * 3); // Faster spawn over score
+            if (enemySpawnTimer >= spawnRate) {
+                enemies.push(new Enemy());
+                enemySpawnTimer = 0;
+            }
+
+            // Update Enemies
+            for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
+                const enemy = enemies[eIndex];
+                enemy.update();
+
+                // Bullet vs Enemy Collision
+                for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
+                    const bullet = bullets[bIndex];
+                    if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width &&
+                        bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
+                        
+                        // Hit enemy!
+                        createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                        score += 10;
+                        document.getElementById('scoreDisplay').innerText = score;
+
+                        // Check High Score
+                        if (score > highScore) {
+                            highScore = score;
+                            localStorage.setItem('stellar_strike_high_score', highScore.toString());
+                            document.getElementById('highScoreDisplay').innerText = highScore;
+                        }
+
+                        enemies.splice(eIndex, 1);
+                        bullets.splice(bIndex, 1);
+                        break;
+                    }
+                }
+
+                if (!enemies[eIndex]) continue; // Already destroyed
+
+                // Enemy reached bottom line -> Loss 1 HP
+                if (enemy.y > CANVAS_HEIGHT) {
+                    enemies.splice(eIndex, 1);
+                    damagePlayer();
+                    continue;
+                }
+
+                // Enemy crash into Player -> Loss 1 HP
+                if (player.invincibleTimer === 0 &&
+                    enemy.x < player.x + player.width &&
+                    enemy.x + enemy.width > player.x &&
+                    enemy.y < player.y + player.height &&
+                    enemy.y + enemy.height > player.y) {
+                    
+                    createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#ef4444', 30);
+                    enemies.splice(eIndex, 1);
+                    damagePlayer();
+                }
+            }
+
+            // Update Particle FX
+            for (let pIndex = particles.length - 1; pIndex >= 0; pIndex--) {
+                particles[pIndex].update();
+                if (particles[pIndex].life <= 0) {
+                    particles.splice(pIndex, 1);
+                }
+            }
+        }
+
+        function damagePlayer() {
+            sounds.playHitPlayer();
+            lives--;
+            updateLivesUI();
+            player.invincibleTimer = 60; // ~1 second invincibility blink
+
+            if (lives <= 0) {
+                isGameRunning = false;
+                document.getElementById('finalScore').innerText = score;
+                document.getElementById('gameOverModal').classList.remove('hidden');
+            }
+        }
+
+        function updateLivesUI() {
+            const display = document.getElementById('livesDisplay');
+            display.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                display.innerHTML += '<i class="fa-solid fa-heart"></i>';
+            }
+        }
+
+        function shootBullet() {
+            if (!isGameRunning || isPaused) return;
+            const now = Date.now();
+            if (now - lastShootTime < 140) return; // Fire rate limit
+
+            sounds.playShoot();
+            bullets.push(new Bullet(player.x + player.width / 2, player.y));
+            lastShootTime = now;
+        }
+
+        function drawGame() {
+            // Clear Canvas
+            ctx.fillStyle = '#030712';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw Stars Parallax
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(224, 242, 254, ${star.alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Subtle Grid Line Overlay for Sci-Fi aesthetic
+            ctx.strokeStyle = 'rgba(14, 165, 233, 0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < CANVAS_WIDTH; x += 30) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
+            }
+
+            // Draw Bullets, Enemies, Particles, Player
+            bullets.forEach(b => b.draw());
+            enemies.forEach(e => e.draw());
+            particles.forEach(p => p.draw());
+            if (lives > 0) player.draw();
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            drawGame();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard Handlers
+        window.addEventListener('keydown', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                player.dx = -player.speed;
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                player.dx = player.speed;
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                shootBullet();
+            } else if (e.code === 'KeyP') {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'ArrowRight' || e.code === 'KeyD') {
+                player.dx = 0;
+            }
+        });
+
+        // Touch & Mouse Drag Controls directly on Canvas
+        function handlePointerMove(clientX) {
+            if (!isGameRunning || isPaused) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const mouseX = (clientX - rect.left) * scaleX;
+            player.x = mouseX - player.width / 2;
+        }
+
+        canvas.addEventListener('mousemove', e => handlePointerMove(e.clientX));
+        canvas.addEventListener('touchmove', e => {
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX);
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('click', () => {
+            shootBullet();
+        });
+
+        // Mobile On-Screen Controls
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnFire = document.getElementById('btnFire');
+
+        const bindHold = (btn, actionStart, actionEnd) => {
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); actionStart(); }, { passive: false });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); actionEnd(); }, { passive: false });
+            btn.addEventListener('mousedown', actionStart);
+            btn.addEventListener('mouseup', actionEnd);
+            btn.addEventListener('mouseleave', actionEnd);
+        };
+
+        bindHold(btnLeft, () => { player.dx = -player.speed; }, () => { player.dx = 0; });
+        bindHold(btnRight, () => { player.dx = player.speed; }, () => { player.dx = 0; });
+        btnFire.addEventListener('click', () => shootBullet());
+
+        // Button Click Handlers
+        function startGame() {
+            sounds.init();
+            resetGame();
+            isGameRunning = true;
+            isPaused = false;
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.add('hidden');
+            cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function togglePause() {
+            if (!isGameRunning) return;
+            isPaused = !isPaused;
+            document.getElementById('pauseOverlay').classList.toggle('hidden', !isPaused);
+        }
+
+        document.getElementById('startGameBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', startGame);
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+        document.getElementById('resumeBtn').addEventListener('click', togglePause);
+
+        document.getElementById('audioBtn').addEventListener('click', () => {
+            sounds.enabled = !sounds.enabled;
+            const icon = document.getElementById('audioIcon');
+            icon.className = sounds.enabled 
+                ? 'fa-solid fa-volume-high text-cyan-400' 
+                : 'fa-solid fa-volume-xmark text-slate-500';
+        });
+
+        // Initial preview draw
+        drawGame();
+    </script>
+</body>
+</html>

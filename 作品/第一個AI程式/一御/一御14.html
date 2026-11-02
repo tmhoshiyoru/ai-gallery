@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>經典小恐龍跳躍 - 冒險版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@500;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .font-fredoka {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        /* 繪圖畫布容器 */
+        #game-container {
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Custom Scrollbar for Modal */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-slate-800 text-slate-100 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 overflow-x-hidden">
+
+    <!-- 主遊戲卡片容器 -->
+    <div class="w-full max-w-4xl bg-slate-900 border-4 border-slate-700 rounded-3xl p-3 sm:p-6 flex flex-col items-center gap-4 relative">
+        
+        <!-- Header / 資訊狀態列 -->
+        <div class="w-full flex flex-wrap justify-between items-center bg-slate-800/90 border border-slate-700 px-4 py-2.5 rounded-2xl gap-2">
+            <!-- 品牌與生命值 -->
+            <div class="flex items-center gap-3">
+                <span class="text-xl sm:text-2xl font-black text-amber-400 tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-dragon"></i> 恐龍冒險
+                </span>
+                
+                <!-- 生命值 Hearts -->
+                <div id="hearts-container" class="flex items-center gap-1 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">
+                    <i class="fa-solid fa-heart text-red-500 text-lg sm:text-xl"></i>
+                    <i class="fa-solid fa-heart text-red-500 text-lg sm:text-xl"></i>
+                    <i class="fa-solid fa-heart text-red-500 text-lg sm:text-xl"></i>
+                </div>
+            </div>
+
+            <!-- 分數與控制鈕 -->
+            <div class="flex items-center gap-2 sm:gap-4 font-fredoka">
+                <div class="bg-slate-900/80 border border-slate-700 px-3 py-1 rounded-xl text-center">
+                    <span class="text-xs text-slate-400 block font-sans font-bold">最高分</span>
+                    <span id="high-score" class="text-amber-400 text-base sm:text-lg">00000</span>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700 px-3 py-1 rounded-xl text-center">
+                    <span class="text-xs text-slate-400 block font-sans font-bold">目前得分</span>
+                    <span id="current-score" class="text-emerald-400 text-lg sm:text-xl">00000</span>
+                </div>
+
+                <!-- 暫停鈕 -->
+                <button id="pause-btn" onclick="togglePause()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold p-2.5 rounded-xl transition active:scale-95 flex items-center justify-center w-10 h-10 shadow-lg">
+                    <i class="fa-solid fa-pause text-lg"></i>
+                </button>
+
+                <!-- 外觀裝扮鈕 -->
+                <button onclick="openWardrobe()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold p-2.5 rounded-xl transition active:scale-95 flex items-center justify-center w-10 h-10 shadow-lg relative">
+                    <i class="fa-solid fa-shirt text-lg"></i>
+                    <span id="wardrobe-dot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas 遊戲畫布與浮層容器 -->
+        <div id="game-container" class="w-full aspect-[2/1] sm:aspect-[2.2/1] max-h-[480px] bg-sky-200 rounded-2xl overflow-hidden cursor-pointer relative border-2 border-slate-700">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+            <!-- 啟動 Overlay -->
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 text-center p-4">
+                <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center border-2 border-emerald-400 animate-bounce">
+                    <i class="fa-solid fa-play text-4xl text-emerald-400 ml-1"></i>
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-black text-white">點擊畫面或按空白鍵開始</h2>
+                <p class="text-sm sm:text-base text-slate-300 max-w-md">跳過障礙物得分！每 300 分切換時段，滿一天可吃 🍰 補血，每 1000 分有神秘外觀寶箱 🎁！</p>
+                <button onclick="startGame()" class="mt-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg px-8 py-3 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition">
+                    立即開始遊戲
+                </button>
+            </div>
+
+            <!-- 暫停 Overlay -->
+            <div id="pause-overlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center p-4">
+                <i class="fa-solid fa-circle-pause text-6xl text-amber-400 animate-pulse"></i>
+                <h2 class="text-3xl font-black text-white">遊戲暫停中</h2>
+                <p class="text-slate-300">按下 <kbd class="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-amber-400 font-mono text-sm">Enter</kbd> 鍵或點擊下方按鈕繼續</p>
+                <button onclick="togglePause()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-lg px-8 py-3 rounded-2xl shadow-xl transition active:scale-95">
+                    繼續遊戲
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameover-overlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center p-4">
+                <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center border-2 border-red-500">
+                    <i class="fa-solid fa-skull text-3xl text-red-500"></i>
+                </div>
+                <h2 class="text-3xl sm:text-5xl font-black text-red-500 font-fredoka tracking-wider">GAME OVER</h2>
+                <div class="bg-slate-900/90 border border-slate-700 p-4 rounded-2xl min-w-[240px]">
+                    <div class="flex justify-between text-slate-400 text-sm mb-1">
+                        <span>本次得分:</span>
+                        <span id="final-score" class="text-emerald-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-slate-400 text-sm">
+                        <span>歷史最高:</span>
+                        <span id="final-high" class="text-amber-400 font-bold">0</span>
+                    </div>
+                </div>
+                <button onclick="startGame()" class="bg-gradient-to-r from-red-500 to-amber-500 hover:from-red-400 hover:to-amber-400 text-white font-black text-lg px-8 py-3 rounded-2xl shadow-xl transition hover:scale-105 active:scale-95">
+                    再試一次
+                </button>
+            </div>
+        </div>
+
+        <!-- 底部控制說明卡片 -->
+        <div class="w-full flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-bold text-slate-400 text-center">
+            <span class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/80"><i class="fa-solid fa-keyboard mr-1.5 text-emerald-400"></i> 空白鍵 / 點擊：跳躍</span>
+            <span class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/80"><i class="fa-solid fa-arrow-down mr-1.5 text-cyan-400"></i> 下方向鍵：蹲下</span>
+            <span class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700/80"><i class="fa-solid fa-keyboard mr-1.5 text-amber-400"></i> Enter 鍵：暫停 / 繼續</span>
+        </div>
+    </div>
+
+    <!-- 試衣間 Modal -->
+    <div id="wardrobe-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-3xl p-5 sm:p-6 max-w-lg w-full flex flex-col gap-4 shadow-2xl relative">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-xl font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-shirt text-indigo-400"></i> 恐龍試衣間
+                </h3>
+                <button onclick="closeWardrobe()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400">在遊戲中每突破 500 分即可解鎖一款限定造型寶箱！</p>
+
+            <div id="outfits-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto custom-scrollbar p-1">
+                <!-- 套裝列表將由 JavaScript 動態繪製 -->
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex justify-end">
+                <button onclick="closeWardrobe()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2 rounded-xl transition">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲核心邏輯 -->
+    <script>
+        // --- 音效生成器 Web Audio API ---
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playScore() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08); // E5
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playHurt() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(60, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+            playItem() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+            playGameOver() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        // --- 外觀造型設定資料庫 ---
+        const OUTFITS = {
+            none: { id: 'none', name: '原始小恐龍', icon: 'fa-paw', desc: '最經典的原汁原味恐龍造型。', reqScore: 0 },
+            princess: { id: 'princess', name: '公主裙', icon: 'fa-crown', desc: '粉紅夢幻公主裙與耀眼金皇冠。', reqScore: 500 },
+            wizard: { id: 'wizard', name: '巫師袍', icon: 'fa-hat-wizard', desc: '深紫魔法長袍與神祕巫師帽。', reqScore: 1000 },
+            knight: { id: 'knight', name: '騎士盔甲', icon: 'fa-shield-halved', desc: '銀灰重型胸甲與紅羽飾頭盔。', reqScore: 1500 },
+            chef: { id: 'chef', name: '廚師裝', icon: 'fa-utensils', desc: '純白專業圍裙與高聳廚師帽。', reqScore: 2000 },
+            pajamas: { id: 'pajamas', name: '可愛睡衣', icon: 'fa-moon', desc: '舒適藍白條紋連身睡衣與睡帽。', reqScore: 2500 }
+        };
+
+        // 解鎖與裝備狀態
+        let unlockedOutfits = ['none'];
+        let currentOutfit = 'none';
+
+        // --- 遊戲全域狀態 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let score = 0;
+        let highScore = 0;
+        let lives = 3;
+        let invulnerableTimer = 0; // 受傷無敵時間 (幀數)
+        let gameSpeed = 6;
+        let frameCount = 0;
+
+        let dayCycleCount = 0; // 記錄滿一天次數 (每 900 分為一整天)
+        let lastDaySpawnScore = 0;
+        let lastOutfitSpawnScore = 0;
+
+        // 畫布基礎尺寸設定
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 400;
+        const GROUND_Y = 320;
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // 實體清單
+        let obstacles = [];
+        let items = [];
+        let particles = [];
+        let clouds = [];
+        let stars = [];
+
+        // 恐龍角色實體
+        const dino = {
+            x: 80,
+            y: GROUND_Y - 50,
+            width: 44,
+            height: 50,
+            normalHeight: 50,
+            duckHeight: 28,
+            isDucking: false,
+            velocityY: 0,
+            gravity: 0.65,
+            jumpStrength: -13.5,
+            isGrounded: true,
+            animFrame: 0,
+            
+            jump() {
+                // 蹲下狀態無法跳躍
+                if (this.isDucking) return;
+
+                if (this.isGrounded && gameState === 'PLAYING') {
+                    this.velocityY = this.jumpStrength;
+                    this.isGrounded = false;
+                    soundFX.playJump();
+                    // 跳躍煙霧顆粒
+                    for(let i=0; i<6; i++) {
+                        particles.push(new DustParticle(this.x + 20, GROUND_Y));
+                    }
+                }
+            },
+
+            duck(isDucking) {
+                if (this.isDucking === isDucking) return;
+                this.isDucking = isDucking;
+                
+                if (this.isDucking) {
+                    this.height = this.duckHeight;
+                    // 若在空中按蹲下，給予向下的急速加速
+                    if (!this.isGrounded) {
+                        this.velocityY += 6;
+                    }
+                } else {
+                    this.height = this.normalHeight;
+                }
+            },
+            
+            update() {
+                this.velocityY += this.gravity;
+                this.y += this.velocityY;
+
+                if (this.y >= GROUND_Y - this.height) {
+                    this.y = GROUND_Y - this.height;
+                    this.velocityY = 0;
+                    this.isGrounded = true;
+                }
+
+                if (frameCount % 6 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            },
+
+            draw() {
+                // 無敵閃爍效果
+                if (invulnerableTimer > 0 && Math.floor(frameCount / 4) % 2 === 0) {
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // --- 恐龍身體基礎繪製 ---
+                ctx.fillStyle = '#22c55e'; // 鮮亮綠色
+
+                if (this.isDucking) {
+                    // === 蹲下狀態繪製 ===
+                    // 腳腿部
+                    ctx.fillRect(8 + (this.animFrame * 12), 20, 8, 8);
+                    ctx.fillRect(28 - (this.animFrame * 12), 20, 8, 8);
+
+                    // 趴下的身體
+                    ctx.beginPath();
+                    ctx.roundRect(4, 6, 36, 18, 6);
+                    ctx.fill();
+
+                    // 尾巴
+                    ctx.beginPath();
+                    ctx.moveTo(6, 10); ctx.lineTo(-6, 14); ctx.lineTo(6, 18);
+                    ctx.fill();
+
+                    // 向前伸出的頭部
+                    ctx.beginPath();
+                    ctx.roundRect(26, -2, 22, 18, 5);
+                    ctx.fill();
+
+                    // 眼睛
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(40, 4, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath(); ctx.arc(41, 4, 1.8, 0, Math.PI * 2); ctx.fill();
+
+                    // 腮紅
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.globalAlpha = 0.5;
+                    ctx.beginPath(); ctx.arc(35, 9, 2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    // 背刺
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    ctx.moveTo(10, 6); ctx.lineTo(6, 0); ctx.lineTo(14, 6);
+                    ctx.moveTo(22, 6); ctx.lineTo(18, 0); ctx.lineTo(26, 6);
+                    ctx.fill();
+
+                } else {
+                    // === 正常直立狀態繪製 ===
+                    if (this.isGrounded) {
+                        ctx.fillRect(10 + (this.animFrame * 8), 40, 8, 12);
+                        ctx.fillRect(26 - (this.animFrame * 8), 40, 8, 12);
+                    } else {
+                        ctx.fillRect(10, 38, 8, 8);
+                        ctx.fillRect(24, 42, 8, 8);
+                    }
+
+                    // 身體 & 尾巴
+                    ctx.beginPath();
+                    ctx.roundRect(6, 16, 32, 28, 8);
+                    ctx.fill();
+                    
+                    // 尾巴
+                    ctx.beginPath();
+                    ctx.moveTo(8, 24);
+                    ctx.lineTo(-4, 32);
+                    ctx.lineTo(8, 36);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // 頭部
+                    ctx.beginPath();
+                    ctx.roundRect(14, 0, 28, 22, 6);
+                    ctx.fill();
+
+                    // 肚皮 (淡綠色)
+                    ctx.fillStyle = '#86efac';
+                    ctx.beginPath();
+                    ctx.roundRect(20, 22, 16, 18, 5);
+                    ctx.fill();
+
+                    // 眼睛
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(32, 7, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(33, 7, 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 腮紅
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.globalAlpha = 0.5;
+                    ctx.beginPath();
+                    ctx.arc(26, 13, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    // 背刺
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    ctx.moveTo(8, 18); ctx.lineTo(3, 22); ctx.lineTo(10, 25);
+                    ctx.moveTo(12, 26); ctx.lineTo(7, 30); ctx.lineTo(14, 33);
+                    ctx.fill();
+                }
+
+                // --- 繪製套裝造型裝飾 ---
+                this.drawOutfitOverlay();
+
+                ctx.restore();
+            },
+
+            drawOutfitOverlay() {
+                if (this.isDucking) {
+                    // 蹲下時套裝的簡化飾品配戴
+                    if (currentOutfit === 'princess') {
+                        ctx.fillStyle = '#ec4899';
+                        ctx.fillRect(8, 12, 28, 10);
+                        ctx.fillStyle = '#eab308'; // 皇冠
+                        ctx.fillRect(32, -6, 10, 5);
+                    } else if (currentOutfit === 'wizard') {
+                        ctx.fillStyle = '#7e22ce';
+                        ctx.fillRect(8, 8, 24, 12);
+                        ctx.fillStyle = '#581c87'; // 帽
+                        ctx.beginPath(); ctx.moveTo(26, -2); ctx.lineTo(44, -2); ctx.lineTo(35, -14); ctx.fill();
+                    } else if (currentOutfit === 'knight') {
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.fillRect(12, 8, 20, 12);
+                        ctx.fillStyle = '#64748b'; // 頭盔
+                        ctx.fillRect(30, -4, 16, 10);
+                    } else if (currentOutfit === 'chef') {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(16, 8, 16, 12);
+                        ctx.fillStyle = '#ffffff'; // 帽
+                        ctx.fillRect(32, -8, 12, 6);
+                    } else if (currentOutfit === 'pajamas') {
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.fillRect(8, 8, 28, 14);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(14, 8, 4, 14);
+                        ctx.fillRect(22, 8, 4, 14);
+                    }
+                    return;
+                }
+
+                if (currentOutfit === 'princess') {
+                    // 粉紅裙擺
+                    ctx.fillStyle = '#ec4899';
+                    ctx.beginPath();
+                    ctx.moveTo(10, 32);
+                    ctx.lineTo(38, 32);
+                    ctx.lineTo(42, 42);
+                    ctx.lineTo(6, 42);
+                    ctx.closePath();
+                    ctx.fill();
+                    // 皇冠
+                    ctx.fillStyle = '#eab308';
+                    ctx.beginPath();
+                    ctx.moveTo(20, -2);
+                    ctx.lineTo(24, -8);
+                    ctx.lineTo(28, -2);
+                    ctx.lineTo(32, -8);
+                    ctx.lineTo(36, -2);
+                    ctx.lineTo(36, 2);
+                    ctx.lineTo(20, 2);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (currentOutfit === 'wizard') {
+                    // 紫色斗篷
+                    ctx.fillStyle = '#7e22ce';
+                    ctx.fillRect(8, 20, 28, 20);
+                    // 巫師帽
+                    ctx.fillStyle = '#581c87';
+                    ctx.beginPath();
+                    ctx.moveTo(10, 2);
+                    ctx.lineTo(40, 2);
+                    ctx.lineTo(28, -18);
+                    ctx.closePath();
+                    ctx.fill();
+                    // 帽帶黃星
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillRect(20, 0, 12, 3);
+                } else if (currentOutfit === 'knight') {
+                    // 銀色盔甲
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillRect(16, 20, 20, 20);
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(20, 24, 12, 12);
+                    // 頭盔
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(18, -2, 22, 12);
+                    // 羽飾
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.moveTo(22, -2);
+                    ctx.lineTo(16, -12);
+                    ctx.lineTo(24, -6);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (currentOutfit === 'chef') {
+                    // 圍裙
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(20, 22, 16, 18);
+                    ctx.fillStyle = '#ef4444'; // 領結
+                    ctx.fillRect(25, 20, 6, 4);
+                    // 廚師帽
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(22, -4, 16, 6);
+                    ctx.beginPath();
+                    ctx.arc(25, -8, 7, 0, Math.PI * 2);
+                    ctx.arc(35, -8, 7, 0, Math.PI * 2);
+                    ctx.arc(30, -12, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (currentOutfit === 'pajamas') {
+                    // 藍白睡衣
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillRect(10, 20, 28, 22);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(14, 20, 4, 22);
+                    ctx.fillRect(22, 20, 4, 22);
+                    ctx.fillRect(30, 20, 4, 22);
+                    // 睡帽
+                    ctx.fillStyle = '#1d4ed8';
+                    ctx.beginPath();
+                    ctx.moveTo(18, 2);
+                    ctx.lineTo(38, 2);
+                    ctx.lineTo(10, -12);
+                    ctx.closePath();
+                    ctx.fill();
+                    // 帽尖絨球
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(10, -12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        };
+
+        // --- 背景與天體繪製 ---
+        function getSkyPhase(scoreVal) {
+            // 每 300 分切換時段
+            const phaseIndex = Math.floor(scoreVal / 300) % 3;
+            if (phaseIndex === 0) return 'DAY';      // 0 ~ 290
+            if (phaseIndex === 1) return 'SUNSET';   // 300 ~ 590
+            return 'NIGHT';                          // 600 ~ 890
+        }
+
+        function drawCelestial(phase) {
+            ctx.save();
+            if (phase === 'DAY') {
+                // 開心太陽 ☀️
+                const cx = 680, cy = 80;
+                ctx.translate(cx, cy);
+                
+                // 光芒旋轉
+                ctx.fillStyle = '#fbbf24';
+                for (let i = 0; i < 8; i++) {
+                    ctx.rotate(Math.PI / 4);
+                    ctx.fillRect(-3, -36, 6, 10);
+                }
+
+                // 太陽主體
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 開心表情
+                ctx.fillStyle = '#78350f';
+                ctx.beginPath();
+                ctx.arc(-8, -4, 3, 0, Math.PI * 2);
+                ctx.arc(8, -4, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // 燦爛微笑
+                ctx.beginPath();
+                ctx.arc(0, 2, 12, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#78350f';
+                ctx.stroke();
+
+                // 腮紅
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(-12, 4, 4, 0, Math.PI * 2);
+                ctx.arc(12, 4, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (phase === 'SUNSET') {
+                // 疲憊夕陽 🌇
+                const cx = 680, cy = 110;
+                ctx.translate(cx, cy);
+
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 瞇眼
+                ctx.strokeStyle = '#451a03';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(-9, -2, 4, 0.8 * Math.PI, 0.2 * Math.PI, true);
+                ctx.arc(9, -2, 4, 0.8 * Math.PI, 0.2 * Math.PI, true);
+                ctx.stroke();
+
+                // 疲憊嘴角
+                ctx.beginPath();
+                ctx.arc(0, 16, 8, 1.2 * Math.PI, 1.8 * Math.PI);
+                ctx.stroke();
+
+                // 汗珠
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(16, -8, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (phase === 'NIGHT') {
+                // 平靜月亮 🌙
+                const cx = 680, cy = 80;
+                ctx.translate(cx, cy);
+
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                ctx.fill();
+                // 遮擋形成彎月
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(-8, -4, 22, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 閉眼微笑
+                ctx.strokeStyle = '#854d0e';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(4, 0, 4, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // 雲朵與背景山丘
+        class Cloud {
+            constructor() {
+                this.x = CANVAS_WIDTH + Math.random() * 200;
+                this.y = 40 + Math.random() * 100;
+                this.speed = 0.5 + Math.random() * 0.8;
+                this.size = 0.8 + Math.random() * 0.5;
+            }
+            update() {
+                this.x -= this.speed;
+                if (this.x < -100) {
+                    this.x = CANVAS_WIDTH + 50;
+                    this.y = 40 + Math.random() * 100;
+                }
+            }
+            draw() {
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.size, this.size);
+                ctx.beginPath();
+                ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                ctx.arc(15, -8, 20, 0, Math.PI * 2);
+                ctx.arc(35, 0, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 初始化繁星
+        for (let i = 0; i < 30; i++) {
+            stars.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: Math.random() * 180,
+                radius: Math.random() * 1.5 + 0.5,
+                alpha: Math.random()
+            });
+        }
+        for (let i = 0; i < 4; i++) {
+            clouds.push(new Cloud());
+        }
+
+        // --- 障礙物定義 (仙人掌與食人花/飛鳥) ---
+        class Obstacle {
+            constructor() {
+                this.x = CANVAS_WIDTH + 20;
+                this.passed = false;
+                
+                // 隨機選擇類型 (0: 小仙人掌, 1: 大仙人掌, 2: 飛鳥)
+                const rand = Math.random();
+                if (rand < 0.45) {
+                    this.type = 'cactus_small';
+                    this.width = 24;
+                    this.height = 42;
+                    this.y = GROUND_Y - this.height;
+                } else if (rand < 0.75) {
+                    this.type = 'cactus_large';
+                    this.width = 38;
+                    this.height = 54;
+                    this.y = GROUND_Y - this.height;
+                } else {
+                    this.type = 'bird';
+                    this.width = 36;
+                    this.height = 28;
+                    // 飛鳥隨機高度 (需跳躍或蹲下)
+                    this.y = GROUND_Y - 50 - Math.random() * 35;
+                    this.animFrame = 0;
+                }
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                if (this.type === 'bird' && frameCount % 10 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.type.startsWith('cactus')) {
+                    // 仙人掌卡通造型
+                    ctx.fillStyle = '#16a34a';
+                    ctx.beginPath();
+                    ctx.roundRect(this.width/2 - 6, 0, 12, this.height, 6);
+                    ctx.fill();
+
+                    // 分支
+                    ctx.beginPath();
+                    ctx.roundRect(2, 12, this.width - 4, 8, 4);
+                    ctx.roundRect(2, 6, 6, 12, 3);
+                    ctx.roundRect(this.width - 8, 8, 6, 12, 3);
+                    ctx.fill();
+
+                    // 可愛表情
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(this.width/2 - 4, 10, 3, 3);
+                    ctx.fillRect(this.width/2 + 1, 10, 3, 3);
+
+                } else if (this.type === 'bird') {
+                    // 飛鳥卡通造型
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.roundRect(6, 6, 24, 16, 8);
+                    ctx.fill();
+
+                    // 鳥嘴
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.moveTo(6, 10); ctx.lineTo(-2, 14); ctx.lineTo(6, 18);
+                    ctx.fill();
+
+                    // 翅膀拍打
+                    ctx.fillStyle = '#e11d48';
+                    ctx.beginPath();
+                    if (this.animFrame === 0) {
+                        ctx.moveTo(16, 10); ctx.lineTo(26, -4); ctx.lineTo(22, 12);
+                    } else {
+                        ctx.moveTo(16, 12); ctx.lineTo(26, 24); ctx.lineTo(22, 12);
+                    }
+                    ctx.fill();
+
+                    // 眼睛
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath(); ctx.arc(10, 10, 3, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath(); ctx.arc(9, 10, 1.5, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- 地面道具 (蛋糕 🍰 & 造型寶箱 🎁) ---
+        class Item {
+            constructor(type, outfitKey = null) {
+                this.x = CANVAS_WIDTH + 20;
+                this.y = GROUND_Y - 36;
+                this.width = 32;
+                this.height = 32;
+                this.type = type; // 'cake' 或 'outfit'
+                this.outfitKey = outfitKey;
+                this.bounceY = 0;
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                this.bounceY = Math.sin(frameCount * 0.1) * 4;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y + this.bounceY);
+
+                if (this.type === 'cake') {
+                    // 草莓蛋糕 🍰
+                    ctx.fillStyle = '#fbcfe8'; // 蛋糕底
+                    ctx.fillRect(2, 14, 28, 14);
+                    ctx.fillStyle = '#be185d'; // 夾心
+                    ctx.fillRect(2, 20, 28, 3);
+                    ctx.fillStyle = '#ffffff'; // 鮮奶油頂
+                    ctx.beginPath();
+                    ctx.roundRect(0, 10, 32, 6, 3);
+                    ctx.fill();
+                    // 草莓
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(16, 6, 5, 0, Math.PI*2);
+                    ctx.fill();
+                } else if (this.type === 'outfit') {
+                    // 驚喜裝扮寶箱 🎁
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.fillRect(2, 8, 28, 22);
+                    ctx.fillStyle = '#fbbf24'; // 緞帶
+                    ctx.fillRect(13, 8, 6, 22);
+                    ctx.fillRect(2, 16, 28, 5);
+                    // 蝴蝶結
+                    ctx.beginPath();
+                    ctx.arc(11, 6, 4, 0, Math.PI*2);
+                    ctx.arc(21, 6, 4, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // --- 粒子特效 (四角幸運星 ⭐ & 跳躍煙霧) ---
+        class StarParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = -Math.random() * 4 - 2;
+                this.size = Math.random() * 6 + 6;
+                this.alpha = 1.0;
+                this.rotation = Math.random() * Math.PI;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.15; // 重力
+                this.alpha -= 0.025;
+                this.rotation += 0.1;
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = '#facc15';
+
+                // 繪製四角星
+                ctx.beginPath();
+                for (let i = 0; i < 4; i++) {
+                    ctx.lineTo(Math.cos((i * Math.PI) / 2) * this.size, Math.sin((i * Math.PI) / 2) * this.size);
+                    ctx.lineTo(Math.cos((i * Math.PI) / 2 + Math.PI / 4) * (this.size / 3), Math.sin((i * Math.PI) / 2 + Math.PI / 4) * (this.size / 3));
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class DustParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = -Math.random() * 2 - 1;
+                this.vy = -Math.random() * 1.5;
+                this.radius = Math.random() * 4 + 2;
+                this.alpha = 0.8;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.04;
+            }
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- 核心遊戲循環 ---
+        function startGame() {
+            soundFX.init();
+            score = 0;
+            lives = 3;
+            gameSpeed = 6; // 初始基礎速度
+            invulnerableTimer = 0;
+            dayCycleCount = 0;
+            lastDaySpawnScore = 0;
+            lastOutfitSpawnScore = 0;
+
+            obstacles = [];
+            items = [];
+            particles = [];
+
+            dino.y = GROUND_Y - dino.height;
+            dino.velocityY = 0;
+            dino.isGrounded = true;
+
+            updateHeartsUI();
+            updateScoreUI();
+
+            gameState = 'PLAYING';
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('pause-overlay').classList.add('hidden');
+            document.getElementById('gameover-overlay').classList.add('hidden');
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pause-overlay').classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('pause-overlay').classList.add('hidden');
+            }
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            soundFX.playGameOver();
+            if (score > highScore) {
+                highScore = score;
+            }
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-high').innerText = highScore;
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+            updateScoreUI();
+        }
+
+        function triggerScoreStars(x, y) {
+            soundFX.playScore();
+            // 散射 4 顆幸運金星
+            for (let i = 0; i < 4; i++) {
+                particles.push(new StarParticle(x, y));
+            }
+        }
+
+        function updateHeartsUI() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('i');
+                if (i < lives) {
+                    heart.className = 'fa-solid fa-heart text-red-500 text-lg sm:text-xl';
+                } else {
+                    heart.className = 'fa-regular fa-heart text-slate-600 text-lg sm:text-xl';
+                }
+                container.appendChild(heart);
+            }
+        }
+
+        function updateScoreUI() {
+            document.getElementById('current-score').innerText = String(score).padStart(5, '0');
+            document.getElementById('high-score').innerText = String(highScore).padStart(5, '0');
+        }
+
+        // --- 主更新繪製迴圈 ---
+        function gameLoop() {
+            frameCount++;
+
+            // 1. 繪製動態背景色與山丘
+            const phase = getSkyPhase(score);
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+
+            if (phase === 'DAY') {
+                skyGrad.addColorStop(0, '#bae6fd');
+                skyGrad.addColorStop(1, '#e0f2fe');
+            } else if (phase === 'SUNSET') {
+                skyGrad.addColorStop(0, '#fdba74');
+                skyGrad.addColorStop(1, '#fed7aa');
+            } else if (phase === 'NIGHT') {
+                skyGrad.addColorStop(0, '#0f172a');
+                skyGrad.addColorStop(1, '#1e293b');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 夜晚閃爍星空
+            if (phase === 'NIGHT') {
+                stars.forEach(s => {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(Math.sin(frameCount * 0.02 + s.alpha))})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            // 繪製太陽/月亮天體
+            drawCelestial(phase);
+
+            // 繪製雲朵
+            clouds.forEach(c => {
+                if (gameState === 'PLAYING') c.update();
+                c.draw();
+            });
+
+            // 繪製遠方山丘
+            ctx.fillStyle = phase === 'SUNSET' ? '#b45309' : (phase === 'NIGHT' ? '#334155' : '#86efac');
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.quadraticCurveTo(150, 220, 300, GROUND_Y);
+            ctx.quadraticCurveTo(500, 240, 700, GROUND_Y);
+            ctx.quadraticCurveTo(750, 250, CANVAS_WIDTH, GROUND_Y);
+            ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.lineTo(0, CANVAS_HEIGHT);
+            ctx.fill();
+
+            // 繪製地面條帶
+            ctx.fillStyle = phase === 'NIGHT' ? '#1e293b' : '#fde047';
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 12);
+            ctx.fillStyle = phase === 'NIGHT' ? '#0f172a' : '#eab308';
+            ctx.fillRect(0, GROUND_Y + 12, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y - 12);
+
+            // 地面裝飾線條
+            ctx.strokeStyle = phase === 'NIGHT' ? '#334155' : '#ca8a04';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const groundOffset = (frameCount * gameSpeed) % 40;
+            for (let x = -groundOffset; x < CANVAS_WIDTH; x += 40) {
+                ctx.moveTo(x, GROUND_Y + 20);
+                ctx.lineTo(x + 15, GROUND_Y + 20);
+            }
+            ctx.stroke();
+
+            // 2. 遊戲進行邏輯更新
+            if (gameState === 'PLAYING') {
+                dino.update();
+
+                if (invulnerableTimer > 0) invulnerableTimer--;
+
+                // ⚡ 加速機制：每 50 分提升移動速度 0.3，最高可達 18
+                gameSpeed = Math.min(18, 6 + Math.floor(score / 50) * 0.3);
+
+                // 障礙物生成頻率隨速度同步加快
+                const spawnInterval = Math.max(35, Math.floor(100 - gameSpeed * 3.5));
+                if (frameCount % spawnInterval === 0 && Math.random() < 0.8) {
+                    if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < CANVAS_WIDTH - Math.max(180, 300 - gameSpeed * 5)) {
+                        obstacles.push(new Obstacle());
+                    }
+                }
+
+                // 道具生成邏輯：
+                // A. 每過一整天 (每 900 分) 生成蛋糕 🍰
+                if (score >= 900 && score % 900 === 0 && score !== lastDaySpawnScore) {
+                    lastDaySpawnScore = score;
+                    items.push(new Item('cake'));
+                }
+
+                // B. 每 500 分生成造型寶箱 🎁 (500, 1000, 1500, 2000, 2500 分)
+                if (score >= 500 && score % 500 === 0 && score !== lastOutfitSpawnScore) {
+                    lastOutfitSpawnScore = score;
+                    const available = Object.keys(OUTFITS).filter(k => OUTFITS[k].reqScore === score);
+                    if (available.length > 0) {
+                        items.push(new Item('outfit', available[0]));
+                    }
+                }
+
+                // 障礙物更新與碰撞檢測
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.update();
+
+                    // 加分判斷
+                    if (!obs.passed && obs.x + obs.width < dino.x) {
+                        obs.passed = true;
+                        score += 10;
+                        updateScoreUI();
+                        triggerScoreStars(dino.x + dino.width, dino.y);
+                    }
+
+                    // AABB 碰撞檢測 (縮減 6px 讓判定更寬容好玩)
+                    const hit = (
+                        dino.x + 6 < obs.x + obs.width &&
+                        dino.x + dino.width - 6 > obs.x &&
+                        dino.y + 6 < obs.y + obs.height &&
+                        dino.y + dino.height - 6 > obs.y
+                    );
+
+                    if (hit && invulnerableTimer === 0) {
+                        lives--;
+                        updateHeartsUI();
+                        if (lives <= 0) {
+                            gameOver();
+                        } else {
+                            soundFX.playHurt();
+                            invulnerableTimer = 75; // 1.5 秒無敵時間
+                        }
+                    }
+
+                    // 移除走出畫面的障礙物
+                    if (obs.x < -60) obstacles.splice(i, 1);
+                }
+
+                // 道具更新與吃取碰撞
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const item = items[i];
+                    item.update();
+
+                    const itemHit = (
+                        dino.x < item.x + item.width &&
+                        dino.x + dino.width > item.x &&
+                        dino.y < item.y + item.height &&
+                        dino.y + dino.height > item.y
+                    );
+
+                    if (itemHit) {
+                        soundFX.playItem();
+                        if (item.type === 'cake') {
+                            if (lives < 3) {
+                                lives++;
+                                updateHeartsUI();
+                            }
+                        } else if (item.type === 'outfit' && item.outfitKey) {
+                            unlockOutfit(item.outfitKey);
+                        }
+                        // 爆發幸運星
+                        triggerScoreStars(item.x, item.y);
+                        items.splice(i, 1);
+                    } else if (item.x < -60) {
+                        items.splice(i, 1);
+                    }
+                }
+
+                // 粒子特效更新
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.update();
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                }
+            }
+
+            // 繪製障礙物、道具與粒子
+            obstacles.forEach(o => o.draw());
+            items.forEach(i => i.draw());
+            particles.forEach(p => p.draw());
+
+            // 繪製小恐龍
+            dino.draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- 外觀試衣間邏輯 ---
+        function unlockOutfit(key) {
+            if (!unlockedOutfits.includes(key)) {
+                unlockedOutfits.push(key);
+                currentOutfit = key; // 自動換上新服裝
+                document.getElementById('wardrobe-dot').classList.remove('hidden');
+                renderWardrobeList();
+            }
+        }
+
+        function renderWardrobeList() {
+            const list = document.getElementById('outfits-list');
+            list.innerHTML = '';
+
+            Object.values(OUTFITS).forEach(item => {
+                const isUnlocked = unlockedOutfits.includes(item.id);
+                const isEquipped = currentOutfit === item.id;
+
+                const card = document.createElement('div');
+                card.className = `border rounded-2xl p-3 flex items-center justify-between gap-3 ${
+                    isEquipped ? 'bg-indigo-900/60 border-indigo-500' : (isUnlocked ? 'bg-slate-800 border-slate-700' : 'bg-slate-900/40 border-slate-800 opacity-60')
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xl ${isUnlocked ? 'text-amber-400' : 'text-slate-600'}">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-sm flex items-center gap-2">
+                                ${item.name}
+                                ${isEquipped ? '<span class="text-[10px] bg-indigo-500 text-white px-2 py-0.5 rounded-full font-sans">裝備中</span>' : ''}
+                            </div>
+                            <div class="text-xs text-slate-400">${isUnlocked ? item.desc : `得分達 ${item.reqScore} 解鎖`}</div>
+                        </div>
+                    </div>
+                    <div>
+                        ${isUnlocked ? `
+                            <button onclick="equipOutfit('${item.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                                isEquipped ? 'bg-slate-700 text-slate-400 cursor-default' : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                            }">
+                                ${isEquipped ? '已裝備' : '換上'}
+                            </button>
+                        ` : `
+                            <span class="text-xs text-slate-500 font-bold px-2 py-1"><i class="fa-solid fa-lock mr-1"></i>未解鎖</span>
+                        `}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function equipOutfit(key) {
+            if (unlockedOutfits.includes(key)) {
+                currentOutfit = key;
+                renderWardrobeList();
+            }
+        }
+
+        function openWardrobe() {
+            document.getElementById('wardrobe-dot').classList.add('hidden');
+            renderWardrobeList();
+            document.getElementById('wardrobe-modal').classList.remove('hidden');
+        }
+
+        function closeWardrobe() {
+            document.getElementById('wardrobe-modal').classList.add('hidden');
+        }
+
+        // --- 事件監聽器 ---
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'PLAYING') {
+                    dino.jump();
+                } else if (gameState === 'START' || gameState === 'GAMEOVER') {
+                    startGame();
+                }
+            }
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (gameState === 'PLAYING') {
+                    dino.duck(true);
+                }
+            }
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                    togglePause();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                dino.duck(false);
+            }
+        });
+
+        // 點擊畫布跳躍
+        document.getElementById('game-container').addEventListener('click', (e) => {
+            // 避免點擊浮層按鈕時誤觸跳躍
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            
+            if (gameState === 'PLAYING') {
+                dino.jump();
+            } else if (gameState === 'START' || gameState === 'GAMEOVER') {
+                startGame();
+            }
+        });
+
+        // 啟動動畫迴圈
+        window.onload = function () {
+            renderWardrobeList();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

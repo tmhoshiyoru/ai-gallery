@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>生化考難關！Biochemistry Crisis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@700;800&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 50px rgba(16, 185, 129, 0.3);
+        }
+
+        canvas {
+            display: block;
+            border-radius: 1rem;
+            background-color: #030712;
+        }
+
+        .overlay-card {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(52, 211, 153, 0.25);
+        }
+
+        .btn-bounce {
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s ease, background-color 0.2s;
+        }
+        .btn-bounce:hover {
+            transform: scale(1.04);
+        }
+        .btn-bounce:active {
+            transform: scale(0.96);
+        }
+
+        @keyframes bio-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6)); }
+            50% { filter: drop-shadow(0 0 24px rgba(16, 185, 129, 0.95)); }
+        }
+        .bio-glow {
+            animation: bio-glow 2.5s infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
+
+    <div id="game-container" class="relative w-full max-w-lg h-[92vh] max-h-[820px] aspect-[9/16] rounded-2xl overflow-hidden border border-emerald-500/30">
+        <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+        <!-- In-Game HUD Overlay -->
+        <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none flex justify-between items-start text-white hidden z-10">
+            <!-- HP / Sanity Bar -->
+            <div class="flex flex-col gap-1">
+                <div class="text-xs font-black tracking-widest text-emerald-300 uppercase flex items-center gap-1.5">
+                    <i class="fa-solid fa-dna text-emerald-400 animate-spin" style="animation-duration: 6s;"></i> 理智/生命值
+                </div>
+                <div class="flex gap-1.5" id="hp-container">
+                    <!-- Hearts / HP Tubes generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Pause Button & Score -->
+            <div class="flex flex-col items-end gap-1">
+                <div class="flex items-center gap-2">
+                    <button id="pause-btn" class="pointer-events-auto bg-slate-800/80 hover:bg-slate-700 text-emerald-400 border border-emerald-500/40 w-9 h-9 rounded-xl flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-pause text-xs" id="pause-icon"></i>
+                    </button>
+                    <div class="text-3xl font-black tracking-wider text-amber-300 mono-font drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" id="hud-score">
+                        0
+                    </div>
+                </div>
+                <div id="hud-combo" class="text-xs font-extrabold text-teal-300 opacity-0 transition-opacity duration-200 bg-teal-950/80 px-2 py-0.5 rounded-full border border-teal-500/40">
+                    COMBO x2
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Buff Timers Overlay -->
+        <div id="powerup-status" class="absolute top-16 left-4 flex flex-col gap-2 pointer-events-none z-10"></div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-white overlay-card rounded-2xl z-30 hidden">
+            <div class="text-center space-y-4">
+                <div class="text-5xl mb-2">🧪⏸️</div>
+                <h2 class="text-3xl font-black text-emerald-400 tracking-wider">實驗暫停中</h2>
+                <p class="text-xs text-slate-300">休息一下，喝口水再繼續應付生化反應！</p>
+                <button id="resume-btn" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl shadow-lg btn-bounce">
+                    繼續實驗 <i class="fa-solid fa-play ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-between p-5 text-white overlay-card rounded-2xl z-20">
+            <div class="text-center mt-2">
+                <div class="inline-block bg-emerald-950/80 border border-emerald-400/50 rounded-full px-4 py-1 text-xs text-emerald-300 font-bold mb-2 tracking-widest bio-glow">
+                    🧬 生化系學生期末告急
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 drop-shadow">
+                    生化考難關！
+                </h1>
+                <p class="text-xs text-slate-300 mt-1 font-medium">靈巧操作生化學生，避開海量生化分子！</p>
+            </div>
+
+            <!-- Biochemical Terms & Items Visual Guide -->
+            <div class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2 text-xs text-slate-200">
+                <div class="font-bold text-emerald-400 text-xs mb-1 flex items-center justify-between">
+                    <span><i class="fa-solid fa-flask"></i> 生化分子圖樣與道具簡介：</span>
+                    <span class="text-[10px] text-slate-400">觸碰名詞 -1 HP</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-rose-500/30">
+                        <span class="px-1 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500 font-bold mono-font text-[10px]">P-P-P</span>
+                        <div><p class="font-bold text-rose-300">ATP/NADPH...</p><p class="text-[9px] text-slate-400">具專屬手繪圖樣</p></div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-teal-500/30">
+                        <span class="text-base">🧪</span>
+                        <div><p class="font-bold text-teal-300">緩衝溶液 Buffer</p><p class="text-[9px] text-slate-400">酸鹼護盾 (無敵)</p></div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-amber-500/30">
+                        <span class="text-base">⚡</span>
+                        <div><p class="font-bold text-amber-300">ATP 爆發 Surge</p><p class="text-[9px] text-slate-400">清空畫面所有分子</p></div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-cyan-500/30">
+                        <span class="text-base">🧬</span>
+                        <div><p class="font-bold text-cyan-300">催化劑 Catalyst</p><p class="text-[9px] text-slate-400">反應減速 (慢動作)</p></div>
+                    </div>
+                    <div class="col-span-2 flex items-center gap-2 bg-slate-900/80 p-1.5 rounded border border-emerald-500/30">
+                        <span class="text-base">🍬</span>
+                        <div><p class="font-bold text-emerald-300">六碳葡萄糖 Glucose</p><p class="text-[9px] text-slate-400">恢復 1 點 HP 並給予高額加分</p></div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-slate-400 text-center pt-1 border-t border-slate-800">
+                    💡 操作：拖曳學生 / 鍵盤方向鍵 (A/D) 靈巧避開
+                </div>
+            </div>
+
+            <!-- Best Score Banner -->
+            <div class="text-center">
+                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">最佳生化生存得分</div>
+                <div class="text-2xl font-black text-amber-400 mono-font" id="start-high-score">0</div>
+            </div>
+
+            <!-- Start Button -->
+            <button id="start-btn" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-black text-lg rounded-xl shadow-lg shadow-emerald-950/60 btn-bounce flex justify-center items-center gap-2">
+                <i class="fa-solid fa-microscope"></i> 開始生化期末逃亡！
+            </button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-white overlay-card rounded-2xl z-30 hidden">
+            <div class="text-center my-auto w-full max-w-xs space-y-3.5">
+                <div class="text-6xl mb-1 animate-bounce">🧬🫠</div>
+                <h2 class="text-3xl font-black text-rose-400 tracking-tight">生化期末慘遭當掉！</h2>
+                <p class="text-xs text-slate-300">理智值歸零，請明年再來重修生物化學...</p>
+
+                <!-- Final Results -->
+                <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-4 space-y-3 text-center">
+                    <div>
+                        <div class="text-[11px] text-slate-400 font-bold">本次逃亡總得分</div>
+                        <div class="text-4xl font-black text-amber-300 mono-font" id="final-score">0</div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-center">
+                        <div>
+                            <div class="text-[10px] text-slate-400">避開生化分子</div>
+                            <div class="text-base font-bold text-teal-300 mono-font" id="final-dodged">0</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-slate-400">歷史最高紀錄</div>
+                            <div class="text-base font-bold text-slate-300 mono-font" id="end-high-score">0</div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800/80">
+                        <div class="text-[10px] text-slate-400">生化學術評級稱號</div>
+                        <div class="text-xl font-black text-emerald-400 mt-0.5" id="final-grade">生化重修組</div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="space-y-2 pt-1">
+                    <button id="restart-btn" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold text-base rounded-xl shadow-lg btn-bounce flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> 重新進入實驗室
+                    </button>
+                    <button id="share-btn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 btn-bounce flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-share-nodes"></i> 複製生化戰報挑戰同學
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 text-emerald-300 border border-emerald-500/50 px-4 py-2 rounded-full text-xs font-bold opacity-0 transition-opacity duration-300 pointer-events-none z-40 shadow-xl">
+            戰報已複製至剪貼簿！
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('game-container');
+
+            // --- UI Elements ---
+            const startScreen = document.getElementById('start-screen');
+            const gameOverScreen = document.getElementById('game-over-screen');
+            const pauseScreen = document.getElementById('pause-screen');
+            const hud = document.getElementById('hud');
+            const hudScore = document.getElementById('hud-score');
+            const hudCombo = document.getElementById('hud-combo');
+            const hpContainer = document.getElementById('hp-container');
+            const startHighScoreText = document.getElementById('start-high-score');
+            const endHighScoreText = document.getElementById('end-high-score');
+            const finalScoreText = document.getElementById('final-score');
+            const finalDodgedText = document.getElementById('final-dodged');
+            const finalGradeText = document.getElementById('final-grade');
+            const powerupStatus = document.getElementById('powerup-status');
+            const toast = document.getElementById('toast');
+
+            const startBtn = document.getElementById('start-btn');
+            const restartBtn = document.getElementById('restart-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+            const pauseIcon = document.getElementById('pause-icon');
+            const resumeBtn = document.getElementById('resume-btn');
+            const shareBtn = document.getElementById('share-btn');
+
+            let width, height;
+            function resizeCanvas() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                width = canvas.width;
+                height = canvas.height;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            class SoundManager {
+                constructor() {
+                    this.ctx = null;
+                }
+
+                init() {
+                    if (!this.ctx) {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContext) {
+                            this.ctx = new AudioContext();
+                        }
+                    }
+                    if (this.ctx && this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                }
+
+                playHit() {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.25);
+                }
+
+                playPowerup() {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.exponentialRampToValueAtTime(950, now + 0.22);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.22);
+                }
+
+                playExplode() {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(130, now);
+                    osc.frequency.exponentialRampToValueAtTime(35, now + 0.35);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.35);
+                }
+
+                playHeal() {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    osc.frequency.setValueAtTime(1046.50, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.4);
+                }
+
+                playGameOver() {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(260, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.7);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.7);
+                }
+            }
+            const sound = new SoundManager();
+
+            // Game State
+            let gameState = 'START';
+            let score = 0;
+            let dodgedCount = 0;
+            let highScore = parseInt(window.__galleryStorage.getItem('biochem_crisis_highscore') || '0', 10);
+            let hp = 3;
+            const maxHp = 4;
+            let combo = 0;
+
+            let shieldTimer = 0;
+            let slowMoTimer = 0;
+            let shakeDuration = 0;
+            let hurtTimer = 0; // Visual frame for hurt face
+
+            const BIO_TERMS = [
+                {
+                    name: 'ATP',
+                    typeKey: 'ATP',
+                    speedMult: 1.0,
+                    size: 38,
+                    bg: '#f43f5e',
+                    border: '#fda4af',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#fef08a';
+                        ctx.beginPath();
+                        ctx.roundRect(-16, -10, 10, 20, 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#fbbf24';
+                        [-2, 6, 14].forEach((px) => {
+                            ctx.beginPath();
+                            ctx.arc(px, 0, 4.5, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ef4444';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        });
+                        ctx.strokeStyle = '#fef08a';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(-6, -6); ctx.lineTo(-2, -10); ctx.lineTo(2, -6);
+                        ctx.stroke();
+                    }
+                },
+                {
+                    name: 'NADPH',
+                    typeKey: 'NADPH',
+                    speedMult: 1.25,
+                    size: 38,
+                    bg: '#ec4899',
+                    border: '#fbcfe8',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.beginPath();
+                        ctx.arc(-8, -2, 7, 0, Math.PI * 2);
+                        ctx.arc(8, 2, 7, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#fef08a';
+                        ctx.font = '900 10px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('e⁻', -8, -1);
+                        ctx.fillText('e⁻', 8, 3);
+                    }
+                },
+                {
+                    name: 'DNA',
+                    typeKey: 'DNA',
+                    speedMult: 1.1,
+                    size: 40,
+                    bg: '#8b5cf6',
+                    border: '#ddd6fe',
+                    drawIcon: (ctx) => {
+                        ctx.strokeStyle = '#a7f3d0';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        for (let x = -16; x <= 16; x += 2) {
+                            let y1 = Math.sin(x * 0.25) * 8;
+                            if (x === -16) ctx.moveTo(x, y1);
+                            else ctx.lineTo(x, y1);
+                        }
+                        ctx.stroke();
+
+                        ctx.strokeStyle = '#f472b6';
+                        ctx.beginPath();
+                        for (let x = -16; x <= 16; x += 2) {
+                            let y2 = Math.sin(x * 0.25 + Math.PI) * 8;
+                            if (x === -16) ctx.moveTo(x, y2);
+                            else ctx.lineTo(x, y2);
+                        }
+                        ctx.stroke();
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1;
+                        [-10, 0, 10].forEach(bx => {
+                            let y1 = Math.sin(bx * 0.25) * 8;
+                            let y2 = Math.sin(bx * 0.25 + Math.PI) * 8;
+                            ctx.beginPath();
+                            ctx.moveTo(bx, y1); ctx.lineTo(bx, y2);
+                            ctx.stroke();
+                        });
+                    }
+                },
+                {
+                    name: 'RuBisCO',
+                    typeKey: 'RUBISCO',
+                    speedMult: 0.88,
+                    size: 44,
+                    bg: '#06b6d4',
+                    border: '#cffaffe',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#67e8f9';
+                        for (let i = 0; i < 6; i++) {
+                            let angle = (i * Math.PI) / 3;
+                            let rx = Math.cos(angle) * 10;
+                            let ry = Math.sin(angle) * 10;
+                            ctx.beginPath();
+                            ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.fillStyle = '#0e7490';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                {
+                    name: 'Mitochondria',
+                    typeKey: 'MITO',
+                    speedMult: 0.95,
+                    size: 44,
+                    bg: '#f97316',
+                    border: '#ffedd5',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#fdba74';
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#c2410c';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        ctx.strokeStyle = '#ea580c';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(-12, 0);
+                        ctx.lineTo(-8, -5); ctx.lineTo(-4, 5);
+                        ctx.lineTo(0, -5); ctx.lineTo(4, 5);
+                        ctx.lineTo(8, -5); ctx.lineTo(12, 0);
+                        ctx.stroke();
+                    }
+                },
+                {
+                    name: 'Acetyl-CoA',
+                    typeKey: 'ACOA',
+                    speedMult: 1.15,
+                    size: 40,
+                    bg: '#e11d48',
+                    border: '#fecdd3',
+                    drawIcon: (ctx) => {
+                        ctx.strokeStyle = '#fda4af';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(-14, 0); ctx.lineTo(-2, 0);
+                        ctx.lineTo(8, -8); ctx.moveTo(-2, 0); ctx.lineTo(8, 8);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#f43f5e';
+                        [[-14,0], [8,-8], [8,8]].forEach(([px, py]) => {
+                            ctx.beginPath();
+                            ctx.arc(px, py, 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                },
+                {
+                    name: 'Helicase',
+                    typeKey: 'HELICASE',
+                    speedMult: 1.35,
+                    size: 38,
+                    bg: '#eab308',
+                    border: '#fef08a',
+                    drawIcon: (ctx) => {
+                        ctx.strokeStyle = '#fef08a';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(-16, -10); ctx.lineTo(-2, 0); ctx.lineTo(14, -10);
+                        ctx.moveTo(-16, 10); ctx.lineTo(-2, 0); ctx.lineTo(14, 10);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#ca8a04';
+                        ctx.beginPath();
+                        ctx.arc(-2, 0, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                {
+                    name: 'Chlorophyll',
+                    typeKey: 'CHLORO',
+                    speedMult: 1.05,
+                    size: 40,
+                    bg: '#10b981',
+                    border: '#a7f3d0',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#6ee7b7';
+                        ctx.beginPath();
+                        ctx.moveTo(-14, 0);
+                        ctx.quadraticCurveTo(0, -12, 14, 0);
+                        ctx.quadraticCurveTo(0, 12, -14, 0);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#047857';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                {
+                    name: 'Ribosome',
+                    typeKey: 'RIBO',
+                    speedMult: 0.92,
+                    size: 40,
+                    bg: '#6366f1',
+                    border: '#c7d2fe',
+                    drawIcon: (ctx) => {
+                        ctx.fillStyle = '#a5b4fc';
+                        ctx.beginPath();
+                        ctx.arc(-2, 3, 10, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#818cf8';
+                        ctx.beginPath();
+                        ctx.arc(-2, -6, 6, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = '#f43f5e';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(-16, 0); ctx.lineTo(14, 0);
+                        ctx.stroke();
+                    }
+                },
+                {
+                    name: 'Krebs Cycle',
+                    typeKey: 'KREBS',
+                    speedMult: 0.85,
+                    size: 44,
+                    bg: '#14b8a6',
+                    border: '#99f6e4',
+                    drawIcon: (ctx) => {
+                        ctx.strokeStyle = '#5eead4';
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 10, 0, Math.PI * 1.7);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#2dd4bf';
+                        ctx.beginPath();
+                        ctx.moveTo(8, -10); ctx.lineTo(14, -8); ctx.lineTo(10, -2);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+            ];
+
+            const POWERUP_TYPES = [
+                { type: 'BUFFER', emoji: '🧪', name: '緩衝液 Shield', chance: 0.35 },
+                { type: 'ATP_BURST', emoji: '⚡', name: 'ATP 爆發 Clear', chance: 0.25 },
+                { type: 'CATALYST', emoji: '🧬', name: '催化劑 Slow-mo', chance: 0.25 },
+                { type: 'GLUCOSE', emoji: '🍬', name: '高能葡萄糖 HP+', chance: 0.15 }
+            ];
+
+            let player;
+            let fallingItems = [];
+            let particles = [];
+            let floatingTexts = [];
+            let bgParticles = [];
+
+            let isDragging = false;
+            let keys = { left: false, right: false };
+
+            startHighScoreText.textContent = highScore;
+
+            for (let i = 0; i < 30; i++) {
+                bgParticles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.8 + 0.8,
+                    vy: (Math.random() + 0.2) * 0.5,
+                    alpha: Math.random() * 0.45 + 0.15
+                });
+            }
+
+            class StudentPlayer {
+                constructor() {
+                    // Enlarged Student Dimensions
+                    this.width = 84;
+                    this.height = 110;
+                    this.x = width / 2 - this.width / 2;
+                    this.y = height - this.height - 30;
+                    this.speed = 9.5;
+                    this.targetX = this.x;
+
+                    // Animation state
+                    this.vx = 0;
+                    this.walkCycle = 0;
+                    this.tilt = 0;
+                }
+
+                update() {
+                    if (keys.left) this.targetX -= this.speed;
+                    if (keys.right) this.targetX += this.speed;
+
+                    this.targetX = Math.max(5, Math.min(width - this.width - 5, this.targetX));
+
+                    const prevX = this.x;
+                    this.x += (this.targetX - this.x) * 0.32;
+                    this.vx = this.x - prevX;
+
+                    // Wobble and Walk Animation
+                    if (Math.abs(this.vx) > 0.3) {
+                        this.walkCycle += 0.22;
+                        this.tilt = Math.min(0.2, Math.max(-0.2, this.vx * 0.03));
+                    } else {
+                        this.walkCycle = 0;
+                        this.tilt *= 0.8;
+                    }
+                }
+
+                draw() {
+                    ctx.save();
+                    const centerX = this.x + this.width / 2;
+                    const centerY = this.y + this.height / 2;
+
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(this.tilt);
+
+                    // Shield Glow Effect
+                    if (shieldTimer > 0) {
+                        ctx.save();
+                        ctx.shadowColor = '#2dd4bf';
+                        ctx.shadowBlur = 25;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 62, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(45, 212, 191, 0.2)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#2dd4bf';
+                        ctx.lineWidth = 3.5;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    // Dynamic Leg Motion
+                    const legOffset = Math.sin(this.walkCycle) * 6;
+
+                    // 1. Shoes & Legs
+                    ctx.fillStyle = '#1e293b'; // Shoes
+                    ctx.beginPath();
+                    ctx.roundRect(-22 + legOffset, 42, 16, 12, 4); // Left Shoe
+                    ctx.roundRect(6 - legOffset, 42, 16, 12, 4);  // Right Shoe
+                    ctx.fill();
+
+                    // Jeans
+                    ctx.fillStyle = '#1d4ed8';
+                    ctx.fillRect(-20 + legOffset, 22, 12, 22);
+                    ctx.fillRect(8 - legOffset, 22, 12, 22);
+
+                    // 2. White Lab Coat Body
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.beginPath();
+                    ctx.roundRect(-28, -18, 56, 44, [6, 6, 10, 10]);
+                    ctx.fill();
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Inner Shirt & Emerald Tie
+                    ctx.fillStyle = '#0f766e';
+                    ctx.beginPath();
+                    ctx.moveTo(-5, -18); ctx.lineTo(5, -18); ctx.lineTo(0, -2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Lab Coat Collar & Buttons
+                    ctx.strokeStyle = '#94a3b8';
+                    ctx.beginPath();
+                    ctx.moveTo(-16, -18); ctx.lineTo(-6, -6);
+                    ctx.moveTo(16, -18); ctx.lineTo(6, -6);
+                    ctx.stroke();
+
+                    // Lab Pocket & Colored Test Tubes
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.fillRect(-22, 2, 14, 16);
+                    ctx.fillStyle = '#f43f5e'; ctx.fillRect(-20, -4, 3, 8); // Red Tube
+                    ctx.fillStyle = '#10b981'; ctx.fillRect(-16, -6, 3, 10); // Green Tube
+                    ctx.fillStyle = '#38bdf8'; ctx.fillRect(-12, -3, 3, 7); // Blue Tube
+
+                    // 3. Hands / Equipment (Clipboard)
+                    ctx.fillStyle = '#b45309'; // Clipboard
+                    ctx.fillRect(18, -4, 16, 22);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(20, -2, 12, 18);
+                    ctx.fillStyle = '#fde047'; // Hand
+                    ctx.beginPath(); ctx.arc(22, 12, 5, 0, Math.PI * 2); ctx.fill();
+
+                    // 4. Head & Messy Hair
+                    ctx.fillStyle = '#fde047'; // Skin tone
+                    ctx.beginPath();
+                    ctx.arc(0, -32, 26, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Brown Messy Hair
+                    ctx.fillStyle = '#78350f';
+                    ctx.beginPath();
+                    ctx.arc(0, -38, 27, Math.PI * 0.85, Math.PI * 2.15);
+                    ctx.fill();
+                    // Hair tufts
+                    ctx.beginPath();
+                    ctx.moveTo(-18, -50); ctx.lineTo(-10, -58); ctx.lineTo(-4, -50);
+                    ctx.moveTo(0, -52); ctx.lineTo(8, -60); ctx.lineTo(14, -50);
+                    ctx.fill();
+
+                    // 5. Safety Goggles (Green Neon)
+                    ctx.fillStyle = '#0284c7';
+                    ctx.beginPath();
+                    ctx.roundRect(-22, -42, 44, 16, 6);
+                    ctx.fill();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Goggle Strap
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-22, -34); ctx.lineTo(-26, -34);
+                    ctx.moveTo(22, -34); ctx.lineTo(26, -34);
+                    ctx.stroke();
+
+                    // 6. Facial Expression Switch
+                    if (hurtTimer > 0) {
+                        // Hurt Face (Dizzy eyes 😵)
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2.5;
+                        // Left Eye X
+                        ctx.beginPath(); ctx.moveTo(-12, -38); ctx.lineTo(-4, -30); ctx.moveTo(-4, -38); ctx.lineTo(-12, -30); ctx.stroke();
+                        // Right Eye X
+                        ctx.beginPath(); ctx.moveTo(4, -38); ctx.lineTo(12, -30); ctx.moveTo(12, -38); ctx.lineTo(4, -30); ctx.stroke();
+
+                        // O-shaped mouth
+                        ctx.fillStyle = '#dc2626';
+                        ctx.beginPath(); ctx.arc(0, -20, 5, 0, Math.PI * 2); ctx.fill();
+
+                        // Red Blush
+                        ctx.fillStyle = 'rgba(244, 63, 94, 0.5)';
+                        ctx.beginPath(); ctx.arc(-14, -22, 5, 0, Math.PI * 2); ctx.arc(14, -22, 5, 0, Math.PI * 2); ctx.fill();
+                    } else if (shieldTimer > 0) {
+                        // Shield Confident Face (Cool / Smiling 😎)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(-8, -34, 5, 0, Math.PI * 2);
+                        ctx.arc(8, -34, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#0f172a';
+                        ctx.beginPath();
+                        ctx.arc(-7, -34, 2.5, 0, Math.PI * 2);
+                        ctx.arc(9, -34, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Big Smile
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.arc(0, -24, 7, 0.1 * Math.PI, 0.9 * Math.PI);
+                        ctx.stroke();
+                    } else {
+                        // Normal Tired / Focused Student Face
+                        // Dark circles under eyes (Tired student)
+                        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+                        ctx.beginPath();
+                        ctx.arc(-8, -30, 6, 0, Math.PI * 2);
+                        ctx.arc(8, -30, 6, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Pupils looking slightly up at falling items
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(-8, -34, 5.5, 0, Math.PI * 2);
+                        ctx.arc(8, -34, 5.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#020617';
+                        ctx.beginPath();
+                        ctx.arc(-8, -36, 2.8, 0, Math.PI * 2);
+                        ctx.arc(8, -36, 2.8, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Mouth (Determined line)
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(-5, -21); ctx.lineTo(5, -21);
+                        ctx.stroke();
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            class FallingItem {
+                constructor(isPowerup = false) {
+                    this.isPowerup = isPowerup;
+                    this.x = Math.random() * (width - 80) + 40;
+                    this.y = -50;
+                    this.rotation = (Math.random() - 0.5) * 0.3;
+                    this.rotSpeed = (Math.random() - 0.5) * 0.02;
+
+                    if (isPowerup) {
+                        const rand = Math.random();
+                        let cum = 0;
+                        let selected = POWERUP_TYPES[0];
+                        for (let p of POWERUP_TYPES) {
+                            cum += p.chance;
+                            if (rand <= cum) {
+                                selected = p;
+                                break;
+                            }
+                        }
+                        this.info = selected;
+                        this.size = 38;
+                        this.speed = 2.5 + Math.random() * 1.2;
+                    } else {
+                        const type = BIO_TERMS[Math.floor(Math.random() * BIO_TERMS.length)];
+                        this.info = type;
+                        this.size = type.size;
+                        const baseSpeed = 3.0 + Math.min(score / 500, 4.8);
+                        this.speed = baseSpeed * type.speedMult + Math.random() * 0.5;
+                    }
+                }
+
+                update() {
+                    const effectiveSpeed = slowMoTimer > 0 ? this.speed * 0.45 : this.speed;
+                    this.y += effectiveSpeed;
+                    this.rotation += this.rotSpeed;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+
+                    if (this.isPowerup) {
+                        ctx.shadowColor = '#fbbf24';
+                        ctx.shadowBlur = 14;
+
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#facc15';
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+
+                        ctx.font = '22px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(this.info.emoji, 0, 1);
+                    } else {
+                        ctx.font = `800 ${Math.floor(this.size * 0.42)}px "JetBrains Mono", sans-serif`;
+                        const textWidth = ctx.measureText(this.info.name).width;
+                        const iconSpacing = 36;
+                        const padX = 14;
+                        const badgeWidth = textWidth + iconSpacing + padX * 2;
+                        const badgeHeight = this.size + 8;
+
+                        ctx.shadowColor = this.info.bg;
+                        ctx.shadowBlur = 12;
+
+                        ctx.beginPath();
+                        ctx.roundRect(-badgeWidth / 2, -badgeHeight / 2, badgeWidth, badgeHeight, 10);
+                        ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+                        ctx.fill();
+                        ctx.strokeStyle = this.info.bg;
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.roundRect(-badgeWidth / 2 + 2, -badgeHeight / 2 + 2, badgeWidth - 4, badgeHeight - 4, 8);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+
+                        ctx.save();
+                        ctx.translate(-badgeWidth / 2 + padX + 12, 0);
+                        this.info.drawIcon(ctx);
+                        ctx.restore();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(this.info.name, -badgeWidth / 2 + padX + iconSpacing, 1);
+                    }
+
+                    ctx.restore();
+                }
+            }
+
+            class Particle {
+                constructor(x, y, color) {
+                    this.x = x;
+                    this.y = y;
+                    this.color = color;
+                    this.radius = Math.random() * 4.5 + 1.5;
+                    this.vx = (Math.random() - 0.5) * 8;
+                    this.vy = (Math.random() - 0.5) * 8;
+                    this.alpha = 1;
+                    this.decay = Math.random() * 0.03 + 0.02;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.alpha -= this.decay;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, this.alpha);
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            class FloatingText {
+                constructor(x, y, text, color) {
+                    this.x = x;
+                    this.y = y;
+                    this.text = text;
+                    this.color = color;
+                    this.alpha = 1;
+                    this.vy = -1.6;
+                }
+
+                update() {
+                    this.y += this.vy;
+                    this.alpha -= 0.024;
+                }
+
+                draw() {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, this.alpha);
+                    ctx.fillStyle = this.color;
+                    ctx.font = '900 16px "Noto Sans TC", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.text, this.x, this.y);
+                    ctx.restore();
+                }
+            }
+
+            function createExplosion(x, y, color, count = 16) {
+                for (let i = 0; i < count; i++) {
+                    particles.push(new Particle(x, y, color));
+                }
+            }
+
+            function addFloatingText(x, y, text, color = '#ffffff') {
+                floatingTexts.push(new FloatingText(x, y, text, color));
+            }
+
+            function getCanvasCoordinates(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                return clientX - rect.left;
+            }
+
+            function handlePointerStart(e) {
+                if (gameState !== 'PLAYING') return;
+                isDragging = true;
+                const canvasX = getCanvasCoordinates(e);
+                player.targetX = canvasX - player.width / 2;
+            }
+
+            function handlePointerMove(e) {
+                if (!isDragging || gameState !== 'PLAYING') return;
+                const canvasX = getCanvasCoordinates(e);
+                player.targetX = canvasX - player.width / 2;
+            }
+
+            function handlePointerEnd() {
+                isDragging = false;
+            }
+
+            window.addEventListener('mousedown', handlePointerStart);
+            window.addEventListener('mousemove', handlePointerMove);
+            window.addEventListener('mouseup', handlePointerEnd);
+
+            window.addEventListener('touchstart', (e) => {
+                handlePointerStart(e);
+                sound.init();
+            }, { passive: true });
+            window.addEventListener('touchmove', handlePointerMove, { passive: true });
+            window.addEventListener('touchend', handlePointerEnd);
+
+            window.addEventListener('keydown', (e) => {
+                sound.init();
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                    keys.left = true;
+                } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                    keys.right = true;
+                } else if (e.key === 'P' || e.key === 'p' || e.key === 'Escape') {
+                    togglePause();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                    keys.left = false;
+                } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                    keys.right = false;
+                }
+            });
+
+            function startGame() {
+                sound.init();
+                score = 0;
+                dodgedCount = 0;
+                hp = 3;
+                combo = 0;
+                fallingItems = [];
+                particles = [];
+                floatingTexts = [];
+                shieldTimer = 0;
+                slowMoTimer = 0;
+                hurtTimer = 0;
+
+                player = new StudentPlayer();
+
+                updateHPUI();
+                hudScore.textContent = '0';
+
+                gameState = 'PLAYING';
+                startScreen.classList.add('hidden');
+                gameOverScreen.classList.add('hidden');
+                pauseScreen.classList.add('hidden');
+                hud.classList.remove('hidden');
+            }
+
+            function togglePause() {
+                if (gameState === 'PLAYING') {
+                    gameState = 'PAUSED';
+                    pauseScreen.classList.remove('hidden');
+                    pauseIcon.className = 'fa-solid fa-play text-xs';
+                } else if (gameState === 'PAUSED') {
+                    gameState = 'PLAYING';
+                    pauseScreen.classList.add('hidden');
+                    pauseIcon.className = 'fa-solid fa-pause text-xs';
+                }
+            }
+
+            function triggerGameOver() {
+                gameState = 'GAMEOVER';
+                sound.playGameOver();
+
+                if (score > highScore) {
+                    highScore = score;
+                    window.__galleryStorage.setItem('biochem_crisis_highscore', highScore.toString());
+                }
+
+                let grade = '生化重修預備軍';
+                let gradeColor = 'text-rose-500';
+                if (score >= 2400) { grade = '諾貝爾生醫獎候選人 🏆'; gradeColor = 'text-amber-400'; }
+                else if (score >= 1500) { grade = '細胞生理學大師 🧬'; gradeColor = 'text-amber-300'; }
+                else if (score >= 900) { grade = '論文撰寫中研究生 🔬'; gradeColor = 'text-teal-300'; }
+                else if (score >= 400) { grade = '實驗室工讀生 🧪'; gradeColor = 'text-cyan-300'; }
+
+                finalScoreText.textContent = score;
+                finalDodgedText.textContent = dodgedCount;
+                endHighScoreText.textContent = highScore;
+                finalGradeText.textContent = grade;
+                finalGradeText.className = `text-xl font-black ${gradeColor}`;
+
+                hud.classList.add('hidden');
+                gameOverScreen.classList.remove('hidden');
+            }
+
+            function updateHPUI() {
+                hpContainer.innerHTML = '';
+                for (let i = 0; i < maxHp; i++) {
+                    const icon = document.createElement('i');
+                    if (i < hp) {
+                        icon.className = 'fa-solid fa-vial text-emerald-400 text-lg drop-shadow';
+                    } else {
+                        icon.className = 'fa-solid fa-vial-empty text-slate-700 text-lg';
+                    }
+                    hpContainer.appendChild(icon);
+                }
+            }
+
+            function updatePowerupHUD() {
+                powerupStatus.innerHTML = '';
+
+                if (shieldTimer > 0) {
+                    const sec = (shieldTimer / 60).toFixed(1);
+                    const tag = document.createElement('div');
+                    tag.className = 'bg-teal-500/90 text-slate-950 px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md border border-teal-300 animate-pulse';
+                    tag.innerHTML = `🧪 緩衝護盾 ${sec}s`;
+                    powerupStatus.appendChild(tag);
+                }
+
+                if (slowMoTimer > 0) {
+                    const sec = (slowMoTimer / 60).toFixed(1);
+                    const tag = document.createElement('div');
+                    tag.className = 'bg-cyan-500/90 text-slate-950 px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md border border-cyan-300';
+                    tag.innerHTML = `🧬 催化減速 ${sec}s`;
+                    powerupStatus.appendChild(tag);
+                }
+            }
+
+            let spawnCounter = 0;
+
+            function spawnLogic() {
+                spawnCounter++;
+                const spawnInterval = Math.max(16, 46 - Math.floor(score / 170));
+
+                if (spawnCounter % spawnInterval === 0) {
+                    fallingItems.push(new FallingItem(false));
+                }
+
+                if (spawnCounter % 380 === 0) {
+                    fallingItems.push(new FallingItem(true));
+                }
+            }
+
+            function checkCollisions() {
+                for (let i = fallingItems.length - 1; i >= 0; i--) {
+                    const item = fallingItems[i];
+
+                    const pCenterX = player.x + player.width / 2;
+                    const pCenterY = player.y + player.height / 2;
+                    const dist = Math.hypot(pCenterX - item.x, pCenterY - item.y);
+
+                    // Adjusted hit radius for larger student
+                    const hitRadius = player.width * 0.42 + item.size * 0.4;
+
+                    if (dist < hitRadius) {
+                        if (item.isPowerup) {
+                            applyPowerup(item.info.type);
+                            createExplosion(item.x, item.y, '#facc15', 18);
+                        } else {
+                            if (shieldTimer > 0) {
+                                sound.playExplode();
+                                createExplosion(item.x, item.y, '#2dd4bf', 14);
+                                addFloatingText(item.x, item.y, '酸鹼護盾抵擋！', '#2dd4bf');
+                                score += 20;
+                            } else {
+                                sound.playHit();
+                                shakeDuration = 12;
+                                hurtTimer = 25; // Hurt face duration
+                                hp--;
+                                combo = 0;
+                                updateHPUI();
+                                createExplosion(item.x, item.y, '#f43f5e', 20);
+                                addFloatingText(item.x, item.y, '理智 -1！', '#f43f5e');
+
+                                if (hp <= 0) {
+                                    triggerGameOver();
+                                    return;
+                                }
+                            }
+                        }
+
+                        fallingItems.splice(i, 1);
+                    } else if (item.y > height + 40) {
+                        if (!item.isPowerup) {
+                            score += 10;
+                            dodgedCount++;
+                            combo++;
+                        }
+                        fallingItems.splice(i, 1);
+                    }
+                }
+            }
+
+            function applyPowerup(type) {
+                switch (type) {
+                    case 'BUFFER':
+                        sound.playPowerup();
+                        shieldTimer = 300;
+                        addFloatingText(player.x + 30, player.y - 10, '緩衝溶液護盾！', '#2dd4bf');
+                        break;
+                    case 'ATP_BURST':
+                        sound.playExplode();
+                        fallingItems.forEach(item => {
+                            if (!item.isPowerup) {
+                                createExplosion(item.x, item.y, '#facc15', 14);
+                            }
+                        });
+                        fallingItems = fallingItems.filter(item => item.isPowerup);
+                        addFloatingText(player.x + 30, player.y - 10, 'ATP 水解全清空！', '#facc15');
+                        score += 120;
+                        break;
+                    case 'CATALYST':
+                        sound.playPowerup();
+                        slowMoTimer = 360;
+                        addFloatingText(player.x + 30, player.y - 10, '催化減速！', '#38bdf8');
+                        break;
+                    case 'GLUCOSE':
+                        sound.playHeal();
+                        if (hp < maxHp) {
+                            hp++;
+                            updateHPUI();
+                        }
+                        score += 180;
+                        addFloatingText(player.x + 30, player.y - 10, '六碳葡萄糖 HP+1', '#34d399');
+                        break;
+                }
+            }
+
+            function drawBackground() {
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+                bgGrad.addColorStop(0, '#030712');
+                bgGrad.addColorStop(0.5, '#0f172a');
+                bgGrad.addColorStop(1, '#022c22');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.fillStyle = '#34d399';
+                for (let p of bgParticles) {
+                    p.y -= p.vy;
+                    if (p.y < 0) {
+                        p.y = height;
+                        p.x = Math.random() * width;
+                    }
+                    ctx.save();
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            function renderLoop() {
+                ctx.save();
+
+                if (shakeDuration > 0) {
+                    const dx = (Math.random() - 0.5) * 12;
+                    const dy = (Math.random() - 0.5) * 12;
+                    ctx.translate(dx, dy);
+                    shakeDuration--;
+                }
+
+                drawBackground();
+
+                if (gameState === 'PLAYING') {
+                    if (shieldTimer > 0) shieldTimer--;
+                    if (slowMoTimer > 0) slowMoTimer--;
+                    if (hurtTimer > 0) hurtTimer--;
+
+                    spawnLogic();
+
+                    player.update();
+                    player.draw();
+
+                    for (let item of fallingItems) {
+                        item.update();
+                        item.draw();
+                    }
+
+                    checkCollisions();
+
+                    for (let i = particles.length - 1; i >= 0; i--) {
+                        particles[i].update();
+                        particles[i].draw();
+                        if (particles[i].alpha <= 0) particles.splice(i, 1);
+                    }
+
+                    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                        floatingTexts[i].update();
+                        floatingTexts[i].draw();
+                        if (floatingTexts[i].alpha <= 0) floatingTexts.splice(i, 1);
+                    }
+
+                    hudScore.textContent = score;
+                    if (combo > 2) {
+                        hudCombo.textContent = `COMBO x${combo}`;
+                        hudCombo.style.opacity = '1';
+                    } else {
+                        hudCombo.style.opacity = '0';
+                    }
+
+                    updatePowerupHUD();
+                } else if (gameState === 'PAUSED') {
+                    player.draw();
+                    for (let item of fallingItems) {
+                        item.draw();
+                    }
+                }
+
+                ctx.restore();
+                requestAnimationFrame(renderLoop);
+            }
+
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+            pauseBtn.addEventListener('click', togglePause);
+            resumeBtn.addEventListener('click', togglePause);
+
+            shareBtn.addEventListener('click', () => {
+                const shareText = `我在《生化考難關！》避開了 ${dodgedCount} 個生化分子與胞器，獲得 ${score} 分！學術評級：${finalGradeText.textContent}！來挑戰我的生化生存極限吧！🧪🧬`;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        showToast();
+                    }).catch(() => {
+                        fallbackCopyText(shareText);
+                    });
+                } else {
+                    fallbackCopyText(shareText);
+                }
+            });
+
+            function fallbackCopyText(text) {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast();
+                } catch (err) {
+                    console.error('Copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            }
+
+            function showToast() {
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, 2200);
+            }
+
+            requestAnimationFrame(renderLoop);
+        });
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Cyberpunk Snake - 霓虹賽博貪吃蛇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
+            background-color: #05050a;
+            color: #e0f7fc;
+            touch-action: manipulation;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .neon-border {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4), inset 0 0 15px rgba(0, 243, 255, 0.2);
+            border: 2px solid rgba(0, 243, 255, 0.6);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        .neon-text-pink {
+            text-shadow: 0 0 8px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.4);
+        }
+
+        .btn-glow {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .btn-glow:active {
+            transform: translateY(1px);
+        }
+
+        canvas {
+            background: radial-gradient(circle at center, #0d0d1a 0%, #030307 100%);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center p-2 sm:p-4">
+
+    <!-- 頂部數據看板 -->
+    <header class="w-full max-w-xl flex justify-between items-center bg-gray-900/80 backdrop-blur border border-cyan-500/30 rounded-xl px-4 py-3 mb-2 shadow-lg">
+        <div class="flex items-center space-x-6">
+            <div>
+                <span class="text-[10px] text-cyan-400 block tracking-widest uppercase">SCORE</span>
+                <span id="score" class="text-2xl font-black text-white neon-text-cyan">0</span>
+            </div>
+            <div>
+                <span class="text-[10px] text-pink-400 block tracking-widest uppercase">HIGH SCORE</span>
+                <span id="highScore" class="text-2xl font-black text-pink-400 neon-text-pink">0</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button id="sound-btn" class="p-2 bg-gray-800 hover:bg-gray-700 border border-cyan-500/40 rounded-lg text-cyan-400 transition">
+                <svg id="sound-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>
+                </svg>
+                <svg id="sound-off" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                </svg>
+            </button>
+            <button id="pause-btn" class="p-2 bg-gray-800 hover:bg-gray-700 border border-cyan-500/40 rounded-lg text-cyan-400 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas 畫布與 Overlay 遮罩區域 -->
+    <div class="relative flex-1 w-full max-w-xl flex justify-center items-center overflow-hidden my-auto">
+        <canvas id="gameCanvas" width="440" height="440" class="neon-border rounded-xl w-full h-full max-h-[75vh] object-contain"></canvas>
+
+        <!-- 開始選單 -->
+        <div id="startMenu" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col justify-center items-center text-center p-6 rounded-xl border border-cyan-500/30">
+            <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-500 mb-2 tracking-wider neon-text-cyan">
+                NEON SNAKE
+            </h1>
+            <p class="text-cyan-200/80 mb-6 text-xs sm:text-sm">請選擇遊戲模式並開始挑戰</p>
+
+            <div class="flex flex-col sm:flex-row gap-2 mb-8">
+                <button class="mode-btn px-4 py-2 rounded-lg border border-cyan-400 text-xs font-bold transition bg-cyan-500/20 text-cyan-300" onclick="setMode('CLASSIC', this)">經典牆壁</button>
+                <button class="mode-btn px-4 py-2 rounded-lg border border-gray-700 text-xs font-bold transition text-gray-400 hover:text-cyan-300" onclick="setMode('NO_WALLS', this)">無壁穿梭</button>
+                <button class="mode-btn px-4 py-2 rounded-lg border border-gray-700 text-xs font-bold transition text-gray-400 hover:text-cyan-300" onclick="setMode('OBSTACLES', this)">障礙迷宮</button>
+            </div>
+
+            <button onclick="startGame()" class="btn-glow px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 font-bold text-base rounded-full shadow-lg text-white border border-cyan-300 tracking-wider">
+                開始遊戲 (START)
+            </button>
+        </div>
+
+        <!-- 遊戲結束選單 -->
+        <div id="gameOverMenu" class="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col justify-center items-center text-center p-6 rounded-xl border border-pink-500/30 hidden">
+            <h2 class="text-4xl sm:text-5xl font-black text-pink-500 mb-2 neon-text-pink">GAME OVER</h2>
+            <p class="text-cyan-200 mb-6">最終得分：<span id="finalScore" class="text-2xl font-bold text-yellow-400">0</span></p>
+
+            <button onclick="startGame()" class="btn-glow px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-base rounded-full shadow-lg text-white border border-pink-300 tracking-wider">
+                再玩一次 (REPLAY)
+            </button>
+        </div>
+
+        <!-- 暫停選單 -->
+        <div id="pauseMenu" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center text-center p-6 rounded-xl hidden">
+            <h2 class="text-3xl font-bold text-cyan-400 mb-6 tracking-widest neon-text-cyan">PAUSED</h2>
+            <button onclick="togglePause()" class="btn-glow px-8 py-3 bg-cyan-600 hover:bg-cyan-500 font-bold rounded-full text-white tracking-wider">
+                繼續遊戲 (RESUME)
+            </button>
+        </div>
+    </div>
+
+    <!-- 行動裝置虛擬鍵盤控制 -->
+    <footer class="w-full max-w-xl mt-2 sm:hidden flex flex-col items-center gap-1">
+        <button onclick="handleTouch('UP')" class="w-16 h-12 bg-gray-800/80 active:bg-cyan-600 rounded-lg text-xl font-bold text-cyan-400 border border-cyan-500/30">▲</button>
+        <div class="flex gap-4">
+            <button onclick="handleTouch('LEFT')" class="w-16 h-12 bg-gray-800/80 active:bg-cyan-600 rounded-lg text-xl font-bold text-cyan-400 border border-cyan-500/30">◄</button>
+            <button onclick="handleTouch('DOWN')" class="w-16 h-12 bg-gray-800/80 active:bg-cyan-600 rounded-lg text-xl font-bold text-cyan-400 border border-cyan-500/30">▼</button>
+            <button onclick="handleTouch('RIGHT')" class="w-16 h-12 bg-gray-800/80 active:bg-cyan-600 rounded-lg text-xl font-bold text-cyan-400 border border-cyan-500/30">►</button>
+        </div>
+    </footer>
+
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            play(type) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'eat') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'powerup') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'die') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                }
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GRID_SIZE = 22;
+        const TILE_SIZE = canvas.width / GRID_SIZE;
+
+        let snake = [];
+        let dir = { x: 1, y: 0 };
+        let nextDir = { x: 1, y: 0 };
+        let food = {};
+        let specialFood = null;
+        let specialTimer = null;
+        let obstacles = [];
+        let particles = [];
+
+        let score = 0;
+        let highScore = localStorage.getItem('neon_snake_highscore') || 0;
+        let gameMode = 'CLASSIC';
+        let gameInterval = null;
+        let isPaused = false;
+        let isGameOver = false;
+        let gameSpeed = 100;
+
+        document.getElementById('highScore').innerText = highScore;
+
+        function setMode(mode, btn) {
+            gameMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.className = 'mode-btn px-4 py-2 rounded-lg border border-gray-700 text-xs font-bold transition text-gray-400 hover:text-cyan-300';
+            });
+            btn.className = 'mode-btn px-4 py-2 rounded-lg border border-cyan-400 text-xs font-bold transition bg-cyan-500/20 text-cyan-300';
+        }
+
+        function startGame() {
+            audio.init();
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
+
+            snake = [
+                { x: 5, y: 10 },
+                { x: 4, y: 10 },
+                { x: 3, y: 10 }
+            ];
+            dir = { x: 1, y: 0 };
+            nextDir = { x: 1, y: 0 };
+            score = 0;
+            document.getElementById('score').innerText = score;
+
+            isGameOver = false;
+            isPaused = false;
+            gameSpeed = 110;
+            particles = [];
+            specialFood = null;
+
+            generateObstacles();
+            spawnFood();
+
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, gameSpeed);
+        }
+
+        function generateObstacles() {
+            obstacles = [];
+            if (gameMode !== 'OBSTACLES') return;
+
+            const obstacleCount = 14;
+            for (let i = 0; i < obstacleCount; i++) {
+                let obs;
+                do {
+                    obs = {
+                        x: Math.floor(Math.random() * GRID_SIZE),
+                        y: Math.floor(Math.random() * GRID_SIZE)
+                    };
+                } while (
+                    (obs.x >= 2 && obs.x <= 8 && obs.y === 10) ||
+                    obstacles.some(o => o.x === obs.x && o.y === obs.y)
+                );
+                obstacles.push(obs);
+            }
+        }
+
+        function spawnFood() {
+            food = getValidPos();
+
+            if (Math.random() < 0.3 && !specialFood) {
+                const types = ['GOLDEN', 'SPEED', 'SHRINK'];
+                const selectedType = types[Math.floor(Math.random() * types.length)];
+                specialFood = {
+                    ...getValidPos(),
+                    type: selectedType
+                };
+
+                if (specialTimer) clearTimeout(specialTimer);
+                specialTimer = setTimeout(() => {
+                    specialFood = null;
+                }, 7000);
+            }
+        }
+
+        function getValidPos() {
+            let pos;
+            while (true) {
+                pos = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+                const inSnake = snake.some(s => s.x === pos.x && s.y === pos.y);
+                const inObs = obstacles.some(o => o.x === pos.x && o.y === pos.y);
+                const inFood = food && food.x === pos.x && food.y === pos.y;
+                if (!inSnake && !inObs && !inFood) break;
+            }
+            return pos;
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 16; i++) {
+                particles.push({
+                    x: (x + 0.5) * TILE_SIZE,
+                    y: (y + 0.5) * TILE_SIZE,
+                    vx: (Math.random() - 0.5) * 7,
+                    vy: (Math.random() - 0.5) * 7,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function gameLoop() {
+            if (isPaused || isGameOver) return;
+
+            updateSnake();
+            updateParticles();
+            draw();
+        }
+
+        function updateSnake() {
+            dir = nextDir;
+            let head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+            if (gameMode === 'NO_WALLS') {
+                if (head.x < 0) head.x = GRID_SIZE - 1;
+                if (head.x >= GRID_SIZE) head.x = 0;
+                if (head.y < 0) head.y = GRID_SIZE - 1;
+                if (head.y >= GRID_SIZE) head.y = 0;
+            } else {
+                if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            if (obstacles.some(obs => obs.x === head.x && obs.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                audio.play('eat');
+                createParticles(food.x, food.y, '#ff007f');
+                checkHighScore();
+                spawnFood();
+
+                if (gameSpeed > 60) {
+                    gameSpeed -= 0.5;
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(gameLoop, gameSpeed);
+                }
+            } else if (specialFood && head.x === specialFood.x && head.y === specialFood.y) {
+                audio.play('powerup');
+                if (specialFood.type === 'GOLDEN') {
+                    score += 35;
+                    createParticles(specialFood.x, specialFood.y, '#ffd700');
+                } else if (specialFood.type === 'SPEED') {
+                    score += 20;
+                    createParticles(specialFood.x, specialFood.y, '#00f3ff');
+                } else if (specialFood.type === 'SHRINK') {
+                    score += 15;
+                    createParticles(specialFood.x, specialFood.y, '#bf00ff');
+                    if (snake.length > 3) snake.pop();
+                }
+                specialFood = null;
+                checkHighScore();
+            } else {
+                snake.pop();
+            }
+
+            document.getElementById('score').innerText = score;
+        }
+
+        function checkHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('neon_snake_highscore', highScore);
+                document.getElementById('highScore').innerText = highScore;
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.035;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 網格背景
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * TILE_SIZE, 0);
+                ctx.lineTo(i * TILE_SIZE, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * TILE_SIZE);
+                ctx.lineTo(canvas.width, i * TILE_SIZE);
+                ctx.stroke();
+            }
+
+            // 障礙物
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#33334d';
+                ctx.strokeStyle = '#00f3ff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(obs.x * TILE_SIZE + 2, obs.y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4, 4);
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            // 普通食物
+            ctx.save();
+            ctx.fillStyle = '#ff007f';
+            ctx.shadowColor = '#ff007f';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc((food.x + 0.5) * TILE_SIZE, (food.y + 0.5) * TILE_SIZE, TILE_SIZE / 2 - 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // 特殊道具食物
+            if (specialFood) {
+                let color = '#ffd700';
+                if (specialFood.type === 'SPEED') color = '#00f3ff';
+                if (specialFood.type === 'SHRINK') color = '#bf00ff';
+
+                ctx.save();
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc((specialFood.x + 0.5) * TILE_SIZE, (specialFood.y + 0.5) * TILE_SIZE, TILE_SIZE / 2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 蛇身
+            snake.forEach((seg, index) => {
+                ctx.save();
+                if (index === 0) {
+                    ctx.fillStyle = '#00f3ff';
+                    ctx.shadowColor = '#00f3ff';
+                    ctx.shadowBlur = 15;
+                } else {
+                    ctx.fillStyle = '#0088cc';
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.beginPath();
+                ctx.roundRect(
+                    seg.x * TILE_SIZE + 1,
+                    seg.y * TILE_SIZE + 1,
+                    TILE_SIZE - 2,
+                    TILE_SIZE - 2,
+                    [5]
+                );
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 爆炸粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            audio.play('die');
+            clearInterval(gameInterval);
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (isGameOver) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else {
+                document.getElementById('pauseMenu').classList.add('hidden');
+            }
+        }
+
+        function changeDir(newDir) {
+            if (newDir.x === -dir.x && newDir.y === -dir.y) return;
+            nextDir = newDir;
+        }
+
+        window.addEventListener('keydown', e => {
+            audio.init();
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W': changeDir({ x: 0, y: -1 }); break;
+                case 'ArrowDown': case 's': case 'S': changeDir({ x: 0, y: 1 }); break;
+                case 'ArrowLeft': case 'a': case 'A': changeDir({ x: -1, y: 0 }); break;
+                case 'ArrowRight': case 'd': case 'D': changeDir({ x: 1, y: 0 }); break;
+                case ' ': togglePause(); break;
+            }
+        });
+
+        function handleTouch(direction) {
+            audio.init();
+            switch (direction) {
+                case 'UP': changeDir({ x: 0, y: -1 }); break;
+                case 'DOWN': changeDir({ x: 0, y: 1 }); break;
+                case 'LEFT': changeDir({ x: -1, y: 0 }); break;
+                case 'RIGHT': changeDir({ x: 1, y: 0 }); break;
+            }
+        }
+
+        document.getElementById('pause-btn').addEventListener('click', togglePause);
+
+        const soundBtn = document.getElementById('sound-btn');
+        const soundOn = document.getElementById('sound-on');
+        const soundOff = document.getElementById('sound-off');
+
+        soundBtn.addEventListener('click', () => {
+            audio.init();
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                soundOn.classList.add('hidden');
+                soundOff.classList.remove('hidden');
+            } else {
+                soundOn.classList.remove('hidden');
+                soundOff.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

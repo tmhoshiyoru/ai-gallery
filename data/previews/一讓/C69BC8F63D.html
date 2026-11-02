@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>三國無雙：一騎當千 (無雙割草舒壓遊戲)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111827;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: #1c1917;
+        }
+
+        /* Screen shake keyframes */
+        .shake {
+            animation: shake 0.15s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* Custom scrollbars and glowing UI */
+        .glow-text-gold {
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.5);
+        }
+        .glow-text-red {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        .musou-btn-active {
+            animation: pulse-glow 1s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 15px #f59e0b, inset 0 0 10px #f59e0b; }
+            to { box-shadow: 0 0 30px #ef4444, inset 0 0 20px #ef4444; }
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="relative flex justify-center items-center">
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI Overlay container -->
+    <div id="ui-container" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+        
+        <!-- Top Bar: Health, Musou, Score & Kill Counter -->
+        <div class="flex flex-wrap justify-between items-start w-full gap-4">
+            
+            <!-- Character Info & Bars -->
+            <div class="flex items-center gap-3 bg-gray-900/80 backdrop-blur-md border border-amber-600/40 p-3 rounded-2xl shadow-2xl min-w-[280px] sm:min-w-[340px]">
+                <div id="hero-avatar" class="w-14 h-14 rounded-full border-2 border-amber-400 bg-amber-950 flex justify-center items-center text-2xl font-bold text-amber-300 shadow-inner">
+                    關
+                </div>
+                <div class="flex-1 flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center">
+                        <span id="hero-name" class="text-amber-200 font-black tracking-widest text-lg">關羽 - 雲長</span>
+                        <span id="hp-text" class="text-xs font-bold text-emerald-400">100 / 100 HP</span>
+                    </div>
+                    <!-- HP Bar -->
+                    <div class="w-full bg-gray-950 h-3.5 rounded-full overflow-hidden border border-emerald-900/50">
+                        <div id="hp-bar" class="h-full bg-gradient-to-r from-emerald-600 to-green-400 w-full transition-all duration-200"></div>
+                    </div>
+                    <!-- Musou Bar -->
+                    <div class="w-full bg-gray-950 h-3 rounded-full overflow-hidden border border-amber-900/50">
+                        <div id="musou-bar" class="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 w-0% transition-all duration-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats & Combo display -->
+            <div class="flex flex-col items-end gap-1">
+                <div class="bg-gray-900/80 backdrop-blur-md border border-amber-600/40 px-5 py-2 rounded-2xl flex items-center gap-4 text-amber-300 shadow-2xl">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-skull text-red-500 text-lg"></i>
+                        <span class="text-xs text-gray-400">擊殺:</span>
+                        <span id="kill-count" class="text-2xl font-black text-amber-400 glow-text-gold tracking-wider">0</span>
+                    </div>
+                    <div class="h-6 w-[1px] bg-amber-600/30"></div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-clock text-amber-400 text-lg"></i>
+                        <span id="game-time" class="text-lg font-mono font-bold text-amber-200">00:00</span>
+                    </div>
+                </div>
+
+                <!-- Floating Combo Notification -->
+                <div id="combo-box" class="opacity-0 transition-opacity duration-300 flex flex-col items-end">
+                    <span id="combo-count" class="text-4xl sm:text-5xl font-black italic text-red-500 glow-text-red">50 COMBO!</span>
+                    <span id="combo-title" class="text-xs font-bold tracking-widest text-amber-300 uppercase">無雙之勢・連擊如風</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Dynamic Announcements -->
+        <div id="announcement" class="self-center opacity-0 transition-all duration-500 transform scale-75 text-center pointer-events-none">
+            <h2 id="announcement-text" class="text-4xl md:text-6xl font-black text-amber-400 glow-text-gold tracking-widest border-y-2 border-amber-500/50 py-2 bg-black/60 px-8 rounded-xl backdrop-blur-sm">
+                萬軍取首！
+            </h2>
+        </div>
+
+        <!-- Bottom Controls & Skill Bar (Desktop hints & Mobile Virtual Controls) -->
+        <div class="flex justify-between items-end w-full">
+            
+            <!-- Mobile Virtual Joystick Container (Left) -->
+            <div id="joystick-zone" class="pointer-events-auto relative w-36 h-36 md:w-44 md:h-44 bg-gray-900/40 rounded-full border-2 border-amber-500/30 backdrop-blur-sm flex justify-center items-center touch-none">
+                <div id="joystick-knob" class="absolute w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-700 rounded-full border-2 border-amber-200 shadow-lg transform translate-x-0 translate-y-0 transition-transform duration-75"></div>
+            </div>
+
+            <!-- Desktop Key Hints (Visible on Desktop) -->
+            <div class="hidden md:flex gap-3 bg-gray-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-amber-600/30 text-amber-200/80 text-xs">
+                <div><span class="bg-gray-800 px-2 py-1 rounded text-amber-400 font-bold">WASD / 方向鍵</span> 移動</div>
+                <div><span class="bg-gray-800 px-2 py-1 rounded text-amber-400 font-bold">J / 點擊</span> 普通攻擊</div>
+                <div><span class="bg-gray-800 px-2 py-1 rounded text-amber-400 font-bold">K</span> 武將特技</div>
+                <div><span class="bg-gray-800 px-2 py-1 rounded text-amber-400 font-bold">SPACE</span> 無雙亂舞</div>
+            </div>
+
+            <!-- Action Buttons (Right) -->
+            <div class="pointer-events-auto flex gap-3 sm:gap-4 items-end">
+                <!-- Skill Button -->
+                <button id="btn-skill" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-900 border-2 border-blue-400/80 flex flex-col justify-center items-center shadow-xl active:scale-95 transition-transform text-white relative overflow-hidden">
+                    <i class="fa-solid fa-bolt text-xl sm:text-2xl mb-0.5"></i>
+                    <span class="text-[10px] sm:text-xs font-bold">特技 (K)</span>
+                    <div id="skill-cd-mask" class="absolute inset-0 bg-black/70 flex justify-center items-center text-xs font-bold text-amber-300 hidden">3s</div>
+                </button>
+
+                <!-- Musou Button -->
+                <button id="btn-musou" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-amber-600 via-orange-600 to-red-700 border-2 border-amber-300 flex flex-col justify-center items-center shadow-2xl active:scale-95 transition-transform text-white relative">
+                    <i class="fa-solid fa-fire text-2xl sm:text-3xl mb-1"></i>
+                    <span class="text-xs sm:text-sm font-black tracking-wider">無雙 (Space)</span>
+                </button>
+
+                <!-- Normal Attack Button -->
+                <button id="btn-attack" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-red-600 to-rose-800 border-2 border-red-300 flex flex-col justify-center items-center shadow-2xl active:scale-95 transition-transform text-white">
+                    <i class="fa-solid fa-burst text-2xl sm:text-3xl mb-1"></i>
+                    <span class="text-xs sm:text-sm font-black tracking-wider">攻擊 (J)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Select Modal (Start Screen) -->
+    <div id="modal-select" class="absolute inset-0 bg-black/85 backdrop-blur-lg flex flex-col justify-center items-center p-4 z-50">
+        <div class="text-center mb-6">
+            <h1 class="text-4xl sm:text-6xl font-black text-amber-400 glow-text-gold tracking-widest mb-2">三國無雙：一騎當千</h1>
+            <p class="text-amber-200/80 text-sm sm:text-base">選擇你的無雙猛將，橫掃千軍，極致割草舒壓！</p>
+        </div>
+
+        <!-- Hero Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl w-full px-4 mb-8">
+            
+            <!-- Guan Yu Card -->
+            <div onclick="selectHero('guanyu')" class="hero-card cursor-pointer bg-gradient-to-b from-emerald-950 to-gray-900 border-2 border-emerald-600/50 hover:border-emerald-400 p-4 rounded-2xl flex flex-col items-center hover:scale-105 transition-all duration-300 group shadow-2xl">
+                <div class="w-20 h-20 rounded-full bg-emerald-900/80 border-2 border-emerald-400 flex justify-center items-center overflow-hidden mb-3 group-hover:rotate-6 transition-transform shadow-lg relative">
+                    <!-- SVG Avatar: Guan Yu -->
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="48" fill="#064e3b" />
+                        <!-- Face & Beard -->
+                        <path d="M30 40 Q50 35 70 40 L72 65 Q50 90 28 65 Z" fill="#b91c1c" />
+                        <path d="M35 50 Q50 98 65 50 Q50 70 35 50 Z" fill="#15803d" />
+                        <path d="M25 55 Q50 105 75 55 Q50 80 25 55 Z" fill="#052e16" />
+                        <!-- Eyes & Headband -->
+                        <rect x="25" y="32" width="50" height="12" fill="#f59e0b" rx="3" />
+                        <circle cx="40" cy="45" r="3" fill="#fff" /><circle cx="60" cy="45" r="3" fill="#fff" />
+                        <circle cx="40" cy="45" r="1.5" fill="#000" /><circle cx="60" cy="45" r="1.5" fill="#000" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-emerald-300 mb-1">關羽 (雲長)</h3>
+                <span class="text-[11px] bg-emerald-900/60 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 mb-2">青龍偃月刀・大範圍橫掃</span>
+                <p class="text-xs text-gray-300 text-center leading-relaxed mb-3">
+                    刀光如青龍出海，範圍超大，能一刀斬飛身前數十名敵兵。
+                </p>
+                <div class="w-full text-[11px] text-emerald-400/90 font-semibold flex justify-between px-1 mt-auto">
+                    <span>範圍: ★★★★★</span>
+                    <span>速度: ★★★☆☆</span>
+                </div>
+            </div>
+
+            <!-- Zhao Yun Card -->
+            <div onclick="selectHero('zhaoyun')" class="hero-card cursor-pointer bg-gradient-to-b from-blue-950 to-gray-900 border-2 border-blue-600/50 hover:border-blue-400 p-4 rounded-2xl flex flex-col items-center hover:scale-105 transition-all duration-300 group shadow-2xl">
+                <div class="w-20 h-20 rounded-full bg-blue-900/80 border-2 border-blue-400 flex justify-center items-center overflow-hidden mb-3 group-hover:rotate-6 transition-transform shadow-lg relative">
+                    <!-- SVG Avatar: Zhao Yun -->
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="48" fill="#1e3a8a" />
+                        <!-- Helmet & Armor -->
+                        <path d="M20 40 L50 10 L80 40 L70 75 L30 75 Z" fill="#94a3b8" />
+                        <path d="M30 42 Q50 38 70 42 L65 65 Q50 75 35 65 Z" fill="#fde047" />
+                        <circle cx="50" cy="22" r="6" fill="#ef4444" />
+                        <!-- Eyes -->
+                        <circle cx="40" cy="48" r="3" fill="#fff" /><circle cx="60" cy="48" r="3" fill="#fff" />
+                        <circle cx="40" cy="48" r="1.5" fill="#000" /><circle cx="60" cy="48" r="1.5" fill="#000" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-blue-300 mb-1">趙雲 (子龍)</h3>
+                <span class="text-[11px] bg-blue-900/60 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-500/30 mb-2">龍膽槍・疾風突刺衝鋒</span>
+                <p class="text-xs text-gray-300 text-center leading-relaxed mb-3">
+                    長槍如銀龍破空，出槍極快，特技可長距離直線衝鋒。
+                </p>
+                <div class="w-full text-[11px] text-blue-400/90 font-semibold flex justify-between px-1 mt-auto">
+                    <span>速度: ★★★★★</span>
+                    <span>靈活: ★★★★★</span>
+                </div>
+            </div>
+
+            <!-- Lu Bu Card -->
+            <div onclick="selectHero('lubu')" class="hero-card cursor-pointer bg-gradient-to-b from-red-950 to-gray-900 border-2 border-red-600/50 hover:border-red-400 p-4 rounded-2xl flex flex-col items-center hover:scale-105 transition-all duration-300 group shadow-2xl">
+                <div class="w-20 h-20 rounded-full bg-red-900/80 border-2 border-red-400 flex justify-center items-center overflow-hidden mb-3 group-hover:rotate-6 transition-transform shadow-lg relative">
+                    <!-- SVG Avatar: Lu Bu -->
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="48" fill="#450a0a" />
+                        <!-- Feathers Crest -->
+                        <path d="M35 25 Q20 2 10 0 Q30 15 45 25 Z" fill="#dc2626" />
+                        <path d="M65 25 Q80 2 90 0 Q70 15 55 25 Z" fill="#dc2626" />
+                        <!-- Face & Crown -->
+                        <rect x="25" y="25" width="50" height="15" fill="#f59e0b" rx="2" />
+                        <path d="M30 42 Q50 38 70 42 L68 68 Q50 82 32 68 Z" fill="#fca5a5" />
+                        <path d="M32 62 Q50 72 68 62 L65 72 Q50 80 35 72 Z" fill="#7f1d1d" />
+                        <!-- Eyes -->
+                        <circle cx="42" cy="48" r="3.5" fill="#f59e0b" /><circle cx="58" cy="48" r="3.5" fill="#f59e0b" />
+                        <circle cx="42" cy="48" r="1.5" fill="#000" /><circle cx="58" cy="48" r="1.5" fill="#000" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-red-400 mb-1">呂布 (奉先)</h3>
+                <span class="text-[11px] bg-red-900/60 text-red-300 px-2.5 py-0.5 rounded-full border border-red-500/30 mb-2">方天畫戟・毀滅震撼彈</span>
+                <p class="text-xs text-gray-300 text-center leading-relaxed mb-3">
+                    人中呂布！擁有摧枯拉朽的攻擊力與無雙衝擊波，威壓全場。
+                </p>
+                <div class="w-full text-[11px] text-red-400/90 font-semibold flex justify-between px-1 mt-auto">
+                    <span>威力: ★★★★★</span>
+                    <span>擊飛: ★★★★★</span>
+                </div>
+            </div>
+
+            <!-- Zhou Yu Card (NEW) -->
+            <div onclick="selectHero('zhouyu')" class="hero-card cursor-pointer bg-gradient-to-b from-orange-950 to-gray-900 border-2 border-orange-600/50 hover:border-orange-400 p-4 rounded-2xl flex flex-col items-center hover:scale-105 transition-all duration-300 group shadow-2xl">
+                <div class="w-20 h-20 rounded-full bg-orange-900/80 border-2 border-orange-400 flex justify-center items-center overflow-hidden mb-3 group-hover:rotate-6 transition-transform shadow-lg relative">
+                    <!-- SVG Avatar: Zhou Yu -->
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="50" cy="50" r="48" fill="#7c2d12" />
+                        <!-- Hair & Silk Headband -->
+                        <path d="M25 30 C35 15 65 15 75 30 L72 65 C50 85 50 85 28 65 Z" fill="#fed7aa" />
+                        <path d="M22 28 Q50 15 78 28 L75 38 Q50 25 25 38 Z" fill="#ea580c" />
+                        <!-- Crown Gem -->
+                        <circle cx="50" cy="26" r="4" fill="#facc15" />
+                        <!-- Eyes -->
+                        <circle cx="40" cy="46" r="3" fill="#fff" /><circle cx="60" cy="46" r="3" fill="#fff" />
+                        <circle cx="40" cy="46" r="1.5" fill="#431407" /><circle cx="60" cy="46" r="1.5" fill="#431407" />
+                        <!-- Feather Fan Accent -->
+                        <path d="M65 60 Q85 50 90 70 Q75 80 65 60 Z" fill="#ffedd5" stroke="#f97316" stroke-width="2" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-orange-300 mb-1">周瑜 (公瑾)</h3>
+                <span class="text-[11px] bg-orange-900/60 text-orange-300 px-2.5 py-0.5 rounded-full border border-orange-500/30 mb-2">羽扇烈火・赤壁業火陣</span>
+                <p class="text-xs text-gray-300 text-center leading-relaxed mb-3">
+                    美周郎登場！羽扇揮出連環烈焰火焰波，特技可引爆燃燒陣法。
+                </p>
+                <div class="w-full text-[11px] text-orange-400/90 font-semibold flex justify-between px-1 mt-auto">
+                    <span>火攻: ★★★★★</span>
+                    <span>持續傷: ★★★★★</span>
+                </div>
+            </div>
+
+        </div>
+
+        <button id="btn-start" class="px-10 py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 text-gray-950 font-black text-xl rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all border-2 border-amber-300">
+            開 始 出 征
+        </button>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
+    <div id="modal-gameover" class="absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col justify-center items-center p-4 z-50 hidden">
+        <div class="bg-gray-900 border-2 border-amber-500/50 p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+            <h2 id="gameover-title" class="text-4xl font-black text-amber-400 glow-text-gold mb-2">戰績赫赫</h2>
+            <p id="gameover-sub" class="text-amber-200/80 text-sm mb-6">一騎當千，勢不可擋！</p>
+
+            <div class="space-y-4 my-6 bg-gray-950/80 p-4 rounded-2xl border border-gray-800">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-400">總擊殺敵軍:</span>
+                    <span id="stat-kills" class="text-2xl font-black text-amber-400">0 人</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-400">最高連擊 (Combo):</span>
+                    <span id="stat-combo" class="text-2xl font-black text-red-400">0 Hits</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-400">浴血奮戰時間:</span>
+                    <span id="stat-time" class="text-xl font-bold text-emerald-400">00:00</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 text-gray-950 font-black text-lg rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all">
+                再次出征 (重新開始)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Sound FX Engine using Web Audio API
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playSlash() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.12);
+                    
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch(e) {}
+            }
+
+            playHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + 0.08);
+                    
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.08);
+                } catch(e) {}
+            }
+
+            playExplosion() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+                    
+                    gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.5);
+                } catch(e) {}
+            }
+
+            playHeal() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.25);
+                    
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.25);
+                } catch(e) {}
+            }
+        }
+
+        const sounds = new SoundEngine();
+
+        const HERO_CONFIGS = {
+            guanyu: {
+                name: '關羽 (雲長)',
+                avatar: '關',
+                color: '#10b981',
+                weaponColor: '#34d399',
+                attackRange: 130,
+                attackArc: Math.PI * 1.2,
+                moveSpeed: 4.8,
+                damage: 35,
+                skillName: '青龍出海',
+                skillCd: 4,
+                musouDuration: 3000
+            },
+            zhaoyun: {
+                name: '趙雲 (子龍)',
+                avatar: '趙',
+                color: '#3b82f6',
+                weaponColor: '#60a5fa',
+                attackRange: 110,
+                attackArc: Math.PI * 0.8,
+                moveSpeed: 6.2,
+                damage: 28,
+                skillName: '七進七出',
+                skillCd: 3,
+                musouDuration: 2500
+            },
+            lubu: {
+                name: '呂布 (奉先)',
+                avatar: '呂',
+                color: '#ef4444',
+                weaponColor: '#f87171',
+                attackRange: 150,
+                attackArc: Math.PI * 1.5,
+                moveSpeed: 5.2,
+                damage: 50,
+                skillName: '天霸封神',
+                skillCd: 5,
+                musouDuration: 3500
+            },
+            zhouyu: {
+                name: '周瑜 (公瑾)',
+                avatar: '周',
+                color: '#f97316',
+                weaponColor: '#fb923c',
+                attackRange: 140,
+                attackArc: Math.PI * 1.1,
+                moveSpeed: 5.5,
+                damage: 38,
+                skillName: '業火燎原',
+                skillCd: 4,
+                musouDuration: 3200
+            }
+        };
+
+        // Canvas Setup
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game State Variables
+        let gameState = {
+            active: false,
+            selectedHeroKey: 'guanyu',
+            hero: null,
+            player: {
+                x: 0,
+                y: 0,
+                radius: 20,
+                hp: 100,
+                maxHp: 100,
+                musou: 0,
+                maxMusou: 100,
+                angle: 0,
+                isAttacking: false,
+                attackProgress: 0,
+                isSkillActive: false,
+                skillCdTimer: 0,
+                isMusouActive: false,
+                musouTimer: 0
+            },
+            enemies: [],
+            particles: [],
+            floatingTexts: [],
+            slashes: [],
+            drops: [], // Healing drops (Steamed Buns / Meat Packs)
+            kills: 0,
+            combo: 0,
+            maxCombo: 0,
+            comboTimer: null,
+            startTime: 0,
+            elapsedSeconds: 0,
+            keys: {},
+            joystick: { active: false, x: 0, y: 0 }
+        };
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            sounds.init();
+            gameState.keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                triggerMusou();
+            }
+            if (e.key.toLowerCase() === 'j') {
+                triggerAttack();
+            }
+            if (e.key.toLowerCase() === 'k') {
+                triggerSkill();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            gameState.keys[e.key.toLowerCase()] = false;
+        });
+
+        // Virtual Joystick Setup for Mobile
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickKnob = document.getElementById('joystick-knob');
+        let touchId = null;
+
+        joystickZone.addEventListener('touchstart', (e) => {
+            sounds.init();
+            const touch = e.changedTouches[0];
+            touchId = touch.identifier;
+            updateJoystick(touch);
+        });
+
+        joystickZone.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === touchId) {
+                    updateJoystick(e.changedTouches[i]);
+                    break;
+                }
+            }
+        });
+
+        const resetJoystick = () => {
+            touchId = null;
+            gameState.joystick.active = false;
+            gameState.joystick.x = 0;
+            gameState.joystick.y = 0;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+        };
+
+        joystickZone.addEventListener('touchend', resetJoystick);
+        joystickZone.addEventListener('touchcancel', resetJoystick);
+
+        function updateJoystick(touch) {
+            const rect = joystickZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxRadius = rect.width / 2 - 10;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            gameState.joystick.active = true;
+            gameState.joystick.x = dx / maxRadius;
+            gameState.joystick.y = dy / maxRadius;
+        }
+
+        // Action Buttons Touch Handlers
+        document.getElementById('btn-attack').addEventListener('pointerdown', () => { sounds.init(); triggerAttack(); });
+        document.getElementById('btn-skill').addEventListener('pointerdown', () => { sounds.init(); triggerSkill(); });
+        document.getElementById('btn-musou').addEventListener('pointerdown', () => { sounds.init(); triggerMusou(); });
+
+        function selectHero(heroKey) {
+            gameState.selectedHeroKey = heroKey;
+            document.querySelectorAll('.hero-card').forEach(card => {
+                card.classList.remove('border-amber-400', 'ring-4', 'ring-amber-500/50');
+            });
+            event.currentTarget.classList.add('border-amber-400', 'ring-4', 'ring-amber-500/50');
+        }
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            sounds.init();
+            document.getElementById('modal-select').classList.add('hidden');
+            startGame();
+        });
+
+        function startGame() {
+            const heroConfig = HERO_CONFIGS[gameState.selectedHeroKey];
+            gameState.hero = heroConfig;
+
+            // Setup UI Elements
+            document.getElementById('hero-name').innerText = heroConfig.name;
+            document.getElementById('hero-avatar').innerText = heroConfig.avatar;
+            document.getElementById('hero-avatar').style.borderColor = heroConfig.color;
+
+            // Reset Player
+            gameState.player = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                radius: 22,
+                hp: 100,
+                maxHp: 100,
+                musou: 0,
+                maxMusou: 100,
+                angle: 0,
+                isAttacking: false,
+                attackProgress: 0,
+                isSkillActive: false,
+                skillCdTimer: 0,
+                isMusouActive: false,
+                musouTimer: 0
+            };
+
+            gameState.enemies = [];
+            gameState.particles = [];
+            gameState.floatingTexts = [];
+            gameState.slashes = [];
+            gameState.drops = [];
+            gameState.kills = 0;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.startTime = Date.now();
+            gameState.active = true;
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restartGame() {
+            document.getElementById('modal-gameover').classList.add('hidden');
+            document.getElementById('modal-select').classList.remove('hidden');
+        }
+
+        function spawnEnemies() {
+            // Keep dynamic enemy count on screen (80 - 150 enemies for hack-and-slash feel)
+            const targetCount = 100 + Math.floor(gameState.kills / 50) * 10;
+            const currentCount = gameState.enemies.length;
+
+            if (currentCount < targetCount) {
+                const toSpawn = Math.min(10, targetCount - currentCount);
+                for (let i = 0; i < toSpawn; i++) {
+                    // Spawn outside visible viewport
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.max(canvas.width, canvas.height) / 2 + 100 + Math.random() * 200;
+                    const spawnX = gameState.player.x + Math.cos(angle) * dist;
+                    const spawnY = gameState.player.y + Math.sin(angle) * dist;
+
+                    const isElite = Math.random() < 0.08; // 8% chance for Elite enemy
+                    gameState.enemies.push({
+                        x: spawnX,
+                        y: spawnY,
+                        radius: isElite ? 22 : 14,
+                        hp: isElite ? 100 : 25,
+                        maxHp: isElite ? 100 : 25,
+                        speed: isElite ? 2.2 : 1.8 + Math.random() * 0.8,
+                        color: isElite ? '#eab308' : '#dc2626',
+                        isElite: isElite,
+                        vx: 0,
+                        vy: 0
+                    });
+                }
+            }
+        }
+
+        function triggerAttack() {
+            if (!gameState.active || gameState.player.isAttacking) return;
+            gameState.player.isAttacking = true;
+            gameState.player.attackProgress = 0;
+            sounds.playSlash();
+
+            // Perform Slash Hit Calculation
+            executeSlashHit(gameState.hero.attackRange, gameState.hero.attackArc, gameState.hero.damage);
+        }
+
+        function triggerSkill() {
+            if (!gameState.active || gameState.player.skillCdTimer > 0) return;
+            
+            gameState.player.skillCdTimer = gameState.hero.skillCd;
+            sounds.playExplosion();
+
+            if (gameState.selectedHeroKey === 'guanyu') {
+                // 360-degree Whirlwind Cleave
+                executeSlashHit(220, Math.PI * 2, gameState.hero.damage * 2);
+                createScreenShake(8);
+                createFloatingText(gameState.player.x, gameState.player.y - 30, '青龍出海！', '#34d399');
+            } else if (gameState.selectedHeroKey === 'zhaoyun') {
+                // Forward Dash Spear Thrust
+                const dashDist = 200;
+                gameState.player.x += Math.cos(gameState.player.angle) * dashDist;
+                gameState.player.y += Math.sin(gameState.player.angle) * dashDist;
+                executeSlashHit(180, Math.PI * 0.6, gameState.hero.damage * 1.8);
+                createScreenShake(6);
+                createFloatingText(gameState.player.x, gameState.player.y - 30, '七進七出！', '#60a5fa');
+            } else if (gameState.selectedHeroKey === 'lubu') {
+                // Ground Shatter shockwave
+                executeSlashHit(260, Math.PI * 2, gameState.hero.damage * 2.5);
+                createScreenShake(14);
+                createFloatingText(gameState.player.x, gameState.player.y - 30, '天霸封神！', '#f87171');
+            } else if (gameState.selectedHeroKey === 'zhouyu') {
+                // Blazing Inferno Wave
+                executeSlashHit(240, Math.PI * 2, gameState.hero.damage * 2.2);
+                createScreenShake(10);
+                createFloatingText(gameState.player.x, gameState.player.y - 30, '業火燎原！', '#fb923c');
+                
+                // Spawn persistent fiery flame particles
+                for (let f = 0; f < 15; f++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.random() * 150;
+                    gameState.particles.push({
+                        x: gameState.player.x + Math.cos(angle) * r,
+                        y: gameState.player.y + Math.sin(angle) * r,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: -Math.random() * 4 - 2,
+                        color: Math.random() < 0.5 ? '#ea580c' : '#facc15',
+                        size: Math.random() * 6 + 3,
+                        life: 1.5
+                    });
+                }
+            }
+
+            // Skill Cooldown UI Mask Timer
+            const mask = document.getElementById('skill-cd-mask');
+            mask.classList.remove('hidden');
+            const cdInterval = setInterval(() => {
+                gameState.player.skillCdTimer--;
+                mask.innerText = gameState.player.skillCdTimer + 's';
+                if (gameState.player.skillCdTimer <= 0) {
+                    clearInterval(cdInterval);
+                    mask.classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function triggerMusou() {
+            if (!gameState.active || gameState.player.musou < gameState.player.maxMusou) return;
+
+            gameState.player.musou = 0;
+            gameState.player.isMusouActive = true;
+            gameState.player.musouTimer = gameState.hero.musouDuration;
+
+            sounds.playExplosion();
+            createScreenShake(20);
+            showAnnouncement('天下無雙・絕技爆發！');
+
+            // Screen clearing Musou Wave
+            setTimeout(() => {
+                executeSlashHit(600, Math.PI * 2, 200);
+            }, 300);
+        }
+
+        function executeSlashHit(range, arcAngle, damage) {
+            const p = gameState.player;
+            let hitCount = 0;
+
+            // Record Slash Graphic Effect
+            gameState.slashes.push({
+                x: p.x,
+                y: p.y,
+                angle: p.angle,
+                range: range,
+                arc: arcAngle,
+                color: gameState.hero.weaponColor,
+                life: 1.0
+            });
+
+            gameState.enemies.forEach((enemy) => {
+                const dx = enemy.x - p.x;
+                const dy = enemy.y - p.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist <= range + enemy.radius) {
+                    // Angle check
+                    let enemyAngle = Math.atan2(dy, dx);
+                    let angleDiff = Math.abs(enemyAngle - p.angle);
+                    if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+                    if (angleDiff <= arcAngle / 2) {
+                        // Enemy Hit!
+                        hitCount++;
+                        enemy.hp -= damage;
+
+                        // Massive Knockback for stress relief
+                        const knockback = p.isMusouActive ? 120 : 60;
+                        enemy.x += Math.cos(enemyAngle) * knockback;
+                        enemy.y += Math.sin(enemyAngle) * knockback;
+
+                        // Spark & Blood particles
+                        for (let i = 0; i < 4; i++) {
+                            gameState.particles.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                vx: (Math.random() - 0.5) * 10,
+                                vy: (Math.random() - 0.5) * 10,
+                                color: enemy.color,
+                                size: Math.random() * 4 + 2,
+                                life: 1.0
+                            });
+                        }
+
+                        createFloatingText(enemy.x, enemy.y, '-' + Math.floor(damage), '#f59e0b');
+                    }
+                }
+            });
+
+            if (hitCount > 0) {
+                sounds.playHit();
+                addCombo(hitCount);
+                // Musou Charge
+                if (!p.isMusouActive) {
+                    p.musou = Math.min(p.maxMusou, p.musou + hitCount * 1.5);
+                }
+            }
+        }
+
+        function addCombo(hits) {
+            gameState.combo += hits;
+            if (gameState.combo > gameState.maxCombo) {
+                gameState.maxCombo = gameState.combo;
+            }
+
+            const comboBox = document.getElementById('combo-box');
+            const comboCount = document.getElementById('combo-count');
+            comboCount.innerText = gameState.combo + ' COMBO!';
+            comboBox.style.opacity = '1';
+
+            clearTimeout(gameState.comboTimer);
+            gameState.comboTimer = setTimeout(() => {
+                gameState.combo = 0;
+                comboBox.style.opacity = '0';
+            }, 2500);
+
+            if (gameState.combo > 0 && gameState.combo % 100 === 0) {
+                showAnnouncement('連擊達 ' + gameState.combo + ' 斬！');
+            }
+        }
+
+        function createFloatingText(x, y, text, color) {
+            gameState.floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                alpha: 1.0,
+                vy: -1.5
+            });
+        }
+
+        function createScreenShake(intensity) {
+            document.body.classList.add('shake');
+            setTimeout(() => {
+                document.body.classList.remove('shake');
+            }, 150);
+        }
+
+        function showAnnouncement(text) {
+            const el = document.getElementById('announcement');
+            const elText = document.getElementById('announcement-text');
+            elText.innerText = text;
+            el.classList.remove('opacity-0', 'scale-75');
+            el.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                el.classList.add('opacity-0', 'scale-75');
+                el.classList.remove('opacity-100', 'scale-100');
+            }, 1800);
+        }
+
+        function updateGameLogic(dt) {
+            if (!gameState.active) return;
+
+            const p = gameState.player;
+            const speed = gameState.hero.moveSpeed;
+
+            // Player Movement (Keyboard or Virtual Joystick)
+            let moveX = 0;
+            let moveY = 0;
+
+            if (gameState.keys['w'] || gameState.keys['arrowup']) moveY -= 1;
+            if (gameState.keys['s'] || gameState.keys['arrowdown']) moveY += 1;
+            if (gameState.keys['a'] || gameState.keys['arrowleft']) moveX -= 1;
+            if (gameState.keys['d'] || gameState.keys['arrowright']) moveX += 1;
+
+            if (gameState.joystick.active) {
+                moveX = gameState.joystick.x;
+                moveY = gameState.joystick.y;
+            }
+
+            if (moveX !== 0 || moveY !== 0) {
+                const len = Math.hypot(moveX, moveY);
+                p.x += (moveX / len) * speed;
+                p.y += (moveY / len) * speed;
+                p.angle = Math.atan2(moveY, moveX);
+            }
+
+            // Handle Attack animation progress
+            if (p.isAttacking) {
+                p.attackProgress += 0.15;
+                if (p.attackProgress >= 1) {
+                    p.isAttacking = false;
+                    p.attackProgress = 0;
+                }
+            }
+
+            // Handle Musou active timer
+            if (p.isMusouActive) {
+                p.musouTimer -= dt;
+                if (Math.random() < 0.3) {
+                    executeSlashHit(250, Math.PI * 2, 30);
+                }
+                if (p.musouTimer <= 0) {
+                    p.isMusouActive = false;
+                }
+            }
+
+            // Spawn Enemies
+            spawnEnemies();
+
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i];
+
+                if (enemy.hp <= 0) {
+                    // Enemy Death - Drop score & particle splash
+                    gameState.kills++;
+
+                    // Chance to drop Healing Meat Bun (100% for Elites, 12% for normal enemies)
+                    const dropChance = enemy.isElite ? 1.0 : 0.12;
+                    if (Math.random() < dropChance) {
+                        gameState.drops.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            radius: 12,
+                            healAmount: enemy.isElite ? 40 : 20,
+                            isBig: enemy.isElite,
+                            life: 12.0 // disappears after 12s
+                        });
+                    }
+
+                    for (let p = 0; p < 6; p++) {
+                        gameState.particles.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            vx: (Math.random() - 0.5) * 8,
+                            vy: (Math.random() - 0.5) * 8,
+                            color: '#eab308',
+                            size: Math.random() * 3 + 2,
+                            life: 1.0
+                        });
+                    }
+                    gameState.enemies.splice(i, 1);
+                    continue;
+                }
+
+                // AI Chase Player
+                const dx = p.x - enemy.x;
+                const dy = p.y - enemy.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 0) {
+                    enemy.x += (dx / dist) * enemy.speed;
+                    enemy.y += (dy / dist) * enemy.speed;
+                }
+
+                // Player damage collision
+                if (dist < p.radius + enemy.radius && !p.isMusouActive) {
+                    p.hp -= 0.15;
+                    if (p.hp <= 0) {
+                        p.hp = 0;
+                        gameOver();
+                    }
+                }
+            }
+
+            for (let i = gameState.drops.length - 1; i >= 0; i--) {
+                const drop = gameState.drops[i];
+                drop.life -= dt;
+
+                const dx = p.x - drop.x;
+                const dy = p.y - drop.y;
+                const dist = Math.hypot(dx, dy);
+
+                // Pickup range
+                if (dist < p.radius + drop.radius + 10) {
+                    // Heal Player!
+                    p.hp = Math.min(p.maxHp, p.hp + drop.healAmount);
+                    sounds.playHeal();
+
+                    createFloatingText(drop.x, drop.y - 15, '+' + Math.floor(drop.healAmount) + ' HP 包子', '#22c55e');
+
+                    // Green healing particles burst
+                    for (let k = 0; k < 8; k++) {
+                        gameState.particles.push({
+                            x: p.x,
+                            y: p.y,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: (Math.random() - 0.5) * 6,
+                            color: '#4ade80',
+                            size: Math.random() * 4 + 2,
+                            life: 0.8
+                        });
+                    }
+
+                    gameState.drops.splice(i, 1);
+                    continue;
+                }
+
+                if (drop.life <= 0) {
+                    gameState.drops.splice(i, 1);
+                }
+            }
+
+            // Update Slash Visuals
+            for (let i = gameState.slashes.length - 1; i >= 0; i--) {
+                const s = gameState.slashes[i];
+                s.life -= 0.1;
+                if (s.life <= 0) gameState.slashes.splice(i, 1);
+            }
+
+            // Update Particles
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const pt = gameState.particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.life -= 0.05;
+                if (pt.life <= 0) gameState.particles.splice(i, 1);
+            }
+
+            // Update Floating Texts
+            for (let i = gameState.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = gameState.floatingTexts[i];
+                ft.y += ft.vy;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) gameState.floatingTexts.splice(i, 1);
+            }
+
+            // Time Tracking
+            gameState.elapsedSeconds = Math.floor((Date.now() - gameState.startTime) / 1000);
+
+            updateUI();
+        }
+
+        function updateUI() {
+            const p = gameState.player;
+            document.getElementById('hp-bar').style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
+            document.getElementById('hp-text').innerText = Math.ceil(p.hp) + ' / ' + p.maxHp + ' HP';
+
+            const musouPercent = Math.min(100, (p.musou / p.maxMusou) * 100);
+            const musouBar = document.getElementById('musou-bar');
+            musouBar.style.width = musouPercent + '%';
+
+            const musouBtn = document.getElementById('btn-musou');
+            if (musouPercent >= 100) {
+                musouBtn.classList.add('musou-btn-active');
+            } else {
+                musouBtn.classList.remove('musou-btn-active');
+            }
+
+            document.getElementById('kill-count').innerText = gameState.kills;
+
+            const mins = String(Math.floor(gameState.elapsedSeconds / 60)).padStart(2, '0');
+            const secs = String(gameState.elapsedSeconds % 60).padStart(2, '0');
+            document.getElementById('game-time').innerText = `${mins}:${secs}`;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Camera follow Player
+            ctx.save();
+            ctx.translate(canvas.width / 2 - gameState.player.x, canvas.height / 2 - gameState.player.y);
+
+            // Draw Battlefield Tile Grid / Texture
+            drawBattlefield();
+
+            // Draw Drops (Steamed Buns / Healing items)
+            gameState.drops.forEach(drop => {
+                ctx.save();
+                ctx.translate(drop.x, drop.y);
+
+                // Glow outline
+                ctx.beginPath();
+                ctx.arc(0, 0, drop.radius + 4, 0, Math.PI * 2);
+                ctx.fillStyle = drop.isBig ? 'rgba(234, 179, 8, 0.4)' : 'rgba(34, 197, 94, 0.4)';
+                ctx.fill();
+
+                // Steamed Bun Body
+                ctx.beginPath();
+                ctx.arc(0, 2, drop.radius, 0, Math.PI * 2);
+                ctx.fillStyle = drop.isBig ? '#fef08a' : '#f8fafc';
+                ctx.fill();
+                ctx.strokeStyle = drop.isBig ? '#d97706' : '#16a34a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Bun top folds
+                ctx.beginPath();
+                ctx.arc(0, -2, 4, 0, Math.PI, true);
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            // Draw Enemies
+            gameState.enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                ctx.fillStyle = enemy.color;
+                ctx.shadowColor = enemy.color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#7f1d1d';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Health bar over elite enemies
+                if (enemy.isElite) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(enemy.x - 15, enemy.y - 28, 30, 4);
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(enemy.x - 15, enemy.y - 28, (enemy.hp / enemy.maxHp) * 30, 4);
+                }
+            });
+
+            // Draw Slashes / Hit Arcs
+            gameState.slashes.forEach(s => {
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.rotate(s.angle);
+                ctx.beginPath();
+                ctx.arc(0, 0, s.range, -s.arc / 2, s.arc / 2);
+                ctx.strokeStyle = s.color;
+                ctx.lineWidth = 14 * s.life;
+                ctx.shadowColor = s.color;
+                ctx.shadowBlur = 20;
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // Draw Particles
+            gameState.particles.forEach(pt => {
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = pt.life;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Draw Player Character
+            const p = gameState.player;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+
+            // Weapon Arc Trail when attacking
+            if (p.isAttacking) {
+                ctx.beginPath();
+                ctx.arc(0, 0, gameState.hero.attackRange, -gameState.hero.attackArc / 2, gameState.hero.attackArc / 2);
+                ctx.strokeStyle = gameState.hero.weaponColor;
+                ctx.lineWidth = 6;
+                ctx.stroke();
+            }
+
+            // Character Body
+            ctx.beginPath();
+            ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = gameState.hero.color;
+            ctx.shadowColor = gameState.hero.color;
+            ctx.shadowBlur = p.isMusouActive ? 30 : 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Facing Direction Pointer / Weapon Spear Line
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(p.radius + 18, 0);
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Draw Floating Damage Texts
+            gameState.floatingTexts.forEach(ft => {
+                ctx.font = 'bold 18px sans-serif';
+                ctx.fillStyle = ft.color;
+                ctx.globalAlpha = ft.alpha;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.globalAlpha = 1.0;
+            });
+
+            ctx.restore();
+        }
+
+        function drawBattlefield() {
+            // Background Grid Lines
+            const gridSize = 100;
+            const startX = Math.floor((gameState.player.x - canvas.width) / gridSize) * gridSize;
+            const endX = Math.floor((gameState.player.x + canvas.width) / gridSize) * gridSize;
+            const startY = Math.floor((gameState.player.y - canvas.height) / gridSize) * gridSize;
+            const endY = Math.floor((gameState.player.y + canvas.height) / gridSize) * gridSize;
+
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 1;
+
+            for (let x = startX; x <= endX; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x, endY);
+                ctx.stroke();
+            }
+
+            for (let y = startY; y <= endY; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(startX, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+            }
+        }
+
+        let lastTime = performance.now();
+        function gameLoop(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            if (gameState.active) {
+                updateGameLogic(dt);
+                render();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameOver() {
+            gameState.active = false;
+
+            document.getElementById('stat-kills').innerText = gameState.kills + ' 人';
+            document.getElementById('stat-combo').innerText = gameState.maxCombo + ' Hits';
+
+            const mins = String(Math.floor(gameState.elapsedSeconds / 60)).padStart(2, '0');
+            const secs = String(gameState.elapsedSeconds % 60).padStart(2, '0');
+            document.getElementById('stat-time').innerText = `${mins}:${secs}`;
+
+            document.getElementById('modal-gameover').classList.remove('hidden');
+        }
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

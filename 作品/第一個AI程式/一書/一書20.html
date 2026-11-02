@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 瑪利歐輕藍紫版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8eaf6 50%, #f3e8ff 100%);
+            color: #334155;
+            touch-action: none;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Light pastel blue-purple tile colors */
+        .tile-2 { background-color: #e0e7ff; color: #3730a3; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); }
+        .tile-4 { background-color: #c7d2fe; color: #312e81; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2); }
+        .tile-8 { background-color: #a5b4fc; color: #ffffff; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25); }
+        .tile-16 { background-color: #818cf8; color: #ffffff; box-shadow: 0 4px 18px rgba(129, 140, 248, 0.3); }
+        .tile-32 { background-color: #6366f1; color: #ffffff; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35); }
+        .tile-64 { background-color: #4f46e5; color: #ffffff; box-shadow: 0 6px 22px rgba(79, 70, 229, 0.4); }
+        .tile-128 { background-color: #a855f7; color: #ffffff; font-size: 1.7rem; font-weight: 900; box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+        .tile-256 { background-color: #9333ea; color: #ffffff; font-size: 1.7rem; font-weight: 900; box-shadow: 0 0 25px rgba(147, 51, 234, 0.45); }
+        .tile-512 { background-color: #7e22ce; color: #ffffff; font-size: 1.7rem; font-weight: 900; box-shadow: 0 0 30px rgba(126, 34, 206, 0.5); }
+        .tile-1024 { background-color: #0ea5e9; color: #ffffff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 0 35px rgba(14, 165, 233, 0.5); }
+        .tile-2048 { background-color: #06b6d4; color: #ffffff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 0 40px rgba(6, 182, 212, 0.6); border: 2px solid #ffffff; }
+        .tile-super { background-color: #f43f5e; color: #ffffff; font-size: 1.2rem; font-weight: 900; box-shadow: 0 0 45px rgba(244, 63, 94, 0.6); }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .tile-merged { animation: pop 0.2s ease-in-out forwards; }
+
+        /* Mario running animation across screen */
+        @keyframes marioRun {
+            0% { transform: translateX(-60px); }
+            100% { transform: translateX(calc(100vw + 60px)); }
+        }
+        .mario-container {
+            position: relative;
+            width: 100%;
+            height: 36px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        .mario-sprite {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            animation: marioRun 10s linear infinite;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+        <div class="mario-container">
+            <div class="mario-sprite">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-md">
+                    <!-- Pixel Art Mario representation using SVG -->
+                    <rect x="8" y="2" width="8" height="2" fill="#ef4444"/>
+                    <rect x="6" y="4" width="12" height="2" fill="#ef4444"/>
+                    <rect x="5" y="6" width="5" height="2" fill="#854d0e"/>
+                    <rect x="11" y="6" width="3" height="2" fill="#fde047"/>
+                    <rect x="5" y="8" width="10" height="2" fill="#854d0e"/>
+                    <rect x="7" y="10" width="6" height="2" fill="#ffedd5"/>
+                    <rect x="6" y="12" width="11" height="4" fill="#ef4444"/>
+                    <rect x="8" y="12" width="3" height="2" fill="#38bdf8"/>
+                    <rect x="4" y="14" width="3" height="2" fill="#ef4444"/>
+                    <rect x="17" y="14" width="3" height="2" fill="#ef4444"/>
+                    <rect x="3" y="16" width="3" height="2" fill="#ef4444"/>
+                    <rect x="18" y="16" width="3" height="2" fill="#ef4444"/>
+                    <rect x="6" y="16" width="10" height="2" fill="#1e3a8a"/>
+                    <rect x="5" y="18" width="4" height="4" fill="#854d0e"/>
+                    <rect x="15" y="18" width="4" height="4" fill="#854d0e"/>
+                </svg>
+                <div class="text-[11px] font-bold text-indigo-500 ml-1 tracking-wider bg-white/60 px-2 py-0.5 rounded-full shadow-sm">Super 2048!</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-md flex flex-col mb-4">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 tracking-wider">2048</h1>
+            <div class="flex gap-2">
+                <div class="bg-white/80 border border-indigo-100 px-4 py-2 rounded-xl flex flex-col items-center shadow-md backdrop-blur-md">
+                    <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-400">分數</span>
+                    <span id="score" class="text-lg font-extrabold text-indigo-600">0</span>
+                </div>
+                <div class="bg-white/80 border border-indigo-100 px-4 py-2 rounded-xl flex flex-col items-center shadow-md backdrop-blur-md">
+                    <span class="text-[10px] uppercase font-bold tracking-widest text-purple-400">最高分</span>
+                    <span id="best-score" class="text-lg font-extrabold text-purple-600">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center bg-white/60 p-3 rounded-xl border border-indigo-100 shadow-sm backdrop-blur-sm">
+            <p class="text-xs text-indigo-600/80 font-medium">淺色藍紫極光版 • 支援最多返回 2 步</p>
+            <div class="flex gap-2">
+                <button id="undo-btn" class="bg-indigo-500 hover:bg-indigo-600 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow transition flex items-center gap-1" title="最多返回 2 步">
+                    ↩ 返回 (<span id="undo-count">2</span>)
+                </button>
+                <button id="restart-btn" class="bg-purple-500 hover:bg-purple-600 active:scale-95 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow transition">
+                    新遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative bg-indigo-950/10 border-2 border-indigo-200 p-3 rounded-2xl shadow-xl w-full max-w-md aspect-square backdrop-blur-md">
+        <!-- Background grid slots -->
+        <div class="grid grid-cols-4 grid-rows-4 gap-3 w-full h-full">
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+            <div class="bg-indigo-100/70 rounded-xl w-full h-full"></div>
+        </div>
+
+        <!-- Dynamic tiles overlay -->
+        <div id="tile-container" class="absolute inset-3 grid grid-cols-4 grid-rows-4 gap-3 pointer-events-none"></div>
+
+        <!-- Win Overlay -->
+        <div id="win-overlay" class="absolute inset-0 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center hidden z-20">
+            <h2 class="text-3xl font-black text-cyan-600 mb-2 drop-shadow-sm">恭喜達標！</h2>
+            <p class="text-indigo-600 text-sm mb-6 font-medium">您成功合成了 2048 拼塊！</p>
+            <div class="flex gap-3">
+                <button id="keep-playing-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl shadow-lg transition transform active:scale-95 text-sm">
+                    繼續挑戰
+                </button>
+                <button id="win-restart-btn" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2 rounded-xl shadow-lg transition transform active:scale-95 text-sm">
+                    新遊戲
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="game-over-overlay" class="absolute inset-0 bg-white/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center hidden z-20">
+            <h2 class="text-3xl font-black text-rose-500 mb-2 drop-shadow-sm">遊戲結束</h2>
+            <p class="text-indigo-600 text-sm mb-6 font-medium">目前沒有可移動的步數了！</p>
+            <button id="game-over-restart-btn" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition transform active:scale-95 text-base">
+                重新開始
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class Game2048 {
+            constructor() {
+                this.grid = Array(4).fill(null).map(() => Array(4).fill(0));
+                this.score = 0;
+                this.bestScore = parseInt(localStorage.getItem('bestScore_light_mario')) || 0;
+                this.won = false;
+                this.keepPlaying = false;
+                this.over = false;
+
+                this.history = [];
+
+                this.tileContainer = document.getElementById('tile-container');
+                this.scoreElement = document.getElementById('score');
+                this.bestScoreElement = document.getElementById('best-score');
+                this.undoCountElement = document.getElementById('undo-count');
+                this.undoBtn = document.getElementById('undo-btn');
+                this.winOverlay = document.getElementById('win-overlay');
+                this.gameOverOverlay = document.getElementById('game-over-overlay');
+
+                this.bestScoreElement.textContent = this.bestScore;
+                this.initListeners();
+                this.restart();
+            }
+
+            saveState() {
+                const currentState = {
+                    grid: JSON.parse(JSON.stringify(this.grid)),
+                    score: this.score,
+                    won: this.won,
+                    over: this.over
+                };
+                this.history.push(currentState);
+                if (this.history.length > 2) {
+                    this.history.shift();
+                }
+                this.updateUndoButton();
+            }
+
+            updateUndoButton() {
+                const count = this.history.length;
+                this.undoCountElement.textContent = count;
+                this.undoBtn.disabled = count === 0;
+            }
+
+            undo() {
+                if (this.history.length === 0) return;
+                const prevState = this.history.pop();
+                this.grid = prevState.grid;
+                this.score = prevState.score;
+                this.won = prevState.won;
+                this.over = prevState.over;
+
+                this.winOverlay.classList.add('hidden');
+                this.gameOverOverlay.classList.add('hidden');
+                this.updateView();
+                this.updateUndoButton();
+            }
+
+            restart() {
+                this.history = [];
+                this.grid = Array(4).fill(null).map(() => Array(4).fill(0));
+                this.score = 0;
+                this.won = false;
+                this.keepPlaying = false;
+                this.over = false;
+                this.winOverlay.classList.add('hidden');
+                this.gameOverOverlay.classList.add('hidden');
+
+                this.addRandomTile();
+                this.addRandomTile();
+                this.updateView();
+                this.updateUndoButton();
+            }
+
+            addRandomTile() {
+                const emptyCells = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (this.grid[r][c] === 0) {
+                            emptyCells.push({ r, c });
+                        }
+                    }
+                }
+                if (emptyCells.length > 0) {
+                    const { r, c } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    this.grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+                }
+            }
+
+            updateView() {
+                this.scoreElement.textContent = this.score;
+                if (this.score > this.bestScore) {
+                    this.bestScore = this.score;
+                    localStorage.setItem('bestScore_light_mario', this.bestScore);
+                    this.bestScoreElement.textContent = this.bestScore;
+                }
+
+                this.tileContainer.innerHTML = '';
+
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        const value = this.grid[r][c];
+                        if (value > 0) {
+                            const tile = document.createElement('div');
+                            tile.className = `flex items-center justify-center font-black rounded-xl shadow-md transition-all duration-100 tile-${value <= 2048 ? value : 'super'}`;
+                            tile.style.gridColumnStart = c + 1;
+                            tile.style.gridRowStart = r + 1;
+                            tile.textContent = value;
+                            this.tileContainer.appendChild(tile);
+                        }
+                    }
+                }
+            }
+
+            slide(row) {
+                let arr = row.filter(val => val !== 0);
+                let addedScore = 0;
+
+                for (let i = 0; i < arr.length - 1; i++) {
+                    if (arr[i] === arr[i + 1]) {
+                        arr[i] *= 2;
+                        addedScore += arr[i];
+                        arr[i + 1] = 0;
+                        if (arr[i] === 2048 && !this.won && !this.keepPlaying) {
+                            this.won = true;
+                            this.winOverlay.classList.remove('hidden');
+                        }
+                    }
+                }
+
+                arr = arr.filter(val => val !== 0);
+                while (arr.length < 4) {
+                    arr.push(0);
+                }
+
+                return { row: arr, addedScore };
+            }
+
+            move(direction) {
+                if (this.over) return;
+                let moved = false;
+                let newGrid = JSON.parse(JSON.stringify(this.grid));
+                let totalAddedScore = 0;
+
+                if (direction === 'left') {
+                    for (let r = 0; r < 4; r++) {
+                        const res = this.slide(newGrid[r]);
+                        newGrid[r] = res.row;
+                        totalAddedScore += res.addedScore;
+                        if (JSON.stringify(this.grid[r]) !== JSON.stringify(newGrid[r])) moved = true;
+                    }
+                } else if (direction === 'right') {
+                    for (let r = 0; r < 4; r++) {
+                        const reversed = [...newGrid[r]].reverse();
+                        const res = this.slide(reversed);
+                        const originalRow = res.row.reverse();
+                        totalAddedScore += res.addedScore;
+                        if (JSON.stringify(this.grid[r]) !== JSON.stringify(originalRow)) moved = true;
+                        newGrid[r] = originalRow;
+                    }
+                } else if (direction === 'up') {
+                    for (let c = 0; c < 4; c++) {
+                        let col = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]];
+                        const res = this.slide(col);
+                        totalAddedScore += res.addedScore;
+                        for (let r = 0; r < 4; r++) {
+                            if (newGrid[r][c] !== res.row[r]) moved = true;
+                            newGrid[r][c] = res.row[r];
+                        }
+                    }
+                } else if (direction === 'down') {
+                    for (let c = 0; c < 4; c++) {
+                        let col = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]].reverse();
+                        const res = this.slide(col);
+                        const originalCol = res.row.reverse();
+                        totalAddedScore += res.addedScore;
+                        for (let r = 0; r < 4; r++) {
+                            if (newGrid[r][c] !== originalCol[r]) moved = true;
+                            newGrid[r][c] = originalCol[r];
+                        }
+                    }
+                }
+
+                if (moved) {
+                    this.saveState();
+                    this.grid = newGrid;
+                    this.score += totalAddedScore;
+                    this.addRandomTile();
+                    this.updateView();
+
+                    if (this.isGameOver()) {
+                        this.over = true;
+                        this.gameOverOverlay.classList.remove('hidden');
+                    }
+                }
+            }
+
+            isGameOver() {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (this.grid[r][c] === 0) return false;
+                    }
+                }
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        const val = this.grid[r][c];
+                        if (c < 3 && val === this.grid[r][c + 1]) return false;
+                        if (r < 3 && val === this.grid[r + 1][c]) return false;
+                    }
+                }
+                return true;
+            }
+
+            initListeners() {
+                window.addEventListener('keydown', (e) => {
+                    if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); this.move('up'); }
+                    else if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); this.move('down'); }
+                    else if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); this.move('left'); }
+                    else if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); this.move('right'); }
+                });
+
+                let touchStartX = 0;
+                let touchStartY = 0;
+                const board = document.querySelector('.relative.bg-indigo-950\\/10');
+
+                board.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }, { passive: true });
+
+                board.addEventListener('touchend', (e) => {
+                    if (!touchStartX || !touchStartY) return;
+                    let touchEndX = e.changedTouches[0].clientX;
+                    let touchEndY = e.changedTouches[0].clientY;
+
+                    let xDiff = touchEndX - touchStartX;
+                    let yDiff = touchEndY - touchStartY;
+
+                    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+                        if (xDiff > 30) this.move('right');
+                        else if (xDiff < -30) this.move('left');
+                    } else {
+                        if (yDiff > 30) this.move('down');
+                        else if (yDiff < -30) this.move('up');
+                    }
+
+                    touchStartX = 0;
+                    touchStartY = 0;
+                }, { passive: true });
+
+                document.getElementById('undo-btn').addEventListener('click', () => this.undo());
+                document.getElementById('restart-btn').addEventListener('click', () => this.restart());
+                document.getElementById('win-restart-btn').addEventListener('click', () => this.restart());
+                document.getElementById('game-over-restart-btn').addEventListener('click', () => this.restart());
+                document.getElementById('keep-playing-btn').addEventListener('click', () => {
+                    this.keepPlaying = true;
+                    this.winOverlay.classList.add('hidden');
+                });
+            }
+        }
+
+        window.onload = () => {
+            window.game = new Game2048();
+        };
+    </script>
+</body>
+</html>

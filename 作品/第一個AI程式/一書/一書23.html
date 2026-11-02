@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小小兵酷跑 (Minion Runner) - 自訂背景版</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 像素風格字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', monospace;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        /* 自訂 color input 樣式 */
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border: 2px solid #374151;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body class="bg-amber-100 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-300" id="game-body">
+
+    <!-- 主容器 -->
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6 border-4 border-gray-800 transition-colors duration-300" id="game-card">
+        
+        <!-- 頂部資訊欄 -->
+        <div class="flex flex-wrap justify-between items-center mb-4 text-xs md:text-sm text-gray-700" id="ui-header">
+            <div class="flex items-center space-x-3 mb-2 sm:mb-0">
+                <span class="font-bold flex items-center text-yellow-600">
+                    <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block mr-2 animate-bounce"></span>
+                    MINION RUNNER
+                </span>
+                <button id="sound-btn" class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg text-xs transition border border-gray-400">
+                    🔊 音效: 開
+                </button>
+            </div>
+            <div class="flex items-center space-x-6 font-mono tracking-widest text-gray-800" id="score-container">
+                <div>HI <span id="high-score-display">00000</span></div>
+                <div>SCORE <span id="score-display">00000</span></div>
+            </div>
+        </div>
+
+        <!-- 自訂配色面板 -->
+        <div class="mb-4 p-3 bg-gray-50 border-2 border-gray-300 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center space-x-4 flex-wrap gap-y-2">
+                <label class="flex items-center space-x-2 font-bold text-gray-700">
+                    <span>🎨 背景顏色:</span>
+                    <input type="color" id="bg-color-picker" value="#f8fafc" class="w-8 h-8 cursor-pointer bg-transparent rounded">
+                </label>
+                <label class="flex items-center space-x-2 font-bold text-gray-700">
+                    <span>🌱 地面顏色:</span>
+                    <input type="color" id="ground-color-picker" value="#475569" class="w-8 h-8 cursor-pointer bg-transparent rounded">
+                </label>
+            </div>
+            
+            <!-- 主題預設按鈕 -->
+            <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                <span class="text-gray-500 font-bold mr-1">風格:</span>
+                <button onclick="applyThemePreset('classic')" class="px-2.5 py-1 bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded font-bold transition border border-yellow-500">🍌 經典小黃人</button>
+                <button onclick="applyThemePreset('evil')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold transition border border-purple-900">😈 瘋狂紫怪</button>
+                <button onclick="applyThemePreset('cyberpunk')" class="px-2.5 py-1 bg-cyan-500 hover:bg-cyan-600 text-white rounded font-bold transition border border-cyan-800">⚡ 賽博朋克</button>
+                <button onclick="applyThemePreset('sunset')" class="px-2.5 py-1 bg-orange-400 hover:bg-orange-500 text-white rounded font-bold transition border border-orange-700">🌅 綺麗夕陽</button>
+            </div>
+        </div>
+
+        <!-- 遊戲畫布容器 -->
+        <div class="relative w-full overflow-hidden bg-slate-50 border-2 border-gray-800 rounded-xl" id="canvas-container">
+            <canvas id="gameCanvas" width="800" height="250" class="w-full h-auto block"></canvas>
+            
+            <!-- 開始 / 重新開始覆蓋層 -->
+            <div id="game-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/15 backdrop-blur-[1px]">
+                <div class="text-center bg-white/95 p-6 rounded-2xl border-4 border-gray-800 shadow-2xl max-w-xs sm:max-w-md">
+                    <div class="text-3xl mb-2">🍌</div>
+                    <p id="overlay-title" class="text-lg md:text-xl font-bold mb-3 text-gray-800">按空白鍵或點擊開始酷跑！</p>
+                    <p class="text-xs text-gray-600 mb-4 leading-relaxed font-sans">
+                        <b>[空白鍵 / ↑]</b> 跳躍避開障礙<br>
+                        <b>[↓]</b> 蹲下滑行 / 快速落地
+                    </p>
+                    <button id="start-btn" class="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-xs rounded-lg active:scale-95 transition shadow-md border-2 border-yellow-600">
+                        開始遊戲 (START)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手機端觸控按鍵區 -->
+        <div class="mt-4 grid grid-cols-2 gap-4 md:hidden">
+            <button id="mobile-jump" class="py-4 bg-yellow-500 active:bg-yellow-600 text-gray-900 rounded-xl text-center font-bold text-sm shadow-md border-2 border-yellow-700">
+                ▲ 跳躍 (JUMP)
+            </button>
+            <button id="mobile-duck" class="py-4 bg-blue-600 active:bg-blue-700 text-white rounded-xl text-center font-bold text-sm shadow-md border-2 border-blue-800">
+                ▼ 蹲下 (DUCK)
+            </button>
+        </div>
+
+        <!-- 說明 -->
+        <div class="mt-4 pt-3 border-t border-gray-200 text-center text-xs text-gray-500 font-sans">
+            🍌 獨家小小兵怪獸驚魂版 ｜ 遠景巨怪漫步 ｜ 逼真尖叫姿勢與視覺特效
+        </div>
+    </div>
+
+    <!-- 腳本區域 -->
+    <script>
+        // Web Audio API 音效生成器 (無需外部音訊檔)
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playJump() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(750, this.ctx.currentTime + 0.15);
+
+                    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.15);
+                } catch (e) {}
+            }
+
+            playScream() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(450, now);
+                    osc.frequency.linearRampToValueAtTime(900, now + 0.12);
+                    osc.frequency.linearRampToValueAtTime(350, now + 0.3);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch (e) {}
+            }
+
+            playScore() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(659.25, now); // E5
+                    osc.frequency.setValueAtTime(987.77, now + 0.08); // B5
+
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } catch (e) {}
+            }
+
+            playHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } catch (e) {}
+            }
+        }
+
+        // Canvas 與基本設置
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sound = new SoundEngine();
+
+        // 介面元件
+        const scoreDisplay = document.getElementById('score-display');
+        const highScoreDisplay = document.getElementById('high-score-display');
+        const overlay = document.getElementById('game-overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const startBtn = document.getElementById('start-btn');
+        const soundBtn = document.getElementById('sound-btn');
+        const bgColorPicker = document.getElementById('bg-color-picker');
+        const groundColorPicker = document.getElementById('ground-color-picker');
+
+        // 遊戲常數
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 250;
+        const GROUND_Y = 210;
+        const GRAVITY = 0.62;
+
+        // 遊戲狀態與顏色設置
+        let gameRunning = false;
+        let isGameOver = false;
+        let score = 0;
+        let highScore = localStorage.getItem('minion_dino_high_score') || 0;
+        let gameSpeed = 6;
+        let frameCount = 0;
+
+        // 配色設置
+        let customBgColor = bgColorPicker.value;
+        let customGroundColor = groundColorPicker.value;
+        let minionSkinColor = '#FCE029'; // 經典黃色
+        let minionClothesColor = '#2563EB'; // 藍色牛仔褲
+        let minionEyeCount = 2; // 2隻眼睛
+
+        highScoreDisplay.textContent = String(Math.floor(highScore)).padStart(5, '0');
+
+        // 小小兵主角物件 (Minion)
+        const minion = {
+            x: 60,
+            y: GROUND_Y - 48,
+            width: 40,
+            height: 48,
+            velocityY: 0,
+            isJumping: false,
+            isDucking: false,
+            isScreaming: false,
+            screamTimer: 0,
+            animFrame: 0,
+            animTimer: 0,
+
+            jump() {
+                if (!this.isJumping) {
+                    this.velocityY = -11.8;
+                    this.isJumping = true;
+                    this.triggerScream(25);
+                    sound.playScream();
+                }
+            },
+
+            triggerScream(duration = 30) {
+                this.isScreaming = true;
+                this.screamTimer = duration;
+            },
+
+            duck(enable) {
+                if (this.isJumping && enable) {
+                    this.velocityY += 2.2; // 快速下落
+                }
+                this.isDucking = enable;
+                if (enable) {
+                    this.height = 26;
+                    this.width = 48;
+                } else {
+                    this.height = 48;
+                    this.width = 40;
+                }
+            },
+
+            update() {
+                if (this.isJumping) {
+                    this.y += this.velocityY;
+                    this.velocityY += GRAVITY;
+
+                    const currentGround = this.isDucking ? GROUND_Y - 26 : GROUND_Y - 48;
+                    if (this.y >= currentGround) {
+                        this.y = currentGround;
+                        this.isJumping = false;
+                        this.velocityY = 0;
+                    }
+                } else {
+                    this.y = this.isDucking ? GROUND_Y - 26 : GROUND_Y - 48;
+                }
+
+                // 尖叫計時器
+                if (this.screamTimer > 0) {
+                    this.screamTimer--;
+                    this.isScreaming = true;
+                } else {
+                    this.isScreaming = false;
+                }
+
+                // 腳步跑步動畫
+                this.animTimer++;
+                if (this.animTimer % 5 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            },
+
+            draw() {
+                ctx.save();
+
+                // 尖叫或受驚時身體微微抖動
+                let shakeX = 0;
+                let shakeY = 0;
+                if (this.isScreaming || isGameOver) {
+                    shakeX = (Math.random() - 0.5) * 4;
+                    shakeY = (Math.random() - 0.5) * 4;
+                }
+
+                const drawX = this.x + shakeX;
+                const drawY = this.y + shakeY;
+
+                // 跳躍時動態計算炫彩變色 (Rainbow Hue shift)
+                const currentSkinColor = this.isJumping 
+                    ? `hsl(${(frameCount * 12) % 360}, 95%, 60%)` 
+                    : minionSkinColor;
+
+                if (this.isDucking) {
+                    // 蹲下姿態
+                    ctx.fillStyle = currentSkinColor;
+                    ctx.fillRect(drawX, drawY + 4, 46, 22);
+
+                    ctx.fillStyle = minionClothesColor;
+                    ctx.fillRect(drawX + 8, drawY + 12, 30, 14);
+
+                    ctx.fillStyle = '#64748B';
+                    ctx.fillRect(drawX + 30, drawY + 6, 12, 10);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(drawX + 33, drawY + 8, 7, 6);
+                    ctx.fillStyle = '#451A03';
+                    ctx.fillRect(drawX + 36, drawY + 9, 3, 4);
+
+                    ctx.fillStyle = '#1E293B';
+                    if (this.animFrame === 0) {
+                        ctx.fillRect(drawX + 4, drawY + 22, 10, 4);
+                        ctx.fillRect(drawX + 24, drawY + 22, 8, 4);
+                    } else {
+                        ctx.fillRect(drawX + 8, drawY + 22, 8, 4);
+                        ctx.fillRect(drawX + 28, drawY + 22, 10, 4);
+                    }
+                } else {
+                    // 1. 髮型
+                    ctx.fillStyle = '#1E293B';
+                    ctx.fillRect(drawX + 16, drawY - 4, 2, 4);
+                    ctx.fillRect(drawX + 20, drawY - 5, 2, 5);
+                    ctx.fillRect(drawX + 24, drawY - 4, 2, 4);
+
+                    // 2. 黃色身體 (跳躍時變色)
+                    ctx.fillStyle = currentSkinColor;
+                    ctx.fillRect(drawX + 4, drawY, 32, 40);
+                    ctx.fillRect(drawX + 2, drawY + 6, 36, 28);
+
+                    // 3. 吊帶褲
+                    ctx.fillStyle = minionClothesColor;
+                    ctx.fillRect(drawX + 4, drawY + 24, 32, 16);
+                    ctx.fillRect(drawX + 8, drawY + 18, 24, 8);
+                    ctx.fillRect(drawX + 4, drawY + 16, 5, 8);
+                    ctx.fillRect(drawX + 31, drawY + 16, 5, 8);
+                    ctx.fillStyle = '#1E40AF';
+                    ctx.fillRect(drawX + 16, drawY + 22, 8, 6);
+
+                    // 4. 眼鏡與大眼睛 (尖叫時眼睛放大)
+                    ctx.fillStyle = '#1E293B';
+                    ctx.fillRect(drawX + 2, drawY + 10, 36, 4);
+
+                    if (minionEyeCount === 2) {
+                        ctx.fillStyle = '#94A3B8';
+                        ctx.fillRect(drawX + 9, drawY + 5, 12, 14);
+                        ctx.fillRect(drawX + 20, drawY + 5, 12, 14);
+
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(drawX + 11, drawY + 7, 8, 10);
+                        ctx.fillRect(drawX + 22, drawY + 7, 8, 10);
+
+                        if (isGameOver) {
+                            ctx.strokeStyle = '#DC2626';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(drawX + 12, drawY + 8); ctx.lineTo(drawX + 17, drawY + 15);
+                            ctx.moveTo(drawX + 17, drawY + 8); ctx.lineTo(drawX + 12, drawY + 15);
+                            ctx.moveTo(drawX + 23, drawY + 8); ctx.lineTo(drawX + 28, drawY + 15);
+                            ctx.moveTo(drawX + 28, drawY + 8); ctx.lineTo(drawX + 23, drawY + 15);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = '#78350F';
+                            // 尖叫時瞳孔縮小放大呈現驚恐狀
+                            const pupilSize = this.isScreaming ? 2 : 3;
+                            const pupilOffset = this.isScreaming ? 2 : 0;
+                            ctx.fillRect(drawX + 15 - pupilOffset, drawY + 10, pupilSize, pupilSize + 1);
+                            ctx.fillRect(drawX + 23 + pupilOffset, drawY + 10, pupilSize, pupilSize + 1);
+                        }
+                    } else {
+                        ctx.fillStyle = '#94A3B8';
+                        ctx.fillRect(drawX + 11, drawY + 4, 18, 16);
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(drawX + 13, drawY + 6, 14, 12);
+
+                        if (isGameOver) {
+                            ctx.strokeStyle = '#DC2626';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(drawX + 16, drawY + 8); ctx.lineTo(drawX + 24, drawY + 16);
+                            ctx.moveTo(drawX + 24, drawY + 8); ctx.lineTo(drawX + 16, drawY + 16);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = '#78350F';
+                            const pupilSize = this.isScreaming ? 3 : 5;
+                            ctx.fillRect(drawX + 18, drawY + 10, pupilSize, pupilSize);
+                        }
+                    }
+
+                    // 5. 嘴巴 (尖叫姿勢：巨型張嘴 😱)
+                    ctx.fillStyle = '#1E293B';
+                    if (isGameOver) {
+                        ctx.fillRect(drawX + 16, drawY + 21, 8, 2);
+                    } else if (this.isScreaming) {
+                        // 尖叫大嘴 (黑色大橢圓口型 + 紅色舌頭)
+                        ctx.fillStyle = '#18181B';
+                        ctx.fillRect(drawX + 14, drawY + 17, 12, 8);
+                        ctx.fillStyle = '#EF4444'; // 舌頭
+                        ctx.fillRect(drawX + 17, drawY + 22, 6, 3);
+                    } else {
+                        ctx.fillRect(drawX + 16, drawY + 18, 8, 2);
+                    }
+
+                    // 6. 手臂 (尖叫姿態：舉高雙手 \o/ 揮舞 panic)
+                    if (this.isScreaming || isGameOver) {
+                        ctx.fillStyle = currentSkinColor;
+                        // 高舉手臂
+                        ctx.fillRect(drawX - 4, drawY + 4, 5, 14);
+                        ctx.fillRect(drawX + 39, drawY + 4, 5, 14);
+                        // 黑色手套
+                        ctx.fillStyle = '#1E293B';
+                        ctx.fillRect(drawX - 6, drawY - 1, 7, 6);
+                        ctx.fillRect(drawX + 39, drawY - 1, 7, 6);
+                    } else {
+                        // 一般擺臂
+                        ctx.fillStyle = currentSkinColor;
+                        ctx.fillRect(drawX - 1, drawY + 20, 4, 10);
+                        ctx.fillRect(drawX + 37, drawY + 20, 4, 10);
+                        ctx.fillStyle = '#1E293B';
+                        ctx.fillRect(drawX - 2, drawY + 28, 5, 5);
+                        ctx.fillRect(drawX + 37, drawY + 28, 5, 5);
+                    }
+
+                    // 7. 腳與靴子
+                    ctx.fillStyle = '#1E293B';
+                    if (this.isJumping) {
+                        ctx.fillRect(drawX + 8, drawY + 40, 8, 7);
+                        ctx.fillRect(drawX + 24, drawY + 40, 8, 7);
+                    } else {
+                        if (this.animFrame === 0) {
+                            ctx.fillRect(drawX + 6, drawY + 40, 9, 8);
+                            ctx.fillRect(drawX + 25, drawY + 40, 8, 5);
+                        } else {
+                            ctx.fillRect(drawX + 7, drawY + 40, 8, 5);
+                            ctx.fillRect(drawX + 24, drawY + 40, 9, 8);
+                        }
+                    }
+
+                    // 8. 尖叫對話泡泡特效 "AAAAA! 🍌"
+                    if (this.isScreaming && !isGameOver) {
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.strokeStyle = '#1E293B';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.roundRect(drawX + 25, drawY - 32, 75, 22, 6);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#DC2626';
+                        ctx.font = 'bold 9px monospace';
+                        ctx.fillText('AAAA!🍌', drawX + 30, drawY - 18);
+                    }
+                }
+
+                ctx.restore();
+            }
+        };
+
+        // 背景遠景巨型怪獸類別
+        let backgroundMonsters = [];
+
+        class BackgroundMonster {
+            constructor() {
+                this.x = CANVAS_WIDTH + 100;
+                this.type = Math.floor(Math.random() * 2); // 0: 巨型哥吉拉怪獸, 1: 多眼觸手怪
+                this.speed = 0.6 + Math.random() * 0.4;
+                this.width = 80;
+                this.height = 110;
+                this.y = GROUND_Y - this.height + 15;
+                this.markedForDeletion = false;
+                this.animTimer = 0;
+            }
+
+            update() {
+                this.x -= this.speed;
+                this.animTimer++;
+                if (this.x + this.width < -120) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = 0.28; // 半透明遠景剪影風格
+
+                if (this.type === 0) {
+                    // 遠景哥吉拉剪影巨怪
+                    ctx.fillStyle = '#334155';
+                    // 身軀
+                    ctx.fillRect(this.x + 15, this.y + 25, 55, 75);
+                    // 巨型頭部
+                    ctx.fillRect(this.x + 35, this.y, 40, 35);
+                    // 尾巴
+                    ctx.fillRect(this.x - 20, this.y + 65, 40, 25);
+                    // 背脊鋸齒
+                    const spineOffset = Math.sin(this.animTimer * 0.1) * 3;
+                    ctx.fillRect(this.x + 5, this.y + 20 + spineOffset, 12, 18);
+                    ctx.fillRect(this.x + 18, this.y + 8 + spineOffset, 12, 18);
+
+                    // 發光紅眼
+                    ctx.fillStyle = '#EF4444';
+                    ctx.fillRect(this.x + 60, this.y + 10, 10, 8);
+
+                    // 尖銳白牙
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(this.x + 52, this.y + 26, 6, 8);
+                    ctx.fillRect(this.x + 62, this.y + 26, 6, 8);
+                } else {
+                    // 多眼懸浮大怪獸
+                    ctx.fillStyle = '#581C87';
+                    const floatY = this.y + Math.sin(this.animTimer * 0.08) * 12 - 20;
+
+                    ctx.beginPath();
+                    ctx.arc(this.x + 40, floatY + 40, 42, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 三隻發光眼睛
+                    ctx.fillStyle = '#FACC15';
+                    ctx.fillRect(this.x + 20, floatY + 25, 12, 12);
+                    ctx.fillRect(this.x + 45, floatY + 20, 15, 15);
+                    ctx.fillRect(this.x + 35, floatY + 45, 10, 10);
+
+                    // 黑色瞳孔
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(this.x + 24, floatY + 28, 5, 5);
+                    ctx.fillRect(this.x + 50, floatY + 24, 6, 6);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function handleBackgroundMonsters() {
+            if (Math.random() < 0.004) {
+                backgroundMonsters.push(new BackgroundMonster());
+            }
+
+            for (let i = backgroundMonsters.length - 1; i >= 0; i--) {
+                backgroundMonsters[i].update();
+                backgroundMonsters[i].draw();
+
+                if (backgroundMonsters[i].markedForDeletion) {
+                    backgroundMonsters.splice(i, 1);
+                }
+            }
+        }
+
+        // 障礙物類別 (香蕉 & 飛天翼龍)
+        let obstacles = [];
+
+        class BananaObstacle {
+            constructor(type, speed) {
+                this.x = CANVAS_WIDTH + Math.random() * 40;
+                this.type = type; // 0: 單根香蕉, 1: 大香蕉, 2: 香蕉串
+                this.speed = speed;
+                this.markedForDeletion = false;
+
+                if (type === 0) {
+                    this.width = 22;
+                    this.height = 36;
+                } else if (type === 1) {
+                    this.width = 28;
+                    this.height = 48;
+                } else {
+                    this.width = 46;
+                    this.height = 42;
+                }
+                this.y = GROUND_Y - this.height;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                if (this.type === 0) {
+                    // 單根彎曲香蕉
+                    ctx.fillStyle = '#15803D'; // 綠色香蕉梗
+                    ctx.fillRect(this.x + 8, this.y, 5, 6);
+
+                    ctx.fillStyle = '#FACC15'; // 亮黃主體
+                    ctx.fillRect(this.x + 6, this.y + 5, 9, 26);
+                    ctx.fillRect(this.x + 2, this.y + 12, 16, 16);
+                    ctx.fillRect(this.x + 12, this.y + 24, 8, 8);
+
+                    ctx.fillStyle = '#EAB308'; // 陰影
+                    ctx.fillRect(this.x + 12, this.y + 10, 5, 20);
+
+                    ctx.fillStyle = '#78350F'; // 尖端黑點
+                    ctx.fillRect(this.x + 8, this.y, 5, 2);
+                    ctx.fillRect(this.x + 16, this.y + 32, 4, 4);
+                } else if (this.type === 1) {
+                    // 巨型香蕉
+                    ctx.fillStyle = '#15803D';
+                    ctx.fillRect(this.x + 11, this.y, 6, 8);
+
+                    ctx.fillStyle = '#FACC15';
+                    ctx.fillRect(this.x + 8, this.y + 7, 12, 36);
+                    ctx.fillRect(this.x + 3, this.y + 16, 22, 24);
+                    ctx.fillRect(this.x + 17, this.y + 32, 9, 12);
+
+                    ctx.fillStyle = '#CA8A04';
+                    ctx.fillRect(this.x + 15, this.y + 12, 6, 30);
+
+                    ctx.fillStyle = '#78350F';
+                    ctx.fillRect(this.x + 11, this.y, 6, 3);
+                    ctx.fillRect(this.x + 22, this.y + 42, 5, 5);
+                } else {
+                    // 香蕉串 (Banana Bunch)
+                    ctx.fillStyle = '#15803D';
+                    ctx.fillRect(this.x + 18, this.y + 2, 10, 8);
+
+                    // 左香蕉
+                    ctx.fillStyle = '#FACC15';
+                    ctx.fillRect(this.x + 2, this.y + 12, 12, 24);
+                    ctx.fillRect(this.x + 6, this.y + 28, 10, 10);
+
+                    // 中香蕉
+                    ctx.fillStyle = '#FDE047';
+                    ctx.fillRect(this.x + 16, this.y + 8, 14, 30);
+
+                    // 右香蕉
+                    ctx.fillStyle = '#EAB308';
+                    ctx.fillRect(this.x + 32, this.y + 12, 12, 24);
+                    ctx.fillRect(this.x + 30, this.y + 28, 10, 10);
+
+                    // 細節
+                    ctx.fillStyle = '#78350F';
+                    ctx.fillRect(this.x + 4, this.y + 34, 4, 4);
+                    ctx.fillRect(this.x + 21, this.y + 36, 5, 5);
+                    ctx.fillRect(this.x + 38, this.y + 34, 4, 4);
+                }
+                ctx.restore();
+            }
+        }
+
+        class FlyingEnemy {
+            constructor(speed) {
+                this.x = CANVAS_WIDTH + 50;
+                this.width = 40;
+                this.height = 28;
+                this.speed = speed + 0.6;
+                this.markedForDeletion = false;
+                
+                // 出現高度：低(需跳過), 中(需蹲下), 高(安全)
+                const heights = [GROUND_Y - 28, GROUND_Y - 52, GROUND_Y - 76];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                
+                this.animFrame = 0;
+                this.animTimer = 0;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+                this.animTimer++;
+                if (this.animTimer % 10 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            }
+
+            draw() {
+                // 紅色翼龍
+                ctx.fillStyle = '#E11D48';
+                ctx.fillRect(this.x + 10, this.y + 10, 20, 8);
+                ctx.fillRect(this.x + 28, this.y + 6, 10, 6);
+                ctx.fillRect(this.x + 36, this.y + 8, 6, 2);
+
+                if (this.animFrame === 0) {
+                    ctx.fillRect(this.x + 14, this.y - 2, 8, 12);
+                } else {
+                    ctx.fillRect(this.x + 14, this.y + 16, 8, 10);
+                }
+            }
+        }
+
+        // 背景雲朵
+        let clouds = [];
+        function spawnClouds() {
+            if (Math.random() < 0.012) {
+                clouds.push({
+                    x: CANVAS_WIDTH,
+                    y: 25 + Math.random() * 55,
+                    speed: 0.8 + Math.random() * 0.5,
+                    width: 48
+                });
+            }
+        }
+
+        // 碰撞檢測 (AABB)
+        function checkCollision(rect1, rect2) {
+            const padding = 5;
+            return (
+                rect1.x + padding < rect2.x + rect2.width &&
+                rect1.x + rect1.width - padding > rect2.x &&
+                rect1.y + padding < rect2.y + rect2.height &&
+                rect1.y + rect1.height - padding > rect2.y
+            );
+        }
+
+        // 地面繪製
+        let groundX = 0;
+        function drawGround() {
+            ctx.strokeStyle = customGroundColor;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+            ctx.stroke();
+
+            // 滾動的小碎石與顆粒細節
+            groundX = (groundX - gameSpeed) % 24;
+            ctx.fillStyle = customGroundColor;
+            for (let i = groundX; i < CANVAS_WIDTH; i += 28) {
+                ctx.fillRect(i, GROUND_Y + 6, 5, 2);
+                ctx.fillRect(i + 12, GROUND_Y + 14, 3, 2);
+            }
+        }
+
+        // 產生物件邏輯
+        let obstacleTimer = 0;
+        let minObstacleInterval = 65;
+
+        function handleObstacles() {
+            obstacleTimer++;
+            if (obstacleTimer > minObstacleInterval + Math.random() * 45) {
+                if (score > 300 && Math.random() < 0.35) {
+                    obstacles.push(new FlyingEnemy(gameSpeed));
+                } else {
+                    const bananaType = Math.floor(Math.random() * 3);
+                    obstacles.push(new BananaObstacle(bananaType, gameSpeed));
+                }
+                obstacleTimer = 0;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                obstacles[i].draw();
+
+                if (checkCollision(minion, obstacles[i])) {
+                    triggerGameOver();
+                }
+
+                if (obstacles[i].markedForDeletion) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        function triggerGameOver() {
+            gameRunning = false;
+            isGameOver = true;
+            sound.playHit();
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('minion_dino_high_score', Math.floor(highScore));
+                highScoreDisplay.textContent = String(Math.floor(highScore)).padStart(5, '0');
+            }
+
+            overlayTitle.textContent = "GAME OVER";
+            startBtn.textContent = "再試一次 (RETRY)";
+            overlay.classList.remove('hidden');
+
+            // 重繪死亡狀態的小小兵
+            minion.draw();
+        }
+
+        function resetGame() {
+            sound.init();
+            score = 0;
+            gameSpeed = 6;
+            frameCount = 0;
+            obstacles = [];
+            clouds = [];
+            backgroundMonsters = [];
+            isGameOver = false;
+            gameRunning = true;
+
+            minion.y = GROUND_Y - minion.height;
+            minion.velocityY = 0;
+            minion.isJumping = false;
+            minion.isDucking = false;
+            minion.isScreaming = false;
+
+            overlay.classList.add('hidden');
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 主更新與繪製循環
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            frameCount++;
+            score += 0.15;
+
+            // 每 100 分升級難度與音效
+            if (Math.floor(score) > 0 && Math.floor(score) % 100 === 0 && Math.floor(score - 0.15) % 100 !== 0) {
+                sound.playScore();
+                gameSpeed += 0.3;
+            }
+
+            // 清空畫布並填入自訂背景色
+            ctx.fillStyle = customBgColor;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 繪製背景雲朵
+            spawnClouds();
+            for (let i = clouds.length - 1; i >= 0; i--) {
+                clouds[i].x -= clouds[i].speed;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.fillRect(clouds[i].x, clouds[i].y, clouds[i].width, 12);
+                ctx.fillRect(clouds[i].x + 8, clouds[i].y - 6, 28, 8);
+                if (clouds[i].x + clouds[i].width < 0) {
+                    clouds.splice(i, 1);
+                }
+            }
+
+            // 繪製背景遠景怪獸
+            handleBackgroundMonsters();
+
+            // 檢測障礙物近距離觸發驚恐尖叫
+            const closeObstacle = obstacles.some(o => o.x - minion.x < 140 && o.x - minion.x > 0);
+            if (closeObstacle && !minion.isScreaming) {
+                minion.triggerScream(12);
+            }
+
+            // 繪製地面
+            drawGround();
+
+            // 更新與繪製小小兵
+            minion.update();
+            minion.draw();
+
+            // 更新與繪製障礙物
+            handleObstacles();
+
+            // 更新 UI 分數顯示
+            scoreDisplay.textContent = String(Math.floor(score)).padStart(5, '0');
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 自訂顏色選擇事件
+        bgColorPicker.addEventListener('input', (e) => {
+            customBgColor = e.target.value;
+            canvas.style.backgroundColor = customBgColor;
+            if (!gameRunning) redrawStaticScene();
+        });
+
+        groundColorPicker.addEventListener('input', (e) => {
+            customGroundColor = e.target.value;
+            if (!gameRunning) redrawStaticScene();
+        });
+
+        // 主題預設切換功能
+        window.applyThemePreset = function(preset) {
+            if (preset === 'classic') {
+                customBgColor = '#f8fafc';
+                customGroundColor = '#475569';
+                minionSkinColor = '#FCE029';
+                minionClothesColor = '#2563EB';
+                minionEyeCount = 2;
+            } else if (preset === 'evil') {
+                customBgColor = '#2e1065';
+                customGroundColor = '#a855f7';
+                minionSkinColor = '#A855F7'; // 瘋狂紫怪
+                minionClothesColor = '#3B0764';
+                minionEyeCount = 1;
+            } else if (preset === 'cyberpunk') {
+                customBgColor = '#0f172a';
+                customGroundColor = '#06b6d4';
+                minionSkinColor = '#FCE029';
+                minionClothesColor = '#EC4899';
+                minionEyeCount = 1;
+            } else if (preset === 'sunset') {
+                customBgColor = '#fff7ed';
+                customGroundColor = '#c2410c';
+                minionSkinColor = '#FCE029';
+                minionClothesColor = '#1E3A8A';
+                minionEyeCount = 2;
+            }
+
+            bgColorPicker.value = customBgColor;
+            groundColorPicker.value = customGroundColor;
+            canvas.style.backgroundColor = customBgColor;
+
+            if (!gameRunning) {
+                redrawStaticScene();
+            }
+        };
+
+        function redrawStaticScene() {
+            ctx.fillStyle = customBgColor;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            drawGround();
+            minion.draw();
+        }
+
+        // 鍵盤操作監聽
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (!gameRunning) {
+                    resetGame();
+                } else {
+                    minion.jump();
+                }
+            }
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (gameRunning) {
+                    minion.duck(true);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                if (gameRunning) {
+                    minion.duck(false);
+                }
+            }
+        });
+
+        // 按鈕與觸控事件
+        startBtn.addEventListener('click', () => {
+            resetGame();
+        });
+
+        soundBtn.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            soundBtn.textContent = sound.enabled ? '🔊 音效: 開' : '🔇 音效: 關';
+        });
+
+        // 移動端觸控
+        const mobileJump = document.getElementById('mobile-jump');
+        const mobileDuck = document.getElementById('mobile-duck');
+
+        mobileJump.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameRunning) resetGame();
+            else minion.jump();
+        });
+
+        mobileDuck.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameRunning) minion.duck(true);
+        });
+
+        mobileDuck.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameRunning) minion.duck(false);
+        });
+
+        // 初次渲染預覽
+        redrawStaticScene();
+    </script>
+</body>
+</html>

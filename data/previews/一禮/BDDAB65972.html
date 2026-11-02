@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>田園物語：精緻像素大冒險 - Cozy Farm & Town</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Pixel Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        canvas#gameCanvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background-color: #2d6a4f;
+            cursor: pointer;
+        }
+
+        .pixel-panel {
+            background-color: #2d1e3e;
+            border: 4px solid #fbbf24;
+            box-shadow: inset 0 0 0 3px #180e29, 0 8px 24px rgba(0,0,0,0.7);
+            border-radius: 12px;
+        }
+
+        .pixel-panel-light {
+            background-color: #432e5d;
+            border: 2px solid #fcd34d;
+            box-shadow: inset 0 0 0 2px #2d1e3e;
+            border-radius: 8px;
+        }
+
+        .pixel-btn {
+            background-color: #f59e0b;
+            color: #180e29;
+            font-weight: 800;
+            border: 2px solid #fff;
+            box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0,0,0,0.4);
+            transition: transform 0.05s ease, box-shadow 0.05s ease;
+            cursor: pointer;
+        }
+
+        .pixel-btn:hover {
+            background-color: #fbbf24;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 0 #b45309, 0 8px 14px rgba(0,0,0,0.4);
+        }
+
+        .pixel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #b45309, 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .pixel-btn-red {
+            background-color: #ef4444;
+            color: #fff;
+            box-shadow: 0 4px 0 #991b1b;
+        }
+        .pixel-btn-red:hover { background-color: #f87171; box-shadow: 0 5px 0 #991b1b; }
+
+        .pixel-btn-green {
+            background-color: #10b981;
+            color: #fff;
+            box-shadow: 0 4px 0 #047857;
+        }
+        .pixel-btn-green:hover { background-color: #34d399; box-shadow: 0 5px 0 #047857; }
+
+        .hotbar-slot {
+            transition: all 0.12s ease;
+        }
+        .hotbar-slot.active {
+            border-color: #fbbf24 !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 18px rgba(251, 191, 36, 0.9);
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #180e29; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 4px; }
+
+        #toast-container { pointer-events: none; }
+        .toast {
+            animation: fadeInOut 2.8s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+            15% { opacity: 1; transform: translateY(0) scale(1); }
+            85% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col items-center justify-between min-h-screen p-2 md:p-3 select-none">
+
+    <!-- Top HUD Bar -->
+    <header class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-2 p-2.5 px-4 pixel-panel z-10">
+        <div class="flex items-center gap-3 text-xs md:text-sm font-bold text-amber-200">
+            <div id="hud-zone" class="flex items-center gap-1.5 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-400/40 text-amber-300">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span id="val-zone-name">🏡 隨風農場</span>
+            </div>
+            <div id="hud-season-day" class="flex items-center gap-1">
+                <i class="fa-solid fa-calendar-days text-amber-400"></i>
+                <span>第 <span id="val-day">1</span> 天</span>
+                <span class="text-xs text-amber-300/80">(<span id="val-season">春季</span>)</span>
+            </div>
+            <div id="hud-time" class="flex items-center gap-1">
+                <i class="fa-regular fa-clock text-amber-400"></i>
+                <span id="val-time">08:00</span>
+            </div>
+            <div id="hud-weather" class="flex items-center gap-1 bg-purple-900/60 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                <span id="val-weather-icon">☀️</span>
+                <span id="val-weather" class="text-xs">晴天</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs md:text-sm font-bold">
+            <!-- Energy Bar -->
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-yellow-400"></i>
+                <div class="w-24 md:w-32 bg-gray-950 border border-amber-400/60 rounded-full h-4 overflow-hidden relative">
+                    <div id="val-energy-bar" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full transition-all duration-300" style="width: 100%;"></div>
+                    <span id="val-energy-text" class="absolute inset-0 flex items-center justify-center text-[10px] text-white drop-shadow font-mono">100/100</span>
+                </div>
+            </div>
+
+            <!-- Gold Balance -->
+            <div class="flex items-center gap-1 text-yellow-300 text-sm md:text-base">
+                <i class="fa-solid fa-coins text-yellow-400"></i>
+                <span id="val-gold" class="font-mono font-black text-amber-300 text-lg">350</span> G
+            </div>
+
+            <!-- Global Action Controls -->
+            <div class="flex items-center gap-2">
+                <button id="btn-sound" class="p-1.5 px-2 bg-purple-900 hover:bg-purple-800 text-amber-300 rounded border border-amber-400/40 text-xs transition" title="聲音音效開關">
+                    <i class="fa-solid fa-volume-high" id="icon-sound"></i>
+                </button>
+                <button id="btn-open-inventory" class="p-1.5 px-2 bg-amber-600 hover:bg-amber-500 text-purple-950 font-bold rounded border border-amber-300 text-xs transition">
+                    <i class="fa-solid fa-bag-shopping"></i> 背包 (I)
+                </button>
+                <button id="btn-open-quests" class="p-1.5 px-2 bg-purple-800 hover:bg-purple-700 text-amber-200 rounded border border-purple-400/40 text-xs transition relative">
+                    <i class="fa-solid fa-scroll"></i> 任務
+                    <span id="quest-badge" class="hidden absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-purple-950 animate-pulse"></span>
+                </button>
+                <button id="btn-save" class="p-1.5 px-2 bg-emerald-800 hover:bg-emerald-700 text-amber-200 rounded border border-emerald-400/40 text-xs transition" title="儲存遊戲進度">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full max-w-6xl flex items-center justify-center overflow-hidden my-1">
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" width="960" height="540" class="w-full max-h-[72vh] aspect-[16/9] object-contain rounded-lg border-2 border-amber-500/50 shadow-2xl"></canvas>
+
+            <!-- Location Road Sign Indicator -->
+            <div class="absolute top-3 left-4 bg-purple-950/85 backdrop-blur-sm border border-amber-400/40 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-200 shadow-lg pointer-events-none flex items-center gap-2">
+                <span class="text-base">🗺️</span>
+                <span id="road-sign-text">⬅️ 左側：隨風農場 | 🏪 右側：綠野市集廣場 ➡️</span>
+            </div>
+
+            <!-- Character Direction Visual Box Overlay -->
+            <div class="absolute top-3 right-4 bg-purple-950/85 backdrop-blur-sm border border-amber-400/40 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-200 shadow-lg pointer-events-none flex items-center gap-2">
+                <span>面向方向:</span>
+                <span id="player-facing-tag" class="text-amber-300 font-extrabold bg-amber-500/20 px-2 py-0.5 rounded border border-amber-400/30">👇 正面 (向下)</span>
+            </div>
+
+            <!-- NPC Dynamic Dialogue Box Overlay -->
+            <div id="dialog-overlay" class="hidden absolute bottom-4 left-4 right-4 pixel-panel p-4 flex items-center gap-4 z-30">
+                <div id="dialog-portrait" class="w-14 h-14 rounded-lg bg-amber-200 flex items-center justify-center text-3xl border-2 border-amber-600 shadow">
+                    👨‍🌾
+                </div>
+                <div class="flex-1">
+                    <h4 id="dialog-name" class="text-amber-300 font-bold text-base">NPC 名字</h4>
+                    <p id="dialog-text" class="text-white text-xs md:text-sm mt-1">對話內容...</p>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <button id="btn-dialog-action" class="pixel-btn pixel-btn-green px-4 py-1.5 text-xs">交易/查看</button>
+                    <button id="btn-dialog-close" class="pixel-btn pixel-btn-red px-3 py-1 text-xs">離開</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Dock: Hotbar + Touch Controls -->
+    <footer class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-2 z-10">
+        <!-- Hotbar Slots (Keys 1-8) -->
+        <div class="pixel-panel p-1.5 flex items-center gap-1.5 overflow-x-auto max-w-full" id="hotbar-container"></div>
+
+        <!-- Mobile Touch D-Pad / Controls -->
+        <div class="flex items-center justify-between w-full md:w-auto gap-3">
+            <div class="flex md:hidden items-center gap-2">
+                <div class="grid grid-cols-3 gap-1 w-28 h-28 bg-purple-950/90 p-1 rounded-lg border border-purple-500/50">
+                    <div></div>
+                    <button id="btn-touch-up" class="bg-purple-800 active:bg-amber-500 text-white rounded font-bold">▲</button>
+                    <div></div>
+                    <button id="btn-touch-left" class="bg-purple-800 active:bg-amber-500 text-white rounded font-bold">◄</button>
+                    <button id="btn-touch-act" class="bg-amber-500 active:bg-amber-400 text-purple-950 font-black rounded text-xs">使用</button>
+                    <button id="btn-touch-right" class="bg-purple-800 active:bg-amber-500 text-white rounded font-bold">►</button>
+                    <div></div>
+                    <button id="btn-touch-down" class="bg-purple-800 active:bg-amber-500 text-white rounded font-bold">▼</button>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Keybind Hints -->
+            <div class="hidden md:flex items-center gap-3 text-[11px] text-amber-200/90 bg-purple-950/90 px-3 py-2 rounded-lg border border-amber-400/30">
+                <span><kbd class="px-1.5 py-0.5 bg-purple-900 border border-amber-400/40 rounded text-white font-mono">WASD / 箭頭</kbd> 行走移動</span>
+                <span><kbd class="px-1.5 py-0.5 bg-purple-900 border border-amber-400/40 rounded text-white font-mono">E / 空白鍵</kbd> 對話 / 耕作 / 建造 / 採收</span>
+                <span><kbd class="px-1.5 py-0.5 bg-purple-900 border border-amber-400/40 rounded text-white font-mono">1-8</kbd> 切換工具與種子</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-16 right-4 flex flex-col items-end gap-2.5 z-50 pointer-events-none"></div>
+
+    <!-- MODAL: SHOP STALL SYSTEM -->
+    <div id="modal-shop" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-3">
+        <div class="pixel-panel w-full max-w-2xl max-h-[85vh] flex flex-col p-4 relative">
+            <div class="flex items-center justify-between pb-3 border-b-2 border-purple-900">
+                <div class="flex items-center gap-3">
+                    <span id="shop-icon-header" class="text-3xl">🏪</span>
+                    <div>
+                        <h3 id="shop-title" class="text-xl font-black text-amber-300">市集攤位</h3>
+                        <p id="shop-desc" class="text-xs text-purple-200">請選擇欲購買或交易的商品</p>
+                    </div>
+                </div>
+                <button id="btn-close-shop" class="pixel-btn pixel-btn-red px-3 py-1 text-xs">✕ 關閉</button>
+            </div>
+
+            <div id="shop-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto custom-scroll p-1 my-3 flex-1 min-h-[280px]"></div>
+
+            <div class="pt-2 border-t border-purple-900 flex justify-between items-center text-sm font-bold text-amber-300">
+                <span>目前擁有金幣：</span>
+                <span class="text-lg"><span id="shop-gold-val">0</span> G</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: INVENTORY -->
+    <div id="modal-inventory" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-3">
+        <div class="pixel-panel w-full max-w-xl max-h-[85vh] flex flex-col p-4 relative">
+            <div class="flex items-center justify-between pb-3 border-b-2 border-purple-900">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🎒</span>
+                    <h3 class="text-lg font-bold text-amber-300">農夫個人背包</h3>
+                </div>
+                <button id="btn-close-inventory" class="pixel-btn pixel-btn-red px-3 py-1 text-xs">✕ 關閉</button>
+            </div>
+
+            <div id="inventory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 my-4 overflow-y-auto custom-scroll p-2 bg-purple-950/70 rounded-lg border border-purple-800 flex-1 min-h-[220px]"></div>
+
+            <div class="pixel-panel-light p-3 text-xs text-purple-200">
+                💡 提示：點擊背包內的物品可將其配置到快捷工具列（1-8 欄位）中使用。
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: QUESTS -->
+    <div id="modal-quests" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-3">
+        <div class="pixel-panel w-full max-w-lg max-h-[80vh] flex flex-col p-4 relative">
+            <div class="flex items-center justify-between pb-3 border-b-2 border-purple-900">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📜</span>
+                    <h3 class="text-lg font-bold text-amber-300">小鎮公告欄任務</h3>
+                </div>
+                <button id="btn-close-quests" class="pixel-btn pixel-btn-red px-3 py-1 text-xs">✕ 關閉</button>
+            </div>
+
+            <div id="quests-list" class="flex flex-col gap-3 my-4 overflow-y-auto custom-scroll p-1 flex-1"></div>
+        </div>
+    </div>
+
+    <script>
+        const TILE_SIZE = 32;
+        
+        const WORLD_COLS = 50;
+        const WORLD_ROWS = 22;
+        const MAP_WIDTH = WORLD_COLS * TILE_SIZE;
+        const MAP_HEIGHT = WORLD_ROWS * TILE_SIZE;
+
+        const VIEW_WIDTH = 960;
+        const VIEW_HEIGHT = 540;
+
+        const TILE = {
+            GRASS: 0,
+            TILLED: 1,
+            WATERED: 2,
+            ROAD: 3,
+            WATER: 4,
+            WOOD_FLOOR: 5,
+            FENCE: 6
+        };
+
+        const CROPS = {
+            cabbage:  { id: 'cabbage',  name: '高麗菜', seedCost: 10, sellPrice: 24, growthDays: 2, icon: '🥬', energyGain: 15 },
+            carrot:   { id: 'carrot',   name: '胡蘿蔔', seedCost: 15, sellPrice: 36, growthDays: 2, icon: '🥕', energyGain: 18 },
+            tomato:   { id: 'tomato',   name: '番茄',   seedCost: 25, sellPrice: 65, growthDays: 3, icon: '🍅', energyGain: 25 },
+            pumpkin:  { id: 'pumpkin',  name: '南瓜',   seedCost: 45, sellPrice: 120,growthDays: 4, icon: '🎃', energyGain: 40 },
+            strawberry:{ id: 'strawberry', name: '草莓',seedCost: 65, sellPrice: 180,growthDays: 5, icon: '🍓', energyGain: 50 },
+            sunflower:{ id: 'sunflower', name: '向日葵',seedCost: 80, sellPrice: 240,growthDays: 6, icon: '🌻', energyGain: 60 }
+        };
+
+        const BUILDINGS = {
+            fence:      { id: 'fence',      name: '木籬笆',     cost: 12, icon: '🪵', isSolid: true },
+            stone_path: { id: 'stone_path', name: '石板路',     cost: 8,  icon: '🪨', isSolid: false },
+            flower_bed: { id: 'flower_bed', name: '溫馨花壇',   cost: 25, icon: '🌸', isSolid: false },
+            scarecrow:  { id: 'scarecrow',  name: '守護稻草人', cost: 75, icon: '🌾', isSolid: true },
+            light_post: { id: 'light_post', name: '古典街燈',   cost: 110,icon: '💡', isSolid: true },
+            well:       { id: 'well',       name: '許願井',     cost: 220,icon: '🚰', isSolid: true },
+            chicken_coop:{ id: 'chicken_coop', name: '溫馨雞舍', cost: 500,icon: '🐔', isSolid: true },
+            barn:       { id: 'barn',       name: '紅磚牛棚',   cost: 950,icon: '🐄', isSolid: true },
+            windmill:   { id: 'windmill',   name: '景觀風車',   cost: 1400,icon: '🎡', isSolid: true },
+            greenhouse: { id: 'greenhouse', name: '四季溫室',   cost: 2200,icon: '🏡', isSolid: true }
+        };
+
+        const TOOLS = [
+            { id: 'hoe',    name: '耕作鋤頭', icon: '⛏️', desc: '整地變為可種植農田' },
+            { id: 'can',    name: '園藝水壺', icon: '💧', desc: '為乾涸土地澆水增長作物' },
+            { id: 'scythe', name: '採收鐮刀', icon: '🌾', desc: '採收成熟農作物' },
+            { id: 'axe',    name: '拆除斧頭', icon: '🪓', desc: '拆除已建設施' }
+        ];
+
+        const MARKET_NPCS = [
+            { id: 'seed_vendor', name: '老農夫 麥克', role: '種子與農具攤', icon: '👨‍🌾', x: 32, y: 5, dialogue: '哈囉！我是麥克。想買些優質農作物種子或升級農具嗎？', type: 'seed_stall' },
+            { id: 'carpenter',   name: '木工 湯姆',   role: '建材與建築工坊', icon: '🔨', x: 40, y: 5, dialogue: '歡迎來到工坊！我可以為你的農場建造籬笆、雞舍、許願井甚至景觀風車！', type: 'building_stall' },
+            { id: 'grocer',      name: '市集老闆 麗莎', role: '小鎮雜貨與收購舖', icon: '👩‍🍳', x: 32, y: 14, dialogue: '辛苦採收了農作物嗎？我用全鎮最好的高價收購你的作物！', type: 'sell_stall' },
+            { id: 'rancher',     name: '牧場主人 艾莉絲', role: '農場牧場寵物攤', icon: '🤠', x: 40, y: 14, dialogue: '要讓農場更熱鬧嗎？來選購可愛的小雞、乳牛或忠誠狗狗吧！', type: 'ranch_stall' }
+        ];
+
+        let gameState = {
+            day: 1,
+            time: 8.0,
+            seasonIndex: 0,
+            seasons: ['春季', '夏季', '秋季', '冬季'],
+            weather: 'sunny',
+            gold: 350,
+            energy: 100,
+            maxEnergy: 100,
+
+            player: {
+                x: 8.5,
+                y: 10.5,
+                dir: 'down',
+                isMoving: false,
+                speed: 4.8,
+                walkFrame: 0,
+                animTimer: 0
+            },
+
+            animals: [
+                { id: 1, type: '🐶', name: '旺財', x: 10, y: 10, kind: 'pet' },
+                { id: 2, type: '🐔', name: '小黃', x: 14, y: 8,  kind: 'chicken' }
+            ],
+
+            grid: [],
+            inventory: [],
+            hotbar: new Array(8).fill(null),
+            activeHotbarIndex: 0,
+
+            quests: [
+                { id: 1, desc: '走至市集與老農夫麥克對話並購買種子', target: 1, current: 0, reward: 80, done: false, type: 'talk_seed' },
+                { id: 2, desc: '在農場耕作土地並種植 3 份作物', target: 3, current: 0, reward: 100, done: false, type: 'plant' },
+                { id: 3, desc: '購買並放置一座木籬笆或石板路', target: 1, current: 0, reward: 120, done: false, type: 'build' }
+            ],
+
+            settings: { soundEnabled: true }
+        };
+
+        let canvas, ctx;
+        let lastTime = performance.now();
+        let keysPressed = {};
+        let touchMoveDir = null;
+        let activeTalkNPC = null;
+        let dialogueDismissed = false;
+        let camera = { x: 0, y: 0 };
+
+        class SoundEngine {
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            playTone(freq, duration = 0.1, type = 'sine') {
+                if (!gameState.settings.soundEnabled) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(); osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            playChime() {
+                if (!gameState.settings.soundEnabled) return;
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+                    setTimeout(() => this.playTone(f, 0.12, 'triangle'), idx * 70);
+                });
+            }
+            playWater() { this.playTone(280, 0.1, 'sine'); setTimeout(() => this.playTone(420, 0.12, 'sine'), 50); }
+            playDig() { this.playTone(110, 0.1, 'square'); }
+            playCoin() { this.playTone(987, 0.08, 'sine'); setTimeout(() => this.playTone(1318, 0.12, 'triangle'), 60); }
+        }
+        const sound = new SoundEngine();
+
+        window.onload = function() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            generateWorldMap();
+            initDefaultInventory();
+            setupEventListeners();
+            loadGameFromStorage();
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+
+            showToast("🌾 歡迎！操作 WASD 控制精緻像素角色動態冒險！");
+        };
+
+        function generateWorldMap() {
+            gameState.grid = [];
+            for (let r = 0; r < WORLD_ROWS; r++) {
+                let row = [];
+                for (let c = 0; c < WORLD_COLS; c++) {
+                    let tileType = TILE.GRASS;
+                    let structure = null;
+
+                    if (c === 24 || c === 25) {
+                        tileType = TILE.WATER;
+                        if (r >= 10 && r <= 12) tileType = TILE.ROAD;
+                    }
+
+                    if (c > 25) {
+                        if ((r >= 9 && r <= 13) || (c >= 30 && c <= 42 && r >= 4 && r <= 17)) {
+                            tileType = TILE.ROAD;
+                        }
+                        MARKET_NPCS.forEach(npc => {
+                            if (Math.abs(c - npc.x) <= 2 && Math.abs(r - npc.y) <= 1) {
+                                tileType = TILE.WOOD_FLOOR;
+                            }
+                        });
+                    }
+
+                    if (r >= 2 && r <= 4 && c >= 3 && c <= 6) {
+                        structure = 'player_house';
+                    }
+
+                    row.push({ type: tileType, crop: null, structure: structure });
+                }
+                gameState.grid.push(row);
+            }
+        }
+
+        function initDefaultInventory() {
+            gameState.inventory = [
+                { ...TOOLS[0], type: 'tool', qty: 1 },
+                { ...TOOLS[1], type: 'tool', qty: 1 },
+                { ...TOOLS[2], type: 'tool', qty: 1 },
+                { ...TOOLS[3], type: 'tool', qty: 1 },
+                { id: 'cabbage_seed', name: '高麗菜種子', type: 'seed', cropId: 'cabbage', qty: 5, icon: '🌱' },
+                { id: 'carrot_seed',  name: '胡蘿蔔種子', type: 'seed', cropId: 'carrot',  qty: 3, icon: '🌱' }
+            ];
+
+            for (let i = 0; i < 8; i++) {
+                gameState.hotbar[i] = gameState.inventory[i] || null;
+            }
+        }
+
+        function gameLoop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            updatePlayer(dt);
+            updateAnimals(dt);
+            updateTimeCycle(dt);
+            updateCamera();
+
+            renderGame();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateTimeCycle(dt) {
+            gameState.time += dt * 0.12;
+            if (gameState.time >= 24.0) {
+                gameState.time = 0;
+                nextDay();
+            }
+
+            const hours = Math.floor(gameState.time);
+            const minutes = Math.floor((gameState.time % 1) * 60);
+            document.getElementById('val-time').innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+
+        function nextDay() {
+            gameState.day++;
+            gameState.time = 6.0;
+            gameState.energy = gameState.maxEnergy;
+
+            if (gameState.day % 10 === 1 && gameState.day > 1) {
+                gameState.seasonIndex = (gameState.seasonIndex + 1) % gameState.seasons.length;
+                showToast(`🍂 季節交替！現在進入 ${gameState.seasons[gameState.seasonIndex]}`);
+            }
+
+            const r = Math.random();
+            gameState.weather = r < 0.65 ? 'sunny' : (r < 0.88 ? 'rainy' : 'snowy');
+
+            for (let r = 0; r < WORLD_ROWS; r++) {
+                for (let c = 0; c < WORLD_COLS; c++) {
+                    const cell = gameState.grid[r][c];
+
+                    if (gameState.weather === 'rainy' && cell.type === TILE.TILLED) {
+                        cell.type = TILE.WATERED;
+                    }
+
+                    if (cell.crop) {
+                        const cropData = CROPS[cell.crop.id];
+                        if (cell.type === TILE.WATERED || gameState.weather === 'rainy') {
+                            cell.crop.age++;
+                            const ratio = cell.crop.age / cropData.growthDays;
+                            if (ratio >= 1.0) cell.crop.stage = 3;
+                            else if (ratio >= 0.6) cell.crop.stage = 2;
+                            else if (ratio >= 0.3) cell.crop.stage = 1;
+                        }
+                        if (cell.type === TILE.WATERED) cell.type = TILE.TILLED;
+                    }
+                }
+            }
+
+            updateUI();
+            sound.playChime();
+            showToast(`🌅 新的一天清晨！第 ${gameState.day} 天`);
+        }
+
+        function updatePlayer(dt) {
+            let dx = 0;
+            let dy = 0;
+
+            if (keysPressed['KeyW'] || keysPressed['ArrowUp'] || touchMoveDir === 'up') dy -= 1;
+            if (keysPressed['KeyS'] || keysPressed['ArrowDown'] || touchMoveDir === 'down') dy += 1;
+            if (keysPressed['KeyA'] || keysPressed['ArrowLeft'] || touchMoveDir === 'left') dx -= 1;
+            if (keysPressed['KeyD'] || keysPressed['ArrowRight'] || touchMoveDir === 'right') dx += 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                dx /= len; dy /= len;
+
+                if (Math.abs(dx) > Math.abs(dy)) gameState.player.dir = dx > 0 ? 'right' : 'left';
+                else gameState.player.dir = dy > 0 ? 'down' : 'up';
+
+                const newX = gameState.player.x + dx * gameState.player.speed * dt;
+                const newY = gameState.player.y + dy * gameState.player.speed * dt;
+
+                if (canWalkTo(newX, newY)) {
+                    gameState.player.x = newX;
+                    gameState.player.y = newY;
+                    gameState.player.isMoving = true;
+
+                    gameState.player.animTimer += dt * 10;
+                    if (gameState.player.animTimer >= 1) {
+                        gameState.player.walkFrame = (gameState.player.walkFrame + 1) % 4;
+                        gameState.player.animTimer = 0;
+                    }
+                }
+            } else {
+                gameState.player.isMoving = false;
+                gameState.player.walkFrame = 0;
+            }
+
+            const zoneName = gameState.player.x < 24 ? "🏡 隨風農場" : "🏪 綠野市集廣場";
+            document.getElementById('val-zone-name').innerText = zoneName;
+
+            const dirMap = {
+                down: '👇 正面 (向下)',
+                up: '👆 背面 (向上)',
+                left: '👈 側面 (向左)',
+                right: '👉 側面 (向右)'
+            };
+            document.getElementById('player-facing-tag').innerText = dirMap[gameState.player.dir];
+
+            checkNPCProximity();
+        }
+
+        function updateAnimals(dt) {
+            gameState.animals.forEach(anim => {
+                if (Math.random() < 0.02) {
+                    anim.x += (Math.random() - 0.5) * 0.5;
+                    anim.y += (Math.random() - 0.5) * 0.5;
+                    anim.x = Math.max(2, Math.min(22, anim.x));
+                    anim.y = Math.max(2, Math.min(18, anim.y));
+                }
+            });
+        }
+
+        function canWalkTo(gx, gy) {
+            if (gx < 0.5 || gx >= WORLD_COLS - 0.5 || gy < 0.5 || gy >= WORLD_ROWS - 0.5) return false;
+
+            const c = Math.floor(gx);
+            const r = Math.floor(gy);
+            const cell = gameState.grid[r]?.[c];
+
+            if (!cell) return false;
+            if (cell.type === TILE.WATER) return false;
+            if (cell.structure === 'player_house') return false;
+            if (cell.structure && BUILDINGS[cell.structure]?.isSolid) return false;
+
+            return true;
+        }
+
+        function updateCamera() {
+            const px = gameState.player.x * TILE_SIZE;
+            const py = gameState.player.y * TILE_SIZE;
+
+            camera.x = px - VIEW_WIDTH / 2;
+            camera.y = py - VIEW_HEIGHT / 2;
+
+            camera.x = Math.max(0, Math.min(MAP_WIDTH - VIEW_WIDTH, camera.x));
+            camera.y = Math.max(0, Math.min(MAP_HEIGHT - VIEW_HEIGHT, camera.y));
+        }
+
+        function checkNPCProximity() {
+            let foundNPC = null;
+            MARKET_NPCS.forEach(npc => {
+                const dist = Math.hypot(gameState.player.x - npc.x, gameState.player.y - npc.y);
+                if (dist < 2.0) foundNPC = npc;
+            });
+
+            const dialogOverlay = document.getElementById('dialog-overlay');
+            if (foundNPC) {
+                if (activeTalkNPC !== foundNPC) {
+                    dialogueDismissed = false;
+                }
+
+                activeTalkNPC = foundNPC;
+
+                if (!dialogueDismissed) {
+                    document.getElementById('dialog-portrait').innerText = foundNPC.icon;
+                    document.getElementById('dialog-name').innerText = `${foundNPC.name}（${foundNPC.role}）`;
+                    document.getElementById('dialog-text').innerText = foundNPC.dialogue;
+                    
+                    document.getElementById('btn-dialog-action').innerText = `與 ${foundNPC.name.split(' ')[0]} 交易`;
+                    document.getElementById('btn-dialog-action').onclick = () => openNPCStall(foundNPC);
+
+                    dialogOverlay.classList.remove('hidden');
+                    if (foundNPC.id === 'seed_vendor') checkQuests('talk_seed');
+                }
+            } else {
+                activeTalkNPC = null;
+                dialogueDismissed = false;
+                dialogOverlay.classList.add('hidden');
+            }
+        }
+
+        function leaveNPCDialogue() {
+            const dialogOverlay = document.getElementById('dialog-overlay');
+            dialogOverlay.classList.add('hidden');
+            dialogueDismissed = true;
+
+            if (activeTalkNPC) {
+                let stepX = 0;
+                let stepY = 0;
+
+                switch (gameState.player.dir) {
+                    case 'up': stepY = 0.8; break;
+                    case 'down': stepY = -0.8; break;
+                    case 'left': stepX = 0.8; break;
+                    case 'right': stepX = -0.8; break;
+                    default: stepY = 0.8; break;
+                }
+
+                const targetX = gameState.player.x + stepX;
+                const targetY = gameState.player.y + stepY;
+
+                if (canWalkTo(targetX, targetY)) {
+                    gameState.player.x = targetX;
+                    gameState.player.y = targetY;
+                }
+            }
+        }
+
+        function interactWithFrontTile() {
+            if (gameState.energy <= 0) {
+                showToast("⚠️ 精力用盡了！請回農場小屋休息或食用作物。");
+                return;
+            }
+
+            if (activeTalkNPC) {
+                if (dialogueDismissed) {
+                    dialogueDismissed = false;
+                    checkNPCProximity();
+                    return;
+                }
+                openNPCStall(activeTalkNPC);
+                return;
+            }
+
+            let targetC = Math.floor(gameState.player.x);
+            let targetR = Math.floor(gameState.player.y);
+
+            switch (gameState.player.dir) {
+                case 'up': targetR--; break;
+                case 'down': targetR++; break;
+                case 'left': targetC--; break;
+                case 'right': targetC++; break;
+            }
+
+            if (targetC < 0 || targetC >= WORLD_COLS || targetR < 0 || targetR >= WORLD_ROWS) return;
+
+            const cell = gameState.grid[targetR][targetC];
+            const activeItem = gameState.hotbar[gameState.activeHotbarIndex];
+
+            if (targetC >= 3 && targetC <= 6 && targetR >= 2 && targetR <= 4) {
+                nextDay();
+                return;
+            }
+
+            if (!activeItem) {
+                if (cell.crop && cell.crop.stage === 3) {
+                    harvestCrop(targetR, targetC);
+                } else {
+                    showToast("💡 快捷列未選擇工具或種子");
+                }
+                return;
+            }
+
+            if (activeItem.type === 'tool') {
+                if (activeItem.id === 'hoe') {
+                    if (cell.type === TILE.GRASS && targetC < 24) {
+                        cell.type = TILE.TILLED;
+                        consumeEnergy(3);
+                        sound.playDig();
+                        showToast("⛏️ 成功耕作土地！");
+                    }
+                } else if (activeItem.id === 'can') {
+                    if (cell.type === TILE.TILLED) {
+                        cell.type = TILE.WATERED;
+                        consumeEnergy(2);
+                        sound.playWater();
+                        showToast("💧 澆水完成！");
+                    }
+                } else if (activeItem.id === 'scythe') {
+                    if (cell.crop && cell.crop.stage === 3) {
+                        harvestCrop(targetR, targetC);
+                    }
+                } else if (activeItem.id === 'axe') {
+                    if (cell.structure && cell.structure !== 'player_house') {
+                        showToast(`🪓 拆除了 ${BUILDINGS[cell.structure]?.name || '設施'}`);
+                        cell.structure = null;
+                        consumeEnergy(4);
+                        sound.playDig();
+                    }
+                }
+            } else if (activeItem.type === 'seed') {
+                if ((cell.type === TILE.TILLED || cell.type === TILE.WATERED) && !cell.crop) {
+                    cell.crop = { id: activeItem.cropId, stage: 0, age: 0 };
+                    consumeEnergy(2);
+                    sound.playDig();
+
+                    activeItem.qty--;
+                    if (activeItem.qty <= 0) {
+                        gameState.hotbar[gameState.activeHotbarIndex] = null;
+                        removeFromInventory(activeItem.id);
+                    }
+                    updateUI();
+                    checkQuests('plant');
+                    showToast(`🌱 種下了 ${activeItem.name}`);
+                } else {
+                    showToast("⚠️ 種子需種在耕作好的土地上！");
+                }
+            } else if (activeItem.type === 'building') {
+                if (cell.type === TILE.GRASS && !cell.structure && !cell.crop && targetC < 24) {
+                    cell.structure = activeItem.buildingId;
+                    consumeEnergy(5);
+                    sound.playDig();
+
+                    activeItem.qty--;
+                    if (activeItem.qty <= 0) {
+                        gameState.hotbar[gameState.activeHotbarIndex] = null;
+                        removeFromInventory(activeItem.id);
+                    }
+                    updateUI();
+                    checkQuests('build');
+                    showToast(`🪵 成功建造放置 ${activeItem.name}`);
+                } else {
+                    showToast("⚠️ 無法在此處放置設施！");
+                }
+            } else if (activeItem.type === 'crop') {
+                const cropDef = CROPS[activeItem.cropId];
+                if (cropDef) {
+                    gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + cropDef.energyGain);
+                    activeItem.qty--;
+                    if (activeItem.qty <= 0) {
+                        gameState.hotbar[gameState.activeHotbarIndex] = null;
+                        removeFromInventory(activeItem.id);
+                    }
+                    updateUI();
+                    sound.playChime();
+                    showToast(`😋 品嚐了 ${activeItem.name}，恢復精力 +${cropDef.energyGain}`);
+                }
+            }
+        }
+
+        function harvestCrop(r, c) {
+            const cell = gameState.grid[r][c];
+            if (!cell.crop || cell.crop.stage !== 3) return;
+
+            const cropDef = CROPS[cell.crop.id];
+            addItemToInventory({
+                id: `crop_${cell.crop.id}`,
+                cropId: cell.crop.id,
+                name: cropDef.name,
+                type: 'crop',
+                qty: 1,
+                icon: cropDef.icon
+            });
+
+            sound.playChime();
+            showToast(`🎉 採收 1 個優質${cropDef.name}！`);
+            cell.crop = null;
+            cell.type = TILE.TILLED;
+            consumeEnergy(3);
+            updateUI();
+        }
+
+        function consumeEnergy(amt) {
+            gameState.energy = Math.max(0, gameState.energy - amt);
+            updateUI();
+        }
+
+        function drawDetailedPlayerSprite(px, py, dir, isMoving, walkFrame) {
+            ctx.save();
+
+            const legOffset = isMoving ? Math.sin(walkFrame * Math.PI / 2) * 3 : 0;
+            const bodyBob = isMoving ? Math.abs(Math.sin(walkFrame * Math.PI / 2)) * 2 : 0;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(px, py + 14, 11, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 1. FACING DOWN (FRONT FACE - FEMALE FARMER)
+            if (dir === 'down') {
+                // Shoes (Cute red shoes)
+                ctx.fillStyle = '#be123c';
+                ctx.fillRect(px - 7, py + 10 - legOffset, 5, 5);
+                ctx.fillRect(px + 2, py + 10 + legOffset, 5, 5);
+
+                // Legs / Stockings
+                ctx.fillStyle = '#fce7f3';
+                ctx.fillRect(px - 6, py + 6 - legOffset, 4, 5);
+                ctx.fillRect(px + 2, py + 6 + legOffset, 4, 5);
+
+                // Denim Overall Dress / Skirt
+                ctx.fillStyle = '#2563eb';
+                ctx.fillRect(px - 8, py + 1 - bodyBob, 16, 7);
+
+                // Pink Shirt & Overalls Top
+                ctx.fillStyle = '#f472b6';
+                ctx.fillRect(px - 7, py - 6 - bodyBob, 14, 8);
+                ctx.fillStyle = '#1d4ed8'; // straps
+                ctx.fillRect(px - 6, py - 6 - bodyBob, 3, 8);
+                ctx.fillRect(px + 3, py - 6 - bodyBob, 3, 8);
+
+                // Cute yellow buttons
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(px - 5, py - 2 - bodyBob, 2, 2);
+                ctx.fillRect(px + 3, py - 2 - bodyBob, 2, 2);
+
+                // Arms / Hands
+                ctx.fillStyle = '#fce7f3';
+                ctx.fillRect(px - 10, py - 3 - bodyBob + legOffset, 3, 6);
+                ctx.fillRect(px + 7, py - 3 - bodyBob - legOffset, 3, 6);
+
+                // Long Twin Tails Hair (Back layer)
+                ctx.fillStyle = '#7c2d12'; // Auburn/Brown hair
+                ctx.fillRect(px - 12, py - 12 - bodyBob, 4, 12);
+                ctx.fillRect(px + 8, py - 12 - bodyBob, 4, 12);
+                // Pink Hair Bows
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - 13, py - 14 - bodyBob, 5, 3);
+                ctx.fillRect(px + 8, py - 14 - bodyBob, 5, 3);
+
+                // Face Skin Base
+                ctx.fillStyle = '#fde047'; 
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(px - 8, py - 18 - bodyBob, 16, 12);
+
+                // Cute Big Eyes
+                ctx.fillStyle = '#1e1b4b';
+                ctx.fillRect(px - 5, py - 13 - bodyBob, 3, 4);
+                ctx.fillRect(px + 2, py - 13 - bodyBob, 3, 4);
+                // Sparkle reflections
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(px - 5, py - 13 - bodyBob, 1, 1);
+                ctx.fillRect(px + 2, py - 13 - bodyBob, 1, 1);
+
+                // Blush / Cheeks
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillRect(px - 7, py - 10 - bodyBob, 3, 2);
+                ctx.fillRect(px + 4, py - 10 - bodyBob, 3, 2);
+
+                // Cute Smile
+                ctx.fillStyle = '#e11d48';
+                ctx.fillRect(px - 1, py - 9 - bodyBob, 2, 1);
+
+                // Cute Bangs (Front Hair)
+                ctx.fillStyle = '#7c2d12';
+                ctx.fillRect(px - 9, py - 20 - bodyBob, 18, 5);
+                ctx.fillRect(px - 9, py - 16 - bodyBob, 3, 4);
+                ctx.fillRect(px + 6, py - 16 - bodyBob, 3, 4);
+                ctx.fillRect(px - 3, py - 16 - bodyBob, 6, 2);
+
+                // Farmer Straw Hat with Flower Ribbon
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(px - 13, py - 21 - bodyBob, 26, 4);
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(px - 8, py - 28 - bodyBob, 16, 8);
+                // Pink Ribbon
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - 8, py - 22 - bodyBob, 16, 2);
+                ctx.fillStyle = '#ffffff'; // Little Flower on hat
+                ctx.fillRect(px + 4, py - 25 - bodyBob, 3, 3);
+            }
+
+            // 2. FACING UP (BACK VIEW - FEMALE FARMER)
+            else if (dir === 'up') {
+                // Shoes
+                ctx.fillStyle = '#be123c';
+                ctx.fillRect(px - 7, py + 10 - legOffset, 5, 5);
+                ctx.fillRect(px + 2, py + 10 + legOffset, 5, 5);
+
+                // Legs
+                ctx.fillStyle = '#fce7f3';
+                ctx.fillRect(px - 6, py + 6 - legOffset, 4, 5);
+                ctx.fillRect(px + 2, py + 6 + legOffset, 4, 5);
+
+                // Skirt
+                ctx.fillStyle = '#2563eb';
+                ctx.fillRect(px - 8, py + 1 - bodyBob, 16, 7);
+
+                // Pink Shirt & Overall Back
+                ctx.fillStyle = '#f472b6';
+                ctx.fillRect(px - 7, py - 6 - bodyBob, 14, 8);
+                ctx.fillStyle = '#1d4ed8';
+                ctx.fillRect(px - 6, py - 6 - bodyBob, 12, 8);
+
+                // Back Hair Base & Long Pigtails
+                ctx.fillStyle = '#7c2d12';
+                ctx.fillRect(px - 8, py - 18 - bodyBob, 16, 13);
+                ctx.fillRect(px - 12, py - 10 - bodyBob + legOffset, 4, 12);
+                ctx.fillRect(px + 8, py - 10 - bodyBob - legOffset, 4, 12);
+
+                // Hair Bows
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - 13, py - 12 - bodyBob, 5, 3);
+                ctx.fillRect(px + 8, py - 12 - bodyBob, 5, 3);
+
+                // Straw Hat Back
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(px - 13, py - 21 - bodyBob, 26, 5);
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(px - 8, py - 28 - bodyBob, 16, 8);
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - 8, py - 22 - bodyBob, 16, 2);
+            }
+
+            // 3. FACING LEFT / RIGHT (FIXED SIDE LAYER ORDER: Back Hair -> Skin/Face -> Eye/Blush -> Bangs -> Hat)
+            else {
+                const flip = dir === 'right' ? 1 : -1;
+
+                // Shoes
+                ctx.fillStyle = '#be123c';
+                ctx.fillRect(px + (flip * (legOffset - 2)), py + 10, 5, 5);
+                ctx.fillRect(px - (flip * (legOffset + 2)), py + 10, 5, 5);
+
+                // Skirt & Shirt
+                ctx.fillStyle = '#2563eb';
+                ctx.fillRect(px - 6, py + 1 - bodyBob, 12, 7);
+                ctx.fillStyle = '#f472b6';
+                ctx.fillRect(px - 5, py - 6 - bodyBob, 10, 8);
+                ctx.fillStyle = '#1d4ed8';
+                ctx.fillRect(px - 2, py - 6 - bodyBob, 5, 8);
+
+                // Arms
+                ctx.fillStyle = '#fce7f3';
+                ctx.fillRect(px + (flip * (legOffset + 1)), py - 2 - bodyBob, 4, 6);
+
+                // A. Back Pigtail (Renders BEHIND the head)
+                ctx.fillStyle = '#7c2d12';
+                ctx.fillRect(px - (flip * 9), py - 10 - bodyBob, 4, 11);
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - (flip * 10), py - 12 - bodyBob, 5, 3);
+
+                // B. Head Base / Skin (Middle Layer)
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(px - 6, py - 18 - bodyBob, 12, 12);
+                // Cute Nose Profile
+                ctx.fillRect(px + (flip * 6), py - 13 - bodyBob, 2, 3);
+
+                // C. Facial Features (Eye, Blush, Lips) - Rendered ON TOP of skin, BEFORE front hair
+                // Side Eye (Positioned towards facing direction)
+                ctx.fillStyle = '#1e1b4b';
+                ctx.fillRect(px + (flip * 2), py - 14 - bodyBob, 3, 4);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(px + (flip * 2), py - 14 - bodyBob, 1, 1);
+
+                // Blush
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillRect(px + (flip * 3), py - 10 - bodyBob, 3, 2);
+
+                // D. Bangs & Hair Layer (Renders ON TOP of head, but BEHIND the eyes so facial features aren't covered)
+                ctx.fillStyle = '#7c2d12';
+                // Top Hair Cover
+                ctx.fillRect(px - 7, py - 20 - bodyBob, 13, 4);
+                // Back Head Hair (Opposite of facing direction)
+                ctx.fillRect(px - (flip * 6) - (dir === 'left' ? 2 : 0), py - 18 - bodyBob, 5, 10);
+                // Side Bangs (Slightly behind the eye)
+                ctx.fillRect(px - (flip * 1), py - 18 - bodyBob, 3, 5);
+
+                // E. Straw Hat Side View
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(px - 11, py - 21 - bodyBob, 22, 4);
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(px - 7, py - 28 - bodyBob, 14, 8);
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(px - 7, py - 22 - bodyBob, 14, 2);
+            }
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            const dirArrow = { down: '▼', up: '▲', left: '◀', right: '▶' }[dir];
+            ctx.fillText(dirArrow, px, py - 32 - bodyBob);
+
+            ctx.restore();
+        }
+
+        function renderGame() {
+            ctx.clearRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+
+            const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+            const endCol = Math.min(WORLD_COLS - 1, Math.ceil((camera.x + VIEW_WIDTH) / TILE_SIZE));
+            const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+            const endRow = Math.min(WORLD_ROWS - 1, Math.ceil((camera.y + VIEW_HEIGHT) / TILE_SIZE));
+
+            for (let r = startRow; r <= endRow; r++) {
+                for (let c = startCol; c <= endCol; c++) {
+                    const cell = gameState.grid[r][c];
+                    const x = c * TILE_SIZE;
+                    const y = r * TILE_SIZE;
+
+                    if (cell.type === TILE.GRASS) {
+                        ctx.fillStyle = (r + c) % 2 === 0 ? '#388e3c' : '#2e7d32';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    } else if (cell.type === TILE.TILLED) {
+                        ctx.fillStyle = '#6d4c41';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    } else if (cell.type === TILE.WATERED) {
+                        ctx.fillStyle = '#3e2723';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    } else if (cell.type === TILE.ROAD) {
+                        ctx.fillStyle = '#90a4ae';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#607d8b';
+                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+                    } else if (cell.type === TILE.WOOD_FLOOR) {
+                        ctx.fillStyle = '#8d6e63';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    } else if (cell.type === TILE.WATER) {
+                        ctx.fillStyle = '#1e88e5';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.fillStyle = '#64b5f6';
+                        ctx.fillRect(x + 4, y + 8 + Math.sin(Date.now()/300 + c)*2, 12, 3);
+                    }
+
+                    if (cell.structure) drawStructure(cell.structure, x, y);
+                    if (cell.crop) drawCrop(cell.crop, x, y);
+                }
+            }
+
+            drawPlayerHouse();
+            MARKET_NPCS.forEach(npc => drawMarketStall(npc));
+
+            gameState.animals.forEach(anim => {
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(anim.type, anim.x * TILE_SIZE, anim.y * TILE_SIZE);
+            });
+
+            drawDetailedPlayerSprite(
+                gameState.player.x * TILE_SIZE,
+                gameState.player.y * TILE_SIZE,
+                gameState.player.dir,
+                gameState.player.isMoving,
+                gameState.player.walkFrame
+            );
+
+            drawTargetCursor();
+            drawAmbientEffects();
+
+            ctx.restore();
+        }
+
+        function drawCrop(crop, x, y) {
+            const cropDef = CROPS[crop.id];
+            if (!cropDef) return;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (crop.stage === 0) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath(); ctx.arc(x + 16, y + 20, 3, 0, Math.PI * 2); ctx.fill();
+            } else if (crop.stage === 1) {
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(x + 14, y + 16, 4, 10);
+            } else if (crop.stage === 2) {
+                ctx.font = '16px sans-serif';
+                ctx.fillText(cropDef.icon, x + 16, y + 16);
+            } else if (crop.stage === 3) {
+                ctx.font = '22px sans-serif';
+                ctx.fillText(cropDef.icon, x + 16, y + 16);
+            }
+        }
+
+        function drawStructure(id, x, y) {
+            if (id === 'player_house') return;
+            const b = BUILDINGS[id];
+            if (!b) return;
+
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.icon, x + 16, y + 16);
+        }
+
+        function drawPlayerHouse() {
+            const hx = 3 * TILE_SIZE;
+            const hy = 2 * TILE_SIZE;
+
+            ctx.fillStyle = '#854d0e';
+            ctx.fillRect(hx, hy + 12, 4 * TILE_SIZE, 3 * TILE_SIZE - 12);
+
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(hx - 10, hy + 12);
+            ctx.lineTo(hx + (2 * TILE_SIZE), hy - 20);
+            ctx.lineTo(hx + (4 * TILE_SIZE) + 10, hy + 12);
+            ctx.fill();
+
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(hx + 50, hy + 50, 28, 34);
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(hx + 16, hy + 30, 20, 20);
+            ctx.fillRect(hx + 90, hy + 30, 20, 20);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🏡 溫馨農場小屋', hx + 64, hy - 25);
+        }
+
+        function drawMarketStall(npc) {
+            const sx = (npc.x - 1) * TILE_SIZE;
+            const sy = (npc.y - 1) * TILE_SIZE;
+
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(sx, sy, 3 * TILE_SIZE, 2.5 * TILE_SIZE);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(sx + 4, sy + 4, 3 * TILE_SIZE - 8, 12);
+
+            ctx.font = '26px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(npc.icon, npc.x * TILE_SIZE, npc.y * TILE_SIZE);
+
+            ctx.fillStyle = '#fef3c7';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(npc.role, npc.x * TILE_SIZE, sy - 6);
+        }
+
+        function drawTargetCursor() {
+            let targetC = Math.floor(gameState.player.x);
+            let targetR = Math.floor(gameState.player.y);
+
+            switch (gameState.player.dir) {
+                case 'up': targetR--; break;
+                case 'down': targetR++; break;
+                case 'left': targetC--; break;
+                case 'right': targetC++; break;
+            }
+
+            if (targetC >= 0 && targetC < WORLD_COLS && targetR >= 0 && targetR < WORLD_ROWS) {
+                const x = targetC * TILE_SIZE;
+                const y = targetR * TILE_SIZE;
+
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            }
+        }
+
+        function drawAmbientEffects() {
+            const hour = gameState.time;
+            let darkAlpha = 0;
+
+            if (hour >= 19 || hour < 5) darkAlpha = 0.5;
+            else if (hour >= 17) darkAlpha = (hour - 17) / 2 * 0.5;
+            else if (hour < 7) darkAlpha = (7 - hour) / 2 * 0.5;
+
+            if (darkAlpha > 0) {
+                ctx.fillStyle = `rgba(15, 23, 42, ${darkAlpha})`;
+                ctx.fillRect(camera.x, camera.y, VIEW_WIDTH, VIEW_HEIGHT);
+            }
+        }
+
+        function openNPCStall(npc) {
+            document.getElementById('shop-icon-header').innerText = npc.icon;
+            document.getElementById('shop-title').innerText = `${npc.name} 的${npc.role}`;
+            document.getElementById('shop-desc').innerText = npc.dialogue;
+            document.getElementById('shop-gold-val').innerText = gameState.gold;
+
+            const container = document.getElementById('shop-items-container');
+            container.innerHTML = '';
+
+            if (npc.type === 'seed_stall') {
+                Object.values(CROPS).forEach(crop => {
+                    const card = document.createElement('div');
+                    card.className = 'pixel-panel-light p-3 flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${crop.icon}</span>
+                            <div>
+                                <h4 class="font-bold text-amber-200 text-sm">${crop.name}種子</h4>
+                                <p class="text-[11px] text-purple-200">成熟期：${crop.growthDays} 天 | 售價：${crop.sellPrice}G</p>
+                            </div>
+                        </div>
+                        <button class="pixel-btn px-3 py-1 text-xs" onclick="buySeed('${crop.id}')">
+                            ${crop.seedCost} G 購買
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } else if (npc.type === 'building_stall') {
+                Object.entries(BUILDINGS).forEach(([id, item]) => {
+                    const card = document.createElement('div');
+                    card.className = 'pixel-panel-light p-3 flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${item.icon}</span>
+                            <div>
+                                <h4 class="font-bold text-amber-200 text-sm">${item.name}</h4>
+                                <p class="text-[11px] text-purple-200">建材與設施藍圖</p>
+                            </div>
+                        </div>
+                        <button class="pixel-btn px-3 py-1 text-xs" onclick="buyBuilding('${id}')">
+                            ${item.cost} G 購買
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } else if (npc.type === 'sell_stall') {
+                const cropsInInv = gameState.inventory.filter(i => i.type === 'crop');
+                if (cropsInInv.length === 0) {
+                    container.innerHTML = `<div class="col-span-2 text-center text-purple-300 py-8">🎒 背包中目前沒有可售出的成熟農作物。</div>`;
+                } else {
+                    cropsInInv.forEach(item => {
+                        const cropDef = CROPS[item.cropId];
+                        const card = document.createElement('div');
+                        card.className = 'pixel-panel-light p-3 flex items-center justify-between';
+                        card.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl">${item.icon}</span>
+                                <div>
+                                    <h4 class="font-bold text-amber-200 text-sm">${item.name}</h4>
+                                    <p class="text-[11px] text-purple-200">持有數量：${item.qty} 個</p>
+                                </div>
+                            </div>
+                            <button class="pixel-btn pixel-btn-green px-3 py-1 text-xs" onclick="sellCrop('${item.id}')">
+                                售出 1 個 (+${cropDef.sellPrice}G)
+                            </button>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } else if (npc.type === 'ranch_stall') {
+                const animalsForSale = [
+                    { id: 'chicken', name: '小黃雞', icon: '🐔', cost: 150 },
+                    { id: 'cow',     name: '花斑乳牛', icon: '🐄', cost: 400 },
+                    { id: 'sheep',   name: '綿羊',   icon: '🐑', cost: 350 },
+                    { id: 'dog',     name: '小柴犬', icon: '🐕', cost: 200 }
+                ];
+
+                animalsForSale.forEach(anim => {
+                    const card = document.createElement('div');
+                    card.className = 'pixel-panel-light p-3 flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${anim.icon}</span>
+                            <div>
+                                <h4 class="font-bold text-amber-200 text-sm">${anim.name}</h4>
+                                <p class="text-[11px] text-purple-200">會在農場自由走動</p>
+                            </div>
+                        </div>
+                        <button class="pixel-btn px-3 py-1 text-xs" onclick="buyAnimal('${anim.icon}', '${anim.name}', ${anim.cost})">
+                            ${anim.cost} G 購買
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            document.getElementById('modal-shop').classList.remove('hidden');
+        }
+
+        window.buySeed = function(cropId) {
+            const crop = CROPS[cropId];
+            if (gameState.gold < crop.seedCost) {
+                showToast("⚠️ 金幣不足！");
+                return;
+            }
+            gameState.gold -= crop.seedCost;
+            addItemToInventory({ id: `${cropId}_seed`, name: `${crop.name}種子`, type: 'seed', cropId: cropId, qty: 1, icon: '🌱' });
+            sound.playCoin();
+            showToast(`🛒 購買了 1 包 ${crop.name}種子！`);
+            document.getElementById('shop-gold-val').innerText = gameState.gold;
+            updateUI();
+        };
+
+        window.buyBuilding = function(buildingId) {
+            const item = BUILDINGS[buildingId];
+            if (gameState.gold < item.cost) {
+                showToast("⚠️ 金幣不足！");
+                return;
+            }
+            gameState.gold -= item.cost;
+            addItemToInventory({ id: `build_${buildingId}`, name: item.name, type: 'building', buildingId: buildingId, qty: 1, icon: item.icon });
+            sound.playCoin();
+            showToast(`🪵 成功購買 ${item.name}！可在農場快捷列選擇後建造`);
+            document.getElementById('shop-gold-val').innerText = gameState.gold;
+            updateUI();
+        };
+
+        window.sellCrop = function(itemId) {
+            const item = gameState.inventory.find(i => i.id === itemId);
+            if (!item || item.qty <= 0) return;
+
+            const cropDef = CROPS[item.cropId];
+            gameState.gold += cropDef.sellPrice;
+            item.qty--;
+
+            if (item.qty <= 0) removeFromInventory(itemId);
+
+            sound.playCoin();
+            showToast(`💰 售出 ${item.name}，獲得 +${cropDef.sellPrice} G！`);
+            document.getElementById('shop-gold-val').innerText = gameState.gold;
+            openNPCStall(MARKET_NPCS[2]);
+            updateUI();
+        };
+
+        window.buyAnimal = function(icon, name, cost) {
+            if (gameState.gold < cost) {
+                showToast("⚠️ 金幣不足！");
+                return;
+            }
+            gameState.gold -= cost;
+            gameState.animals.push({
+                id: Date.now(),
+                type: icon,
+                name: name,
+                x: 10 + Math.random()*5,
+                y: 8 + Math.random()*5
+            });
+            sound.playCoin();
+            showToast(`🐾 成功購買了 ${name}！已放養至隨風農場`);
+            document.getElementById('shop-gold-val').innerText = gameState.gold;
+            updateUI();
+        };
+
+        function openInventoryModal() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+
+            gameState.inventory.forEach(item => {
+                const slot = document.createElement('div');
+                slot.className = 'p-2 bg-purple-900/80 border border-purple-600 hover:border-amber-400 rounded-lg flex flex-col items-center justify-center cursor-pointer relative text-2xl';
+                slot.innerHTML = `
+                    <span>${item.icon}</span>
+                    <span class="text-[10px] text-amber-200 mt-1 font-bold truncate max-w-full">${item.name}</span>
+                    ${item.qty ? `<span class="absolute top-1 right-1 text-[10px] bg-purple-950 px-1 rounded text-amber-300 font-bold">${item.qty}</span>` : ''}
+                `;
+
+                slot.onclick = () => {
+                    gameState.hotbar[gameState.activeHotbarIndex] = item;
+                    renderHotbar();
+                    showToast(`已把 ${item.name} 配置到快捷列欄位 #${gameState.activeHotbarIndex + 1}`);
+                };
+
+                grid.appendChild(slot);
+            });
+
+            document.getElementById('modal-inventory').classList.remove('hidden');
+        }
+
+        function addItemToInventory(item) {
+            const existing = gameState.inventory.find(i => i.id === item.id);
+            if (existing && existing.qty) {
+                existing.qty += item.qty;
+            } else {
+                gameState.inventory.push({ ...item });
+            }
+
+            for (let i = 0; i < 8; i++) {
+                if (!gameState.hotbar[i]) {
+                    const invItem = gameState.inventory.find(it => it.id === item.id);
+                    if (invItem) gameState.hotbar[i] = invItem;
+                    break;
+                }
+            }
+            updateUI();
+        }
+
+        function removeFromInventory(itemId) {
+            gameState.inventory = gameState.inventory.filter(i => i.id !== itemId);
+        }
+
+        function updateUI() {
+            document.getElementById('val-day').innerText = gameState.day;
+            document.getElementById('val-season').innerText = gameState.seasons[gameState.seasonIndex];
+            document.getElementById('val-gold').innerText = gameState.gold;
+
+            const energyPct = Math.max(0, (gameState.energy / gameState.maxEnergy) * 100);
+            document.getElementById('val-energy-bar').style.width = `${energyPct}%`;
+            document.getElementById('val-energy-text').innerText = `${Math.floor(gameState.energy)}/${gameState.maxEnergy}`;
+
+            renderHotbar();
+        }
+
+        function renderHotbar() {
+            const container = document.getElementById('hotbar-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < 8; i++) {
+                const item = gameState.hotbar[i];
+                const isActive = i === gameState.activeHotbarIndex;
+
+                const slot = document.createElement('div');
+                slot.className = `hotbar-slot w-10 h-10 md:w-12 md:h-12 bg-purple-950 border-2 ${isActive ? 'border-amber-400 active' : 'border-purple-700'} rounded-lg flex flex-col items-center justify-center relative cursor-pointer text-base md:text-xl`;
+
+                if (item) {
+                    slot.innerHTML = `
+                        <span>${item.icon}</span>
+                        ${item.qty && item.qty > 1 ? `<span class="absolute bottom-0.5 right-1 text-[10px] font-black text-amber-300 drop-shadow">${item.qty}</span>` : ''}
+                    `;
+                }
+
+                const keyNum = document.createElement('span');
+                keyNum.className = 'absolute top-0.5 left-1 text-[9px] text-purple-300/70 font-mono';
+                keyNum.innerText = i + 1;
+                slot.appendChild(keyNum);
+
+                slot.onclick = () => {
+                    gameState.activeHotbarIndex = i;
+                    renderHotbar();
+                };
+
+                container.appendChild(slot);
+            }
+        }
+
+        function checkQuests(type) {
+            let updated = false;
+            gameState.quests.forEach(q => {
+                if (!q.done && q.type === type && q.current < q.target) {
+                    q.current++;
+                    if (q.current >= q.target) {
+                        showQuestNotice();
+                        document.getElementById('quest-badge').classList.remove('hidden');
+                    }
+                    updated = true;
+                }
+            });
+            if (updated) saveGameToStorage();
+        }
+
+        function showQuestNotice() {
+            showToast("📜 任務完成");
+            sound.playChime();
+        }
+
+        function openQuestsModal() {
+            const container = document.getElementById('quests-list');
+            container.innerHTML = '';
+
+            const remainingUnclaimed = gameState.quests.some(quest => !quest.done && quest.current >= quest.target);
+            if (!remainingUnclaimed) {
+                document.getElementById('quest-badge').classList.add('hidden');
+            }
+
+            gameState.quests.forEach(quest => {
+                const item = document.createElement('div');
+                item.className = 'pixel-panel-light p-3 flex items-center justify-between';
+                item.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-amber-200 text-sm">${quest.desc}</h4>
+                        <p class="text-xs text-purple-200">任務進度：${quest.current} / ${quest.target}</p>
+                    </div>
+                    <div>
+                        ${quest.done 
+                            ? `<span class="text-xs text-emerald-400 font-bold">✓ 已完成</span>` 
+                            : `<button class="pixel-btn px-2 py-1 text-xs" onclick="claimQuest(${quest.id})" ${quest.current < quest.target ? 'disabled opacity-50' : ''}>領取 ${quest.reward}G</button>`}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            document.getElementById('modal-quests').classList.remove('hidden');
+        }
+
+        window.claimQuest = function(questId) {
+            const q = gameState.quests.find(quest => quest.id === questId);
+            if (q && !q.done && q.current >= q.target) {
+                q.done = true;
+                gameState.gold += q.reward;
+                sound.playCoin();
+                showToast(`🎁 成功領取獎勵 +${q.reward} G！`);
+                
+                const remainingUnclaimed = gameState.quests.some(quest => !quest.done && quest.current >= quest.target);
+                if (!remainingUnclaimed) {
+                    document.getElementById('quest-badge').classList.add('hidden');
+                }
+                
+                openQuestsModal();
+                updateUI();
+            }
+        };
+
+        function loadGameFromStorage() {
+            try {
+                const saved = window.__galleryStorage.getItem('COZY_FARM_TOWN_SAVE');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    gameState = { ...gameState, ...parsed };
+                }
+            } catch(e) {}
+        }
+
+        function saveGameToStorage() {
+            try {
+                const dataToSave = {
+                    day: gameState.day,
+                    time: gameState.time,
+                    seasonIndex: gameState.seasonIndex,
+                    weather: gameState.weather,
+                    gold: gameState.gold,
+                    energy: gameState.energy,
+                    maxEnergy: gameState.maxEnergy,
+                    player: gameState.player,
+                    animals: gameState.animals,
+                    grid: gameState.grid,
+                    inventory: gameState.inventory,
+                    hotbar: gameState.hotbar,
+                    quests: gameState.quests,
+                    settings: gameState.settings
+                };
+                window.__galleryStorage.setItem('COZY_FARM_TOWN_SAVE', JSON.stringify(dataToSave));
+                showToast("💾 遊戲進度已成功儲存！");
+            } catch(e) {
+                showToast("⚠️ 儲存失敗，無法寫入本機儲存空間");
+            }
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast pixel-panel-light px-3.5 py-2 text-amber-200 text-xs font-bold shadow-xl border border-amber-400 pointer-events-auto max-w-xs';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2800);
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.code] = true;
+
+                if (e.code === 'Space' || e.code === 'KeyE') {
+                    interactWithFrontTile();
+                }
+
+                if (e.code.startsWith('Digit')) {
+                    const num = parseInt(e.code.replace('Digit', '')) - 1;
+                    if (num >= 0 && num < 8) {
+                        gameState.activeHotbarIndex = num;
+                        renderHotbar();
+                    }
+                }
+
+                if (e.code === 'KeyI') openInventoryModal();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keysPressed[e.code] = false;
+            });
+
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) * (VIEW_WIDTH / rect.width) + camera.x;
+                const clickY = (e.clientY - rect.top) * (VIEW_HEIGHT / rect.height) + camera.y;
+
+                const targetC = Math.floor(clickX / TILE_SIZE);
+                const targetR = Math.floor(clickY / TILE_SIZE);
+
+                const pC = Math.floor(gameState.player.x);
+                const pR = Math.floor(gameState.player.y);
+
+                if (targetC > pC) gameState.player.dir = 'right';
+                else if (targetC < pC) gameState.player.dir = 'left';
+                else if (targetR > pR) gameState.player.dir = 'down';
+                else if (targetR < pR) gameState.player.dir = 'up';
+
+                interactWithFrontTile();
+            });
+
+            document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
+            document.getElementById('btn-open-inventory').onclick = openInventoryModal;
+            document.getElementById('btn-close-inventory').onclick = () => document.getElementById('modal-inventory').classList.add('hidden');
+
+            document.getElementById('btn-open-quests').onclick = () => {
+                document.getElementById('quest-badge').classList.add('hidden');
+                openQuestsModal();
+            };
+            document.getElementById('btn-close-quests').onclick = () => document.getElementById('modal-quests').classList.add('hidden');
+
+            document.getElementById('btn-dialog-close').onclick = leaveNPCDialogue;
+            document.getElementById('btn-save').onclick = saveGameToStorage;
+
+            document.getElementById('btn-sound').onclick = () => {
+                gameState.settings.soundEnabled = !gameState.settings.soundEnabled;
+                document.getElementById('icon-sound').className = gameState.settings.soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+                showToast(gameState.settings.soundEnabled ? '🔊 音效已開啟' : '🔇 音效已靜音');
+            };
+
+            const bindTouchBtn = (id, dir) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); touchMoveDir = dir; });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); touchMoveDir = null; });
+            };
+
+            bindTouchBtn('btn-touch-up', 'up');
+            bindTouchBtn('btn-touch-down', 'down');
+            bindTouchBtn('btn-touch-left', 'left');
+            bindTouchBtn('btn-touch-right', 'right');
+
+            const touchActBtn = document.getElementById('btn-touch-act');
+            if (touchActBtn) {
+                touchActBtn.addEventListener('click', interactWithFrontTile);
+            }
+
+            window.focus();
+        }
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

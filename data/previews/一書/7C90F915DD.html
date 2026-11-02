@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Google 離線小恐龍遊戲 (Chrome Dino Game)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            font-family: 'Press Start 2P', monospace, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Custom scrollbar reset */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        .game-canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500" id="gameBody">
+
+    <div class="w-full max-w-3xl flex flex-col items-center">
+        
+        <!-- Header / Game Title & Score Display -->
+        <div class="w-full flex flex-col md:flex-row justify-between items-center mb-4 px-2">
+            <div class="flex items-center space-x-3 mb-2 md:mb-0">
+                <i class="fa-solid font-bold text-2xl text-gray-700 dark:text-gray-200 fa-ghost" id="gameLogo"></i>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wider text-gray-700 dark:text-gray-200">DINO RUNNER</h1>
+                <!-- Phase Badge -->
+                <span id="themeBadge" class="text-xs px-2.5 py-1 rounded-full font-bold shadow-sm transition-all duration-500 flex items-center space-x-1 bg-amber-100 text-amber-800 border border-amber-300">
+                    <i class="fa-solid fa-sun text-amber-500" id="themeIcon"></i>
+                    <span id="themeText">DAY</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center space-x-6 text-sm md:text-base pixel-font text-gray-600 dark:text-gray-300">
+                <div>HI <span id="highScore">00000</span></div>
+                <div><span id="currentScore">00000</span></div>
+            </div>
+        </div>
+
+        <div class="game-canvas-container bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden relative transition-colors duration-500" id="canvasCard">
+            
+            <!-- Canvas Element -->
+            <canvas id="gameCanvas" width="800" height="250" class="w-full h-auto block border-b border-gray-100"></canvas>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverModal" class="hidden absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center z-10 transition-opacity">
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl flex flex-col items-center border border-gray-200 dark:border-gray-700 max-w-xs w-full">
+                    <p class="text-red-500 font-bold text-lg mb-2 tracking-widest pixel-font">GAME OVER</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 pixel-font" id="finalScoreText">SCORE: 0</p>
+                    <button id="restartBtn" class="bg-gray-800 hover:bg-gray-900 text-white dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-white px-6 py-3 rounded-xl font-bold transition flex items-center space-x-2 shadow-md active:scale-95">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>RESTART</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Start Prompt Overlay -->
+            <div id="startModal" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col items-center justify-center z-10">
+                <p class="text-gray-700 dark:text-gray-200 font-bold text-sm md:text-base mb-4 animate-pulse pixel-font text-center px-4">
+                    PRESS SPACE OR TAP TO START
+                </p>
+                <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>START GAME</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Controls Container (Visible on touch devices) -->
+        <div class="w-full mt-4 grid grid-cols-2 gap-4 md:hidden">
+            <button id="mobileDuckBtn" class="bg-gray-200 active:bg-gray-300 text-gray-700 py-4 rounded-xl font-bold flex flex-col items-center justify-center space-y-1 shadow">
+                <i class="fa-solid fa-arrow-down text-xl"></i>
+                <span class="text-xs">DUCK (下蹲)</span>
+            </button>
+            <button id="mobileJumpBtn" class="bg-blue-600 active:bg-blue-700 text-white py-4 rounded-xl font-bold flex flex-col items-center justify-center space-y-1 shadow">
+                <i class="fa-solid fa-arrow-up text-xl"></i>
+                <span class="text-xs">JUMP (跳躍)</span>
+            </button>
+        </div>
+
+        <!-- Control Instructions -->
+        <div class="mt-6 text-xs text-gray-500 dark:text-gray-400 space-y-2 text-center max-w-md">
+            <div class="flex justify-center items-center space-x-4">
+                <span class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300 font-mono">Space / Up</span>
+                <span>跳躍 (Jump)</span>
+                <span class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300 font-mono">Down</span>
+                <span>蹲下 (Duck)</span>
+            </div>
+            <p class="text-gray-400 text-[10px]">每累積 200 分切換時段：白天 ➔ 黃昏 ➔ 黑夜 ➔ 日出！</p>
+        </div>
+    </div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+            }
+
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playScore() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(1200, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.25);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 250;
+        const GROUND_Y = 210;
+
+        // UI elements
+        const currentScoreEl = document.getElementById('currentScore');
+        const highScoreEl = document.getElementById('highScore');
+        const startModal = document.getElementById('startModal');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const finalScoreText = document.getElementById('finalScoreText');
+        const gameBody = document.getElementById('gameBody');
+        const canvasCard = document.getElementById('canvasCard');
+        const themeBadge = document.getElementById('themeBadge');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+
+        // Sky & Environment Themes Definition
+        const THEMES = [
+            {
+                id: 'day',
+                name: 'DAY (白天)',
+                bgBodyClasses: ['bg-slate-100', 'text-slate-800'],
+                cardClasses: ['bg-white', 'border-slate-200'],
+                badgeClasses: 'bg-amber-100 text-amber-900 border-amber-300',
+                iconClass: 'fa-sun text-amber-500',
+                canvasBg: '#ffffff',
+                fgColor: '#535353',
+                eyeColor: '#ffffff',
+                skyType: 'sun'
+            },
+            {
+                id: 'dusk',
+                name: 'DUSK (黃昏)',
+                bgBodyClasses: ['bg-orange-100', 'text-amber-950'],
+                cardClasses: ['bg-orange-50', 'border-orange-200'],
+                badgeClasses: 'bg-orange-200 text-orange-900 border-orange-300',
+                iconClass: 'fa-sun-plant-wilt text-orange-600',
+                canvasBg: '#ffedd5',
+                fgColor: '#7c2d12',
+                eyeColor: '#ffedd5',
+                skyType: 'dusk-sun'
+            },
+            {
+                id: 'night',
+                name: 'NIGHT (黑夜)',
+                bgBodyClasses: ['bg-slate-950', 'text-slate-100'],
+                cardClasses: ['bg-slate-900', 'border-slate-800'],
+                badgeClasses: 'bg-indigo-950 text-indigo-200 border-indigo-700',
+                iconClass: 'fa-moon text-indigo-300',
+                canvasBg: '#0f172a',
+                fgColor: '#e2e8f0',
+                eyeColor: '#0f172a',
+                skyType: 'moon'
+            },
+            {
+                id: 'dawn',
+                name: 'DAWN (日出)',
+                bgBodyClasses: ['bg-pink-100', 'text-indigo-950'],
+                cardClasses: ['bg-purple-50', 'border-purple-200'],
+                badgeClasses: 'bg-pink-200 text-pink-900 border-pink-300',
+                iconClass: 'fa-horizon text-rose-500',
+                canvasBg: '#fce7f3',
+                fgColor: '#4c1d95',
+                eyeColor: '#fce7f3',
+                skyType: 'dawn-sun'
+            }
+        ];
+
+        // Game State Variables
+        let isPlaying = false;
+        let isGameOver = false;
+        let score = 0;
+        let highScore = window.__galleryStorage.getItem('dino_high_score') || 0;
+        let gameSpeed = 6;
+        let gravity = 0.6;
+        let frameCount = 0;
+        let themeIndex = 0; // 0: day, 1: dusk, 2: night, 3: dawn
+        let stars = [];
+
+        // Generate stars for night sky
+        for (let i = 0; i < 30; i++) {
+            stars.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: Math.random() * (GROUND_Y - 80),
+                size: Math.random() * 2 + 1,
+                blinkSpeed: Math.random() * 0.05 + 0.01
+            });
+        }
+
+        highScoreEl.innerText = String(highScore).padStart(5, '0');
+
+        class Dino {
+            constructor() {
+                this.x = 50;
+                this.y = GROUND_Y - 47;
+                this.width = 44;
+                this.height = 47;
+                this.vy = 0;
+                this.jumpStrength = -11.5;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.legFrame = 0;
+                this.animTimer = 0;
+            }
+
+            jump() {
+                if (this.isGrounded && !this.isDucking) {
+                    this.vy = this.jumpStrength;
+                    this.isGrounded = false;
+                    sfx.playJump();
+                }
+            }
+
+            duck(ducking) {
+                if (this.isGrounded) {
+                    this.isDucking = ducking;
+                    if (ducking) {
+                        this.width = 55;
+                        this.height = 28;
+                        this.y = GROUND_Y - 28;
+                    } else {
+                        this.width = 44;
+                        this.height = 47;
+                        this.y = GROUND_Y - 47;
+                    }
+                }
+            }
+
+            update() {
+                if (!this.isGrounded) {
+                    this.vy += gravity;
+                    this.y += this.vy;
+                    
+                    if (this.y >= GROUND_Y - this.height) {
+                        this.y = GROUND_Y - this.height;
+                        this.vy = 0;
+                        this.isGrounded = true;
+                    }
+                } else {
+                    this.animTimer++;
+                    if (this.animTimer % 6 === 0) {
+                        this.legFrame = (this.legFrame + 1) % 2;
+                    }
+                }
+            }
+
+            draw(ctx, color, eyeColor) {
+                ctx.fillStyle = color;
+
+                if (this.isDucking) {
+                    const px = this.x;
+                    const py = this.y;
+
+                    ctx.fillRect(px + 10, py + 8, 35, 14);
+                    ctx.fillRect(px + 45, py + 2, 10, 12);
+
+                    // Dynamic Eye Color based on background theme
+                    ctx.fillStyle = eyeColor;
+                    ctx.fillRect(px + 48, py + 4, 2, 2);
+                    ctx.fillStyle = color;
+
+                    if (!this.isGrounded) {
+                        ctx.fillRect(px + 18, py + 22, 4, 6);
+                        ctx.fillRect(px + 32, py + 22, 4, 6);
+                    } else if (this.legFrame === 0) {
+                        ctx.fillRect(px + 18, py + 22, 4, 6);
+                        ctx.fillRect(px + 32, py + 22, 6, 2);
+                    } else {
+                        ctx.fillRect(px + 18, py + 22, 6, 2);
+                        ctx.fillRect(px + 32, py + 22, 4, 6);
+                    }
+                } else {
+                    const px = this.x;
+                    const py = this.y;
+
+                    ctx.fillRect(px + 22, py, 22, 16);
+                    ctx.fillRect(px + 30, py + 16, 14, 4);
+
+                    // Dynamic Eye
+                    ctx.fillStyle = eyeColor;
+                    ctx.fillRect(px + 26, py + 3, 3, 3);
+                    ctx.fillStyle = color;
+
+                    ctx.fillRect(px + 14, py + 16, 18, 18);
+                    ctx.fillRect(px + 28, py + 22, 4, 2);
+                    ctx.fillRect(px, py + 18, 14, 10);
+                    ctx.fillRect(px + 4, py + 28, 8, 4);
+
+                    if (!this.isGrounded) {
+                        ctx.fillRect(px + 16, py + 34, 4, 8);
+                        ctx.fillRect(px + 24, py + 34, 4, 8);
+                    } else if (this.legFrame === 0) {
+                        ctx.fillRect(px + 16, py + 34, 4, 13);
+                        ctx.fillRect(px + 20, py + 45, 4, 2);
+                        ctx.fillRect(px + 26, py + 34, 4, 7);
+                    } else {
+                        ctx.fillRect(px + 16, py + 34, 4, 7);
+                        ctx.fillRect(px + 26, py + 34, 4, 13);
+                        ctx.fillRect(px + 30, py + 45, 4, 2);
+                    }
+                }
+            }
+
+            getBounds() {
+                return {
+                    x: this.x + 4,
+                    y: this.y + 4,
+                    width: this.width - 8,
+                    height: this.height - 6
+                };
+            }
+        }
+
+        class Cactus {
+            constructor(speed) {
+                this.type = Math.floor(Math.random() * 3);
+                this.x = CANVAS_WIDTH + 20;
+                this.speed = speed;
+
+                if (this.type === 0) {
+                    this.width = 16;
+                    this.height = 35;
+                } else if (this.type === 1) {
+                    this.width = 34;
+                    this.height = 35;
+                } else {
+                    this.width = 24;
+                    this.height = 48;
+                }
+
+                this.y = GROUND_Y - this.height;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw(ctx, color) {
+                ctx.fillStyle = color;
+                const px = this.x;
+                const py = this.y;
+
+                if (this.type === 0) {
+                    ctx.fillRect(px + 5, py, 6, this.height);
+                    ctx.fillRect(px, py + 10, 5, 12);
+                    ctx.fillRect(px, py + 10, 11, 4);
+                    ctx.fillRect(px + 11, py + 15, 5, 10);
+                    ctx.fillRect(px + 5, py + 15, 11, 4);
+                } else if (this.type === 1) {
+                    ctx.fillRect(px + 4, py + 5, 5, 30);
+                    ctx.fillRect(px, py + 12, 12, 3);
+                    ctx.fillRect(px + 22, py, 6, 35);
+                    ctx.fillRect(px + 16, py + 10, 12, 3);
+                } else {
+                    ctx.fillRect(px + 8, py, 8, this.height);
+                    ctx.fillRect(px, py + 12, 8, 18);
+                    ctx.fillRect(px, py + 26, 16, 4);
+                    ctx.fillRect(px + 16, py + 18, 8, 14);
+                    ctx.fillRect(px + 8, py + 28, 16, 4);
+                }
+            }
+
+            getBounds() {
+                return {
+                    x: this.x + 2,
+                    y: this.y + 2,
+                    width: this.width - 4,
+                    height: this.height - 4
+                };
+            }
+        }
+
+        class Pterodactyl {
+            constructor(speed) {
+                this.x = CANVAS_WIDTH + 20;
+                this.width = 42;
+                this.height = 30;
+                this.speed = speed + 0.5;
+                
+                const heights = [GROUND_Y - 28, GROUND_Y - 48, GROUND_Y - 68];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                
+                this.wingFrame = 0;
+                this.animTimer = 0;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+
+                this.animTimer++;
+                if (this.animTimer % 12 === 0) {
+                    this.wingFrame = (this.wingFrame + 1) % 2;
+                }
+            }
+
+            draw(ctx, color, eyeColor) {
+                ctx.fillStyle = color;
+                const px = this.x;
+                const py = this.y;
+
+                ctx.fillRect(px + 12, py + 12, 20, 10);
+                ctx.fillRect(px, py + 8, 12, 6);
+
+                ctx.fillStyle = eyeColor;
+                ctx.fillRect(px + 4, py + 9, 2, 2);
+                ctx.fillStyle = color;
+
+                if (this.wingFrame === 0) {
+                    ctx.fillRect(px + 18, py, 6, 12);
+                    ctx.fillRect(px + 22, py - 4, 4, 8);
+                } else {
+                    ctx.fillRect(px + 18, py + 20, 6, 10);
+                    ctx.fillRect(px + 22, py + 24, 4, 6);
+                }
+            }
+
+            getBounds() {
+                return {
+                    x: this.x + 4,
+                    y: this.y + 4,
+                    width: this.width - 8,
+                    height: this.height - 8
+                };
+            }
+        }
+
+        class Cloud {
+            constructor() {
+                this.x = CANVAS_WIDTH + Math.random() * 100;
+                this.y = 30 + Math.random() * 70;
+                this.width = 46;
+                this.height = 14;
+                this.speed = 1 + Math.random() * 0.5;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x + this.width < 0) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw(ctx, color) {
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.45;
+                ctx.fillRect(this.x + 10, this.y, 26, 14);
+                ctx.fillRect(this.x, this.y + 6, 46, 8);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        let dino = new Dino();
+        let obstacles = [];
+        let clouds = [];
+        let obstacleTimer = 0;
+        let minObstacleInterval = 75;
+        let groundOffset = 0;
+
+        function resetGame() {
+            dino = new Dino();
+            obstacles = [];
+            clouds = [];
+            score = 0;
+            gameSpeed = 6;
+            frameCount = 0;
+            obstacleTimer = 0;
+            themeIndex = 0;
+            isGameOver = false;
+            isPlaying = true;
+            
+            updateTheme();
+            gameOverModal.classList.add('hidden');
+            startModal.classList.add('hidden');
+        }
+
+        function updateTheme() {
+            const currentTheme = THEMES[themeIndex];
+
+            // Reset background classes on body
+            gameBody.className = "min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-700 " + 
+                currentTheme.bgBodyClasses.join(' ');
+
+            // Reset card styling
+            canvasCard.className = "game-canvas-container rounded-xl shadow-xl border-2 overflow-hidden relative transition-colors duration-700 " +
+                currentTheme.cardClasses.join(' ');
+
+            // Badge updates
+            themeBadge.className = `text-xs px-2.5 py-1 rounded-full font-bold shadow-sm transition-all duration-500 flex items-center space-x-1 border ${currentTheme.badgeClasses}`;
+            themeIcon.className = `fa-solid ${currentTheme.iconClass}`;
+            themeText.innerText = currentTheme.id.toUpperCase();
+        }
+
+        function drawSkyElements(ctx, theme) {
+            if (theme.skyType === 'sun') {
+                // High midday sun
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(680, 25, 28, 28);
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(684, 29, 20, 20);
+            } else if (theme.skyType === 'dusk-sun') {
+                // Low sunset orange sun
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(640, 85, 36, 36);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(644, 89, 28, 28);
+            } else if (theme.skyType === 'moon') {
+                // Stars
+                ctx.fillStyle = '#f8fafc';
+                stars.forEach((s) => {
+                    const opacity = 0.3 + Math.sin(frameCount * s.blinkSpeed) * 0.7;
+                    ctx.globalAlpha = Math.max(0.1, opacity);
+                    ctx.fillRect(s.x, s.y, s.size, s.size);
+                });
+                ctx.globalAlpha = 1.0;
+
+                // Crescent Moon
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(680, 30, 24, 24);
+                ctx.fillStyle = theme.canvasBg;
+                ctx.fillRect(674, 26, 20, 24);
+            } else if (theme.skyType === 'dawn-sun') {
+                // Rising pinkish-golden sun on the horizon
+                ctx.fillStyle = '#fb7185';
+                ctx.fillRect(650, 110, 40, 24);
+                ctx.fillStyle = '#fef08a';
+                ctx.fillRect(655, 114, 30, 16);
+            }
+        }
+
+        function spawnObstacle() {
+            obstacleTimer++;
+            const randomInterval = minObstacleInterval + Math.floor(Math.random() * 50);
+
+            if (obstacleTimer > randomInterval) {
+                if (score > 300 && Math.random() < 0.35) {
+                    obstacles.push(new Pterodactyl(gameSpeed));
+                } else {
+                    obstacles.push(new Cactus(gameSpeed));
+                }
+                obstacleTimer = 0;
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
+        function handleGameOver() {
+            isPlaying = false;
+            isGameOver = true;
+            sfx.playHit();
+
+            if (score > highScore) {
+                highScore = Math.floor(score);
+                window.__galleryStorage.setItem('dino_high_score', highScore);
+                highScoreEl.innerText = String(highScore).padStart(5, '0');
+            }
+
+            finalScoreText.innerText = `SCORE: ${Math.floor(score)}`;
+            gameOverModal.classList.remove('hidden');
+        }
+
+        function gameLoop() {
+            frameCount++;
+
+            const currentTheme = THEMES[themeIndex];
+            const themeColor = currentTheme.fgColor;
+            const bgColor = currentTheme.canvasBg;
+            const eyeColor = currentTheme.eyeColor;
+
+            // Clear Canvas
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Render sky elements (Sun, Dusk Sun, Moon & Stars, Dawn Sun)
+            drawSkyElements(ctx, currentTheme);
+
+            if (isPlaying) {
+                // Increment Score & Speed
+                score += 0.15;
+                gameSpeed += 0.0008;
+                
+                // Switch Sky Time Phase every 200 points
+                if (Math.floor(score) > 0 && Math.floor(score) % 200 === 0 && Math.floor(score - 0.15) % 200 !== 0) {
+                    themeIndex = (themeIndex + 1) % THEMES.length;
+                    updateTheme();
+                    sfx.playScore();
+                }
+
+                // Milestone score sound ping every 100 points
+                if (Math.floor(score) > 0 && Math.floor(score) % 100 === 0 && Math.floor(score - 0.15) % 100 !== 0) {
+                    sfx.playScore();
+                }
+
+                currentScoreEl.innerText = String(Math.floor(score)).padStart(5, '0');
+
+                // Clouds management
+                if (frameCount % 120 === 0 && Math.random() < 0.6) {
+                    clouds.push(new Cloud());
+                }
+
+                spawnObstacle();
+                dino.update();
+            }
+
+            // Draw Clouds
+            clouds.forEach((cloud) => {
+                if (isPlaying) cloud.update();
+                cloud.draw(ctx, themeColor);
+            });
+            clouds = clouds.filter(c => !c.markedForDeletion);
+
+            // Draw Ground Line & Texture
+            ctx.strokeStyle = themeColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+            ctx.stroke();
+
+            if (isPlaying) groundOffset = (groundOffset + gameSpeed) % 20;
+            ctx.fillStyle = themeColor;
+            for (let i = -groundOffset; i < CANVAS_WIDTH; i += 25) {
+                if ((i + groundOffset) % 50 === 0) {
+                    ctx.fillRect(i, GROUND_Y + 6, 4, 2);
+                    ctx.fillRect(i + 10, GROUND_Y + 12, 2, 2);
+                }
+            }
+
+            // Draw Dino
+            dino.draw(ctx, themeColor, eyeColor);
+
+            // Update & Draw Obstacles
+            const dinoBounds = dino.getBounds();
+            for (let i = 0; i < obstacles.length; i++) {
+                const obs = obstacles[i];
+                if (isPlaying) obs.update();
+                obs.draw(ctx, themeColor, eyeColor);
+
+                if (isPlaying && checkCollision(dinoBounds, obs.getBounds())) {
+                    handleGameOver();
+                }
+            }
+            obstacles = obstacles.filter(o => !o.markedForDeletion);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerJump() {
+            sfx.init();
+            if (!isPlaying && !isGameOver) {
+                resetGame();
+            } else if (isGameOver) {
+                resetGame();
+            } else {
+                dino.jump();
+            }
+        }
+
+        function triggerDuck(isDucking) {
+            if (isPlaying) {
+                dino.duck(isDucking);
+            }
+        }
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                triggerJump();
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                triggerDuck(true);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                triggerDuck(false);
+            }
+        });
+
+        // Touch & Button Interactions
+        startBtn.addEventListener('click', () => {
+            sfx.init();
+            resetGame();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            sfx.init();
+            resetGame();
+        });
+
+        const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+        const mobileDuckBtn = document.getElementById('mobileDuckBtn');
+
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerJump();
+        });
+
+        mobileDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerDuck(true);
+        });
+
+        mobileDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            triggerDuck(false);
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!isPlaying) triggerJump();
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

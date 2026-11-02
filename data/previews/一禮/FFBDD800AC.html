@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星象羅盤 - 12星座運勢與星盤解析</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for Ambient Audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cosmic: {
+                            950: '#04060f',
+                            900: '#0a0e27',
+                            800: '#141b43',
+                            700: '#212d6a',
+                        },
+                        astral: {
+                            gold: '#fbbf24',
+                            purple: '#a855f7',
+                            cyan: '#38bdf8',
+                            rose: '#fb7185'
+                        }
+                    },
+                    fontFamily: {
+                        cinzel: ['Cinzel', 'serif'],
+                        serif: ['Noto Serif TC', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #04060f;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+
+        /* Cosmic Galaxy Background Gradient */
+        .bg-cosmic-glow {
+            background: 
+                radial-gradient(circle at 15% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(20, 27, 67, 0.8) 0%, rgba(4, 6, 15, 1) 100%);
+        }
+
+        /* Glowing text effects */
+        .gold-glow-text {
+            background: linear-gradient(135deg, #ffffff 0%, #fef08a 40%, #eab308 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 25px rgba(234, 179, 8, 0.35);
+        }
+
+        /* Zodiac wheel rotation animation */
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spinSlow 90s linear infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #04060f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #212d6a;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+
+        /* Modern Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(10, 14, 39, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-card-interactive {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-interactive:hover {
+            transform: translateY(-3px);
+            border-color: rgba(234, 179, 8, 0.5);
+            box-shadow: 0 12px 30px -10px rgba(234, 179, 8, 0.2);
+        }
+
+        .active-zodiac-card {
+            border-color: #eab308 !important;
+            background: rgba(20, 27, 67, 0.9) !important;
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.25) !important;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen bg-cosmic-glow flex flex-col justify-between relative selection:bg-amber-500/30 selection:text-amber-200">
+
+    <!-- Navigation Header -->
+    <header class="border-b border-white/10 bg-cosmic-950/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
+            <div class="flex items-center space-x-3.5 cursor-pointer group" onclick="app.switchTab('horoscope')">
+                <div class="relative w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-purple-600 to-indigo-600 p-[1px] shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/20 transition-all">
+                    <div class="w-full h-full bg-cosmic-950 rounded-[15px] flex items-center justify-center">
+                        <i class="fa-solid fa-compass text-amber-400 text-xl group-hover:rotate-45 transition-transform duration-500"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="font-cinzel text-xl sm:text-2xl font-black tracking-wider gold-glow-text">ASTROLOGY</h1>
+                    <p class="text-[10px] sm:text-xs text-indigo-300/70 tracking-widest uppercase">星象羅盤 · 命運指南</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center space-x-1 sm:space-x-2 bg-cosmic-900/80 p-1.5 rounded-2xl border border-white/5">
+                <button onclick="app.switchTab('horoscope')" id="nav-horoscope" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+                    <i class="fa-solid fa-star-sharp text-amber-400"></i>
+                    <span>星座運勢</span>
+                </button>
+                <button onclick="app.switchTab('compatibility')" id="nav-compatibility" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 text-slate-400 hover:text-amber-200 hover:bg-white/5">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    <span>契合度算命</span>
+                </button>
+                <button onclick="app.switchTab('natal')" id="nav-natal" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 text-slate-400 hover:text-amber-200 hover:bg-white/5">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>星盤解析</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-grow w-full z-10 space-y-10">
+
+        <!-- Hero Decorative Banner -->
+        <div class="relative rounded-3xl p-8 sm:p-10 glass-card overflow-hidden border border-white/10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-20 -top-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="space-y-3 max-w-2xl text-center md:text-left z-10">
+                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-semibold">
+                    <i class="fa-solid fa-sparkles"></i>
+                    <span>即時星象數據點播</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-black font-cinzel text-slate-100 tracking-tight leading-tight">
+                    探索宇宙與星座的 <span class="gold-glow-text">神秘能量</span>
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    精確分析十二星座的星象週期、愛情契合度與個人星盤能量，引導您找到順應天時的智慧抉擇。
+                </p>
+            </div>
+
+            <!-- Spinning Astrology Wheel Decoration -->
+            <div class="relative w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border border-dashed border-amber-400/30 animate-spin-slow"></div>
+                <div class="absolute inset-3 rounded-full border border-indigo-500/20"></div>
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-indigo-900 to-cosmic-950 flex items-center justify-center border border-amber-500/40 shadow-2xl">
+                    <i class="fa-solid fa-moon text-3xl sm:text-4xl text-amber-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 1: Horoscope (星座運勢) -->
+        <section id="tab-horoscope" class="space-y-8">
+
+            <!-- Zodiac Selector Header & Grid -->
+            <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-grid-2 text-amber-400"></i>
+                            <span>選擇您的星座</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">點擊星座圖標以獲取最新運勢分析</p>
+                    </div>
+                </div>
+
+                <!-- 12 Zodiac Buttons Grid -->
+                <div id="zodiac-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                    <!-- Dynamically Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Horoscope Detail Card -->
+            <div id="horoscope-detail-card" class="glass-card rounded-3xl p-6 sm:p-8 space-y-8 hidden transition-all duration-500">
+                
+                <!-- Detail Top Header -->
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center pb-6 border-b border-white/10 gap-6">
+                    <div class="flex items-center space-x-5">
+                        <div id="selected-zodiac-icon" class="text-4xl sm:text-5xl text-amber-300 w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-950 to-cosmic-900 border border-amber-500/30 shadow-xl">
+                            ♈
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-3">
+                                <h3 id="selected-zodiac-name" class="text-2xl sm:text-3xl font-bold text-slate-100">白羊座</h3>
+                                <span id="selected-zodiac-date" class="text-xs px-3 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/50 font-medium">3/21 - 4/19</span>
+                            </div>
+                            <p id="selected-zodiac-element" class="text-xs sm:text-sm text-slate-400">火象星座 · 守護星：火星</p>
+                        </div>
+                    </div>
+
+                    <!-- Timeframe Toggle Tabs -->
+                    <div class="flex bg-cosmic-950 p-1.5 rounded-2xl border border-white/10 w-full lg:w-auto">
+                        <button onclick="app.changeTimeframe('daily')" id="tf-daily" class="flex-1 lg:flex-none px-5 py-2 rounded-xl text-xs font-bold transition-all bg-amber-500 text-slate-950 shadow-md">今日運勢</button>
+                        <button onclick="app.changeTimeframe('weekly')" id="tf-weekly" class="flex-1 lg:flex-none px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-amber-200">本週運勢</button>
+                        <button onclick="app.changeTimeframe('monthly')" id="tf-monthly" class="flex-1 lg:flex-none px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-amber-200">本月運勢</button>
+                    </div>
+                </div>
+
+                <!-- Star Ratings Dashboard Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-cosmic-950/70 border border-white/5 p-4 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>整體運勢</span>
+                            <i class="fa-solid fa-sparkles text-amber-400"></i>
+                        </div>
+                        <div id="stars-overall" class="text-amber-400 text-base sm:text-lg tracking-widest font-bold">★★★★☆</div>
+                    </div>
+                    <div class="bg-cosmic-950/70 border border-white/5 p-4 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>愛情姻緣</span>
+                            <i class="fa-solid fa-heart text-rose-400"></i>
+                        </div>
+                        <div id="stars-love" class="text-rose-400 text-base sm:text-lg tracking-widest font-bold">★★★★★</div>
+                    </div>
+                    <div class="bg-cosmic-950/70 border border-white/5 p-4 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>事業學業</span>
+                            <i class="fa-solid fa-briefcase text-sky-400"></i>
+                        </div>
+                        <div id="stars-career" class="text-sky-400 text-base sm:text-lg tracking-widest font-bold">★★★☆☆</div>
+                    </div>
+                    <div class="bg-cosmic-950/70 border border-white/5 p-4 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <span>財富理財</span>
+                            <i class="fa-solid fa-coins text-emerald-400"></i>
+                        </div>
+                        <div id="stars-wealth" class="text-emerald-400 text-base sm:text-lg tracking-widest font-bold">★★★★☆</div>
+                    </div>
+                </div>
+
+                <!-- Lucky Index Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm bg-gradient-to-r from-indigo-950/80 to-cosmic-900/80 p-4 rounded-2xl border border-indigo-800/30">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-hashtag text-amber-400"></i>
+                        <span class="text-slate-400">幸運數字：</span>
+                        <strong id="lucky-number" class="text-amber-200">7</strong>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-palette text-amber-400"></i>
+                        <span class="text-slate-400">幸運顏色：</span>
+                        <strong id="lucky-color" class="text-amber-200">寶藍色</strong>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-compass text-amber-400"></i>
+                        <span class="text-slate-400">幸運方位：</span>
+                        <strong id="lucky-direction" class="text-amber-200">正東方</strong>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-handshake text-amber-400"></i>
+                        <span class="text-slate-400">速配星座：</span>
+                        <strong id="lucky-match" class="text-amber-200">射手座</strong>
+                    </div>
+                </div>
+
+                <!-- Detailed Text Interpretations -->
+                <div class="space-y-4">
+                    <div class="bg-cosmic-950/50 p-5 rounded-2xl border border-white/5 space-y-2">
+                        <h4 class="text-sm font-bold text-amber-300 flex items-center space-x-2">
+                            <i class="fa-solid fa-quote-left text-amber-400"></i>
+                            <span>整體星象解析</span>
+                        </h4>
+                        <p id="desc-overall" class="text-sm text-slate-300 leading-relaxed">
+                            金星與木星形成良好相位，帶來豐沛的靈感與好人緣。保持開放的心態，非常適合開啟新的合作或嘗試未知的領域。
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-cosmic-950/50 p-5 rounded-2xl border border-white/5 space-y-2">
+                            <h4 class="text-sm font-bold text-rose-300 flex items-center space-x-2">
+                                <i class="fa-solid fa-heart"></i>
+                                <span>感情指引</span>
+                            </h4>
+                            <p id="desc-love" class="text-sm text-slate-300 leading-relaxed">
+                                單身者可能在社交場合吸引有緣人；有伴者適合安排浪漫約會，坦誠交流將大幅拉近彼此心靈距離。
+                            </p>
+                        </div>
+                        <div class="bg-cosmic-950/50 p-5 rounded-2xl border border-white/5 space-y-2">
+                            <h4 class="text-sm font-bold text-sky-300 flex items-center space-x-2">
+                                <i class="fa-solid fa-briefcase"></i>
+                                <span>事業與財運</span>
+                            </h4>
+                            <p id="desc-career" class="text-sm text-slate-300 leading-relaxed">
+                                工作效率高，思路清晰，容易得到長官讚賞。理財方面宜穩健投資，切忌聽信謠言盲目跟風。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 2: Zodiac Compatibility (星座配對) -->
+        <section id="tab-compatibility" class="hidden space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-10 space-y-8">
+                <div class="text-center space-y-2 max-w-xl mx-auto">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-100 font-cinzel">星座雙人契合度測驗</h2>
+                    <p class="text-xs sm:text-sm text-slate-400">選擇兩個星座，探索你們之間的感情碰撞、溝通習慣與相處密碼</p>
+                </div>
+
+                <!-- Selectors Layout Container -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-center max-w-4xl mx-auto py-2">
+                    <!-- Person A Zodiac -->
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="block text-xs font-semibold text-slate-300 text-center">甲方星座</label>
+                        <select id="compat-zodiac-a" class="w-full bg-cosmic-950 border border-white/10 rounded-2xl p-3.5 text-amber-200 text-sm focus:outline-none focus:border-amber-400 transition-colors">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Heart Icon Connector -->
+                    <div class="text-center flex items-center justify-center">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-950 to-purple-950 border border-rose-500/40 flex items-center justify-center text-rose-400 text-2xl shadow-lg shadow-rose-950/50 animate-pulse">
+                            ❤️
+                        </div>
+                    </div>
+
+                    <!-- Person B Zodiac -->
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="block text-xs font-semibold text-slate-300 text-center">乙方星座</label>
+                        <select id="compat-zodiac-b" class="w-full bg-cosmic-950 border border-white/10 rounded-2xl p-3.5 text-amber-200 text-sm focus:outline-none focus:border-amber-400 transition-colors">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2">
+                    <button onclick="app.calculateCompatibility()" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-bold rounded-2xl shadow-xl shadow-purple-950/50 hover:scale-[1.02] transition-all">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>開始分析契合度
+                    </button>
+                </div>
+
+                <!-- Compatibility Result Box -->
+                <div id="compat-result-box" class="hidden space-y-6 pt-8 border-t border-white/10">
+                    <div class="text-center space-y-2">
+                        <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold">契合度綜合評分</span>
+                        <div id="compat-score" class="text-5xl font-black text-amber-300 font-cinzel">88%</div>
+                        <p id="compat-title" class="text-lg font-bold text-slate-100">【靈魂共鳴的天作之合】</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <div class="bg-cosmic-950/70 p-4 rounded-2xl border border-white/5 text-center space-y-1">
+                            <span class="text-rose-300 font-semibold">愛情甜蜜度</span>
+                            <div id="compat-score-love" class="text-amber-300 text-base font-bold">★★★★☆</div>
+                        </div>
+                        <div class="bg-cosmic-950/70 p-4 rounded-2xl border border-white/5 text-center space-y-1">
+                            <span class="text-sky-300 font-semibold">溝通默契度</span>
+                            <div id="compat-score-comm" class="text-amber-300 text-base font-bold">★★★★★</div>
+                        </div>
+                        <div class="bg-cosmic-950/70 p-4 rounded-2xl border border-white/5 text-center space-y-1">
+                            <span class="text-emerald-300 font-semibold">長久穩定度</span>
+                            <div id="compat-score-stab" class="text-amber-300 text-base font-bold">★★★★☆</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-cosmic-950/70 p-6 rounded-2xl border border-white/5 space-y-3 text-sm text-slate-300 leading-relaxed">
+                        <h4 class="font-bold text-amber-300 text-xs uppercase tracking-wider flex items-center space-x-2">
+                            <i class="fa-solid fa-comments"></i>
+                            <span>深度相處建議與解讀</span>
+                        </h4>
+                        <p id="compat-advice">
+                            你們兩者具備極佳的互補性，能夠在彼此身上找到所需的安全感與靈感。只要在溝通時保持耐心，多傾聽對方的想法，這將是一段非常穩定且充滿成長的感情。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Natal Chart Calculator (星盤算命) -->
+        <section id="tab-natal" class="hidden space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-10 space-y-8">
+                <div class="text-center space-y-2 max-w-xl mx-auto">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-100 font-cinzel">個人簡易星盤解析</h2>
+                    <p class="text-xs sm:text-sm text-slate-400">輸入您的出生日期與時間，計算太陽、月亮、上升星座與四大元素能量分配</p>
+                </div>
+
+                <!-- Input Birth Form -->
+                <div class="max-w-xl mx-auto space-y-4 bg-cosmic-950/80 p-6 sm:p-8 rounded-3xl border border-white/10">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs text-slate-300">出生日期</label>
+                            <input type="date" id="natal-date" value="1998-06-15" class="w-full bg-cosmic-900 border border-white/10 rounded-xl p-3 text-slate-100 text-sm focus:outline-none focus:border-amber-400">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-xs text-slate-300">出生時間 (約略即可)</label>
+                            <input type="time" id="natal-time" value="14:30" class="w-full bg-cosmic-900 border border-white/10 rounded-xl p-3 text-slate-100 text-sm focus:outline-none focus:border-amber-400">
+                        </div>
+                    </div>
+
+                    <button onclick="app.calculateNatalChart()" class="w-full py-3.5 bg-indigo-700 hover:bg-indigo-600 text-slate-100 font-bold rounded-xl border border-indigo-500/40 transition-all shadow-lg">
+                        <i class="fa-solid fa-chart-line mr-2"></i>生成個人星盤報告
+                    </button>
+                </div>
+
+                <!-- Natal Result Dashboard -->
+                <div id="natal-result-box" class="hidden space-y-6 pt-8 border-t border-white/10">
+                    <!-- Major Three Signs Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-cosmic-950/80 p-5 rounded-2xl border border-amber-500/30 text-center space-y-2">
+                            <span class="text-xs text-amber-400 font-bold">☀️ 太陽星座 (核心自我)</span>
+                            <div id="natal-sun-name" class="text-2xl font-bold text-amber-200">雙子座</div>
+                            <p class="text-xs text-slate-400 leading-relaxed">代表您的本質性格、核心目標與意志力展現。</p>
+                        </div>
+                        <div class="bg-cosmic-950/80 p-5 rounded-2xl border border-indigo-500/30 text-center space-y-2">
+                            <span class="text-xs text-indigo-300 font-bold">🌙 月亮星座 (潛意識與情感)</span>
+                            <div id="natal-moon-name" class="text-2xl font-bold text-indigo-200">巨蟹座</div>
+                            <p class="text-xs text-slate-400 leading-relaxed">代表您的情感需求、內心安全感與個人直覺。</p>
+                        </div>
+                        <div class="bg-cosmic-950/80 p-5 rounded-2xl border border-purple-500/30 text-center space-y-2">
+                            <span class="text-xs text-purple-300 font-bold">🌅 上升星座 (外在面具)</span>
+                            <div id="natal-asc-name" class="text-2xl font-bold text-purple-200">天秤座</div>
+                            <p class="text-xs text-slate-400 leading-relaxed">代表您給他人的第一印象與處事風格。</p>
+                        </div>
+                    </div>
+
+                    <!-- Elements Percentage Progress Bars -->
+                    <div class="bg-cosmic-950/80 p-6 rounded-2xl border border-white/10 space-y-4">
+                        <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider">四大元素能量比例 (Four Elements Balance)</h4>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-rose-300 font-semibold">🔥 火象能量 (白羊/獅子/射手)</span>
+                                    <strong id="elem-fire-val">30%</strong>
+                                </div>
+                                <div class="w-full bg-cosmic-900 rounded-full h-2 overflow-hidden border border-white/5">
+                                    <div id="elem-fire-bar" class="bg-rose-500 h-full rounded-full" style="width: 30%"></div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-emerald-300 font-semibold">🌱 土象能量 (金牛/處女/摩羯)</span>
+                                    <strong id="elem-earth-val">20%</strong>
+                                </div>
+                                <div class="w-full bg-cosmic-900 rounded-full h-2 overflow-hidden border border-white/5">
+                                    <div id="elem-earth-bar" class="bg-emerald-500 h-full rounded-full" style="width: 20%"></div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-sky-300 font-semibold">💨 風象能量 (雙子/天秤/水瓶)</span>
+                                    <strong id="elem-air-val">35%</strong>
+                                </div>
+                                <div class="w-full bg-cosmic-900 rounded-full h-2 overflow-hidden border border-white/5">
+                                    <div id="elem-air-bar" class="bg-sky-500 h-full rounded-full" style="width: 35%"></div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-indigo-300 font-semibold">💧 水象能量 (巨蟹/天蠍/雙魚)</span>
+                                    <strong id="elem-water-val">15%</strong>
+                                </div>
+                                <div class="w-full bg-cosmic-900 rounded-full h-2 overflow-hidden border border-white/5">
+                                    <div id="elem-water-bar" class="bg-indigo-500 h-full rounded-full" style="width: 15%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-cosmic-950/90 py-8 text-center text-xs text-slate-500 z-10">
+        <div class="max-w-7xl mx-auto px-4 space-y-2">
+            <p class="font-cinzel text-amber-400/80 font-bold tracking-widest">ASTROLOGY COMPASS &copy; 星象羅盤神秘學</p>
+            <p class="text-slate-500">星象揭示性格傾向與能量趨勢，真實的命運始終掌握在您的選擇之中。</p>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * Zodiac Data Definition
+         */
+        const ZODIAC_DATA = [
+            { id: 'aries', name: '白羊座', english: 'Aries', date: '3/21 - 4/19', symbol: '♈', element: '火象星座', ruler: '火星' },
+            { id: 'taurus', name: '金牛座', english: 'Taurus', date: '4/20 - 5/20', symbol: '♉', element: '土象星座', ruler: '金星' },
+            { id: 'gemini', name: '雙子座', english: 'Gemini', date: '5/21 - 6/21', symbol: '♊', element: '風象星座', ruler: '水星' },
+            { id: 'cancer', name: '巨蟹座', english: 'Cancer', date: '6/22 - 7/22', symbol: '♋', element: '水象星座', ruler: '月亮' },
+            { id: 'leo', name: '獅子座', english: 'Leo', date: '7/23 - 8/22', symbol: '♌', element: '火象星座', ruler: '太陽' },
+            { id: 'virgo', name: '處女座', english: 'Virgo', date: '8/23 - 9/22', symbol: '♍', element: '土象星座', ruler: '水星' },
+            { id: 'libra', name: '天秤座', english: 'Libra', date: '9/23 - 10/23', symbol: '♎', element: '風象星座', ruler: '金星' },
+            { id: 'scorpio', name: '天蠍座', english: 'Scorpio', date: '10/24 - 11/22', symbol: '♏', element: '水象星座', ruler: '冥王星' },
+            { id: 'sagittarius', name: '射手座', english: 'Sagittarius', date: '11/23 - 12/21', symbol: '♐', element: '火象星座', ruler: '木星' },
+            { id: 'capricorn', name: '摩羯座', english: 'Capricorn', date: '12/22 - 1/19', symbol: '♑', element: '土象星座', ruler: '土星' },
+            { id: 'aquarius', name: '水瓶座', english: 'Aquarius', date: '1/20 - 2/18', symbol: '♒', element: '風象星座', ruler: '天王星' },
+            { id: 'pisces', name: '雙魚座', english: 'Pisces', date: '2/19 - 3/20', symbol: '♓', element: '水象星座', ruler: '海王星' }
+        ];
+
+        class AstrologyApp {
+            constructor() {
+                this.currentTab = 'horoscope';
+                this.selectedZodiac = ZODIAC_DATA[0]; // Default Aries
+                this.timeframe = 'daily'; // daily, weekly, monthly
+                
+                // Audio synth using Tone.js
+                this.synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                this.synth.volume.value = -18;
+
+                this.init();
+            }
+
+            init() {
+                this.renderZodiacGrid();
+                this.populateCompatibilityDropdowns();
+                this.selectZodiac(this.selectedZodiac.id);
+            }
+
+            playChord() {
+                try {
+                    Tone.start();
+                    this.synth.triggerAttackRelease(["D4", "F#4", "A4", "C#5"], "8n");
+                } catch(e) {
+                    // Audio fallback silently
+                }
+            }
+
+            switchTab(tabName) {
+                this.playChord();
+                this.currentTab = tabName;
+                ['horoscope', 'compatibility', 'natal'].forEach(t => {
+                    const el = document.getElementById(`tab-${t}`);
+                    const nav = document.getElementById(`nav-${t}`);
+                    if (t === tabName) {
+                        el.classList.remove('hidden');
+                        nav.className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm";
+                    } else {
+                        el.classList.add('hidden');
+                        nav.className = "px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 text-slate-400 hover:text-amber-200 hover:bg-white/5";
+                    }
+                });
+            }
+
+            renderZodiacGrid() {
+                const grid = document.getElementById('zodiac-grid');
+                grid.innerHTML = '';
+
+                ZODIAC_DATA.forEach(z => {
+                    const btn = document.createElement('button');
+                    btn.onclick = () => this.selectZodiac(z.id);
+                    btn.id = `zodiac-btn-${z.id}`;
+                    btn.className = "glass-card glass-card-interactive p-4 rounded-2xl flex flex-col items-center justify-center space-y-1.5 transition-all group";
+
+                    btn.innerHTML = `
+                        <span class="text-3xl text-amber-300 group-hover:scale-110 transition-transform">${z.symbol}</span>
+                        <span class="font-bold text-xs text-slate-200 group-hover:text-amber-200">${z.name}</span>
+                        <span class="text-[10px] text-slate-400 font-cinzel">${z.english}</span>
+                    `;
+                    grid.appendChild(btn);
+                });
+            }
+
+            selectZodiac(zodiacId) {
+                this.playChord();
+                this.selectedZodiac = ZODIAC_DATA.find(z => z.id === zodiacId);
+
+                // Highlight active button
+                ZODIAC_DATA.forEach(z => {
+                    const btn = document.getElementById(`zodiac-btn-${z.id}`);
+                    if (z.id === zodiacId) {
+                        btn.classList.add('active-zodiac-card');
+                    } else {
+                        btn.classList.remove('active-zodiac-card');
+                    }
+                });
+
+                // Update UI Card
+                document.getElementById('selected-zodiac-icon').innerText = this.selectedZodiac.symbol;
+                document.getElementById('selected-zodiac-name').innerText = this.selectedZodiac.name;
+                document.getElementById('selected-zodiac-date').innerText = this.selectedZodiac.date;
+                document.getElementById('selected-zodiac-element').innerText = `${this.selectedZodiac.element} · 守護星：${this.selectedZodiac.ruler}`;
+
+                // Reveal Detail Box
+                document.getElementById('horoscope-detail-card').classList.remove('hidden');
+
+                // Render Predictions based on selected timeframe
+                this.updateHoroscopeContent();
+            }
+
+            changeTimeframe(tf) {
+                this.timeframe = tf;
+                ['daily', 'weekly', 'monthly'].forEach(t => {
+                    const btn = document.getElementById(`tf-${t}`);
+                    if (t === tf) {
+                        btn.className = "flex-1 lg:flex-none px-5 py-2 rounded-xl text-xs font-bold transition-all bg-amber-500 text-slate-950 shadow-md";
+                    } else {
+                        btn.className = "flex-1 lg:flex-none px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-amber-200";
+                    }
+                });
+
+                this.updateHoroscopeContent();
+            }
+
+            updateHoroscopeContent() {
+                const name = this.selectedZodiac.name;
+                const tfText = this.timeframe === 'daily' ? '今日' : (this.timeframe === 'weekly' ? '本週' : '本月');
+
+                // Update Lucky Attributes
+                document.getElementById('lucky-number').innerText = (name.length * 3 + 4) % 9 + 1;
+                const colors = ['寶藍色', '珊瑚粉', '香檳金', '翡翠綠', '神秘紫', '珍珠白'];
+                document.getElementById('lucky-color').innerText = colors[name.length % colors.length];
+                const directions = ['正東方', '西北方', '正南方', '東北方'];
+                document.getElementById('lucky-direction').innerText = directions[name.length % directions.length];
+                const matches = ZODIAC_DATA.filter(z => z.id !== this.selectedZodiac.id);
+                document.getElementById('lucky-match').innerText = matches[name.length % matches.length].name;
+
+                // Interpretations
+                document.getElementById('desc-overall').innerText = `${tfText}星象為${name}帶來豐沛的能量指引。守護星能量穩定，整體氣勢扶搖直上，適合把握機會展現自身實力。`;
+                document.getElementById('desc-love').innerText = `${tfText}感情運勢升溫，單身者容易在社交或職場中展現魅力，有伴者則適合深入對話，鞏固彼此信賴。`;
+                document.getElementById('desc-career').innerText = `事業與財運方面，${tfText}表現亮眼。只要維持專注與紀律，理財投資宜保持穩健步調即可收穫成果。`;
+            }
+
+            populateCompatibilityDropdowns() {
+                const selA = document.getElementById('compat-zodiac-a');
+                const selB = document.getElementById('compat-zodiac-b');
+                selA.innerHTML = '';
+                selB.innerHTML = '';
+
+                ZODIAC_DATA.forEach(z => {
+                    selA.innerHTML += `<option value="${z.id}">${z.symbol} ${z.name} (${z.date})</option>`;
+                    selB.innerHTML += `<option value="${z.id}">${z.symbol} ${z.name} (${z.date})</option>`;
+                });
+
+                selB.value = ZODIAC_DATA[8].id; // Default match (Sagittarius)
+            }
+
+            calculateCompatibility() {
+                this.playChord();
+                const a = document.getElementById('compat-zodiac-a').value;
+                const b = document.getElementById('compat-zodiac-b').value;
+
+                const zA = ZODIAC_DATA.find(z => z.id === a);
+                const zB = ZODIAC_DATA.find(z => z.id === b);
+
+                let score = 75;
+                if (zA.element === zB.element) score = 95;
+                else if ((zA.element.includes('火') && zB.element.includes('風')) || 
+                         (zA.element.includes('水') && zB.element.includes('土'))) {
+                    score = 88;
+                } else if (a === b) {
+                    score = 90;
+                }
+
+                document.getElementById('compat-score').innerText = `${score}%`;
+                document.getElementById('compat-title').innerText = score > 90 ? '【天生一對 · 靈魂共鳴】' : (score > 80 ? '【相得益彰 · 默契十足】' : '【互相吸引 · 需多包容】');
+                document.getElementById('compat-result-box').classList.remove('hidden');
+            }
+
+            calculateNatalChart() {
+                this.playChord();
+                const birthDate = document.getElementById('natal-date').value;
+                if (!birthDate) return;
+
+                const month = parseInt(birthDate.split('-')[1]);
+                
+                const sunSign = ZODIAC_DATA[(month - 1) % 12];
+                const moonSign = ZODIAC_DATA[(month + 3) % 12];
+                const ascSign = ZODIAC_DATA[(month + 5) % 12];
+
+                document.getElementById('natal-sun-name').innerText = sunSign.name;
+                document.getElementById('natal-moon-name').innerText = moonSign.name;
+                document.getElementById('natal-asc-name').innerText = ascSign.name;
+
+                document.getElementById('natal-result-box').classList.remove('hidden');
+            }
+        }
+
+        // Initialize Application
+        let app;
+        window.onload = function() {
+            app = new AstrologyApp();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

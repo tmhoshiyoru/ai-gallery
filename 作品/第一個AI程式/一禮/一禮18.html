@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Breakout</title>
+    <style>
+        /* 視覺設定：深色科技風 (Dark Mode) */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b0f19;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #00e5ff;
+            text-shadow: 0 0 10px #00e5ff, 0 0 20px #00e5ff;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        #game-wrapper {
+            position: relative;
+        }
+
+        /* 遊戲畫布與發光邊框 */
+        canvas {
+            background: linear-gradient(135deg, #111827 0%, #030712 100%);
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+            border: 2px solid rgba(0, 229, 255, 0.5);
+            border-radius: 8px;
+            display: block;
+        }
+
+        /* Game Over 文字覆蓋層 */
+        #game-message {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: 900;
+            color: #ff0055;
+            text-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
+            text-align: center;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .controls-hint {
+            margin-top: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        kbd {
+            background-color: #1f2937;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #374151;
+            color: #00e5ff;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>NEON BREAKOUT</h1>
+    
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="640" height="400"></canvas>
+        <div id="game-message">GAME OVER</div>
+    </div>
+
+    <div class="controls-hint">
+        使用 <kbd>←</kbd> <kbd>→</kbd> 方向鍵移動滑塊
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const gameMessage = document.getElementById("game-message");
+
+        // 遊戲狀態與分數
+        let score = 0;
+        let isGameOver = false;
+
+        // 小球屬性 (科技藍)
+        const ballRadius = 6;
+        let x = canvas.width / 2;
+        let y = canvas.height - 40;
+        let dx = 4.5;
+        let dy = -4.5;
+        const ballColor = "#00e5ff";
+
+        // 滑塊屬性 (螢光紫)
+        const paddleHeight = 12;
+        const paddleWidth = 100;
+        let paddleX = (canvas.width - paddleWidth) / 2;
+        let rightPressed = false;
+        let leftPressed = false;
+        const paddleColor = "#b026ff";
+
+        // 磚塊屬性 (三排彩色霓虹)
+        const brickRowCount = 3;
+        const brickColumnCount = 8;
+        const brickWidth = 65;
+        const brickHeight = 22;
+        const brickPadding = 12;
+        const brickOffsetTop = 40;
+        const brickOffsetLeft = 20;
+
+        const bricks = [];
+        // 三排分別賦予不同的高飽和度色彩：桃紅、青綠、亮黃
+        const rowColors = ["#ff0055", "#00ffaa", "#ffea00"]; 
+
+        for (let c = 0; c < brickColumnCount; c++) {
+            bricks[c] = [];
+            for (let r = 0; r < brickRowCount; r++) {
+                bricks[c][r] = { x: 0, y: 0, status: 1, color: rowColors[r] };
+            }
+        }
+
+        // 監聽鍵盤事件
+        document.addEventListener("keydown", keyDownHandler, false);
+        document.addEventListener("keyup", keyUpHandler, false);
+
+        function keyDownHandler(e) {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = true;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = false;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = false;
+            }
+        }
+
+        // 碰撞偵測邏輯
+        function collisionDetection() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    let b = bricks[c][r];
+                    if (b.status == 1) {
+                        // 判斷小球是否進入磚塊的 X/Y 範圍內
+                        if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
+                            dy = -dy; // 反彈
+                            b.status = 0; // 磚塊消失
+                            score += 10; // 得 10 分
+                            
+                            // 檢查是否全數擊破 (獲勝)
+                            if (score === brickRowCount * brickColumnCount * 10) {
+                                showMessage("YOU WIN!", "#00e5ff");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function showMessage(text, color) {
+            isGameOver = true;
+            gameMessage.innerText = text;
+            gameMessage.style.color = color;
+            gameMessage.style.textShadow = `0 0 15px ${color}, 0 0 30px ${color}`;
+            gameMessage.style.display = "block";
+        }
+
+        // 繪製包含光暈效果的組件
+        function drawGlowRect(x, y, w, h, color, radius) {
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(x, y, w, h, radius) : ctx.rect(x, y, w, h);
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0; // 重置光暈避免影響其他元素
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = ballColor;
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = ballColor;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawPaddle() {
+            drawGlowRect(paddleX, canvas.height - paddleHeight - 15, paddleWidth, paddleHeight, paddleColor, 6);
+        }
+
+        function drawBricks() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    if (bricks[c][r].status == 1) {
+                        let brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                        let brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                        bricks[c][r].x = brickX;
+                        bricks[c][r].y = brickY;
+                        
+                        drawGlowRect(brickX, brickY, brickWidth, brickHeight, bricks[c][r].color, 4);
+                    }
+                }
+            }
+        }
+
+        function drawScore() {
+            ctx.font = "bold 16px 'Segoe UI'";
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText("SCORE: " + score, 20, 25);
+        }
+
+        // 主遊戲迴圈
+        function draw() {
+            if (isGameOver) return; // 停止繪製
+
+            // 清空畫布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBricks();
+            drawBall();
+            drawPaddle();
+            drawScore();
+            collisionDetection();
+
+            // 邊界碰撞 - 左右牆壁
+            if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+                dx = -dx;
+            }
+            
+            // 邊界碰撞 - 頂部
+            if (y + dy < ballRadius) {
+                dy = -dy;
+            } 
+            // 邊界碰撞 - 底部
+            else if (y + dy > canvas.height - ballRadius - 15) {
+                // 檢查是否碰到滑塊
+                if (x > paddleX && x < paddleX + paddleWidth && y + dy < canvas.height - 15) {
+                    dy = -dy;
+                    // 根據擊中滑塊的位置，給予小球水平方向的微調，增加遊戲性
+                    let hitPoint = x - (paddleX + paddleWidth / 2);
+                    dx = hitPoint * 0.12; 
+                } 
+                // 掉落到底部邊界 -> Game Over
+                else if (y + dy > canvas.height - ballRadius) {
+                    showMessage("GAME OVER", "#ff0055");
+                }
+            }
+
+            // 更新滑塊位置
+            if (rightPressed && paddleX < canvas.width - paddleWidth) {
+                paddleX += 7;
+            } else if (leftPressed && paddleX > 0) {
+                paddleX -= 7;
+            }
+
+            // 更新小球位置
+            x += dx;
+            y += dy;
+
+            requestAnimationFrame(draw);
+        }
+
+        // 啟動遊戲
+        draw();
+    </script>
+</body>
+</html>

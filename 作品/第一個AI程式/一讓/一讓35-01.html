@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>太空科幻打磚塊 - Space Sci-Fi Breakout</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            background-color: #050814;
+            color: #ffffff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.25);
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            border-radius: 12px;
+            background: radial-gradient(circle at center, #0b132b 0%, #030712 100%);
+        }
+        .glow-text {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(147, 51, 234, 0.6);
+        }
+        .neon-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+        }
+        .neon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.8);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4">
+
+    <!-- 頂部資訊看板 -->
+    <div class="w-full max-w-4xl flex justify-between items-center bg-gray-900/80 backdrop-blur-md px-4 py-3 rounded-xl border border-cyan-500/30 mb-3 shadow-lg">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl md:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 glow-text flex items-center gap-2">
+                <i class="fa-solid font-rocket text-cyan-400"></i> STAR BREAKOUT
+            </h1>
+        </div>
+        <div class="flex items-center space-x-4 md:space-x-8 text-sm md:text-base font-semibold">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">得分:</span>
+                <span id="scoreText" class="text-cyan-400 font-mono text-lg md:text-xl">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400">最高分:</span>
+                <span id="highScoreText" class="text-yellow-400 font-mono text-lg md:text-xl">0</span>
+            </div>
+            <div class="flex items-center gap-1 text-red-500 text-lg" id="livesContainer">
+                <i class="fa-solid fa-heart"></i>
+                <i class="fa-solid fa-heart"></i>
+                <i class="fa-solid fa-heart"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲主要畫布區域 -->
+    <div class="relative w-full max-w-4xl flex justify-center items-center">
+        <canvas id="gameCanvas" class="w-full h-auto max-h-[75vh] aspect-[4/3] object-contain"></canvas>
+
+        <!-- 開始與重置覆蓋選單 -->
+        <div id="overlay" class="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center rounded-xl p-6 text-center transition-opacity duration-300">
+            <h2 id="overlayTitle" class="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 mb-4 glow-text">
+                太空科幻打磚塊
+            </h2>
+            <p id="overlaySub" class="text-gray-300 mb-6 max-w-md text-sm md:text-base leading-relaxed">
+                使用 <kbd class="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-cyan-400">←</kbd> <kbd class="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-cyan-400">→</kbd> 或滑鼠/觸控滑動控制戰艦。<br>
+                擊碎彩虹能量磚塊，收集強化道具，捍衛宇宙！
+            </p>
+            <button id="startBtn" class="neon-btn text-white font-bold px-8 py-3 rounded-full text-lg flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-play"></i> 開始遊戲
+            </button>
+        </div>
+    </div>
+
+    <!-- 行動裝置按鈕控制 (觸控優化) -->
+    <div class="flex md:hidden w-full max-w-4xl justify-between mt-3 px-2 gap-4">
+        <button id="btnLeft" class="flex-1 bg-cyan-900/40 border border-cyan-500/50 py-3 rounded-lg text-cyan-300 active:bg-cyan-600/50 text-xl flex justify-center items-center">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button id="btnShoot" class="w-16 bg-purple-900/40 border border-purple-500/50 py-3 rounded-lg text-purple-300 active:bg-purple-600/50 text-xl flex justify-center items-center">
+            <i class="fa-solid fa-crosshairs"></i>
+        </button>
+        <button id="btnRight" class="flex-1 bg-cyan-900/40 border border-cyan-500/50 py-3 rounded-lg text-cyan-300 active:bg-cyan-600/50 text-xl flex justify-center items-center">
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- JavaScript 遊戲邏輯 -->
+    <script>
+        // Web Audio API 音效合成器 (免外部音樂檔)
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+            playPaddle() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+            playPowerup() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.16);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+            playLose() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const sounds = new SoundEffects();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 設定畫布內部高解析度尺寸 (保持 4:3 比例)
+        canvas.width = 800;
+        canvas.height = 600;
+
+        // 遊戲狀態變數
+        let score = 0;
+        let highScore = localStorage.getItem('starBreakout_highScore') || 0;
+        let lives = 3;
+        let isGameRunning = false;
+        let animationFrameId;
+
+        // UI 元素
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const livesContainer = document.getElementById('livesContainer');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const startBtn = document.getElementById('startBtn');
+
+        highScoreText.textContent = highScore;
+
+        // 滑塊 (太空船) 物件
+        const paddle = {
+            width: 110,
+            height: 16,
+            x: (canvas.width - 110) / 2,
+            y: canvas.height - 35,
+            speed: 8,
+            dx: 0,
+            isEnlarged: false,
+            enlargeTimer: null,
+            hasLaser: false,
+            laserTimer: null
+        };
+
+        let balls = [];
+        let bricks = [];
+        let particles = [];
+        let powerups = [];
+        let lasers = [];
+        let stars = [];
+
+        // 建立動態星空背景
+        for (let i = 0; i < 70; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 0.5,
+                speed: Math.random() * 0.5 + 0.1,
+                alpha: Math.random()
+            });
+        }
+
+        // 鍵盤狀態監聽
+        const keys = { right: false, left: false, space: false };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                keys.space = true;
+                shootLaser();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === ' ' || e.key === 'Spacebar') keys.space = false;
+        });
+
+        // 滑鼠與觸控跟隨操作
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isGameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            paddle.x = mouseX - paddle.width / 2;
+            clampPaddle();
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isGameRunning || e.touches.length === 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const touchX = (e.touches[0].clientX - rect.left) * scaleX;
+            paddle.x = touchX - paddle.width / 2;
+            clampPaddle();
+            e.preventDefault();
+        }, { passive: false });
+
+        // 行動裝置按鈕綁定
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnShoot = document.getElementById('btnShoot');
+
+        btnLeft.addEventListener('touchstart', (e) => { keys.left = true; e.preventDefault(); });
+        btnLeft.addEventListener('touchend', () => { keys.left = false; });
+        btnRight.addEventListener('touchstart', (e) => { keys.right = true; e.preventDefault(); });
+        btnRight.addEventListener('touchend', () => { keys.right = false; });
+        btnShoot.addEventListener('touchstart', (e) => { shootLaser(); e.preventDefault(); });
+
+        function clampPaddle() {
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+        }
+
+        // 初始化磚塊矩陣
+        const brickConfig = {
+            rows: 5,
+            cols: 8,
+            padding: 12,
+            offsetTop: 60,
+            offsetLeft: 35,
+            height: 22
+        };
+
+        const brickColors = [
+            { top: '#f43f5e', bottom: '#be123c' }, // 紅色 (高分)
+            { top: '#fb923c', bottom: '#c2410c' }, // 橘色
+            { top: '#facc15', bottom: '#a16207' }, // 黃色
+            { top: '#4ade80', bottom: '#15803d' }, // 綠色
+            { top: '#38bdf8', bottom: '#0369a1' }  // 藍色
+        ];
+
+        function createBricks() {
+            bricks = [];
+            const totalWidth = canvas.width - brickConfig.offsetLeft * 2;
+            const brickWidth = (totalWidth - (brickConfig.cols - 1) * brickConfig.padding) / brickConfig.cols;
+
+            for (let r = 0; r < brickConfig.rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const brickX = brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding);
+                    const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: brickX,
+                        y: brickY,
+                        width: brickWidth,
+                        height: brickConfig.height,
+                        status: 1,
+                        color: brickColors[r % brickColors.length],
+                        points: (brickConfig.rows - r) * 10
+                    };
+                }
+            }
+        }
+
+        function createBall() {
+            return {
+                x: paddle.x + paddle.width / 2,
+                y: paddle.y - 12,
+                dx: (Math.random() - 0.5) * 6,
+                dy: -6,
+                radius: 7,
+                speed: 6.5
+            };
+        }
+
+        function resetBallAndPaddle() {
+            paddle.width = 110;
+            paddle.x = (canvas.width - paddle.width) / 2;
+            paddle.hasLaser = false;
+            balls = [createBall()];
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 6,
+                    dy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 3 + 1,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        // 道具類型: 1: 擴大滑塊, 2: 多重球, 3: 雷射砲, 4: 額外生命
+        function dropPowerup(x, y) {
+            if (Math.random() < 0.25) { // 25% 掉落機率
+                const types = ['EXPAND', 'MULTIBALL', 'LASER', 'LIFE'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                powerups.push({
+                    x: x,
+                    y: y,
+                    type: type,
+                    speed: 2.5,
+                    width: 26,
+                    height: 26
+                });
+            }
+        }
+
+        function applyPowerup(type) {
+            sounds.playPowerup();
+            if (type === 'EXPAND') {
+                paddle.width = 160;
+                clearTimeout(paddle.enlargeTimer);
+                paddle.enlargeTimer = setTimeout(() => { paddle.width = 110; }, 7000);
+            } else if (type === 'MULTIBALL') {
+                if (balls.length > 0) {
+                    const b = balls[0];
+                    balls.push({ x: b.x, y: b.y, dx: -b.dx, dy: b.dy, radius: 7, speed: b.speed });
+                    balls.push({ x: b.x, y: b.y, dx: b.dx * 1.2, dy: -Math.abs(b.dy), radius: 7, speed: b.speed });
+                }
+            } else if (type === 'LASER') {
+                paddle.hasLaser = true;
+                clearTimeout(paddle.laserTimer);
+                paddle.laserTimer = setTimeout(() => { paddle.hasLaser = false; }, 6000);
+            } else if (type === 'LIFE') {
+                if (lives < 5) {
+                    lives++;
+                    updateLivesUI();
+                }
+            }
+        }
+
+        function shootLaser() {
+            if (!isGameRunning || !paddle.hasLaser) return;
+            lasers.push({ x: paddle.x + 15, y: paddle.y, width: 4, height: 14, speed: 10 });
+            lasers.push({ x: paddle.x + paddle.width - 19, y: paddle.y, width: 4, height: 14, speed: 10 });
+            sounds.playHit();
+        }
+
+        function updateLivesUI() {
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                livesContainer.innerHTML += '<i class="fa-solid fa-heart text-red-500 animate-pulse"></i>';
+            }
+        }
+
+        function update() {
+            if (!isGameRunning) return;
+
+            // 1. 移動滑塊
+            if (keys.right) paddle.x += paddle.speed;
+            if (keys.left) paddle.x -= paddle.speed;
+            clampPaddle();
+
+            // 2. 星空背景運動
+            stars.forEach(s => {
+                s.y += s.speed;
+                if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+            });
+
+            // 3. 雷射發射更新
+            for (let l = lasers.length - 1; l >= 0; l--) {
+                const laser = lasers[l];
+                laser.y -= laser.speed;
+
+                // 雷射碰撞磚塊
+                let laserHit = false;
+                for (let r = 0; r < brickConfig.rows; r++) {
+                    for (let c = 0; c < brickConfig.cols; c++) {
+                        const b = bricks[r][c];
+                        if (b.status === 1) {
+                            if (laser.x > b.x && laser.x < b.x + b.width && laser.y > b.y && laser.y < b.y + b.height) {
+                                b.status = 0;
+                                score += b.points;
+                                scoreText.textContent = score;
+                                createParticles(b.x + b.width / 2, b.y + b.height / 2, b.color.top);
+                                dropPowerup(b.x + b.width / 2, b.y);
+                                sounds.playHit();
+                                laserHit = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (laserHit) break;
+                }
+
+                if (laserHit || laser.y < 0) {
+                    lasers.splice(l, 1);
+                }
+            }
+
+            // 4. 小球更新與碰撞檢查
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // 左右牆壁反彈
+                if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                    ball.dx = -ball.dx;
+                    sounds.playHit();
+                }
+                // 天花板反彈
+                if (ball.y - ball.radius < 0) {
+                    ball.dy = -ball.dy;
+                    sounds.playHit();
+                }
+
+                // 滑塊碰撞
+                if (ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x >= paddle.x && ball.x <= paddle.x + paddle.width) {
+                    
+                    sounds.playPaddle();
+                    // 根據擊中滑塊位置調整角度
+                    let collidePoint = ball.x - (paddle.x + paddle.width / 2);
+                    collidePoint = collidePoint / (paddle.width / 2);
+                    let angle = collidePoint * (Math.PI / 3); // 最大 60 度切角
+
+                    ball.dx = ball.speed * Math.sin(angle);
+                    ball.dy = -ball.speed * Math.cos(angle);
+                }
+
+                // 磚塊碰撞
+                let activeBricksLeft = 0;
+                for (let r = 0; r < brickConfig.rows; r++) {
+                    for (let c = 0; c < brickConfig.cols; c++) {
+                        const b = bricks[r][c];
+                        if (b.status === 1) {
+                            activeBricksLeft++;
+                            if (ball.x + ball.radius > b.x && ball.x - ball.radius < b.x + b.width &&
+                                ball.y + ball.radius > b.y && ball.y - ball.radius < b.y + b.height) {
+                                
+                                b.status = 0;
+                                ball.dy = -ball.dy;
+                                score += b.points;
+                                scoreText.textContent = score;
+
+                                sounds.playHit();
+                                createParticles(b.x + b.width / 2, b.y + b.height / 2, b.color.top);
+                                dropPowerup(b.x + b.width / 2, b.y);
+                            }
+                        }
+                    }
+                }
+
+                // 勝利檢查 (磚塊全部被清除)
+                if (activeBricksLeft === 0) {
+                    gameVictory();
+                    return;
+                }
+
+                // 球掉落底部
+                if (ball.y + ball.radius > canvas.height) {
+                    balls.splice(i, 1);
+                }
+            }
+
+            // 當畫面上沒有球時，扣除血量
+            if (balls.length === 0) {
+                lives--;
+                sounds.playLose();
+                updateLivesUI();
+
+                if (lives <= 0) {
+                    gameOver();
+                    return;
+                } else {
+                    resetBallAndPaddle();
+                }
+            }
+
+            // 5. 道具掉落與碰撞檢查
+            for (let p = powerups.length - 1; p >= 0; p--) {
+                const power = powerups[p];
+                power.y += power.speed;
+
+                // 道具接觸滑塊
+                if (power.y + power.height >= paddle.y &&
+                    power.x >= paddle.x && power.x <= paddle.x + paddle.width) {
+                    applyPowerup(power.type);
+                    powerups.splice(p, 1);
+                    continue;
+                }
+
+                // 道具移出底界
+                if (power.y > canvas.height) {
+                    powerups.splice(p, 1);
+                }
+            }
+
+            // 6. 粒子更新
+            for (let p = particles.length - 1; p >= 0; p--) {
+                const pt = particles[p];
+                pt.x += pt.dx;
+                pt.y += pt.dy;
+                pt.alpha -= pt.decay;
+                if (pt.alpha <= 0) particles.splice(p, 1);
+            }
+        }
+
+        function render() {
+            // 清除畫面
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製背景星星
+            stars.forEach(s => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 繪製磚塊
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        const grad = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.height);
+                        grad.addColorStop(0, b.color.top);
+                        grad.addColorStop(1, b.color.bottom);
+
+                        ctx.fillStyle = grad;
+                        ctx.shadowColor = b.color.top;
+                        ctx.shadowBlur = 8;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.width, b.height, 4);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+
+            // 繪製太空船滑塊
+            ctx.fillStyle = paddle.hasLaser ? '#c084fc' : '#38bdf8';
+            ctx.shadowColor = paddle.hasLaser ? '#a855f7' : '#0284c7';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 繪製滑塊引擎噴射火焰
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(paddle.x + paddle.width / 2, paddle.y + paddle.height + 3, 5, 0, Math.PI);
+            ctx.fill();
+
+            // 繪製小球
+            balls.forEach(ball => {
+                ctx.fillStyle = '#67e8f9';
+                ctx.shadowColor = '#22d3ee';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // 繪製雷射子彈
+            ctx.fillStyle = '#f43f5e';
+            ctx.shadowColor = '#e11d48';
+            ctx.shadowBlur = 10;
+            lasers.forEach(l => {
+                ctx.fillRect(l.x, l.y, l.width, l.height);
+            });
+            ctx.shadowBlur = 0;
+
+            // 繪製掉落道具
+            powerups.forEach(p => {
+                ctx.font = '18px FontAwesome';
+                let icon = '⚡';
+                let color = '#facc15';
+
+                if (p.type === 'EXPAND') { icon = '↔️'; color = '#60a5fa'; }
+                else if (p.type === 'MULTIBALL') { icon = '⚽'; color = '#34d399'; }
+                else if (p.type === 'LASER') { icon = '🔫'; color = '#f43f5e'; }
+                else if (p.type === 'LIFE') { icon = '❤️'; color = '#f43f5e'; }
+
+                ctx.fillStyle = color;
+                ctx.font = '16px sans-serif';
+                ctx.fillText(icon, p.x, p.y);
+            });
+
+            // 繪製爆炸粒子
+            particles.forEach(pt => {
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = pt.alpha;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            if (isGameRunning) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            sounds.init();
+            score = 0;
+            lives = 3;
+            scoreText.textContent = score;
+            updateLivesUI();
+
+            createBricks();
+            resetBallAndPaddle();
+            powerups = [];
+            particles = [];
+            lasers = [];
+
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            isGameRunning = true;
+            cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function gameOver() {
+            isGameRunning = false;
+            checkHighScore();
+            overlayTitle.textContent = "GAME OVER";
+            overlaySub.textContent = `最終得分：${score} 分！繼續加油，再次挑戰拯救宇宙！`;
+            startBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 重新開始';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function gameVictory() {
+            isGameRunning = false;
+            checkHighScore();
+            overlayTitle.textContent = "MISSION COMPLETE!";
+            overlaySub.textContent = `太棒了！你清除所有磚塊，最終得分：${score} 分！`;
+            startBtn.innerHTML = '<i class="fa-solid fa-trophy"></i> 再玩一次';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function checkHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('starBreakout_highScore', highScore);
+                highScoreText.textContent = highScore;
+            }
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        // 初始繪製背景
+        render();
+    </script>
+</body>
+</html>

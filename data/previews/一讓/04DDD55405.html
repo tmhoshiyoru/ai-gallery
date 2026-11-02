@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand-Drawn Space Breakout - 手繪太空打磚塊</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        paper: {
+                            bg: '#f5f2e9',
+                            grid: '#e2dacd',
+                            line: '#ff8a8a',
+                            card: '#fffdf7',
+                            ink: '#2b2d42',
+                            pencil: '#4a4e69',
+                            crayonRed: '#ff5964',
+                            crayonYellow: '#f9c74f',
+                            crayonBlue: '#4cc9f0',
+                            crayonGreen: '#43aa8b',
+                            crayonPurple: '#7209b7'
+                        }
+                    },
+                    fontFamily: {
+                        hand: ['Kalam', 'Architects Daughter', 'cursive', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Kalam:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Kalam', cursive, sans-serif;
+            background-color: #f5f2e9;
+            /* Notebook Graph Paper Grid */
+            background-image: 
+                linear-gradient(to right, rgba(226, 218, 205, 0.6) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(226, 218, 205, 0.6) 1px, transparent 1px);
+            background-size: 24px 24px;
+            touch-action: none;
+        }
+
+        /* Hand-drawn sketchy border effect */
+        .sketch-border {
+            border: 2.5px solid #2b2d42;
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 3px 4px 0px #2b2d42;
+        }
+
+        .sketch-card {
+            background-color: #fffdf7;
+            border: 2px solid #2b2d42;
+            border-radius: 2 line;
+            border-radius: 18px 225px 15px 255px/255px 15px 225px 15px;
+            box-shadow: 4px 5px 0px rgba(43, 45, 66, 0.85);
+        }
+
+        .sketch-btn {
+            background: #fffdf7;
+            border: 2px solid #2b2d42;
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 3px 3px 0px #2b2d42;
+            transition: all 0.15s ease;
+        }
+        .sketch-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0px #2b2d42;
+        }
+        .sketch-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #2b2d42;
+        }
+
+        #gameCanvas {
+            background: #fdfbf7;
+            border: 3px solid #2b2d42;
+            border-radius: 12px 245px 15px 225px/225px 15px 245px 12px;
+            box-shadow: 6px 8px 0px #2b2d42;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a4e69;
+            border-radius: 6px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen text-paper-ink flex flex-col items-center justify-between p-3 sm:p-6 select-none relative">
+
+    <!-- Red Notebook Margin Line (Left side) -->
+    <div class="fixed left-6 sm:left-12 top-0 bottom-0 w-[2px] bg-paper-line/40 z-0 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex items-center justify-between py-2 mb-2 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-4 h-4 rounded-full bg-paper-crayonRed border-2 border-paper-ink transform rotate-12"></div>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-wide text-paper-ink">
+                🚀 SPACE <span class="text-paper-crayonRed font-normal">DOODLE</span>
+            </h1>
+        </div>
+        <div class="text-xs sm:text-sm font-bold text-paper-pencil bg-paper-card px-4 py-1.5 sketch-border flex items-center gap-3">
+            <span>鍵盤 <span class="text-paper-crayonRed">← / →</span></span>
+            <span>•</span>
+            <span>觸控 / 滑鼠</span>
+        </div>
+    </header>
+
+    <!-- Main Game Section -->
+    <main class="w-full max-w-4xl flex flex-col items-center z-10">
+        
+        <!-- Hand-drawn HUD Dashboard -->
+        <div class="w-full sketch-card p-4 flex justify-between items-center px-6 mb-3">
+            <!-- Score -->
+            <div class="flex flex-col">
+                <span class="text-xs text-paper-pencil uppercase font-bold tracking-wider">SCORE 分數</span>
+                <span id="scoreText" class="text-2xl sm:text-3xl font-bold text-paper-ink">0</span>
+            </div>
+
+            <!-- Level -->
+            <div class="flex flex-col items-center">
+                <span class="text-xs text-paper-pencil uppercase font-bold tracking-wider">LEVEL 關卡</span>
+                <span id="levelText" class="text-xl sm:text-2xl font-bold text-paper-crayonBlue">01</span>
+            </div>
+
+            <!-- High Score -->
+            <div class="flex flex-col items-center">
+                <span class="text-xs text-paper-pencil uppercase font-bold tracking-wider">BEST 最高分</span>
+                <span id="highScoreText" class="text-xl sm:text-2xl font-bold text-paper-crayonYellow">0</span>
+            </div>
+
+            <!-- Shields / Lives -->
+            <div class="flex flex-col items-end">
+                <span class="text-xs text-paper-pencil uppercase font-bold tracking-wider">LIVES 生命</span>
+                <div id="livesContainer" class="flex gap-2 mt-1">
+                    <!-- Dynamic Hearts / Stars -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Display Container -->
+        <div class="relative w-full aspect-[4/3] max-h-[68vh] overflow-visible">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-none"></canvas>
+
+            <!-- Start Game Overlay -->
+            <div id="startOverlay" class="absolute inset-0 bg-paper-bg/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-20 rounded-2xl border-2 border-dashed border-paper-ink">
+                <div class="w-16 h-16 rounded-full bg-paper-crayonYellow border-2 border-paper-ink flex items-center justify-center mb-3 transform -rotate-6 shadow-[3px_3px_0px_#2b2d42]">
+                    <span class="text-paper-ink text-3xl font-bold">✎</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-bold text-paper-ink mb-2">
+                    手繪太空打磚塊
+                </h2>
+                <p class="text-paper-pencil max-w-sm text-sm sm:text-base mb-5 leading-relaxed">
+                    塗鴉畫風 × 手繪彈射物理 • 擊碎彩色鉛筆磚塊並蒐集長度擴充塗鴉膠囊
+                </p>
+                <div class="bg-paper-card sketch-border px-5 py-2 mb-6 text-sm text-paper-pencil flex items-center gap-3">
+                    <span>歷史最高分紀錄:</span>
+                    <span id="startHighScoreText" class="text-base font-bold text-paper-crayonRed">0</span>
+                </div>
+                <button id="startBtn" class="px-8 py-3 sketch-btn bg-paper-crayonYellow text-paper-ink font-bold text-lg tracking-wide">
+                    ✏️ 開始繪製 (開始遊戲)
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-paper-bg/95 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-20 rounded-2xl border-2 border-paper-ink">
+                <div class="w-16 h-16 rounded-full bg-paper-crayonRed border-2 border-paper-ink flex items-center justify-center mb-2 transform rotate-6 shadow-[3px_3px_0px_#2b2d42]">
+                    <span class="text-white text-3xl font-bold">✕</span>
+                </div>
+                <h2 class="text-4xl font-bold text-paper-crayonRed mb-1">
+                    GAME OVER!
+                </h2>
+                <p class="text-paper-pencil text-sm font-bold uppercase tracking-widest mb-1">FINAL SCORE 最終得分</p>
+                <p id="finalScoreText" class="text-4xl font-bold text-paper-ink mb-3">0</p>
+                <p id="newHighScoreBanner" class="hidden text-sm font-bold text-paper-ink mb-5 bg-paper-crayonYellow px-4 py-1.5 sketch-border">
+                    🎉 刷新歷史最高紀錄！
+                </p>
+                <button id="restartBtn" class="px-8 py-3 sketch-btn bg-paper-card text-paper-ink font-bold text-lg">
+                    🔄 重來
+                </button>
+            </div>
+
+            <!-- Game Victory Overlay -->
+            <div id="victoryOverlay" class="hidden absolute inset-0 bg-paper-bg/95 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-20 rounded-2xl border-2 border-paper-ink">
+                <div class="w-16 h-16 rounded-full bg-paper-crayonGreen border-2 border-paper-ink flex items-center justify-center mb-2 transform -rotate-6 shadow-[3px_3px_0px_#2b2d42]">
+                    <span class="text-white text-3xl font-bold">✓</span>
+                </div>
+                <h2 class="text-4xl font-bold text-paper-crayonGreen mb-1">
+                    LEVEL CLEARED!
+                </h2>
+                <p id="victoryScoreText" class="text-3xl font-bold text-paper-ink mb-6">0</p>
+                <button id="nextLevelBtn" class="px-8 py-3 sketch-btn bg-paper-crayonGreen text-white font-bold text-lg">
+                    🚀 進入下一個塗鴉關卡
+                </button>
+            </div>
+        </div>
+
+        <!-- Controls Bar -->
+        <div class="w-full mt-4 flex justify-between items-center px-2">
+            <div class="flex items-center space-x-3">
+                <button id="muteBtn" class="px-4 py-2 sketch-btn text-xs font-bold text-paper-ink">
+                    🔊 音效: 開
+                </button>
+                <button id="pauseBtn" class="px-4 py-2 sketch-btn text-xs font-bold text-paper-ink">
+                    ⏸ 暫停
+                </button>
+            </div>
+
+            <div class="text-xs text-paper-pencil font-bold">
+                HAND-DRAWN DOODLE ENGINE v3.0
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full text-center text-xs text-paper-pencil my-2 font-bold z-10">
+        Hand-Drawn • Sketchbook • Colored Pencil Aesthetics
+    </footer>
+
+    <script>
+        /**
+         * Hand-Drawn Doodle Synthesized Audio Engine
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playBounce(isPaddle = false) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    const now = this.ctx.currentTime;
+                    osc.type = isPaddle ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(isPaddle ? 220 : 380, now);
+                    osc.frequency.exponentialRampToValueAtTime(isPaddle ? 440 : 580, now + 0.06);
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } catch (e) {}
+            }
+
+            playHitBrick(pitchMultiplier = 1) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    const now = this.ctx.currentTime;
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(450 * pitchMultiplier, now);
+                    osc.frequency.exponentialRampToValueAtTime(750 * pitchMultiplier, now + 0.07);
+
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+                    osc.start(now);
+                    osc.stop(now + 0.07);
+                } catch (e) {}
+            }
+
+            playLoseLife() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    const now = this.ctx.currentTime;
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch (e) {}
+            }
+
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const notes = [392, 493.88, 587.33, 783.99];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        try {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(this.ctx.destination);
+
+                            const now = this.ctx.currentTime;
+                            osc.type = 'triangle';
+                            osc.frequency.setValueAtTime(freq, now);
+
+                            gain.gain.setValueAtTime(0.12, now);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                            osc.start(now);
+                            osc.stop(now + 0.2);
+                        } catch (e) {}
+                    }, idx * 90);
+                });
+            }
+
+            playPowerUp() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(900, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } catch (e) {}
+            }
+        }
+
+        const sounds = new SoundEngine();
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
+
+        let isRunning = false;
+        let isPaused = false;
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let highScore = parseInt(window.__galleryStorage.getItem('space_breakout_high_score') || '0');
+
+        const keys = { left: false, right: false };
+
+        /**
+         * Hand-Drawn Wobbly Sketch Helpers
+         */
+        function drawHandDrawnRect(context, x, y, w, h, strokeColor = '#2b2d42', fillColor = null, isScribble = true, fixedJitters = null) {
+            context.save();
+            let jIdx = 0;
+            const jitter = () => {
+                if (fixedJitters && fixedJitters.length > 0) {
+                    const val = fixedJitters[jIdx % fixedJitters.length];
+                    jIdx++;
+                    return val;
+                }
+                return (Math.random() - 0.5) * 2.5;
+            };
+
+            // Fill
+            if (fillColor) {
+                context.fillStyle = fillColor;
+                context.beginPath();
+                context.moveTo(x + jitter(), y + jitter());
+                context.lineTo(x + w + jitter(), y + jitter());
+                context.lineTo(x + w + jitter(), y + h + jitter());
+                context.lineTo(x + jitter(), y + h + jitter());
+                context.closePath();
+                context.fill();
+
+                // Crayon/Pencil texture hatch overlay
+                if (isScribble) {
+                    context.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    context.lineWidth = 1.5;
+                    context.beginPath();
+                    for (let i = 4; i < w - 4; i += 8) {
+                        context.moveTo(x + i, y + 3);
+                        context.lineTo(x + i - 4, y + h - 3);
+                    }
+                    context.stroke();
+                }
+            }
+
+            // Outer Hand-Drawn Double Stroke
+            context.strokeStyle = strokeColor;
+            context.lineWidth = 2.2;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+
+            // Pass 1
+            context.beginPath();
+            context.moveTo(x + jitter(), y + jitter());
+            context.lineTo(x + w + jitter(), y + jitter());
+            context.lineTo(x + w + jitter(), y + h + jitter());
+            context.lineTo(x + jitter(), y + h + jitter());
+            context.closePath();
+            context.stroke();
+
+            // Pass 2 (Slight overlap for pencil sketch feel)
+            context.beginPath();
+            context.moveTo(x + jitter(), y + jitter());
+            context.lineTo(x + w + jitter(), y + jitter());
+            context.lineTo(x + w + jitter(), y + h + jitter());
+            context.lineTo(x + jitter(), y + h + jitter());
+            context.closePath();
+            context.stroke();
+
+            context.restore();
+        }
+
+        function drawHandDrawnCircle(context, x, y, radius, strokeColor = '#2b2d42', fillColor = null) {
+            context.save();
+            const jitter = () => (Math.random() - 0.5) * 2;
+
+            if (fillColor) {
+                context.fillStyle = fillColor;
+                context.beginPath();
+                context.arc(x + jitter(), y + jitter(), radius, 0, Math.PI * 2);
+                context.fill();
+            }
+
+            context.strokeStyle = strokeColor;
+            context.lineWidth = 2.2;
+
+            // Double sketchy outline
+            for (let i = 0; i < 2; i++) {
+                context.beginPath();
+                context.arc(x + jitter(), y + jitter(), radius + jitter() * 0.5, 0, Math.PI * 2);
+                context.stroke();
+            }
+
+            context.restore();
+        }
+
+        class DoodleBackgroundStar {
+            constructor() {
+                this.reset();
+                this.y = Math.random() * GAME_HEIGHT;
+            }
+
+            reset() {
+                this.x = Math.random() * GAME_WIDTH;
+                this.y = 0;
+                this.size = Math.random() * 8 + 6;
+                this.type = Math.floor(Math.random() * 3); // 0: +, 1: *, 2: circle
+                this.speed = Math.random() * 0.2 + 0.1;
+                this.angle = Math.random() * Math.PI;
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.y > GAME_HEIGHT) this.reset();
+            }
+
+            draw(context) {
+                context.save();
+                context.strokeStyle = 'rgba(74, 78, 105, 0.25)';
+                context.lineWidth = 1.2;
+                context.translate(this.x, this.y);
+                context.rotate(this.angle);
+
+                if (this.type === 0) {
+                    context.beginPath();
+                    context.moveTo(-this.size / 2, 0); context.lineTo(this.size / 2, 0);
+                    context.moveTo(0, -this.size / 2); context.lineTo(0, this.size / 2);
+                    context.stroke();
+                } else if (this.type === 1) {
+                    context.beginPath();
+                    context.moveTo(-this.size / 2, -this.size / 2); context.lineTo(this.size / 2, this.size / 2);
+                    context.moveTo(this.size / 2, -this.size / 2); context.lineTo(-this.size / 2, this.size / 2);
+                    context.stroke();
+                } else {
+                    context.beginPath();
+                    context.arc(0, 0, this.size / 3, 0, Math.PI * 2);
+                    context.stroke();
+                }
+
+                context.restore();
+            }
+        }
+
+        const backgroundStars = Array.from({ length: 30 }, () => new DoodleBackgroundStar());
+
+        class SketchParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 6 + 4;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.04 + 0.02;
+                this.symbol = ['★', '✦', '•', '+'][Math.floor(Math.random() * 4)];
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw(context) {
+                context.save();
+                context.globalAlpha = Math.max(0, this.alpha);
+                context.fillStyle = this.color;
+                context.font = `bold ${Math.floor(this.size * 2)}px Kalam, cursive`;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(this.symbol, this.x, this.y);
+                context.restore();
+            }
+        }
+
+        let particles = [];
+        let powerUps = [];
+
+        class PowerUp {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 36;
+                this.height = 20;
+                this.vy = 2.0;
+                this.alive = true;
+            }
+
+            update() {
+                this.y += this.vy;
+                if (this.y - this.height > GAME_HEIGHT) this.alive = false;
+            }
+
+            draw(context) {
+                if (!this.alive) return;
+                context.save();
+                context.translate(this.x, this.y);
+
+                drawHandDrawnRect(context, -this.width / 2, -this.height / 2, this.width, this.height, '#2b2d42', '#43aa8b', false);
+
+                context.fillStyle = '#fffdf7';
+                context.font = 'bold 12px Kalam, cursive';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText('+ ↔', 0, 1);
+
+                context.restore();
+            }
+        }
+
+        class Paddle {
+            constructor() {
+                this.width = 110;
+                this.baseWidth = 110;
+                this.height = 16;
+                this.x = (GAME_WIDTH - this.width) / 2;
+                this.y = GAME_HEIGHT - 45;
+                this.speed = 9.5;
+                this.expandTimer = null;
+            }
+
+            reset() {
+                if (this.expandTimer) {
+                    clearTimeout(this.expandTimer);
+                    this.expandTimer = null;
+                }
+                this.baseWidth = Math.max(80, 110 - (level - 1) * 8);
+                this.width = this.baseWidth;
+                this.x = (GAME_WIDTH - this.width) / 2;
+            }
+
+            expand(duration = 5000) {
+                this.width = this.baseWidth * 1.5;
+                if (this.expandTimer) clearTimeout(this.expandTimer);
+                this.expandTimer = setTimeout(() => {
+                    this.width = this.baseWidth;
+                    this.expandTimer = null;
+                }, duration);
+            }
+
+            update() {
+                if (keys.left) this.x -= this.speed;
+                if (keys.right) this.x += this.speed;
+
+                if (this.x < 10) this.x = 10;
+                if (this.x + this.width > GAME_WIDTH - 10) {
+                    this.x = GAME_WIDTH - 10 - this.width;
+                }
+            }
+
+            draw(context) {
+                context.save();
+                const cx = this.x + this.width / 2;
+                const fillCol = this.expandTimer ? '#43aa8b' : '#4cc9f0';
+
+                // Hand-Drawn Rocket Ship Paddle
+                drawHandDrawnRect(context, this.x, this.y, this.width, this.height, '#2b2d42', fillCol, true);
+
+                // Doodled Wings & Nose Cone
+                context.fillStyle = '#ff5964';
+                context.beginPath();
+                // Left wing
+                context.moveTo(this.x, this.y);
+                context.lineTo(this.x - 10, this.y + this.height);
+                context.lineTo(this.x, this.y + this.height);
+                // Right wing
+                context.moveTo(this.x + this.width, this.y);
+                context.lineTo(this.x + this.width + 10, this.y + this.height);
+                context.lineTo(this.x + this.width, this.y + this.height);
+                context.fill();
+                context.strokeStyle = '#2b2d42';
+                context.lineWidth = 2;
+                context.stroke();
+
+                // Cockpit window doodle
+                drawHandDrawnCircle(context, cx, this.y + this.height / 2, 5, '#2b2d42', '#fffdf7');
+
+                if (this.expandTimer) {
+                    context.strokeStyle = '#43aa8b';
+                    context.lineWidth = 2;
+                    context.setLineDash([4, 4]);
+                    context.strokeRect(this.x - 6, this.y - 4, this.width + 12, this.height + 8);
+                }
+
+                context.restore();
+            }
+        }
+
+        class Ball {
+            constructor() {
+                this.radius = 9;
+                this.trail = [];
+                this.reset();
+            }
+
+            reset() {
+                this.x = GAME_WIDTH / 2;
+                this.y = GAME_HEIGHT - 65;
+                // 初始速度提升 10% (原為 6.2，調整後為 6.82)
+                this.speed = 6.82 + (level - 1) * 0.4;
+                const angle = (Math.random() * Math.PI / 3) - (Math.PI / 6) - (Math.PI / 2);
+                this.dx = this.speed * Math.cos(angle);
+                this.dy = this.speed * Math.sin(angle);
+                if (Math.abs(this.dx) < 2) this.dx = this.dx < 0 ? -3 : 3;
+                this.trail = [];
+            }
+
+            update() {
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 6) this.trail.shift();
+
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Boundaries
+                if (this.x - this.radius <= 10) {
+                    this.x = 10 + this.radius;
+                    this.dx = -this.dx;
+                    sounds.playBounce(false);
+                } else if (this.x + this.radius >= GAME_WIDTH - 10) {
+                    this.x = GAME_WIDTH - 10 - this.radius;
+                    this.dx = -this.dx;
+                    sounds.playBounce(false);
+                }
+
+                if (this.y - this.radius <= 10) {
+                    this.y = 10 + this.radius;
+                    this.dy = -this.dy;
+                    sounds.playBounce(false);
+                }
+            }
+
+            draw(context) {
+                context.save();
+                
+                // Pencil Scribble Trail
+                for (let i = 0; i < this.trail.length; i++) {
+                    const pt = this.trail[i];
+                    const ratio = (i + 1) / this.trail.length;
+                    context.strokeStyle = `rgba(74, 78, 105, ${ratio * 0.4})`;
+                    context.lineWidth = 1.5;
+                    context.beginPath();
+                    context.arc(pt.x, pt.y, this.radius * ratio * 0.8, 0, Math.PI * 2);
+                    context.stroke();
+                }
+
+                // Ball Core - Doodled Energy Orb
+                drawHandDrawnCircle(context, this.x, this.y, this.radius, '#2b2d42', '#f9c74f');
+
+                context.restore();
+            }
+        }
+
+        const BRICK_ROWS = 4;
+        const BRICK_COLS = 8;
+        const BRICK_HEIGHT = 22;
+        const BRICK_PADDING = 12;
+        const BRICK_OFFSET_TOP = 65;
+        const BRICK_OFFSET_LEFT = 35;
+
+        // Hand-Drawn Crayon Color Palette (帶有 HP 耐久度設定)
+        const ROW_COLORS = [
+            { color: '#ff5964', points: 40, hp: 3 }, // Crayon Red (需擊中 3 次)
+            { color: '#f9c74f', points: 30, hp: 2 }, // Crayon Yellow (需擊中 2 次)
+            { color: '#4cc9f0', points: 20, hp: 1 }, // Crayon Blue (需擊中 1 次)
+            { color: '#43aa8b', points: 10, hp: 1 }  // Crayon Green (需擊中 1 次)
+        ];
+
+        class Brick {
+            constructor(x, y, width, height, row) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.row = row;
+                const config = ROW_COLORS[row % ROW_COLORS.length];
+                this.color = config.color;
+                this.points = config.points;
+                this.maxHp = config.hp;
+                this.hp = config.hp;
+                this.alive = true;
+                // 預先生成固定的手繪筆觸偏移，避免每張畫格持續閃爍抖動
+                this.jitters = Array.from({ length: 24 }, () => (Math.random() - 0.5) * 2.2);
+            }
+
+            hit() {
+                this.hp--;
+                if (this.hp <= 0) {
+                    this.alive = false;
+                    return true; // 磚塊完全粉碎
+                }
+                return false; // 磚塊受到傷害但尚未破壞
+            }
+
+            draw(context) {
+                if (!this.alive) return;
+                
+                context.save();
+                drawHandDrawnRect(context, this.x, this.y, this.width, this.height, '#2b2d42', this.color, true, this.jitters);
+
+                // 畫出手繪鉛筆裂痕 (當受損時)
+                if (this.hp < this.maxHp) {
+                    context.strokeStyle = '#2b2d42';
+                    context.lineWidth = 2;
+                    context.lineCap = 'round';
+                    context.beginPath();
+
+                    // 第一層裂痕
+                    const midX = this.x + this.width / 2;
+                    const midY = this.y + this.height / 2;
+                    context.moveTo(this.x + 6, this.y + 4);
+                    context.lineTo(midX, midY);
+                    context.lineTo(this.x + this.width - 8, this.y + this.height - 4);
+
+                    // 第二層裂痕 (僅限原本 3 HP 且只剩 1 HP 時)
+                    if (this.maxHp === 3 && this.hp === 1) {
+                        context.moveTo(this.x + this.width - 6, this.y + 5);
+                        context.lineTo(midX, midY);
+                        context.lineTo(this.x + 8, this.y + this.height - 5);
+                    }
+                    context.stroke();
+                }
+
+                // 耐久度手繪圓點提示 (當最大血量大於 1 時)
+                if (this.maxHp > 1) {
+                    context.fillStyle = '#2b2d42';
+                    for (let i = 0; i < this.hp; i++) {
+                        context.beginPath();
+                        context.arc(this.x + this.width - 8 - (i * 7), this.y + 6, 2, 0, Math.PI * 2);
+                        context.fill();
+                    }
+                }
+
+                context.restore();
+            }
+        }
+
+        let paddle = new Paddle();
+        let ball = new Ball();
+        let bricks = [];
+
+        function createBricks() {
+            bricks = [];
+            const totalPaddingWidth = BRICK_PADDING * (BRICK_COLS - 1);
+            const availableWidth = GAME_WIDTH - (BRICK_OFFSET_LEFT * 2) - totalPaddingWidth;
+            const brickWidth = availableWidth / BRICK_COLS;
+
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const bx = BRICK_OFFSET_LEFT + c * (brickWidth + BRICK_PADDING);
+                    const by = BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING);
+                    bricks.push(new Brick(bx, by, brickWidth, BRICK_HEIGHT, r));
+                }
+            }
+        }
+
+        function checkCollisions() {
+            // Ball vs Paddle
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x + ball.radius >= paddle.x &&
+                ball.x - ball.radius <= paddle.x + paddle.width
+            ) {
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const bounceAngle = hitPoint * (Math.PI / 3);
+
+                const currentSpeed = Math.hypot(ball.dx, ball.dy);
+                ball.dx = currentSpeed * Math.sin(bounceAngle);
+                ball.dy = -currentSpeed * Math.cos(bounceAngle);
+
+                ball.y = paddle.y - ball.radius - 1;
+                sounds.playBounce(true);
+            }
+
+            // Ball vs Bricks
+            bricks.forEach((brick) => {
+                if (!brick.alive) return;
+
+                const closestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
+                const closestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
+
+                const distanceX = ball.x - closestX;
+                const distanceY = ball.y - closestY;
+                const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+                if (distanceSquared < (ball.radius * ball.radius)) {
+                    const isDestroyed = brick.hit();
+
+                    if (isDestroyed) {
+                        score += brick.points;
+                        updateHUD();
+                        sounds.playHitBrick(1 + (BRICK_ROWS - brick.row) * 0.15);
+
+                        // 20% Chance power-up drop
+                        if (Math.random() < 0.20) {
+                            powerUps.push(new PowerUp(brick.x + brick.width / 2, brick.y + brick.height / 2));
+                        }
+
+                        // Hand-Drawn Pencil Fragment Burst
+                        for (let i = 0; i < 10; i++) {
+                            particles.push(new SketchParticle(
+                                brick.x + brick.width / 2, 
+                                brick.y + brick.height / 2, 
+                                brick.color
+                            ));
+                        }
+                    } else {
+                        // 尚未完全擊碎：給予基本得分與碰撞回饋
+                        score += 5;
+                        updateHUD();
+                        sounds.playHitBrick(0.7); // 較低沉的撞擊音
+
+                        // 產生少量黑鉛筆屑粒子
+                        for (let i = 0; i < 4; i++) {
+                            particles.push(new SketchParticle(
+                                closestX, 
+                                closestY, 
+                                '#2b2d42'
+                            ));
+                        }
+                    }
+
+                    const prevX = ball.x - ball.dx;
+                    if (prevX + ball.radius <= brick.x || prevX - ball.radius >= brick.x + brick.width) {
+                        ball.dx = -ball.dx;
+                    } else {
+                        ball.dy = -ball.dy;
+                    }
+                }
+            });
+
+            // Level Clear Check
+            const remainingBricks = bricks.filter(b => b.alive).length;
+            if (remainingBricks === 0) {
+                handleLevelClear();
+            }
+
+            // Ball Out of Bounds
+            if (ball.y - ball.radius > GAME_HEIGHT) {
+                lives--;
+                updateHUD();
+                sounds.playLoseLife();
+
+                if (lives <= 0) {
+                    handleGameOver();
+                } else {
+                    ball.reset();
+                    paddle.reset();
+                }
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('levelText').innerText = level < 10 ? '0' + level : level;
+
+            let isNewHigh = false;
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('space_breakout_high_score', highScore.toString());
+                isNewHigh = true;
+            }
+            document.getElementById('highScoreText').innerText = highScore;
+            document.getElementById('startHighScoreText').innerText = highScore;
+
+            const livesContainer = document.getElementById('livesContainer');
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                const star = document.createElement('span');
+                star.className = 'text-paper-crayonRed text-lg leading-none select-none';
+                star.innerText = '★';
+                livesContainer.appendChild(star);
+            }
+
+            return isNewHigh;
+        }
+
+        function handleGameOver() {
+            isRunning = false;
+            document.getElementById('finalScoreText').innerText = score;
+            
+            const banner = document.getElementById('newHighScoreBanner');
+            if (score > 0 && score >= highScore) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+        function handleLevelClear() {
+            isRunning = false;
+            sounds.playVictory();
+            document.getElementById('victoryScoreText').innerText = score;
+            document.getElementById('victoryOverlay').classList.remove('hidden');
+        }
+
+        function drawBackground() {
+            // Paper Notebook Base Color
+            ctx.fillStyle = '#fdfbf7';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Draw Background Stars
+            backgroundStars.forEach(star => {
+                star.update();
+                star.draw(ctx);
+            });
+
+            // Notebook Pencil Line Margins inside Canvas
+            ctx.strokeStyle = 'rgba(255, 138, 138, 0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(25, 0); ctx.lineTo(25, GAME_HEIGHT);
+            ctx.stroke();
+        }
+
+        function gameLoop() {
+            if (!isRunning) return;
+
+            if (!isPaused) {
+                paddle.update();
+                ball.update();
+                checkCollisions();
+
+                // Power-Up Collisions
+                powerUps.forEach(p => {
+                    if (!p.alive) return;
+                    p.update();
+
+                    if (
+                        p.y + p.height / 2 >= paddle.y &&
+                        p.y - p.height / 2 <= paddle.y + paddle.height &&
+                        p.x + p.width / 2 >= paddle.x &&
+                        p.x - p.width / 2 <= paddle.x + paddle.width
+                    ) {
+                        p.alive = false;
+                        paddle.expand(5000);
+                        sounds.playPowerUp();
+
+                        for (let i = 0; i < 10; i++) {
+                            particles.push(new SketchParticle(p.x, p.y, '#43aa8b'));
+                        }
+                    }
+                });
+                powerUps = powerUps.filter(p => p.alive);
+
+                particles.forEach((p, idx) => {
+                    p.update();
+                    if (p.alpha <= 0) particles.splice(idx, 1);
+                });
+            }
+
+            drawBackground();
+
+            // Render Entities
+            bricks.forEach(b => b.draw(ctx));
+            powerUps.forEach(p => p.draw(ctx));
+            paddle.draw(ctx);
+            ball.draw(ctx);
+            particles.forEach(p => p.draw(ctx));
+
+            if (isPaused) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(245, 242, 233, 0.85)';
+                ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+                ctx.fillStyle = '#2b2d42';
+                ctx.font = 'bold 30px Kalam, cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText('⏸ 遊戲暫停中', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+                ctx.restore();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function initGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            updateHUD();
+            createBricks();
+            paddle.reset();
+            ball.reset();
+            particles = [];
+            powerUps = [];
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === ' ' || e.key === 'p' || e.key === 'P') togglePause();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        function handlePointerMove(e) {
+            sounds.init();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = GAME_WIDTH / rect.width;
+            let pointerX = (e.clientX - rect.left) * scaleX;
+
+            if (e.touches && e.touches.length > 0) {
+                pointerX = (e.touches[0].clientX - rect.left) * scaleX;
+            }
+
+            paddle.x = pointerX - paddle.width / 2;
+        }
+
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handlePointerMove(e);
+        }, { passive: false });
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            sounds.init();
+            document.getElementById('startOverlay').classList.add('hidden');
+            initGame();
+            isRunning = true;
+            isPaused = false;
+            requestAnimationFrame(gameLoop);
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            initGame();
+            isRunning = true;
+            isPaused = false;
+            requestAnimationFrame(gameLoop);
+        });
+
+        document.getElementById('nextLevelBtn').addEventListener('click', () => {
+            document.getElementById('victoryOverlay').classList.add('hidden');
+            level++;
+            updateHUD();
+            createBricks();
+            paddle.reset();
+            ball.reset();
+            isRunning = true;
+            isPaused = false;
+            requestAnimationFrame(gameLoop);
+        });
+
+        function togglePause() {
+            if (!isRunning) return;
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').innerText = isPaused ? '▶ 繼續' : '⏸ 暫停';
+        }
+
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            sounds.muted = !sounds.muted;
+            document.getElementById('muteBtn').innerText = sounds.muted ? '🔇 音效: 關' : '🔊 音效: 開';
+        });
+
+        updateHUD();
+        drawBackground();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

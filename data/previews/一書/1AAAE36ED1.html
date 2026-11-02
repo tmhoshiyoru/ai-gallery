@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>城堡守護者：元素禦敵</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            touch-action: manipulation;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .title-font {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-card {
+            background: rgba(31, 41, 55, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(168, 85, 247, 0.4);
+            transform: translateY(-2px);
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4c1d95;
+            border-radius: 3px;
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.8); }
+        }
+
+        .glow-effect {
+            animation: pulse-glow 3s infinite;
+        }
+
+        /* Canvas styling */
+        #gameCanvas {
+            cursor: crosshair;
+            background: linear-gradient(to bottom, #0f172a 0%, #1e1b4b 60%, #020617 100%);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex flex-col justify-between items-center relative overflow-hidden">
+
+    <!-- Top Bar HUD -->
+    <header class="w-full max-w-5xl px-4 py-3 z-10 flex justify-between items-center glass-panel rounded-b-2xl mt-0 shadow-lg">
+        <!-- Health Bar -->
+        <div class="flex items-center space-x-3 w-1/3">
+            <i class="fa-solid font-bold fa-shield-halved text-red-500 text-xl"></i>
+            <div class="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700 relative">
+                <div id="hpBar" class="bg-gradient-to-r from-red-600 to-rose-500 h-full w-full transition-all duration-300"></div>
+                <span id="hpText" class="absolute inset-0 flex items-center justify-center text-xs font-bold drop-shadow">100 / 100</span>
+            </div>
+        </div>
+
+        <!-- Castle Stats -->
+        <div class="flex items-center space-x-6">
+            <div class="text-center">
+                <div class="text-xs text-gray-400">波次</div>
+                <div id="waveText" class="text-xl font-black text-amber-400">1</div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs text-gray-400">分數</div>
+                <div id="scoreText" class="text-xl font-black text-purple-400">0</div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs text-gray-400">水晶 (金幣)</div>
+                <div class="flex items-center justify-center text-emerald-400 font-black text-xl">
+                    <i class="fa-solid fa-gem mr-1 text-sm"></i>
+                    <span id="goldText">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mute Audio Button -->
+        <button id="audioBtn" class="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition">
+            <i id="audioIcon" class="fa-solid fa-volume-high"></i>
+        </button>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative w-full h-full flex-grow flex items-center justify-center p-2">
+        <canvas id="gameCanvas" class="rounded-2xl shadow-2xl border border-indigo-900/40 w-full h-full max-w-5xl max-h-[750px]"></canvas>
+
+        <!-- Dynamic Overlay Message (Combo / Wave Info) -->
+        <div id="bannerText" class="absolute pointer-events-none opacity-0 transform scale-75 transition-all duration-500 flex flex-col items-center justify-center">
+            <h1 id="bannerMain" class="text-4xl md:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-purple-300 to-indigo-400 title-font drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">第 1 波攻擊</h1>
+            <p id="bannerSub" class="text-lg text-purple-200 mt-2 font-bold drop-shadow">準備迎接敵人！</p>
+        </div>
+
+        <!-- START / OVERLAY SCREEN -->
+        <div id="startMenu" class="absolute inset-0 z-20 flex flex-col items-center justify-center glass-panel m-4 rounded-2xl bg-slate-950/90">
+            <div class="text-center max-w-lg p-6">
+                <div class="inline-block p-4 rounded-full bg-purple-900/50 mb-4 border border-purple-500/30 glow-effect">
+                    <i class="fa-solid fa-fort-awesome text-6xl text-purple-400"></i>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-black title-font mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">城堡守護者</h1>
+                <p class="text-gray-400 mb-6">點擊或觸控畫面發射魔法彈，阻擋怪物大軍入侵！使用強大技能與元素提升你的魔法塔。</p>
+                
+                <div class="grid grid-cols-2 gap-3 text-left text-xs text-gray-300 mb-6 bg-slate-900/60 p-4 rounded-xl border border-gray-800">
+                    <div><i class="fa-solid fa-mouse text-purple-400 mr-2"></i>滑鼠左鍵 / 觸控: 發射魔法</div>
+                    <div><i class="fa-solid fa-keyboard text-purple-400 mr-2"></i>數字鍵 1-3: 釋放特殊技能</div>
+                    <div><i class="fa-solid fa-bolt text-purple-400 mr-2"></i>連擊可獲得額外水晶</div>
+                    <div><i class="fa-solid fa-shield text-purple-400 mr-2"></i>防禦城堡不被摧毀</div>
+                </div>
+
+                <button id="startBtn" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-lg rounded-xl shadow-lg transition duration-200 transform hover:scale-105 active:scale-95 border border-purple-400/30">
+                    <i class="fa-solid fa-play mr-2"></i>開始遊戲
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER SCREEN -->
+        <div id="gameOverMenu" class="absolute inset-0 z-20 hidden flex-col items-center justify-center glass-panel m-4 rounded-2xl bg-slate-950/95">
+            <div class="text-center max-w-md p-6">
+                <i class="fa-solid fa-skull-crossbones text-6xl text-red-500 mb-4 animate-bounce"></i>
+                <h2 class="text-3xl font-black text-red-500 mb-1">城堡陷落！</h2>
+                <p class="text-gray-400 mb-6">魔法塔已被怪物大軍摧毀...</p>
+
+                <div class="bg-slate-900/80 rounded-xl p-4 mb-6 border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">最高生存波次:</span><span id="finalWave" class="font-bold text-amber-400">0</span></div>
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">總得分:</span><span id="finalScore" class="font-bold text-purple-400">0</span></div>
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">擊殺怪物:</span><span id="finalKills" class="font-bold text-emerald-400">0</span></div>
+                </div>
+
+                <button id="restartBtn" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-xl shadow-lg transition transform hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>重新挑戰
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Controls & Skills Bar -->
+    <footer class="w-full max-w-5xl px-4 py-3 z-10 glass-panel rounded-t-2xl flex flex-wrap justify-between items-center gap-2">
+        <!-- Skills Bar -->
+        <div class="flex items-center space-x-3">
+            <!-- Skill 1: Firestorm -->
+            <button id="skill1" class="relative group p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-red-500 disabled:opacity-50 flex items-center justify-center transition">
+                <i class="fa-solid fa-fire text-red-500 text-xl"></i>
+                <span class="absolute -top-2 -right-2 bg-red-600 text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold">1</span>
+                <div class="hidden group-hover:block absolute bottom-full mb-2 p-2 bg-slate-900 text-xs rounded shadow-lg border border-slate-700 w-32 text-center pointer-events-none">
+                    烈焰隕石 (全螢幕打擊)<br><span class="text-amber-400">冷卻: 15s</span>
+                </div>
+            </button>
+
+            <!-- Skill 2: Frost Nova -->
+            <button id="skill2" class="relative group p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-cyan-400 disabled:opacity-50 flex items-center justify-center transition">
+                <i class="fa-solid fa-snowflake text-cyan-400 text-xl"></i>
+                <span class="absolute -top-2 -right-2 bg-cyan-600 text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold">2</span>
+                <div class="hidden group-hover:block absolute bottom-full mb-2 p-2 bg-slate-900 text-xs rounded shadow-lg border border-slate-700 w-32 text-center pointer-events-none">
+                    冰霜星爆 (緩速並凍結)<br><span class="text-amber-400">冷卻: 20s</span>
+                </div>
+            </button>
+
+            <!-- Skill 3: Lightning Arc -->
+            <button id="skill3" class="relative group p-2.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-amber-400 disabled:opacity-50 flex items-center justify-center transition">
+                <i class="fa-solid fa-bolt text-amber-400 text-xl"></i>
+                <span class="absolute -top-2 -right-2 bg-amber-600 text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold">3</span>
+                <div class="hidden group-hover:block absolute bottom-full mb-2 p-2 bg-slate-900 text-xs rounded shadow-lg border border-slate-700 w-32 text-center pointer-events-none">
+                    閃電鏈 (高額穿透傷害)<br><span class="text-amber-400">冷卻: 12s</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Upgrade Shop Button -->
+        <div class="flex items-center space-x-2">
+            <button id="shopBtn" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl flex items-center space-x-2 shadow-lg transition transform active:scale-95">
+                <i class="fa-solid fa-store"></i>
+                <span>魔法工坊</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Shop Modal -->
+    <div id="shopModal" class="fixed inset-0 z-30 hidden flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+            <button id="closeShopBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3 class="text-2xl font-bold title-font text-emerald-400 mb-4 flex items-center">
+                <i class="fa-solid fa-hammer mr-2"></i> 魔法塔升級商店
+            </h3>
+
+            <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                <!-- Upgrade Item 1 -->
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-gray-100">攻擊力強化</div>
+                        <div class="text-xs text-gray-400">增加魔法彈基本傷害 (+5)</div>
+                        <div class="text-xs text-amber-400 mt-0.5">目前等級: <span id="dmgLvl">1</span></div>
+                    </div>
+                    <button id="buyDmg" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 text-xs font-bold rounded-lg transition">
+                        升級 <span id="dmgCost" class="text-amber-300">50💎</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade Item 2 -->
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-gray-100">射速升級</div>
+                        <div class="text-xs text-gray-400">減少魔法彈冷卻時間 (-10%)</div>
+                        <div class="text-xs text-amber-400 mt-0.5">目前等級: <span id="speedLvl">1</span></div>
+                    </div>
+                    <button id="buySpeed" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 text-xs font-bold rounded-lg transition">
+                        升級 <span id="speedCost" class="text-amber-300">75💎</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade Item 3 -->
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-gray-100">多重魔法彈</div>
+                        <div class="text-xs text-gray-400">額外發射一顆散射魔法彈</div>
+                        <div class="text-xs text-amber-400 mt-0.5">目前等級: <span id="multiLvl">0</span></div>
+                    </div>
+                    <button id="buyMulti" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 text-xs font-bold rounded-lg transition">
+                        升級 <span id="multiCost" class="text-amber-300">150💎</span>
+                    </button>
+                </div>
+
+                <!-- Upgrade Item 4 -->
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm text-gray-100">城堡修復</div>
+                        <div class="text-xs text-gray-400">恢復 35 點城堡耐久度</div>
+                    </div>
+                    <button id="buyHeal" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-xs font-bold rounded-lg transition">
+                        修復 <span id="healCost" class="text-amber-300">40💎</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- WEB AUDIO API SOUND SYSTEM ---
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playShoot() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playExplosion() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+
+            playSkill() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(900, now + 0.4);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.4);
+            }
+
+            playUpgrade() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(880, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.25);
+            }
+        }
+
+        const sound = new SoundSystem();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State variables
+        let gameRunning = false;
+        let animationFrameId = null;
+        let score = 0;
+        let gold = 0;
+        let wave = 1;
+        let kills = 0;
+        let combo = 0;
+        let lastHitTime = 0;
+
+        // Castle Properties
+        const castle = {
+            hp: 100,
+            maxHp: 100,
+            x: 0,
+            y: 0,
+            width: 90
+        };
+
+        // Player / Turret stats & upgrades
+        const stats = {
+            damage: 20,
+            dmgLvl: 1,
+            dmgCost: 50,
+            
+            fireRate: 300, // ms between shots
+            speedLvl: 1,
+            speedCost: 75,
+            
+            multiShot: 0,
+            multiLvl: 0,
+            multiCost: 150,
+
+            healCost: 40,
+            lastShotTime: 0
+        };
+
+        // Skill Cooldown Tracker (ms)
+        const skills = {
+            skill1: { cd: 15000, lastUsed: 0, ready: true },
+            skill2: { cd: 20000, lastUsed: 0, ready: true },
+            skill3: { cd: 12000, lastUsed: 0, ready: true }
+        };
+
+        // Entities arrays
+        let projectiles = [];
+        let enemies = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        // Mouse/Touch aim
+        let aimAngle = 0;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            castle.x = 80;
+            castle.y = canvas.height / 2;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Mouse/Touch Position tracking
+        function updateAim(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+            aimAngle = Math.atan2(mouseY - castle.y, mouseX - castle.x);
+        }
+
+        canvas.addEventListener('mousemove', (e) => updateAim(e.clientX, e.clientY));
+        canvas.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) updateAim(e.touches[0].clientX, e.touches[0].clientY);
+        });
+
+        canvas.addEventListener('click', (e) => {
+            sound.init();
+            shootProjectile();
+        });
+
+        class Projectile {
+            constructor(x, y, angle, speed = 12, damage = stats.damage, color = '#a855f7') {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.radius = 5;
+                this.damage = damage;
+                this.color = color;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Create subtle particle trail
+                if (Math.random() < 0.4) {
+                    particles.push(new Particle(this.x, this.y, this.color, 2, (Math.random() - 0.5) * 1, (Math.random() - 0.5) * 1, 15));
+                }
+
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.markedForDeletion = true;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Enemy {
+            constructor(type = 'goblin') {
+                this.x = canvas.width + 30;
+                this.y = Math.random() * (canvas.height - 120) + 60;
+                this.type = type;
+                this.markedForDeletion = false;
+                this.slowed = false;
+
+                // Properties based on type
+                if (type === 'goblin') { // Fast, low HP
+                    this.hp = 30 + wave * 8;
+                    this.maxHp = this.hp;
+                    this.speed = 2.2 + Math.random() * 0.5;
+                    this.radius = 14;
+                    this.color = '#22c55e';
+                    this.goldValue = 8;
+                    this.scoreValue = 20;
+                } else if (type === 'orc') { // Slow, Tank
+                    this.hp = 90 + wave * 25;
+                    this.maxHp = this.hp;
+                    this.speed = 1.0;
+                    this.radius = 22;
+                    this.color = '#ea580c';
+                    this.goldValue = 20;
+                    this.scoreValue = 50;
+                } else if (type === 'boss') { // Mega Boss
+                    this.hp = 350 + wave * 100;
+                    this.maxHp = this.hp;
+                    this.speed = 0.6;
+                    this.radius = 35;
+                    this.color = '#ef4444';
+                    this.goldValue = 80;
+                    this.scoreValue = 200;
+                }
+            }
+
+            update() {
+                let currentSpeed = this.slowed ? this.speed * 0.4 : this.speed;
+                this.x -= currentSpeed;
+
+                // Reach castle
+                if (this.x - this.radius <= castle.x + 20) {
+                    castle.hp -= this.type === 'boss' ? 30 : (this.type === 'orc' ? 15 : 8);
+                    this.markedForDeletion = true;
+                    sound.playHit();
+                    createExplosion(this.x, this.y, '#f87171', 15);
+                    updateHUD();
+
+                    if (castle.hp <= 0) {
+                        endGame();
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                
+                // Shadow
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y + this.radius, this.radius, this.radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fill();
+
+                // Enemy Body
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = this.slowed ? 15 : 5;
+                ctx.fill();
+
+                // Health Bar above enemy
+                if (this.hp < this.maxHp) {
+                    const barW = this.radius * 2;
+                    const barH = 4;
+                    const hpRatio = Math.max(0, this.hp / this.maxHp);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(this.x - this.radius, this.y - this.radius - 10, barW, barH);
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(this.x - this.radius, this.y - this.radius - 10, barW * hpRatio, barH);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, radius = 3, vx = (Math.random() - 0.5) * 4, vy = (Math.random() - 0.5) * 4, life = 30) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = radius;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = life;
+                this.maxLife = life;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                if (this.life <= 0) this.markedForDeletion = true;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color = '#ffffff') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 40;
+                this.vy = -1;
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.life--;
+                if (this.life <= 0) this.markedForDeletion = true;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / 40;
+                ctx.font = 'bold 14px "Noto Sans TC"';
+                ctx.fillStyle = this.color;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // Helper: Create particle explosion
+        function createExplosion(x, y, color, count = 12) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push(new Particle(
+                    x, y, color,
+                    Math.random() * 3 + 2,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed,
+                    Math.random() * 20 + 15
+                ));
+            }
+        }
+
+        function shootProjectile() {
+            const now = Date.now();
+            if (now - stats.lastShotTime < stats.fireRate) return;
+            stats.lastShotTime = now;
+
+            sound.playShoot();
+
+            // Main bullet
+            projectiles.push(new Projectile(castle.x + 30, castle.y, aimAngle));
+
+            // Extra bullets for Multi-shot upgrade
+            for (let i = 1; i <= stats.multiShot; i++) {
+                const spread = 0.15 * i;
+                projectiles.push(new Projectile(castle.x + 30, castle.y, aimAngle + spread));
+                projectiles.push(new Projectile(castle.x + 30, castle.y, aimAngle - spread));
+            }
+        }
+
+        let enemySpawnTimer = 0;
+        let waveEnemyCount = 0;
+        let spawnedInWave = 0;
+
+        function startWave() {
+            waveEnemyCount = 10 + wave * 5;
+            spawnedInWave = 0;
+            showBanner(`第 ${wave} 波攻擊`, '怪獸軍團即將抵達！');
+        }
+
+        function spawnEnemies() {
+            enemySpawnTimer++;
+            const spawnInterval = Math.max(30, 100 - wave * 5); // Spawns faster in higher waves
+
+            if (enemySpawnTimer > spawnInterval && spawnedInWave < waveEnemyCount) {
+                enemySpawnTimer = 0;
+                spawnedInWave++;
+
+                // Determine enemy type
+                const rand = Math.random();
+                if (wave % 5 === 0 && spawnedInWave === waveEnemyCount) {
+                    enemies.push(new Enemy('boss'));
+                } else if (rand > 0.7) {
+                    enemies.push(new Enemy('orc'));
+                } else {
+                    enemies.push(new Enemy('goblin'));
+                }
+            }
+
+            // Check if wave completed
+            if (spawnedInWave >= waveEnemyCount && enemies.length === 0) {
+                wave++;
+                gold += 30 + wave * 10;
+                updateHUD();
+                startWave();
+            }
+        }
+
+        function triggerSkill(num) {
+            const now = Date.now();
+            if (num === 1 && skills.skill1.ready) { // Firestorm
+                skills.skill1.ready = false;
+                skills.skill1.lastUsed = now;
+                sound.playSkill();
+                createExplosion(canvas.width / 2, canvas.height / 2, '#f97316', 50);
+                enemies.forEach(e => {
+                    e.hp -= 120 + stats.damage * 2;
+                    floatingTexts.push(new FloatingText(e.x, e.y, `-120`, '#f97316'));
+                });
+                showBanner('烈焰隕石！', '對全螢幕敵人造成強大傷害！');
+            } else if (num === 2 && skills.skill2.ready) { // Frost Nova
+                skills.skill2.ready = false;
+                skills.skill2.lastUsed = now;
+                sound.playSkill();
+                enemies.forEach(e => {
+                    e.slowed = true;
+                    e.hp -= 40;
+                    floatingTexts.push(new FloatingText(e.x, e.y, `緩速!`, '#38bdf8'));
+                });
+                showBanner('冰霜星爆！', '敵人被嚴重凍結並減速！');
+            } else if (num === 3 && skills.skill3.ready) { // Lightning Arc
+                skills.skill3.ready = false;
+                skills.skill3.lastUsed = now;
+                sound.playSkill();
+                enemies.forEach(e => {
+                    e.hp -= 80;
+                    createExplosion(e.x, e.y, '#facc15', 10);
+                    floatingTexts.push(new FloatingText(e.x, e.y, `-80 ⚡`, '#facc15'));
+                });
+                showBanner('閃電鏈！', '高壓電流貫穿敵人群！');
+            }
+            updateSkillButtons();
+        }
+
+        function updateSkillCooldowns() {
+            const now = Date.now();
+            for (let key in skills) {
+                const s = skills[key];
+                if (!s.ready && now - s.lastUsed >= s.cd) {
+                    s.ready = true;
+                }
+            }
+            updateSkillButtons();
+        }
+
+        function updateSkillButtons() {
+            const btn1 = document.getElementById('skill1');
+            const btn2 = document.getElementById('skill2');
+            const btn3 = document.getElementById('skill3');
+
+            btn1.disabled = !skills.skill1.ready;
+            btn2.disabled = !skills.skill2.ready;
+            btn3.disabled = !skills.skill3.ready;
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            updateSkillCooldowns();
+
+            // Update Projectiles
+            projectiles.forEach(p => p.update());
+
+            // Update Enemies & Collisions
+            enemies.forEach(e => {
+                e.update();
+
+                // Check collision with projectiles
+                projectiles.forEach(p => {
+                    const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                    if (dist < p.radius + e.radius) {
+                        p.markedForDeletion = true;
+                        e.hp -= p.damage;
+                        sound.playHit();
+                        createExplosion(p.x, p.y, p.color, 5);
+
+                        // Combo System
+                        const now = Date.now();
+                        if (now - lastHitTime < 1500) {
+                            combo++;
+                        } else {
+                            combo = 1;
+                        }
+                        lastHitTime = now;
+
+                        const dmgText = `${p.damage}` + (combo > 3 ? ` (${combo} Combo!)` : '');
+                        floatingTexts.push(new FloatingText(e.x, e.y - 10, dmgText, combo > 3 ? '#fbbf24' : '#ffffff'));
+
+                        if (e.hp <= 0 && !e.markedForDeletion) {
+                            e.markedForDeletion = true;
+                            sound.playExplosion();
+                            createExplosion(e.x, e.y, e.color, 20);
+                            score += e.scoreValue;
+                            gold += e.goldValue;
+                            kills++;
+                            updateHUD();
+                        }
+                    }
+                });
+            });
+
+            // Update Particles & Floating Texts
+            particles.forEach(pt => pt.update());
+            floatingTexts.forEach(ft => ft.update());
+
+            // Cleanup
+            projectiles = projectiles.filter(p => !p.markedForDeletion);
+            enemies = enemies.filter(e => !e.markedForDeletion);
+            particles = particles.filter(pt => !pt.markedForDeletion);
+            floatingTexts = floatingTexts.filter(ft => !ft.markedForDeletion);
+
+            // Spawner
+            spawnEnemies();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Castle Tower
+            ctx.save();
+            ctx.fillStyle = '#1e1b4b';
+            ctx.strokeStyle = '#4c1d95';
+            ctx.lineWidth = 4;
+            ctx.fillRect(0, castle.y - 60, castle.x, 120);
+            ctx.strokeRect(0, castle.y - 60, castle.x, 120);
+
+            // Turret Cannon
+            ctx.translate(castle.x, castle.y);
+            ctx.rotate(aimAngle);
+            ctx.fillStyle = '#a855f7';
+            ctx.fillRect(0, -6, 35, 12);
+            ctx.restore();
+
+            // Render Entities
+            projectiles.forEach(p => p.draw());
+            enemies.forEach(e => e.draw());
+            particles.forEach(pt => pt.draw());
+            floatingTexts.forEach(ft => ft.draw());
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            if (gameRunning) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('hpBar').style.width = `${Math.max(0, (castle.hp / castle.maxHp) * 100)}%`;
+            document.getElementById('hpText').innerText = `${Math.max(0, Math.floor(castle.hp))} / ${castle.maxHp}`;
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('goldText').innerText = gold;
+            document.getElementById('waveText').innerText = wave;
+
+            // Shop UI Updates
+            document.getElementById('dmgLvl').innerText = stats.dmgLvl;
+            document.getElementById('dmgCost').innerText = `${stats.dmgCost}💎`;
+            document.getElementById('buyDmg').disabled = gold < stats.dmgCost;
+
+            document.getElementById('speedLvl').innerText = stats.speedLvl;
+            document.getElementById('speedCost').innerText = `${stats.speedCost}💎`;
+            document.getElementById('buySpeed').disabled = gold < stats.speedCost;
+
+            document.getElementById('multiLvl').innerText = stats.multiLvl;
+            document.getElementById('multiCost').innerText = `${stats.multiCost}💎`;
+            document.getElementById('buyMulti').disabled = gold < stats.multiCost;
+
+            document.getElementById('buyHeal').disabled = gold < stats.healCost || castle.hp >= castle.maxHp;
+        }
+
+        function showBanner(main, sub) {
+            const banner = document.getElementById('bannerText');
+            document.getElementById('bannerMain').innerText = main;
+            document.getElementById('bannerSub').innerText = sub;
+
+            banner.classList.remove('opacity-0', 'scale-75');
+            banner.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                banner.classList.remove('opacity-100', 'scale-100');
+                banner.classList.add('opacity-0', 'scale-75');
+            }, 2500);
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            gold = 0;
+            wave = 1;
+            kills = 0;
+            castle.hp = 100;
+            projectiles = [];
+            enemies = [];
+            particles = [];
+            floatingTexts = [];
+
+            stats.damage = 20;
+            stats.dmgLvl = 1;
+            stats.dmgCost = 50;
+            stats.fireRate = 300;
+            stats.speedLvl = 1;
+            stats.speedCost = 75;
+            stats.multiShot = 0;
+            stats.multiLvl = 0;
+            stats.multiCost = 150;
+
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            
+            gameRunning = true;
+            updateHUD();
+            startWave();
+            gameLoop();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+
+            document.getElementById('finalWave').innerText = wave;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalKills').innerText = kills;
+
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('gameOverMenu').classList.add('flex');
+        }
+
+        // --- Shop Event Listeners ---
+        document.getElementById('shopBtn').addEventListener('click', () => {
+            document.getElementById('shopModal').classList.remove('hidden');
+        });
+        document.getElementById('closeShopBtn').addEventListener('click', () => {
+            document.getElementById('shopModal').classList.add('hidden');
+        });
+
+        document.getElementById('buyDmg').addEventListener('click', () => {
+            if (gold >= stats.dmgCost) {
+                gold -= stats.dmgCost;
+                stats.damage += 8;
+                stats.dmgLvl++;
+                stats.dmgCost = Math.floor(stats.dmgCost * 1.5);
+                sound.playUpgrade();
+                updateHUD();
+            }
+        });
+
+        document.getElementById('buySpeed').addEventListener('click', () => {
+            if (gold >= stats.speedCost && stats.fireRate > 80) {
+                gold -= stats.speedCost;
+                stats.fireRate = Math.max(80, stats.fireRate - 25);
+                stats.speedLvl++;
+                stats.speedCost = Math.floor(stats.speedCost * 1.6);
+                sound.playUpgrade();
+                updateHUD();
+            }
+        });
+
+        document.getElementById('buyMulti').addEventListener('click', () => {
+            if (gold >= stats.multiCost) {
+                gold -= stats.multiCost;
+                stats.multiShot++;
+                stats.multiLvl++;
+                stats.multiCost = Math.floor(stats.multiCost * 2.2);
+                sound.playUpgrade();
+                updateHUD();
+            }
+        });
+
+        document.getElementById('buyHeal').addEventListener('click', () => {
+            if (gold >= stats.healCost && castle.hp < castle.maxHp) {
+                gold -= stats.healCost;
+                castle.hp = Math.min(castle.maxHp, castle.hp + 35);
+                sound.playUpgrade();
+                updateHUD();
+            }
+        });
+
+        // --- Skills Key Bindings & Click Listeners ---
+        document.getElementById('skill1').addEventListener('click', () => triggerSkill(1));
+        document.getElementById('skill2').addEventListener('click', () => triggerSkill(2));
+        document.getElementById('skill3').addEventListener('click', () => triggerSkill(3));
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '1') triggerSkill(1);
+            if (e.key === '2') triggerSkill(2);
+            if (e.key === '3') triggerSkill(3);
+        });
+
+        // Mute Audio Toggle
+        document.getElementById('audioBtn').addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            const icon = document.getElementById('audioIcon');
+            icon.className = sound.muted ? 'fa-solid fa-volume-xmark text-red-400' : 'fa-solid fa-volume-high';
+        });
+
+        // Start & Restart Listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

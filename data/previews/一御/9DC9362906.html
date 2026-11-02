@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THEME BREAKOUT — 純粹美學打磚塊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&family=Noto+Serif+TC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Serif TC', serif;
+            transition: background 0.5s ease, color 0.3s ease;
+            color: #334155;
+        }
+
+        .serif-title {
+            font-family: 'Cormorant Garamond', 'Noto Serif TC', serif;
+        }
+
+        .zh-serif {
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        .score-font {
+            font-family: 'Cormorant Garamond', 'Noto Serif TC', serif;
+            letter-spacing: 0.05em;
+        }
+
+        /* 視效卡片基底 */
+        .theme-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            transition: all 0.4s ease;
+        }
+
+        /* 按鈕樣式動態過渡 */
+        .theme-btn {
+            letter-spacing: 0.15em;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .theme-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+        .theme-btn:active {
+            transform: translateY(1px);
+        }
+
+        canvas {
+            background: #ffffff;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body id="pageBody" class="min-h-screen flex flex-col items-center justify-center p-4 select-none">
+
+    <main class="w-full max-w-xl flex flex-col items-center gap-4">
+        <!-- 頂部標題與計分板 -->
+        <header id="mainHeader" class="w-full flex justify-between items-end px-2 border-b pb-3 transition-colors duration-300">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span id="tagBadge" class="text-[11px] px-2.5 py-0.5 rounded-full border zh-serif tracking-widest font-medium transition-all">
+                        純粹風格
+                    </span>
+                    <button id="themeBadge" title="點擊切換風格" class="text-[11px] px-2.5 py-0.5 rounded-full border tracking-wider transition-all hover:scale-105 active:scale-95 zh-serif cursor-pointer shadow-2xs flex items-center gap-1">
+                        STYLE: 晨綠微光 ↺
+                    </button>
+                </div>
+                <h1 id="appTitle" class="text-3xl font-semibold serif-title tracking-wider">Lucky Clover</h1>
+                <p id="appSubtitle" class="text-[11px] text-slate-500 zh-serif tracking-widest -mt-1 font-light">在白晨的微光中，尋覓專屬的幸運</p>
+            </div>
+            <div class="flex gap-6 text-right">
+                <div>
+                    <span class="block text-[9px] uppercase tracking-widest text-slate-400 font-semibold">BEST</span>
+                    <span id="highScoreText" class="text-2xl font-medium score-font text-slate-500">0000</span>
+                </div>
+                <div>
+                    <span class="block text-[9px] uppercase tracking-widest text-slate-400 font-semibold">SCORE</span>
+                    <span id="scoreText" class="text-3xl font-bold score-font text-slate-700">0000</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 遊戲 Canvas 與 動態風格 Overlay -->
+        <div id="canvasContainer" class="relative w-full flex justify-center items-center rounded-2xl p-1 bg-white border shadow-xs transition-all duration-300">
+            <canvas id="gameCanvas" width="600" height="450" class="rounded-xl w-full max-w-[600px] h-auto aspect-[4/3] block"></canvas>
+            
+            <!-- 清爽感畫面覆蓋層 -->
+            <div id="overlay" class="absolute inset-0 bg-slate-900/5 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 transition-opacity duration-500 z-20">
+                <div id="overlayCard" class="text-center theme-card p-8 rounded-2xl max-w-[85%] flex flex-col items-center border shadow-lg">
+                    <div id="overlayTag" class="text-[10px] text-slate-400 tracking-[0.25em] uppercase mb-1 font-medium">Fresh Breakout</div>
+                    <h2 id="overlayTitle" class="text-2xl font-bold zh-serif mb-2 tracking-widest">展開一段清爽之旅</h2>
+                    <p id="overlaySub" class="text-xs text-slate-600 leading-relaxed mb-6 zh-serif border-t border-b py-3 w-full font-light">
+                        擊碎磚塊時，有 20% 機率獲得專屬擴充道具<br>
+                        接住它，讓滑塊優雅舒展 5 秒鐘（可連續累加）。
+                    </p>
+                    <button id="startBtn" class="theme-btn px-8 py-2.5 rounded-lg text-xs zh-serif font-medium tracking-widest flex items-center justify-center shadow-md">
+                        <span>開啟旅程</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 頁尾說明 -->
+        <footer id="mainFooter" class="w-full flex justify-between items-center px-1 text-[11px] text-slate-500 zh-serif font-light">
+            <div class="flex gap-2 items-center">
+                <span class="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 text-[10px] shadow-2xs">◄</span>
+                <span class="px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600 text-[10px] shadow-2xs">►</span>
+                <span>鍵盤左右鍵 / 輕觸滑動</span>
+            </div>
+            <div>
+                <span id="rateBadge" class="px-2.5 py-0.5 rounded-full border transition-all">幸運道具掉落率 20%</span>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const pageBody = document.getElementById('pageBody');
+        const mainHeader = document.getElementById('mainHeader');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const tagBadge = document.getElementById('tagBadge');
+        const themeBadge = document.getElementById('themeBadge');
+        const rateBadge = document.getElementById('rateBadge');
+        const appTitle = document.getElementById('appTitle');
+        const appSubtitle = document.getElementById('appSubtitle');
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        
+        const overlay = document.getElementById('overlay');
+        const overlayCard = document.getElementById('overlayCard');
+        const overlayTag = document.getElementById('overlayTag');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const startBtn = document.getElementById('startBtn');
+
+        let highScore = window.__galleryStorage.getItem('breakout_clean_theme_score') || 0;
+        highScoreText.textContent = String(highScore).padStart(4, '0');
+
+        let gameState = 'START';
+        let score = 0;
+        let animationFrameId = null;
+
+        // 定義完全獨立的主題風格資料庫 (包含清新、夢幻、暗黑賽博、日式櫻花、秋楓與咖啡)
+        const themes = [
+            {
+                name: '晨綠微光',
+                title: 'Lucky Clover',
+                subtitle: '在白晨的微光中，尋覓專屬的四葉幸運',
+                tag: '純粹幸運草',
+                itemName: '幸運草',
+                itemBuffName: '幸運舒展',
+                itemType: 'CLOVER',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(230, 245, 235, 0.7) 0%, transparent 45%), radial-gradient(circle at 85% 85%, rgba(235, 242, 248, 0.7) 0%, transparent 45%)',
+                canvasBg: '#ffffff',
+                primaryColor: '#52796f',
+                accentColor: '#84a98c',
+                textColor: '#2c4a3e',
+                badgeBg: '#edf4f0',
+                badgeBorder: '#c3d9cc',
+                cardBorder: '#dce8e0',
+                paddle: '#6b8a7a',
+                paddleGlow: 'rgba(107, 138, 122, 0.15)',
+                ball: '#4a6356',
+                ballGlow: 'rgba(74, 99, 86, 0.15)',
+                bricks: ['#edf4f0', '#e0ece5', '#d2e3d9', '#c3d9cc'],
+                grid: 'rgba(230, 240, 235, 0.45)',
+                particle: 'rgba(168, 204, 180, '
+            },
+            {
+                name: '蔚藍天空',
+                title: 'Azure Sky',
+                subtitle: '徜徉於無垠湛藍，隨雲朵輕盈舞動',
+                tag: '雲朵晴空',
+                itemName: '晴空雲朵',
+                itemBuffName: '雲端擴展',
+                itemType: 'CLOUD',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(225, 242, 255, 0.85) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(240, 248, 255, 0.85) 0%, transparent 50%)',
+                canvasBg: '#f8fafc',
+                primaryColor: '#3a7bd5',
+                accentColor: '#60a5fa',
+                textColor: '#1e3a8a',
+                badgeBg: '#eff6ff',
+                badgeBorder: '#bfdbfe',
+                cardBorder: '#dbeafe',
+                paddle: '#3b82f6',
+                paddleGlow: 'rgba(59, 130, 246, 0.18)',
+                ball: '#2563eb',
+                ballGlow: 'rgba(37, 99, 235, 0.15)',
+                bricks: ['#f0f7ff', '#e0f2fe', '#bae6fd', '#93c5fd'],
+                grid: 'rgba(224, 242, 254, 0.5)',
+                particle: 'rgba(147, 197, 253, '
+            },
+            {
+                name: '粉紅 Y2K',
+                title: 'Cyber Pink Y2K',
+                subtitle: '甜酷千禧復古風，閃耀專屬甜美霓彩',
+                tag: 'Y2K PINK',
+                itemName: '復古愛心',
+                itemBuffName: '愛心延展',
+                itemType: 'HEART',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(255, 228, 242, 0.85) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 241, 245, 0.85) 0%, transparent 50%)',
+                canvasBg: '#fff5f8',
+                primaryColor: '#ec4899',
+                accentColor: '#f472b6',
+                textColor: '#9d174d',
+                badgeBg: '#fdf2f8',
+                badgeBorder: '#fbcfe8',
+                cardBorder: '#fce7f3',
+                paddle: '#f43f5e',
+                paddleGlow: 'rgba(244, 63, 94, 0.2)',
+                ball: '#e11d48',
+                ballGlow: 'rgba(225, 29, 72, 0.18)',
+                bricks: ['#fff1f2', '#ffe4e6', '#fecdd3', '#fda4af'],
+                grid: 'rgba(254, 205, 211, 0.5)',
+                particle: 'rgba(251, 113, 133, '
+            },
+            {
+                name: '蜜桃 Sunset',
+                title: 'Peach Sunset',
+                subtitle: '落日蜜桃微醺，淡雅溫柔的活力橘調',
+                tag: 'PEACH VIBE',
+                itemName: '璀璨火花',
+                itemBuffName: '蜜桃舒展',
+                itemType: 'SPARKLE',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(255, 237, 213, 0.8) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(254, 243, 199, 0.7) 0%, transparent 50%)',
+                canvasBg: '#fffbf5',
+                primaryColor: '#f97316',
+                accentColor: '#fb923c',
+                textColor: '#9a3412',
+                badgeBg: '#fff7ed',
+                badgeBorder: '#fed7aa',
+                cardBorder: '#ffedd5',
+                paddle: '#fb923c',
+                paddleGlow: 'rgba(251, 146, 60, 0.2)',
+                ball: '#ea580c',
+                ballGlow: 'rgba(234, 88, 12, 0.15)',
+                bricks: ['#fff7ed', '#ffedd5', '#fed7aa', '#fdba74'],
+                grid: 'rgba(254, 215, 170, 0.5)',
+                particle: 'rgba(253, 186, 116, '
+            },
+            {
+                name: '紫霧星晨',
+                title: 'Lavender Mist',
+                subtitle: '沉醉紫色星辰，感受靜謐舒緩夜光',
+                tag: 'DREAMY PURPLE',
+                itemName: '許願繁星',
+                itemBuffName: '星光蔓延',
+                itemType: 'STAR',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(243, 232, 255, 0.85) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(250, 245, 255, 0.85) 0%, transparent 50%)',
+                canvasBg: '#faf5ff',
+                primaryColor: '#a855f7',
+                accentColor: '#c084fc',
+                textColor: '#6b21a8',
+                badgeBg: '#faf5ff',
+                badgeBorder: '#e9d5ff',
+                cardBorder: '#f3e8ff',
+                paddle: '#9333ea',
+                paddleGlow: 'rgba(147, 51, 234, 0.2)',
+                ball: '#7e22ce',
+                ballGlow: 'rgba(126, 34, 206, 0.15)',
+                bricks: ['#faf5ff', '#f3e8ff', '#e9d5ff', '#d8b4fe'],
+                grid: 'rgba(233, 213, 255, 0.5)',
+                particle: 'rgba(216, 180, 254, '
+            },
+            {
+                name: '檸檬夏日',
+                title: 'Citrus Summer',
+                subtitle: '清爽酸甜檸檬香氣，煥發盛夏朝氣',
+                tag: 'CITRUS FRESH',
+                itemName: '鮮萃檸檬',
+                itemBuffName: '檸檬清爽',
+                itemType: 'CITRUS',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(254, 240, 138, 0.6) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(253, 224, 71, 0.4) 0%, transparent 50%)',
+                canvasBg: '#fffde7',
+                primaryColor: '#ca8a04',
+                accentColor: '#eab308',
+                textColor: '#854d0e',
+                badgeBg: '#fefce8',
+                badgeBorder: '#fef08a',
+                cardBorder: '#fef9c3',
+                paddle: '#eab308',
+                paddleGlow: 'rgba(234, 179, 8, 0.2)',
+                ball: '#ca8a04',
+                ballGlow: 'rgba(202, 138, 4, 0.18)',
+                bricks: ['#fefce8', '#fef9c3', '#fef08a', '#fde047'],
+                grid: 'rgba(254, 240, 138, 0.5)',
+                particle: 'rgba(250, 204, 21, '
+            },
+            {
+                name: '櫻花吹雪',
+                title: 'Sakura Breeze',
+                subtitle: '春日櫻花漫舞，灑落粉白溫柔瓣影',
+                tag: 'SAKURA PETALS',
+                itemName: '浪漫櫻花',
+                itemBuffName: '櫻吹雪舞',
+                itemType: 'SAKURA',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(255, 228, 230, 0.8) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 241, 242, 0.8) 0%, transparent 50%)',
+                canvasBg: '#fff0f5',
+                primaryColor: '#e11d48',
+                accentColor: '#f43f5e',
+                textColor: '#881337',
+                badgeBg: '#fff1f2',
+                badgeBorder: '#fecdd3',
+                cardBorder: '#ffe4e6',
+                paddle: '#fb7185',
+                paddleGlow: 'rgba(251, 113, 133, 0.2)',
+                ball: '#f43f5e',
+                ballGlow: 'rgba(244, 63, 94, 0.18)',
+                bricks: ['#fff1f2', '#ffe4e6', '#fecdd3', '#fda4af'],
+                grid: 'rgba(254, 205, 211, 0.5)',
+                particle: 'rgba(251, 113, 133, '
+            },
+            {
+                name: '深夜賽博',
+                title: 'Cyber Neon Night',
+                subtitle: '穿梭暗夜霓虹，沉浸未來賽博電光',
+                tag: 'NEON NIGHT',
+                itemName: '高壓閃電',
+                itemBuffName: '電光超頻',
+                itemType: 'BOLT',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.95) 0%, transparent 70%), radial-gradient(circle at 80% 80%, rgba(30, 27, 75, 0.95) 0%, transparent 70%)',
+                canvasBg: '#0f0f1a',
+                primaryColor: '#06b6d4',
+                accentColor: '#22d3ee',
+                textColor: '#e0e7ff',
+                badgeBg: '#1e1b4b',
+                badgeBorder: '#3730a3',
+                cardBorder: '#312e81',
+                paddle: '#06b6d4',
+                paddleGlow: 'rgba(6, 182, 212, 0.5)',
+                ball: '#38bdf8',
+                ballGlow: 'rgba(56, 189, 248, 0.5)',
+                bricks: ['#1e293b', '#334155', '#475569', '#0284c7'],
+                grid: 'rgba(51, 65, 85, 0.4)',
+                particle: 'rgba(56, 189, 248, '
+            },
+            {
+                name: '深海水母',
+                title: 'Deep Ocean',
+                subtitle: '潛入靜謐深海，聆聽微光水母律動',
+                tag: 'OCEAN DEEP',
+                itemName: '微光貝殼',
+                itemBuffName: '深海潮汐',
+                itemType: 'SHELL',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(8, 47, 73, 0.95) 0%, transparent 70%), radial-gradient(circle at 80% 80%, rgba(15, 23, 42, 0.95) 0%, transparent 70%)',
+                canvasBg: '#071927',
+                primaryColor: '#14b8a6',
+                accentColor: '#2dd4bf',
+                textColor: '#ccfbf1',
+                badgeBg: '#115e59',
+                badgeBorder: '#0d9488',
+                cardBorder: '#134e4a',
+                paddle: '#14b8a6',
+                paddleGlow: 'rgba(20, 184, 166, 0.4)',
+                ball: '#06b6d4',
+                ballGlow: 'rgba(6, 182, 212, 0.4)',
+                bricks: ['#0f766e', '#115e59', '#134e4a', '#0d9488'],
+                grid: 'rgba(19, 78, 74, 0.5)',
+                particle: 'rgba(45, 212, 191, '
+            },
+            {
+                name: '秋日楓紅',
+                title: 'Autumn Amber',
+                subtitle: '漫步金黃楓林，感受濃濃秋意溫潤',
+                tag: 'AUTUMN LEAF',
+                itemName: '金黃楓葉',
+                itemBuffName: '楓林蔓延',
+                itemType: 'LEAF',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(254, 215, 170, 0.7) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(251, 146, 60, 0.4) 0%, transparent 50%)',
+                canvasBg: '#fdf8f5',
+                primaryColor: '#c2410c',
+                accentColor: '#ea580c',
+                textColor: '#7c2d12',
+                badgeBg: '#fff7ed',
+                badgeBorder: '#ffedd5',
+                cardBorder: '#fed7aa',
+                paddle: '#ea580c',
+                paddleGlow: 'rgba(234, 88, 12, 0.2)',
+                ball: '#c2410c',
+                ballGlow: 'rgba(194, 65, 12, 0.18)',
+                bricks: ['#fff7ed', '#ffedd5', '#fed7aa', '#fdba74'],
+                grid: 'rgba(254, 215, 170, 0.5)',
+                particle: 'rgba(249, 115, 22, '
+            },
+            {
+                name: '喫茶拿鐵',
+                title: 'Café Mocha',
+                subtitle: '濃厚咖啡香氣，享用寧靜的下午茶時光',
+                tag: 'COFFEE VIBE',
+                itemName: '香醇咖啡豆',
+                itemBuffName: '拿鐵舒緩',
+                itemType: 'BEAN',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(245, 237, 227, 0.9) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(235, 220, 205, 0.8) 0%, transparent 50%)',
+                canvasBg: '#faf6f0',
+                primaryColor: '#78350f',
+                accentColor: '#92400e',
+                textColor: '#451a03',
+                badgeBg: '#fef3c7',
+                badgeBorder: '#fde68a',
+                cardBorder: '#fef3c7',
+                paddle: '#92400e',
+                paddleGlow: 'rgba(146, 64, 14, 0.2)',
+                ball: '#78350f',
+                ballGlow: 'rgba(120, 53, 15, 0.18)',
+                bricks: ['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d'],
+                grid: 'rgba(253, 230, 138, 0.5)',
+                particle: 'rgba(180, 83, 9, '
+            },
+            {
+                name: '宇治抹茶',
+                title: 'Matcha Uji',
+                subtitle: '品味回甘抹茶，沉浸和風茶室的恬靜',
+                tag: 'MATCHA ZEN',
+                itemName: '翠綠茶葉',
+                itemBuffName: '靜謐茶香',
+                itemType: 'TEA_LEAF',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(236, 245, 233, 0.9) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(220, 235, 215, 0.8) 0%, transparent 50%)',
+                canvasBg: '#f4f9f2',
+                primaryColor: '#3f6212',
+                accentColor: '#65a30d',
+                textColor: '#1a2e05',
+                badgeBg: '#ecfdf5',
+                badgeBorder: '#d1fae5',
+                cardBorder: '#dcfce7',
+                paddle: '#4d7c0f',
+                paddleGlow: 'rgba(77, 124, 15, 0.2)',
+                ball: '#3f6212',
+                ballGlow: 'rgba(63, 98, 18, 0.18)',
+                bricks: ['#f0fdf4', '#dcfce7', '#bbf7d0', '#86efac'],
+                grid: 'rgba(187, 247, 208, 0.5)',
+                particle: 'rgba(101, 163, 13, '
+            },
+            {
+                name: '復古蒸汽波',
+                title: 'Vaporwave 80s',
+                subtitle: '重回 80 年代，品嚐復古夢幻的霓虹餘暉',
+                tag: 'VAPORWAVE 80S',
+                itemName: '黑膠唱片',
+                itemBuffName: '復古律動',
+                itemType: 'VINYL',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(251, 207, 232, 0.8) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(199, 210, 254, 0.8) 0%, transparent 50%)',
+                canvasBg: '#fdf2f8',
+                primaryColor: '#c026d3',
+                accentColor: '#e879f9',
+                textColor: '#701a75',
+                badgeBg: '#fce7f3',
+                badgeBorder: '#fbcfe8',
+                cardBorder: '#f8fafc',
+                paddle: '#a21caf',
+                paddleGlow: 'rgba(162, 28, 175, 0.25)',
+                ball: '#86198f',
+                ballGlow: 'rgba(134, 25, 143, 0.2)',
+                bricks: ['#fae8ff', '#f5d0fe', '#f0abfc', '#e879f9'],
+                grid: 'rgba(240, 171, 252, 0.5)',
+                particle: 'rgba(217, 70, 239, '
+            },
+            {
+                name: '極光冰河',
+                title: 'Northern Aurora',
+                subtitle: '探訪極地冰川，凝視極光舞動的湛藍',
+                tag: 'AURORA FROST',
+                itemName: '極光冰晶',
+                itemBuffName: '極致凍結',
+                itemType: 'SNOWFLAKE',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(207, 250, 254, 0.85) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(224, 242, 254, 0.85) 0%, transparent 50%)',
+                canvasBg: '#f0fdfa',
+                primaryColor: '#0891b2',
+                accentColor: '#06b6d4',
+                textColor: '#164e63',
+                badgeBg: '#e0f2fe',
+                badgeBorder: '#bae6fd',
+                cardBorder: '#cffafe',
+                paddle: '#0e7490',
+                paddleGlow: 'rgba(14, 116, 144, 0.2)',
+                ball: '#155e75',
+                ballGlow: 'rgba(21, 94, 117, 0.18)',
+                bricks: ['#ecfeff', '#cffafe', '#a5f3fc', '#67e8f9'],
+                grid: 'rgba(165, 243, 252, 0.5)',
+                particle: 'rgba(34, 211, 238, '
+            },
+            {
+                name: '水墨禪意',
+                title: 'Ink Wash Zen',
+                subtitle: '紙墨交融之間，感受深淺留白的虛實美感',
+                tag: 'ZEN INK WASH',
+                itemName: '禪意墨滴',
+                itemBuffName: '水墨暈染',
+                itemType: 'INK_DROP',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(241, 245, 249, 0.9) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(226, 232, 240, 0.8) 0%, transparent 50%)',
+                canvasBg: '#f8fafc',
+                primaryColor: '#334155',
+                accentColor: '#475569',
+                textColor: '#0f172a',
+                badgeBg: '#f1f5f9',
+                badgeBorder: '#cbd5e1',
+                cardBorder: '#e2e8f0',
+                paddle: '#475569',
+                paddleGlow: 'rgba(71, 85, 105, 0.2)',
+                ball: '#1e293b',
+                ballGlow: 'rgba(30, 41, 59, 0.2)',
+                bricks: ['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1'],
+                grid: 'rgba(203, 213, 225, 0.5)',
+                particle: 'rgba(100, 116, 139, '
+            },
+            {
+                name: '綠洲仙人掌',
+                title: 'Desert Oasis',
+                subtitle: '走進狂野沙漠，擁抱陽光下堅韌的生機',
+                tag: 'DESERT OASIS',
+                itemName: '綠洲仙人掌',
+                itemBuffName: '沙漠舒展',
+                itemType: 'CACTUS',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(254, 243, 199, 0.8) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(253, 230, 138, 0.6) 0%, transparent 50%)',
+                canvasBg: '#fffbeb',
+                primaryColor: '#15803d',
+                accentColor: '#16a34a',
+                textColor: '#14532d',
+                badgeBg: '#fef3c7',
+                badgeBorder: '#fde68a',
+                cardBorder: '#fef9c3',
+                paddle: '#16a34a',
+                paddleGlow: 'rgba(22, 163, 74, 0.2)',
+                ball: '#15803d',
+                ballGlow: 'rgba(21, 128, 61, 0.18)',
+                bricks: ['#fefce8', '#fef3c7', '#fde68a', '#d9f99d'],
+                grid: 'rgba(253, 230, 138, 0.5)',
+                particle: 'rgba(132, 204, 22, '
+            },
+            {
+                name: '繽紛糖果',
+                title: 'Gummy Candy',
+                subtitle: '軟糖夢幻國度，沉浸甜美味蕾樂園',
+                tag: 'GUMMY CANDY',
+                itemName: '夢幻糖果',
+                itemBuffName: '甜蜜擴張',
+                itemType: 'CANDY',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(254, 205, 211, 0.85) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(254, 240, 138, 0.7) 0%, transparent 50%)',
+                canvasBg: '#fff1f2',
+                primaryColor: '#db2777',
+                accentColor: '#f43f5e',
+                textColor: '#831843',
+                badgeBg: '#ffe4e6',
+                badgeBorder: '#fecdd3',
+                cardBorder: '#fce7f3',
+                paddle: '#f43f5e',
+                paddleGlow: 'rgba(244, 63, 94, 0.2)',
+                ball: '#be123c',
+                ballGlow: 'rgba(190, 18, 60, 0.18)',
+                bricks: ['#fff1f2', '#ffe4e6', '#fecdd3', '#fef08a'],
+                grid: 'rgba(254, 205, 211, 0.5)',
+                particle: 'rgba(251, 113, 133, '
+            },
+            {
+                name: '薄荷巧克力',
+                title: 'Mint Choco',
+                subtitle: '沁涼薄荷巧克，感受層次分明的甜美爽脆',
+                tag: 'MINT CHOCO',
+                itemName: '涼感薄荷',
+                itemBuffName: '清涼透心',
+                itemType: 'MINT_LEAF',
+                bgGradient: 'radial-gradient(circle at 15% 15%, rgba(209, 250, 229, 0.9) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(245, 230, 215, 0.8) 0%, transparent 50%)',
+                canvasBg: '#f0fdf4',
+                primaryColor: '#059669',
+                accentColor: '#10b981',
+                textColor: '#064e3b',
+                badgeBg: '#e6f4ea',
+                badgeBorder: '#a7f3d0',
+                cardBorder: '#d1fae5',
+                paddle: '#059669',
+                paddleGlow: 'rgba(5, 150, 105, 0.2)',
+                ball: '#047857',
+                ballGlow: 'rgba(4, 120, 87, 0.18)',
+                bricks: ['#ecfdf5', '#d1fae5', '#a7f3d0', '#6ee7b7'],
+                grid: 'rgba(167, 243, 208, 0.5)',
+                particle: 'rgba(52, 211, 153, '
+            },
+            {
+                name: '銀河星雲',
+                title: 'Galaxy Nebula',
+                subtitle: '漫遊璀璨銀河，尋覓星雲間的神秘奧秘',
+                tag: 'NEBULA GALAXY',
+                itemName: '土星光環',
+                itemBuffName: '星系漫遊',
+                itemType: 'PLANET',
+                bgGradient: 'radial-gradient(circle at 20% 20%, rgba(30, 27, 75, 0.95) 0%, transparent 70%), radial-gradient(circle at 80% 80%, rgba(49, 46, 129, 0.95) 0%, transparent 70%)',
+                canvasBg: '#0b091a',
+                primaryColor: '#818cf8',
+                accentColor: '#a5b4fc',
+                textColor: '#e0e7ff',
+                badgeBg: '#1e1b4b',
+                badgeBorder: '#3730a3',
+                cardBorder: '#312e81',
+                paddle: '#6366f1',
+                paddleGlow: 'rgba(99, 102, 241, 0.5)',
+                ball: '#818cf8',
+                ballGlow: 'rgba(129, 140, 248, 0.5)',
+                bricks: ['#1e1b4b', '#312e81', '#3730a3', '#4338ca'],
+                grid: 'rgba(67, 56, 202, 0.4)',
+                particle: 'rgba(165, 180, 252, '
+            }
+        ];
+
+        let currentThemeIndex = 0;
+        let currentTheme = themes[0];
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+
+            // 1. 全局背景與文字
+            pageBody.style.backgroundImage = theme.bgGradient;
+            
+            // 2. 頁面 UI 元素適應主題
+            appTitle.textContent = theme.title;
+            appSubtitle.textContent = theme.subtitle;
+            tagBadge.textContent = theme.tag;
+
+            // 顏色與邊框設定
+            mainHeader.style.borderColor = theme.cardBorder;
+            canvasContainer.style.borderColor = theme.cardBorder;
+            
+            tagBadge.style.backgroundColor = theme.badgeBg;
+            tagBadge.style.borderColor = theme.badgeBorder;
+            tagBadge.style.color = theme.textColor;
+
+            themeBadge.textContent = `STYLE: ${theme.name} ↺`;
+            themeBadge.style.backgroundColor = theme.badgeBg;
+            themeBadge.style.borderColor = theme.badgeBorder;
+            themeBadge.style.color = theme.textColor;
+
+            rateBadge.textContent = `${theme.itemName}掉落率 20%`;
+            rateBadge.style.backgroundColor = theme.badgeBg;
+            rateBadge.style.borderColor = theme.badgeBorder;
+            rateBadge.style.color = theme.textColor;
+
+            overlayCard.style.borderColor = theme.cardBorder;
+            overlayCard.style.backgroundColor = theme.badgeBg;
+            overlayTag.textContent = theme.tag;
+            overlayTag.style.color = theme.textColor;
+            overlayTitle.textContent = `開啟 ${theme.name} 旅程`;
+            overlayTitle.style.color = theme.textColor;
+            overlaySub.style.color = theme.textColor;
+            
+            startBtn.style.backgroundColor = theme.primaryColor;
+            startBtn.style.color = '#ffffff';
+
+            if (gameState !== 'START') {
+                draw();
+            }
+        }
+
+        function applyRandomTheme() {
+            currentThemeIndex = Math.floor(Math.random() * themes.length);
+            applyTheme(themes[currentThemeIndex]);
+        }
+
+        function cycleTheme() {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            applyTheme(themes[currentThemeIndex]);
+        }
+
+        themeBadge.addEventListener('click', cycleTheme);
+
+        const paddle = {
+            baseWidth: 100,
+            width: 100,
+            height: 10,
+            x: (canvas.width - 100) / 2,
+            y: canvas.height - 32,
+            speed: 8.5,
+            isExpanded: false,
+            expandTimer: null,
+            expandEndTime: 0
+        };
+
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 48,
+            radius: 6.5,
+            speed: 4.95, // 精確鎖定原本速度 90%
+            dx: 2.1,
+            dy: -4.48
+        };
+
+        const brickRowCount = 4;
+        const brickColumnCount = 7;
+        const brickPadding = 12;
+        const brickOffsetTop = 45;
+        const brickOffsetLeft = 35;
+        const brickHeight = 15;
+        const brickWidth = (canvas.width - (brickOffsetLeft * 2) - (brickPadding * (brickColumnCount - 1))) / brickColumnCount;
+
+        let bricks = [];
+        let remainingBricks = 0;
+        let items = [];
+        let floatingTexts = [];
+        let particles = [];
+
+        let rightPressed = false;
+        let leftPressed = false;
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 22; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speedY: Math.random() * -0.25 - 0.08,
+                    speedX: Math.random() * 0.2 - 0.1,
+                    alpha: Math.random() * 0.35 + 0.15
+                });
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                rightPressed = true;
+            } else if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                leftPressed = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                rightPressed = false;
+            } else if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                leftPressed = false;
+            }
+        });
+
+        function handlePointerMove(e) {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const relativeX = (clientX - rect.left) * scaleX;
+            
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, relativeX - paddle.width / 2));
+            }
+        }
+
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', (e) => {
+            handlePointerMove(e);
+            e.preventDefault();
+        }, { passive: false });
+
+        startBtn.addEventListener('click', startGame);
+
+        function initBricks() {
+            bricks = [];
+            remainingBricks = brickRowCount * brickColumnCount;
+            for (let r = 0; r < brickRowCount; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickColumnCount; c++) {
+                    bricks[r][c] = { x: 0, y: 0, status: 1 };
+                }
+            }
+        }
+
+        function resetPaddleBuff() {
+            if (paddle.expandTimer) {
+                clearTimeout(paddle.expandTimer);
+                paddle.expandTimer = null;
+            }
+            paddle.width = paddle.baseWidth;
+            paddle.isExpanded = false;
+            paddle.expandEndTime = 0;
+        }
+
+        function resetPositions() {
+            resetPaddleBuff();
+            paddle.x = (canvas.width - paddle.width) / 2;
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height - 48;
+            
+            const baseSpeed = 4.95; 
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            const angle = (Math.random() * 0.35 + 0.25) * dir;
+            
+            ball.dx = baseSpeed * Math.sin(angle);
+            ball.dy = -baseSpeed * Math.cos(angle);
+
+            items = [];
+            floatingTexts = [];
+        }
+
+        function startGame() {
+            score = 0;
+            scoreText.textContent = String(score).padStart(4, '0');
+            applyRandomTheme();
+            initBricks();
+            initParticles();
+            resetPositions();
+            gameState = 'PLAYING';
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function spawnItem(x, y) {
+            if (Math.random() <= 0.20) {
+                items.push({
+                    x: x + brickWidth / 2,
+                    y: y + brickHeight / 2,
+                    radius: 11,
+                    dy: 2.1,
+                    type: currentTheme.itemType
+                });
+            }
+        }
+
+        function activateExpandBuff() {
+            paddle.width = 150;
+            paddle.isExpanded = true;
+
+            const now = Date.now();
+            if (paddle.expandEndTime > now) {
+                paddle.expandEndTime += 5000;
+            } else {
+                paddle.expandEndTime = now + 5000;
+            }
+
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
+
+            if (paddle.expandTimer) clearTimeout(paddle.expandTimer);
+            const remainingMs = paddle.expandEndTime - now;
+            
+            paddle.expandTimer = setTimeout(() => {
+                paddle.width = paddle.baseWidth;
+                paddle.isExpanded = false;
+                paddle.expandTimer = null;
+                paddle.expandEndTime = 0;
+            }, remainingMs);
+
+            const totalSecs = Math.round(remainingMs / 1000);
+            addFloatingText(`${currentTheme.itemBuffName} (+5s | 剩餘 ${totalSecs}s)`, paddle.x + paddle.width / 2, paddle.y - 15);
+        }
+
+        function addFloatingText(text, x, y) {
+            floatingTexts.push({
+                text: text,
+                x: x,
+                y: y,
+                alpha: 1.0,
+                dy: -1.0
+            });
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            overlayTitle.textContent = '旅程靜享停歇';
+            overlaySub.innerHTML = `平靜享受專注時光。最終得分：<b>${score}</b>`;
+            startBtn.innerHTML = '<span>重新開啟</span>';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_clean_theme_score', highScore);
+                highScoreText.textContent = String(highScore).padStart(4, '0');
+            }
+        }
+
+        function gameWin() {
+            gameState = 'WIN';
+            overlayTitle.textContent = '滿載圓滿';
+            overlaySub.innerHTML = `恭喜清空所有磚塊！<br>最終獲得分數：<b>${score}</b>`;
+            startBtn.innerHTML = '<span>再次探索</span>';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_clean_theme_score', highScore);
+                highScoreText.textContent = String(highScore).padStart(4, '0');
+            }
+        }
+
+        function checkCircleRectCollision(circleX, circleY, radius, rectX, rectY, rectWidth, rectHeight) {
+            const nearestX = Math.max(rectX, Math.min(circleX, rectX + rectWidth));
+            const nearestY = Math.max(rectY, Math.min(circleY, rectY + rectHeight));
+            const deltaX = circleX - nearestX;
+            const deltaY = circleY - nearestY;
+            return (deltaX * deltaX + deltaY * deltaY) <= (radius * radius);
+        }
+
+        function collisionDetection() {
+            for (let r = 0; r < brickRowCount; r++) {
+                for (let c = 0; c < brickColumnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + brickWidth &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + brickHeight
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            remainingBricks--;
+                            score += 10;
+                            scoreText.textContent = String(score).padStart(4, '0');
+
+                            spawnItem(b.x, b.y);
+
+                            ball.dy *= 1.008; 
+                            ball.dx *= 1.008;
+
+                            if (remainingBricks <= 0) {
+                                gameWin();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            if (rightPressed) {
+                paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+            } else if (leftPressed) {
+                paddle.x = Math.max(0, paddle.x - paddle.speed);
+            }
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            for (let p of particles) {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+            }
+
+            // 防卡牆邊界檢測
+            if (ball.x - ball.radius <= 0) {
+                if (ball.dx < 0) ball.dx = Math.abs(ball.dx);
+                ball.x = ball.radius;
+            } else if (ball.x + ball.radius >= canvas.width) {
+                if (ball.dx > 0) ball.dx = -Math.abs(ball.dx);
+                ball.x = canvas.width - ball.radius;
+            }
+
+            // 頂部與滑塊碰撞
+            if (ball.y - ball.radius <= 0) {
+                if (ball.dy < 0) ball.dy = Math.abs(ball.dy);
+                ball.y = ball.radius;
+            } 
+            else if (ball.y + ball.radius >= paddle.y) {
+                if (
+                    ball.x >= paddle.x - ball.radius && 
+                    ball.x <= paddle.x + paddle.width + ball.radius &&
+                    ball.y - ball.radius <= paddle.y + paddle.height
+                ) {
+                    let collidePoint = ball.x - (paddle.x + paddle.width / 2);
+                    collidePoint = collidePoint / (paddle.width / 2);
+
+                    let angle = collidePoint * (Math.PI / 3);
+                    let currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+
+                    ball.dx = currentSpeed * Math.sin(angle);
+                    ball.dy = -currentSpeed * Math.cos(angle);
+                } 
+                else if (ball.y - ball.radius > canvas.height) {
+                    gameOver();
+                }
+            }
+
+            // 道具碰撞檢測
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                const prevY = item.y;
+                item.y += item.dy;
+
+                let isCollected = false;
+                const steps = 4;
+                for (let s = 0; s <= steps; s++) {
+                    const sampleY = prevY + (item.dy * (s / steps));
+                    if (checkCircleRectCollision(item.x, sampleY, item.radius, paddle.x, paddle.y, paddle.width, paddle.height)) {
+                        isCollected = true;
+                        break;
+                    }
+                }
+
+                if (isCollected) {
+                    activateExpandBuff();
+                    items.splice(i, 1);
+                }
+                else if (item.y - item.radius > canvas.height) {
+                    items.splice(i, 1);
+                }
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.dy;
+                ft.alpha -= 0.02;
+                if (ft.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+
+            collisionDetection();
+        }
+
+        function drawItemSymbol(item) {
+            ctx.fillStyle = currentTheme.textColor;
+            const x = item.x;
+            const y = item.y;
+
+            if (item.type === 'CLOVER') {
+                const cr = 2.2;
+                const offset = 2.2;
+                ctx.beginPath();
+                ctx.arc(x - offset, y - offset, cr, 0, Math.PI * 2);
+                ctx.arc(x + offset, y - offset, cr, 0, Math.PI * 2);
+                ctx.arc(x - offset, y + offset, cr, 0, Math.PI * 2);
+                ctx.arc(x + offset, y + offset, cr, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (item.type === 'CLOUD') {
+                ctx.beginPath();
+                ctx.arc(x - 3, y + 1, 2.5, 0, Math.PI * 2);
+                ctx.arc(x, y - 2, 3.2, 0, Math.PI * 2);
+                ctx.arc(x + 3, y + 1, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (item.type === 'HEART') {
+                ctx.beginPath();
+                ctx.arc(x - 2, y - 1, 2.5, 0, Math.PI * 2);
+                ctx.arc(x + 2, y - 1, 2.5, 0, Math.PI * 2);
+                ctx.moveTo(x - 4.2, y);
+                ctx.lineTo(x, y + 4.5);
+                ctx.lineTo(x + 4.2, y);
+                ctx.fill();
+            } else if (item.type === 'STAR' || item.type === 'SPARKLE') {
+                ctx.beginPath();
+                ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(x - 5, y - 0.7, 10, 1.4);
+                ctx.fillRect(x - 0.7, y - 5, 1.4, 10);
+            } else if (item.type === 'CITRUS') {
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = currentTheme.badgeBg;
+                ctx.beginPath();
+                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (item.type === 'SAKURA') {
+                for (let a = 0; a < 5; a++) {
+                    const ang = (a * Math.PI * 2) / 5 - Math.PI / 2;
+                    const px = x + Math.cos(ang) * 2.8;
+                    const py = y + Math.sin(ang) * 2.8;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (item.type === 'BOLT') {
+                ctx.beginPath();
+                ctx.moveTo(x + 1, y - 5);
+                ctx.lineTo(x - 3, y + 0.5);
+                ctx.lineTo(x, y + 0.5);
+                ctx.lineTo(x - 1, y + 5);
+                ctx.lineTo(x + 3, y - 0.5);
+                ctx.lineTo(x, y - 0.5);
+                ctx.closePath();
+                ctx.fill();
+            } else if (item.type === 'SHELL') {
+                ctx.beginPath();
+                ctx.arc(x, y, 3.5, 0, Math.PI, true);
+                ctx.lineTo(x, y + 3.5);
+                ctx.closePath();
+                ctx.fill();
+            } else if (item.type === 'LEAF' || item.type === 'TEA_LEAF' || item.type === 'MINT_LEAF') {
+                ctx.beginPath();
+                ctx.arc(x - 1.5, y - 1.5, 3.5, 0, Math.PI * 0.7);
+                ctx.arc(x + 1.5, y + 1.5, 3.5, Math.PI, Math.PI * 1.7);
+                ctx.fill();
+            } else if (item.type === 'BEAN') {
+                ctx.beginPath();
+                ctx.ellipse(x, y, 2.5, 4, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (item.type === 'VINYL') {
+                ctx.beginPath();
+                ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = currentTheme.badgeBg;
+                ctx.beginPath();
+                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (item.type === 'SNOWFLAKE') {
+                ctx.beginPath();
+                ctx.fillRect(x - 4.5, y - 0.8, 9, 1.6);
+                ctx.fillRect(x - 0.8, y - 4.5, 1.6, 9);
+                ctx.moveTo(x - 3, y - 3);
+                ctx.lineTo(x + 3, y + 3);
+                ctx.moveTo(x + 3, y - 3);
+                ctx.lineTo(x - 3, y + 3);
+                ctx.stroke();
+            } else if (item.type === 'INK_DROP') {
+                ctx.beginPath();
+                ctx.arc(x, y + 1, 3.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(x - 2.8, y + 0.5);
+                ctx.lineTo(x, y - 4.5);
+                ctx.lineTo(x + 2.8, y + 0.5);
+                ctx.fill();
+            } else if (item.type === 'CACTUS') {
+                ctx.fillRect(x - 1.2, y - 4, 2.4, 8);
+                ctx.fillRect(x - 3.5, y - 1, 7, 1.5);
+                ctx.fillRect(x - 3.5, y - 3, 1.5, 2);
+                ctx.fillRect(x + 2, y - 3, 1.5, 2);
+            } else if (item.type === 'CANDY') {
+                ctx.beginPath();
+                ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(x - 2.5, y);
+                ctx.lineTo(x - 5, y - 2.5);
+                ctx.lineTo(x - 5, y + 2.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(x + 2.5, y);
+                ctx.lineTo(x + 5, y - 2.5);
+                ctx.lineTo(x + 5, y + 2.5);
+                ctx.closePath();
+                ctx.fill();
+            } else if (item.type === 'PLANET') {
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(x, y, 6, 2, Math.PI / 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = currentTheme.canvasBg || '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 幾何網格 (適應主題)
+            ctx.strokeStyle = currentTheme.grid;
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // 2. 飄浮微光粒子
+            const particleColorPrefix = currentTheme.particle;
+            for (let p of particles) {
+                ctx.fillStyle = `${particleColorPrefix}${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 3. 磚塊 (純色平塗 + 簡約點綴)
+            for (let r = 0; r < brickRowCount; r++) {
+                for (let c = 0; c < brickColumnCount; c++) {
+                    if (bricks[r][c].status === 1) {
+                        const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                        const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                        
+                        bricks[r][c].x = brickX;
+                        bricks[r][c].y = brickY;
+
+                        const colorLight = currentTheme.bricks[r % currentTheme.bricks.length];
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 4);
+                        ctx.fillStyle = colorLight;
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.04)';
+                        ctx.shadowBlur = 2;
+                        ctx.fill();
+
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+
+                        ctx.clip();
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                        ctx.beginPath();
+                        ctx.arc(brickX + brickWidth - 10, brickY + brickHeight / 2, 2.2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 4. 滑塊
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 5);
+            ctx.fillStyle = currentTheme.paddle;
+            ctx.shadowColor = currentTheme.paddleGlow;
+            ctx.shadowBlur = paddle.isExpanded ? 8 : 3;
+            ctx.fill();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.restore();
+
+            // Buff 倒數時間條
+            if (paddle.isExpanded) {
+                const remainingTime = Math.max(0, paddle.expandEndTime - Date.now());
+                const progress = Math.min(1.0, remainingTime / 5000);
+                ctx.fillStyle = currentTheme.textColor;
+                ctx.shadowColor = currentTheme.paddleGlow;
+                ctx.shadowBlur = 3;
+                ctx.fillRect(paddle.x, paddle.y + paddle.height + 3, paddle.width * progress, 2.5);
+                ctx.shadowBlur = 0;
+            }
+
+            // 5. 純色球體 (無漸層)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = currentTheme.ball;
+            ctx.shadowColor = currentTheme.ballGlow;
+            ctx.shadowBlur = 3;
+            ctx.fill();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+
+            // 6. 風格道具圖騰
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                
+                ctx.fillStyle = currentTheme.badgeBg;
+                ctx.shadowColor = currentTheme.paddleGlow;
+                ctx.shadowBlur = 4;
+                ctx.fill();
+
+                ctx.strokeStyle = currentTheme.paddle;
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                drawItemSymbol(item);
+
+                ctx.restore();
+            }
+
+            // 7. 飄浮提示文字
+            for (let i = 0; i < floatingTexts.length; i++) {
+                const ft = floatingTexts[i];
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.fillStyle = currentTheme.textColor;
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+                ctx.shadowBlur = 3;
+                ctx.font = '12px "Noto Serif TC", serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+        }
+
+        function gameLoop() {
+            if (gameState === 'PLAYING') {
+                update();
+                draw();
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        applyTheme(themes[0]);
+        initBricks();
+        initParticles();
+        draw();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

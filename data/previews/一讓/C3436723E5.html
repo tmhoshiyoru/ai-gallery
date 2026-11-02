@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>像素奇幻地下城 ‧ Pixel Dungeon Breaker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Retro Pixel Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --pixel-gold: #fbbf24;
+            --pixel-red: #ef4444;
+            --pixel-green: #22c55e;
+            --pixel-blue: #3b82f6;
+            --pixel-purple: #a855f7;
+            --bg-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Silkscreen', 'Press Start 2P', monospace;
+            background-color: #0b0914;
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.15) 0%, rgba(11, 9, 20, 0.98) 75%),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            image-rendering: pixelated;
+        }
+
+        .dungeon-frame {
+            background: #1e1b2e;
+            border: 4px solid #475569;
+            box-shadow: 
+                0 0 0 4px #0f172a,
+                0 0 0 8px #d97706,
+                0 10px 25px rgba(0, 0, 0, 0.8),
+                inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .shake {
+            animation: screenShake 0.18s ease-in-out;
+        }
+
+        @keyframes screenShake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-6px, 4px); }
+            40% { transform: translate(6px, -4px); }
+            60% { transform: translate(-4px, -2px); }
+            80% { transform: translate(4px, 2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .pixel-text-gold {
+            color: var(--pixel-gold);
+            text-shadow: 2px 2px 0px #78350f;
+        }
+
+        .pixel-text-red {
+            color: var(--pixel-red);
+            text-shadow: 2px 2px 0px #7f1d1d;
+        }
+
+        .pixel-text-green {
+            color: var(--pixel-green);
+            text-shadow: 2px 2px 0px #14532d;
+        }
+
+        canvas {
+            background: #120e24;
+            border: 4px solid #334155;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+
+        .pixel-btn {
+            background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+            color: #ffffff;
+            border: 3px solid #fef08a;
+            box-shadow: 0 4px 0 #78350f, inset 0 2px 0 rgba(255,255,255,0.4);
+            text-shadow: 2px 2px 0 #451a03;
+            transition: all 0.1s ease;
+        }
+        .pixel-btn:hover {
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #78350f, inset 0 2px 0 rgba(255,255,255,0.4);
+        }
+        .pixel-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #78350f;
+        }
+
+        .theme-tab {
+            background: #1e293b;
+            border: 2px solid #475569;
+            color: #cbd5e1;
+            padding: 3px 6px;
+            font-size: 9px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .theme-tab.active {
+            background: #d97706;
+            border-color: #fef08a;
+            color: #ffffff;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        }
+
+        .modal-bg {
+            background: rgba(10, 7, 18, 0.95);
+            backdrop-filter: blur(6px);
+        }
+
+        .touch-btn {
+            background: #1e293b;
+            border: 2px solid #64748b;
+            color: #38bdf8;
+            box-shadow: 0 4px 0 #0f172a;
+            text-shadow: 1px 1px 0 #000;
+        }
+        .touch-btn:active {
+            background: #3b82f6;
+            color: #fff;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #0f172a;
+        }
+
+        .class-card {
+            background: #18122B;
+            border: 2px solid #475569;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .class-card:hover, .class-card.selected {
+            border-color: #f59e0b;
+            background: #281d4a;
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Achievement Toast Animation */
+        .toast-enter {
+            animation: toastSlide 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes toastSlide {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #ffffff; border-radius: 4px; }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <!-- Achievement Notification Toast -->
+    <div id="achievement-toast" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 hidden max-w-sm w-11/12">
+        <div class="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 border-2 border-yellow-200 p-2.5 rounded shadow-2xl flex items-center gap-3 toast-enter">
+            <div id="achieve-icon" class="text-3xl bg-amber-950/40 p-1.5 rounded-full border border-yellow-300">🏆</div>
+            <div>
+                <div class="text-[9px] text-yellow-100 uppercase tracking-widest font-bold">ACHIEVEMENT UNLOCKED!</div>
+                <div id="achieve-title" class="text-xs font-bold text-white drop-shadow">初露鋒芒</div>
+                <div id="achieve-desc" class="text-[9px] text-amber-100">擊碎你的第一個魔物磚塊！</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Wrapper Container -->
+    <div id="game-wrapper" class="dungeon-frame w-full max-w-2xl p-3 sm:p-5 flex flex-col items-center">
+        
+        <!-- Header Controls & Audio Toggles -->
+        <div class="text-center mb-2 w-full relative">
+            <div class="flex justify-between items-center mb-1">
+                <div class="text-[9px] sm:text-xs font-bold tracking-widest text-[#fbbf24] uppercase flex items-center gap-1">
+                    <span>⚔️</span> PIXEL DUNGEON BREAKER
+                </div>
+                <!-- BGM & Sound Controls -->
+                <div class="flex items-center gap-2">
+                    <button id="bgm-toggle" onclick="toggleBGM()" class="bg-[#1e293b] hover:bg-[#334155] border border-[#64748b] text-[9px] px-2 py-0.5 rounded flex items-center gap-1">
+                        🎵 BGM: <span id="bgm-status" class="text-emerald-400 font-bold">ON</span>
+                    </button>
+                </div>
+            </div>
+
+            <h1 class="text-xl sm:text-3xl font-black tracking-wider pixel-text-gold flex items-center justify-center gap-2">
+                <span>🏰</span> PIXEL BREAKER <span>🗡️</span>
+            </h1>
+
+            <!-- Style / Theme Selector Buttons -->
+            <div class="flex flex-wrap justify-center gap-1 sm:gap-2 mt-2">
+                <button onclick="switchTheme('DUNGEON')" id="tab-DUNGEON" class="theme-tab active">🏰 奇幻地牢</button>
+                <button onclick="switchTheme('CYBERPUNK')" id="tab-CYBERPUNK" class="theme-tab">🏙️ 賽博朋克</button>
+                <button onclick="switchTheme('SCI_FI')" id="tab-SCI_FI" class="theme-tab">🚀 星際太空</button>
+                <button onclick="switchTheme('CANDY')" id="tab-CANDY" class="theme-tab">🍬 糖果夢境</button>
+                <button onclick="openStudioModal()" id="tab-CUSTOM" class="theme-tab bg-gradient-to-r from-purple-600 to-pink-600 text-white border-pink-300">🛠️ 主題工坊</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Scoreboard & Dynamic Status Bar -->
+        <div class="w-full bg-[#1e1936] text-white px-3 py-2 rounded border-2 border-[#b45309] flex flex-col gap-1 mb-2 shadow-md">
+            <div class="flex justify-between items-center text-xs sm:text-sm font-bold">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[#38bdf8]">FLOOR:</span>
+                    <span id="floor-text" class="text-[#fbbf24] font-mono">B1F</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-[#38bdf8]">GOLD:</span>
+                    <span id="gold-text" class="text-[#f59e0b] font-mono">💰0</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-[#38bdf8]">SCORE:</span>
+                    <span id="score-text" class="text-[#22c55e] font-mono">00000</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="pixel-text-red mr-1">HP:</span>
+                    <div id="lives-container" class="flex text-xs sm:text-sm space-x-1">❤️ ❤️ ❤️</div>
+                </div>
+            </div>
+
+            <!-- Event & Pet Status Strip -->
+            <div class="flex justify-between items-center text-[9px] bg-[#0f172a] px-2 py-0.5 rounded border border-[#334155] text-slate-300">
+                <div class="flex items-center gap-1">
+                    <span>🌟 事件:</span>
+                    <span id="event-text" class="text-amber-400 font-bold">⚡ 魔力狂潮 (MP速刷)</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span>🐉 寵物護盾:</span>
+                    <span id="pet-shield-text" class="text-cyan-400 font-bold">Ready [1/1]</span>
+                </div>
+            </div>
+
+            <!-- MP Skill Bar -->
+            <div class="w-full bg-[#0f172a] h-3.5 rounded-full border border-[#38bdf8] overflow-hidden flex items-center p-[1px] relative">
+                <div id="mp-bar" class="bg-gradient-to-r from-blue-600 via-cyan-400 to-teal-300 h-full rounded-full transition-all duration-200" style="width: 0%;"></div>
+                <span id="mp-text" class="absolute inset-0 text-[8px] text-center font-bold text-white drop-shadow flex items-center justify-center">MP SKILL: CHARGING... (PRESS SPACE)</span>
+            </div>
+        </div>
+
+        <!-- Canvas Game Window -->
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" width="600" height="480" class="w-full h-auto max-w-[600px] aspect-[5/4]"></canvas>
+
+            <!-- Start / Setup Modal Overlay -->
+            <div id="game-overlay" class="absolute inset-0 modal-bg rounded flex flex-col items-center justify-center p-3 sm:p-5 text-center text-white m-1 overflow-y-auto">
+                <div class="bg-[#18122B] p-4 sm:p-5 rounded border-4 border-[#f59e0b] max-w-lg w-full shadow-2xl">
+                    <div id="overlay-icon" class="text-3xl sm:text-4xl mb-1">🛡️</div>
+                    <h2 id="overlay-title" class="text-lg sm:text-2xl font-black pixel-text-gold mb-1">勇者職業與模式選擇</h2>
+                    <p id="overlay-msg" class="text-[10px] sm:text-xs text-[#cbd5e1] mb-3 leading-relaxed">
+                        選擇職業與挑戰模式！體驗炸藥桶連爆、傳送門與寵物救援！
+                    </p>
+
+                    <!-- Game Mode Selection Pills -->
+                    <div class="flex justify-center gap-2 mb-3">
+                        <button onclick="selectGameMode('CAMPAIGN', this)" class="mode-btn bg-amber-600 text-white border-2 border-yellow-300 text-[10px] px-3 py-1 rounded font-bold shadow">
+                            ⚔️ 地牢冒險模式 (B1F-B3F)
+                        </button>
+                        <button onclick="selectGameMode('BOSS_RUSH', this)" class="mode-btn bg-slate-800 text-slate-300 border-2 border-slate-600 text-[10px] px-3 py-1 rounded font-bold shadow">
+                            🔥 魔王連戰 (Boss Rush)
+                        </button>
+                    </div>
+
+                    <!-- Class Cards -->
+                    <div id="class-select-container" class="grid grid-cols-3 gap-2 mb-4">
+                        <div class="class-card selected p-2 rounded text-left" onclick="selectClass('KNIGHT', this)">
+                            <div class="text-2xl text-center mb-1">🛡️</div>
+                            <div class="text-xs font-bold text-[#fbbf24] text-center">聖騎士</div>
+                            <div class="text-[9px] text-[#cbd5e1] mt-1">高血量(4HP)<br>長盾牌防禦</div>
+                        </div>
+                        <div class="class-card p-2 rounded text-left" onclick="selectClass('MAGE', this)">
+                            <div class="text-2xl text-center mb-1">🧙‍♂️</div>
+                            <div class="text-xs font-bold text-[#a855f7] text-center">大法師</div>
+                            <div class="text-[9px] text-[#cbd5e1] mt-1">回魔速度x2<br>火球附帶貫穿</div>
+                        </div>
+                        <div class="class-card p-2 rounded text-left" onclick="selectClass('ROGUE', this)">
+                            <div class="text-2xl text-center mb-1">🗡️</div>
+                            <div class="text-xs font-bold text-[#22c55e] text-center">影舞者</div>
+                            <div class="text-[9px] text-[#cbd5e1] mt-1">移動極快<br>雙倍金幣掉落</div>
+                        </div>
+                    </div>
+
+                    <button id="start-btn" class="pixel-btn px-6 py-2.5 rounded text-xs sm:text-base font-bold tracking-wider cursor-pointer w-full">
+                        START QUEST
+                    </button>
+                </div>
+            </div>
+
+            <!-- Goblin Merchant Shop Overlay -->
+            <div id="shop-overlay" class="absolute inset-0 modal-bg rounded hidden flex flex-col items-center justify-center p-4 text-center text-white m-1">
+                <div class="bg-[#18122B] p-4 rounded border-4 border-[#22c55e] max-w-md w-full shadow-2xl">
+                    <div class="text-3xl mb-1">👺</div>
+                    <h2 class="text-lg font-black pixel-text-green mb-1">哥布林神秘黑市</h2>
+                    <p class="text-[10px] text-[#cbd5e1] mb-2">使用獲得的金幣購買升級裝備！</p>
+                    
+                    <div class="flex justify-between items-center mb-2 text-xs bg-[#0f172a] p-2 rounded border border-[#334155]">
+                        <span>當前金幣：</span>
+                        <span id="shop-gold-text" class="text-[#fbbf24] font-bold">💰 0</span>
+                    </div>
+
+                    <div class="space-y-1.5 mb-3 text-left text-[11px]">
+                        <div class="flex justify-between items-center bg-[#251f3d] p-2 rounded border border-[#475569]">
+                            <div>
+                                <div class="font-bold text-[#38bdf8]">🧪 治癒大藥水</div>
+                                <div class="text-[9px] text-[#94a3b8]">恢復 1 點生命值</div>
+                            </div>
+                            <button onclick="buyShopItem('HEAL', 30)" class="pixel-btn px-2.5 py-1 text-[10px]">30💰 購買</button>
+                        </div>
+                        <div class="flex justify-between items-center bg-[#251f3d] p-2 rounded border border-[#475569]">
+                            <div>
+                                <div class="font-bold text-[#fbbf24]">🛡️ 泰坦合金擴盾</div>
+                                <div class="text-[9px] text-[#94a3b8]">永久增加聖盾寬度</div>
+                            </div>
+                            <button onclick="buyShopItem('SHIELD', 40)" class="pixel-btn px-2.5 py-1 text-[10px]">40💰 購買</button>
+                        </div>
+                        <div class="flex justify-between items-center bg-[#251f3d] p-2 rounded border border-[#475569]">
+                            <div>
+                                <div class="font-bold text-[#a855f7]">🪓 影分身多重魔法</div>
+                                <div class="text-[9px] text-[#94a3b8]">召喚 3 顆火球同時打擊</div>
+                            </div>
+                            <button onclick="buyShopItem('MULTIBALL', 35)" class="pixel-btn px-2.5 py-1 text-[10px]">35💰 購買</button>
+                        </div>
+                    </div>
+
+                    <button onclick="closeShopAndContinue()" class="pixel-btn px-6 py-2 rounded text-xs font-bold w-full">
+                        前往下一層 (CONTINUE)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Theme Studio Modal -->
+            <div id="studio-modal" class="absolute inset-0 modal-bg rounded hidden flex flex-col items-center justify-center p-3 text-center text-white m-1">
+                <div class="bg-[#18122B] p-3.5 rounded border-4 border-[#a855f7] max-w-lg w-full shadow-2xl relative overflow-y-auto max-h-[96%] flex flex-col items-center">
+                    <button onclick="closeStudioModal()" class="absolute top-2 right-3 text-lg font-bold text-[#cbd5e1] hover:text-white">✕</button>
+                    <div class="text-2xl mb-1">🛠️</div>
+                    <h2 class="text-base font-black text-[#a855f7] mb-0.5">主題工坊 (Live Theme Studio)</h2>
+                    <p class="text-[10px] text-[#cbd5e1] mb-2">調配專屬顏色與動態圖騰粒子！</p>
+
+                    <!-- Mini Live Preview -->
+                    <div class="mb-2 w-full flex flex-col items-center">
+                        <canvas id="previewCanvas" width="280" height="110" class="border-2 border-[#a855f7] rounded shadow-inner"></canvas>
+                    </div>
+
+                    <!-- Studio Controls Grid -->
+                    <div class="grid grid-cols-2 gap-1.5 w-full text-left text-[10px] mb-2 bg-[#0f172a] p-2 rounded border border-[#334155]">
+                        <div class="flex items-center justify-between">
+                            <span>背景頂部：</span>
+                            <input type="color" id="studio-bg-top" value="#3b0764" onchange="updateStudioPreview()">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>背景底部：</span>
+                            <input type="color" id="studio-bg-bottom" value="#1e1b4b" onchange="updateStudioPreview()">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>磚塊顏色：</span>
+                            <input type="color" id="studio-brick-color" value="#f472b6" onchange="updateStudioPreview()">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span>聖盾顏色：</span>
+                            <input type="color" id="studio-paddle-color" value="#38bdf8" onchange="updateStudioPreview()">
+                        </div>
+                        <div class="col-span-2 flex items-center justify-between">
+                            <span>動態背景圖騰：</span>
+                            <select id="studio-pattern" class="bg-[#1e293b] text-white border border-[#475569] rounded px-1.5 py-0.5 text-[9px]" onchange="updateStudioPreview()">
+                                <option value="SAKURA">🌸 櫻花花瓣 (Sakura)</option>
+                                <option value="LAVA">🌋 熔岩火花 (Lava Sparks)</option>
+                                <option value="OCEAN">🌊 深海氣泡 (Bubbles)</option>
+                                <option value="STEAMPUNK">⚙️ 齒輪網格 (Gear Grid)</option>
+                                <option value="STARS">🌌 浩瀚星空 (Galaxy Stars)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="confirmCustomTheme()" class="pixel-btn px-6 py-2 rounded text-xs font-bold w-full bg-gradient-to-r from-purple-600 to-pink-600 border-purple-300">
+                        ✅ 套用主題
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Controls for Mobile -->
+        <div class="w-full flex justify-between items-center mt-2.5 sm:hidden gap-2">
+            <button id="btn-left" class="touch-btn flex-1 py-3 rounded text-sm font-bold active:scale-95">◄ LEFT</button>
+            <button id="btn-skill" class="touch-btn px-4 py-3 rounded text-xs font-bold bg-[#6b21a8] border-[#a855f7] text-white active:scale-95">⚡ SKILL</button>
+            <button id="btn-right" class="touch-btn flex-1 py-3 rounded text-sm font-bold active:scale-95">RIGHT ►</button>
+        </div>
+    </div>
+
+    <script>
+        /* Retro 8-Bit Synth Audio & Procedural BGM Engine */
+        class RetroAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.bgmPlaying = false;
+                this.bgmInterval = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playShieldBounce() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playExplosion() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playPortalWarp() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playLaser() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(750, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(160, this.ctx.currentTime + 0.09);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.09);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.09);
+            }
+
+            playHitMonster() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(90, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playLootPickup() {
+                if (!this.ctx) return;
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.04);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime + i * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.04 + 0.08);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.04);
+                    osc.stop(this.ctx.currentTime + i * 0.04 + 0.09);
+                });
+            }
+
+            playVictory() {
+                if (!this.ctx) return;
+                [392, 523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.09);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.09);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.09 + 0.15);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.09);
+                    osc.stop(this.ctx.currentTime + i * 0.09 + 0.18);
+                });
+            }
+
+            startBGM() {
+                if (this.bgmPlaying || !this.ctx) return;
+                this.bgmPlaying = true;
+                const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
+                let step = 0;
+                this.bgmInterval = setInterval(() => {
+                    if (!this.bgmPlaying) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(notes[step % notes.length], this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(); osc.stop(this.ctx.currentTime + 0.19);
+                    step++;
+                }, 220);
+            }
+
+            stopBGM() {
+                this.bgmPlaying = false;
+                if (this.bgmInterval) clearInterval(this.bgmInterval);
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = new RetroAudioEngine();
+
+        // UI Element References
+        const scoreText = document.getElementById('score-text');
+        const goldText = document.getElementById('gold-text');
+        const floorText = document.getElementById('floor-text');
+        const livesContainer = document.getElementById('lives-container');
+        const eventText = document.getElementById('event-text');
+        const petShieldText = document.getElementById('pet-shield-text');
+        const mpBar = document.getElementById('mp-bar');
+        const mpText = document.getElementById('mp-text');
+        const overlay = document.getElementById('game-overlay');
+        const startBtn = document.getElementById('start-btn');
+        const shopOverlay = document.getElementById('shop-overlay');
+        const shopGoldText = document.getElementById('shop-gold-text');
+        const gameWrapper = document.getElementById('game-wrapper');
+
+        const THEMES = {
+            DUNGEON: {
+                bgTop: '#120e24', bgBottom: '#070512', pattern: 'DUNGEON',
+                paddleColor: '#3b82f6', ballColor: '#fbbf24', bossColor: '#ef4444', bossName: '👹 DEMON DRAGON 👹',
+                brickIcons: { SLIME: '💚', SKELETON: '💀', RUNE: '💎', TNT: '🧨', PORTAL: '🌀', GHOST: '👻', CHEST: '👑' },
+                brickColors: { SLIME: '#22c55e', SKELETON: '#94a3b8', RUNE: '#a855f7', TNT: '#ef4444', PORTAL: '#38bdf8', GHOST: '#64748b', CHEST: '#eab308' }
+            },
+            CYBERPUNK: {
+                bgTop: '#050515', bgBottom: '#1e0529', pattern: 'CYBER',
+                paddleColor: '#06b6d4', ballColor: '#f43f5e', bossColor: '#d946ef', bossName: '🤖 AI OVERLORD 🤖',
+                brickIcons: { SLIME: '🔋', SKELETON: '🤖', RUNE: '💾', TNT: '🧨', PORTAL: '🌀', GHOST: '👻', CHEST: '💎' },
+                brickColors: { SLIME: '#10b981', SKELETON: '#6366f1', RUNE: '#ec4899', TNT: '#ef4444', PORTAL: '#06b6d4', GHOST: '#a855f7', CHEST: '#f59e0b' }
+            },
+            SCI_FI: {
+                bgTop: '#030712', bgBottom: '#0f172a', pattern: 'STARS',
+                paddleColor: '#38bdf8', ballColor: '#38bdf8', bossColor: '#818cf8', bossName: '👾 ALIEN MOTHER 👾',
+                brickIcons: { SLIME: '👽', SKELETON: '🛸', RUNE: '☄️', TNT: '💥', PORTAL: '🌀', GHOST: '👻', CHEST: '⭐' },
+                brickColors: { SLIME: '#14b8a6', SKELETON: '#3b82f6', RUNE: '#8b5cf6', TNT: '#f97316', PORTAL: '#38bdf8', GHOST: '#94a3b8', CHEST: '#eab308' }
+            },
+            CANDY: {
+                bgTop: '#2e1065', bgBottom: '#581c87', pattern: 'SAKURA',
+                paddleColor: '#f472b6', ballColor: '#fde047', bossColor: '#fb7185', bossName: '🍩 GUMMY MONSTER 🍩',
+                brickIcons: { SLIME: '🍬', SKELETON: '🍭', RUNE: '🧁', TNT: '💣', PORTAL: '🌀', GHOST: '👻', CHEST: '🎂' },
+                brickColors: { SLIME: '#a7f3d0', SKELETON: '#fef08a', RUNE: '#f472b6', TNT: '#fb7185', PORTAL: '#c084fc', GHOST: '#e2e8f0', CHEST: '#fbbf24' }
+            },
+            CUSTOM: {
+                bgTop: '#3b0764', bgBottom: '#1e1b4b', pattern: 'SAKURA',
+                paddleColor: '#38bdf8', ballColor: '#fbbf24', bossColor: '#ef4444', bossName: '👑 CUSTOM BOSS 👑',
+                brickIcons: { SLIME: '✨', SKELETON: '🔥', RUNE: '💎', TNT: '🧨', PORTAL: '🌀', GHOST: '👻', CHEST: '👑' },
+                brickColors: { SLIME: '#f472b6', SKELETON: '#38bdf8', RUNE: '#a855f7', TNT: '#ef4444', PORTAL: '#38bdf8', GHOST: '#cbd5e1', CHEST: '#fbbf24' }
+            }
+        };
+
+        let currentThemeKey = 'DUNGEON';
+        let gameState = 'START';
+        let gameMode = 'CAMPAIGN';
+        let selectedClass = 'KNIGHT';
+        let currentFloor = 1;
+        let score = 0;
+        let gold = 0;
+        let lives = 3;
+        let mp = 0;
+        let maxMp = 100;
+        let combo = 0;
+        let currentEvent = 'NORMAL';
+
+        const keys = { left: false, right: false };
+
+        const paddle = {
+            width: 110, baseWidth: 110, height: 16,
+            x: (canvas.width - 110) / 2, y: canvas.height - 32,
+            speed: 8, laserAmmo: 0
+        };
+
+        let balls = []; // Support multi-ball spell
+
+        const pet = {
+            x: paddle.x - 20, y: paddle.y - 30,
+            floatOffset: 0, shieldAvailable: true, shootTimer: 0
+        };
+
+        const boss = {
+            active: false, x: canvas.width / 2 - 60, y: 50,
+            width: 120, height: 40, hp: 30, maxHp: 30, dx: 2, shootTimer: 0
+        };
+
+        let bossProjectiles = [];
+        let playerLasers = [];
+        let petBullets = [];
+        let particles = [];
+        let loots = [];
+        let bricks = [];
+
+        const brickConfig = {
+            rows: 5, cols: 8, padding: 6, offsetTop: 45, offsetLeft: 18,
+            width: 0, height: 24
+        };
+        brickConfig.width = (canvas.width - (brickConfig.offsetLeft * 2) - (brickConfig.padding * (brickConfig.cols - 1))) / brickConfig.cols;
+
+        // Achievements Tracker
+        const achievements = {
+            FIRST_BLOOD: { unlocked: false, title: '初露鋒芒', desc: '擊碎第一個魔物磚塊！', icon: '⚔️' },
+            TNT_MASTER: { unlocked: false, title: '爆破專家', desc: '引爆一個炸藥桶磚塊！', icon: '🧨' },
+            COMBO_KING: { unlocked: false, title: '連擊大師', desc: '達成 10 連擊 Combo！', icon: '🔥' },
+            PET_SAVIOR: { unlocked: false, title: '靈寵解救', desc: '寵物精靈為你施展風之護盾救援！', icon: '🐉' }
+        };
+
+        function unlockAchievement(key) {
+            if (achievements[key] && !achievements[key].unlocked) {
+                achievements[key].unlocked = true;
+                const toast = document.getElementById('achievement-toast');
+                document.getElementById('achieve-icon').innerText = achievements[key].icon;
+                document.getElementById('achieve-title').innerText = achievements[key].title;
+                document.getElementById('achieve-desc').innerText = achievements[key].desc;
+                toast.classList.remove('hidden');
+                audio.playVictory();
+                setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+            }
+        }
+
+        function toggleBGM() {
+            audio.init();
+            if (audio.bgmPlaying) {
+                audio.stopBGM();
+                document.getElementById('bgm-status').innerText = 'OFF';
+                document.getElementById('bgm-status').className = 'text-rose-400 font-bold';
+            } else {
+                audio.startBGM();
+                document.getElementById('bgm-status').innerText = 'ON';
+                document.getElementById('bgm-status').className = 'text-emerald-400 font-bold';
+            }
+        }
+
+        function switchTheme(themeKey) {
+            currentThemeKey = themeKey;
+            document.querySelectorAll('.theme-tab').forEach(t => t.classList.remove('active'));
+            const activeBtn = document.getElementById(`tab-${themeKey}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            initBricks();
+        }
+
+        function triggerScreenShake() {
+            gameWrapper.classList.remove('shake');
+            void gameWrapper.offsetWidth;
+            gameWrapper.classList.add('shake');
+        }
+
+        function selectClass(className, cardEl) {
+            selectedClass = className;
+            document.querySelectorAll('.class-card').forEach(card => card.classList.remove('selected'));
+            cardEl.classList.add('selected');
+        }
+
+        function selectGameMode(mode, btnEl) {
+            gameMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.className = 'mode-btn bg-slate-800 text-slate-300 border-2 border-slate-600 text-[10px] px-3 py-1 rounded font-bold shadow';
+            });
+            btnEl.className = 'mode-btn bg-amber-600 text-white border-2 border-yellow-300 text-[10px] px-3 py-1 rounded font-bold shadow';
+        }
+
+        function addMp(amount) {
+            const multiplier = (selectedClass === 'MAGE' ? 2 : 1) * (currentEvent === 'MP_STORM' ? 2 : 1);
+            mp = Math.min(maxMp, mp + amount * multiplier);
+            updateMpUI();
+        }
+
+        function updateMpUI() {
+            const percent = (mp / maxMp) * 100;
+            mpBar.style.width = `${percent}%`;
+            if (mp >= maxMp || paddle.laserAmmo > 0) {
+                mpText.innerText = `⚡ MP SKILL READY! (${paddle.laserAmmo > 0 ? paddle.laserAmmo + ' LASERS' : 'PRESS SPACE'})`;
+            } else {
+                mpText.innerText = `MP ENERGY: ${Math.floor(percent)}%`;
+            }
+        }
+
+        function useHeroSkill() {
+            if (mp >= maxMp || paddle.laserAmmo > 0) {
+                if (mp >= maxMp) {
+                    mp = 0;
+                    paddle.laserAmmo += 8;
+                }
+                updateMpUI();
+                playerLasers.push({ x: paddle.x + 10, y: paddle.y, dy: -8, width: 4, height: 12 });
+                playerLasers.push({ x: paddle.x + paddle.width - 14, y: paddle.y, dy: -8, width: 4, height: 12 });
+                audio.playLaser();
+            } else {
+                balls.forEach(b => { if (b.stuckToPaddle) b.stuckToPaddle = false; });
+            }
+        }
+
+        function createParticles(x, y, color, count = 12) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 1;
+                particles.push({
+                    x: x, y: y, size: Math.random() * 4 + 2, color: color,
+                    dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed,
+                    alpha: 1, decay: Math.random() * 0.05 + 0.02
+                });
+            }
+        }
+
+        function triggerTNTExplosion(row, col) {
+            unlockAchievement('TNT_MASTER');
+            audio.playExplosion();
+            triggerScreenShake();
+
+            for (let r = Math.max(0, row - 1); r <= Math.min(brickConfig.rows - 1, row + 1); r++) {
+                for (let c = Math.max(0, col - 1); c <= Math.min(brickConfig.cols - 1, col + 1); c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        b.status = 0;
+                        score += b.points;
+                        gold += 5;
+                        createParticles(b.x + brickConfig.width / 2, b.y + brickConfig.height / 2, '#ef4444', 15);
+                    }
+                }
+            }
+            updateScoreUI();
+            updateGoldUI();
+        }
+
+        function spawnLoot(x, y) {
+            const types = ['POTION', 'SHIELD_UP', 'FIREBALL', 'GOLD', 'MULTIBALL'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            loots.push({ x: x, y: y, width: 20, height: 20, dy: 2, type: chosenType });
+        }
+
+        function applyLootEffect(type) {
+            if (type === 'POTION') { if (lives < 5) lives++; updateLivesUI(); }
+            else if (type === 'SHIELD_UP') { paddle.width = Math.min(paddle.width + 25, 170); }
+            else if (type === 'FIREBALL') { balls.forEach(b => b.isFireball = true); setTimeout(() => { balls.forEach(b => b.isFireball = false); }, 8000); }
+            else if (type === 'GOLD') { gold += (selectedClass === 'ROGUE' ? 20 : 10); updateGoldUI(); }
+            else if (type === 'MULTIBALL') { spawnMultiBalls(); }
+        }
+
+        function spawnMultiBalls() {
+            if (balls.length === 0) return;
+            const mainBall = balls[0];
+            for (let i = 0; i < 2; i++) {
+                balls.push({
+                    x: mainBall.x, y: mainBall.y, radius: 7, speed: 5.5,
+                    dx: (i === 0 ? -3.5 : 3.5), dy: -4, stuckToPaddle: false, trail: [], isFireball: mainBall.isFireball
+                });
+            }
+        }
+
+        function updateGoldUI() {
+            goldText.innerText = `💰${gold}`;
+            if (shopGoldText) shopGoldText.innerText = `💰 ${gold}`;
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx; p.y += p.dy; p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
+            });
+        }
+
+        function updatePetAndBullets() {
+            pet.x = paddle.x - 22;
+            pet.y = paddle.y - 25 + Math.sin(Date.now() * 0.005) * 6;
+
+            pet.shootTimer++;
+            if (pet.shootTimer > 120 && gameState === 'PLAYING') {
+                pet.shootTimer = 0;
+                petBullets.push({ x: pet.x + 8, y: pet.y, dy: -6, radius: 4 });
+            }
+
+            for (let i = petBullets.length - 1; i >= 0; i--) {
+                const pb = petBullets[i];
+                pb.y += pb.dy;
+
+                if (boss.active && pb.x >= boss.x && pb.x <= boss.x + boss.width && pb.y <= boss.y + boss.height) {
+                    boss.hp--;
+                    audio.playHitMonster();
+                    createParticles(pb.x, pb.y, '#38bdf8', 6);
+                    petBullets.splice(i, 1);
+                    if (boss.hp <= 0) killBoss();
+                    continue;
+                }
+
+                if (pb.y < 0) petBullets.splice(i, 1);
+            }
+        }
+
+        function drawPetAndBullets() {
+            ctx.save();
+            ctx.font = '16px monospace';
+            ctx.fillText('🐉', pet.x, pet.y);
+            ctx.restore();
+
+            petBullets.forEach(pb => {
+                ctx.save();
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function updateLasers() {
+            for (let i = playerLasers.length - 1; i >= 0; i--) {
+                const l = playerLasers[i];
+                l.y += l.dy;
+
+                if (boss.active && l.x >= boss.x && l.x <= boss.x + boss.width && l.y <= boss.y + boss.height) {
+                    boss.hp -= 1;
+                    audio.playHitMonster();
+                    createParticles(l.x, l.y, '#ef4444', 8);
+                    playerLasers.splice(i, 1);
+                    if (boss.hp <= 0) killBoss();
+                    continue;
+                }
+
+                for (let r = 0; r < brickConfig.rows; r++) {
+                    for (let c = 0; c < brickConfig.cols; c++) {
+                        const b = bricks[r][c];
+                        if (b.status === 1 && l.x >= b.x && l.x <= b.x + brickConfig.width && l.y >= b.y && l.y <= b.y + brickConfig.height) {
+                            if (b.type === 'TNT') triggerTNTExplosion(r, c);
+                            else {
+                                b.hp--;
+                                if (b.hp <= 0) {
+                                    b.status = 0;
+                                    score += b.points;
+                                    gold += 5;
+                                    updateScoreUI(); updateGoldUI();
+                                    createParticles(b.x + brickConfig.width / 2, b.y + brickConfig.height / 2, b.color, 10);
+                                }
+                            }
+                            playerLasers.splice(i, 1);
+                            r = brickConfig.rows; break;
+                        }
+                    }
+                }
+                if (l.y < 0) playerLasers.splice(i, 1);
+            }
+        }
+
+        function drawLasers() {
+            ctx.fillStyle = '#38bdf8';
+            playerLasers.forEach(l => ctx.fillRect(l.x, l.y, l.width, l.height));
+        }
+
+        function updateLoots() {
+            for (let i = loots.length - 1; i >= 0; i--) {
+                const l = loots[i];
+                l.y += l.dy;
+                if (l.y + l.height >= paddle.y && l.y <= paddle.y + paddle.height && l.x + l.width >= paddle.x && l.x <= paddle.x + paddle.width) {
+                    applyLootEffect(l.type);
+                    audio.playLootPickup();
+                    createParticles(l.x, l.y, '#fbbf24', 15);
+                    loots.splice(i, 1);
+                    continue;
+                }
+                if (l.y > canvas.height) loots.splice(i, 1);
+            }
+        }
+
+        function drawLoots() {
+            loots.forEach(l => {
+                ctx.save();
+                ctx.font = '16px monospace';
+                let icon = '🧪';
+                if (l.type === 'SHIELD_UP') icon = '🛡️';
+                if (l.type === 'FIREBALL') icon = '⚡';
+                if (l.type === 'GOLD') icon = '💰';
+                if (l.type === 'MULTIBALL') icon = '🪓';
+                ctx.fillText(icon, l.x, l.y + 16);
+                ctx.restore();
+            });
+        }
+
+        function updateBoss() {
+            if (!boss.active) return;
+            boss.x += boss.dx;
+            if (boss.x <= 10 || boss.x + boss.width >= canvas.width - 10) boss.dx = -boss.dx;
+
+            boss.shootTimer++;
+            if (boss.shootTimer > 80) {
+                boss.shootTimer = 0;
+                bossProjectiles.push({ x: boss.x + boss.width / 2, y: boss.y + boss.height, radius: 6, dy: 3.5 });
+            }
+
+            for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+                const p = bossProjectiles[i];
+                p.y += p.dy;
+                if (p.y + p.radius >= paddle.y && p.x >= paddle.x && p.x <= paddle.x + paddle.width) {
+                    lives--; updateLivesUI(); triggerScreenShake(); audio.playExplosion();
+                    bossProjectiles.splice(i, 1);
+                    if (lives <= 0) gameOver();
+                    continue;
+                }
+                if (p.y > canvas.height) bossProjectiles.splice(i, 1);
+            }
+        }
+
+        function drawBoss() {
+            if (!boss.active) return;
+            const theme = THEMES[currentThemeKey];
+            ctx.save();
+            ctx.fillStyle = theme.bossColor;
+            ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+            ctx.font = '14px monospace'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+            ctx.fillText(theme.bossName, boss.x + boss.width / 2, boss.y + 25);
+
+            const hpWidth = (boss.hp / boss.maxHp) * boss.width;
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(boss.x, boss.y - 12, boss.width, 8);
+            ctx.fillStyle = '#22c55e'; ctx.fillRect(boss.x, boss.y - 12, hpWidth, 8);
+            ctx.restore();
+
+            bossProjectiles.forEach(p => {
+                ctx.save(); ctx.fillStyle = '#a855f7'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            });
+        }
+
+        function killBoss() {
+            boss.active = false;
+            score += 1000; gold += 100;
+            updateScoreUI(); updateGoldUI();
+            triggerScreenShake(); audio.playVictory();
+            createParticles(boss.x + boss.width / 2, boss.y + boss.height / 2, '#a855f7', 40);
+            gameWin();
+        }
+
+        function initBricks() {
+            bricks = []; boss.active = false;
+            if (currentFloor === 3 || gameMode === 'BOSS_RUSH') {
+                boss.active = true; boss.hp = boss.maxHp; bossProjectiles = []; return;
+            }
+
+            const theme = THEMES[currentThemeKey];
+            const events = ['⚡ 魔力狂潮', '💰 淘金熱', '🌲 平靜冒險'];
+            currentEvent = events[Math.floor(Math.random() * events.length)];
+            eventText.innerText = currentEvent;
+
+            for (let r = 0; r < brickConfig.rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const brickX = brickConfig.offsetLeft + c * (brickConfig.width + brickConfig.padding);
+                    const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    
+                    let type = 'SLIME'; let hp = 1; let points = 10;
+                    if (r === 1) { type = 'SKELETON'; points = 20; }
+                    else if (r === 2) { type = 'RUNE'; hp = 2; points = 40; }
+                    else if (r === 3 && (c === 1 || c === 6)) { type = 'TNT'; points = 30; }
+                    else if (r === 3 && (c === 3 || c === 4)) { type = 'PORTAL'; points = 15; }
+                    else if (r === 4 && (c === 2 || c === 5)) { type = 'CHEST'; points = 50; }
+
+                    bricks[r][c] = {
+                        x: brickX, y: brickY, hp: hp, status: 1, type: type,
+                        color: theme.brickColors[type] || theme.brickColors.SLIME,
+                        icon: theme.brickIcons[type] || '✨', points: points
+                    };
+                }
+            }
+        }
+
+        function drawDungeonBackground() {
+            const theme = THEMES[currentThemeKey];
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, theme.bgTop); grad.addColorStop(1, theme.bgBottom);
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawBricks() {
+            const theme = THEMES[currentThemeKey];
+            for (let r = 0; r < brickConfig.rows; r++) {
+                if (!bricks[r]) continue;
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        ctx.fillStyle = b.color;
+                        ctx.fillRect(b.x, b.y, brickConfig.width, brickConfig.height);
+                        ctx.font = '12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillText(b.icon, b.x + brickConfig.width / 2, b.y + brickConfig.height / 2 + 1);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function drawPaddle() {
+            const theme = THEMES[currentThemeKey];
+            ctx.save(); ctx.fillStyle = theme.paddleColor;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            ctx.fillStyle = '#fbbf24'; ctx.fillRect(paddle.x, paddle.y, paddle.width, 3);
+            ctx.restore();
+        }
+
+        function drawBalls() {
+            const theme = THEMES[currentThemeKey];
+            balls.forEach(b => {
+                ctx.save();
+                ctx.fillStyle = b.isFireball ? '#ef4444' : theme.ballColor;
+                ctx.fillRect(b.x - b.radius, b.y - b.radius, b.radius * 2, b.radius * 2);
+                ctx.restore();
+            });
+        }
+
+        function resetBallAndPaddle() {
+            paddle.width = selectedClass === 'KNIGHT' ? 130 : paddle.baseWidth;
+            paddle.speed = selectedClass === 'ROGUE' ? 10 : 8;
+            paddle.x = (canvas.width - paddle.width) / 2;
+            pet.shieldAvailable = true;
+            petShieldText.innerText = 'Ready [1/1]';
+
+            balls = [{
+                x: paddle.x + paddle.width / 2, y: paddle.y - 10, radius: 7, speed: 5.5,
+                dx: (Math.random() > 0.5 ? 1 : -1) * 4, dy: -4.5, stuckToPaddle: true, trail: [], isFireball: selectedClass === 'MAGE'
+            }];
+            combo = 0;
+        }
+
+        function updatePaddle() {
+            if (keys.left) paddle.x -= paddle.speed;
+            if (keys.right) paddle.x += paddle.speed;
+            if (paddle.x < 4) paddle.x = 4;
+            if (paddle.x + paddle.width > canvas.width - 4) paddle.x = canvas.width - paddle.width - 4;
+
+            balls.forEach(b => {
+                if (b.stuckToPaddle) { b.x = paddle.x + paddle.width / 2; b.y = paddle.y - b.radius - 2; }
+            });
+        }
+
+        function updateBalls() {
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const b = balls[i];
+                if (b.stuckToPaddle) continue;
+
+                b.x += b.dx; b.y += b.dy;
+
+                if (b.x - b.radius < 0) { b.x = b.radius; b.dx = -b.dx; audio.playShieldBounce(); }
+                else if (b.x + b.radius > canvas.width) { b.x = canvas.width - b.radius; b.dx = -b.dx; audio.playShieldBounce(); }
+
+                if (b.y - b.radius < 0) { b.y = b.radius; b.dy = -b.dy; audio.playShieldBounce(); }
+
+                if (b.y + b.radius >= paddle.y && b.y - b.radius <= paddle.y + paddle.height && b.x >= paddle.x && b.x <= paddle.x + paddle.width && b.dy > 0) {
+                    const hitPos = (b.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    const angle = hitPos * (Math.PI / 3);
+                    const speed = Math.hypot(b.dx, b.dy);
+                    b.dx = speed * Math.sin(angle); b.dy = -speed * Math.cos(angle);
+                    audio.playShieldBounce();
+                    continue;
+                }
+
+                // Pet Rescue Savior Shield Mechanism
+                if (b.y + b.radius > canvas.height) {
+                    if (balls.length === 1 && pet.shieldAvailable) {
+                        pet.shieldAvailable = false;
+                        petShieldText.innerText = 'Used [0/1]';
+                        unlockAchievement('PET_SAVIOR');
+                        b.dy = -Math.abs(b.dy);
+                        b.y = canvas.height - 20;
+                        audio.playPortalWarp();
+                        createParticles(b.x, b.y, '#38bdf8', 20);
+                        continue;
+                    }
+
+                    balls.splice(i, 1);
+                    if (balls.length === 0) {
+                        lives--; updateLivesUI(); triggerScreenShake(); audio.playExplosion();
+                        if (lives <= 0) gameOver();
+                        else resetBallAndPaddle();
+                    }
+                }
+
+                checkBrickCollision(b);
+            }
+        }
+
+        function checkBrickCollision(b) {
+            let activeBricksCount = 0;
+            for (let r = 0; r < brickConfig.rows; r++) {
+                if (!bricks[r]) continue;
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const brick = bricks[r][c];
+                    if (brick.status === 1) {
+                        activeBricksCount++;
+                        if (b.x + b.radius > brick.x && b.x - b.radius < brick.x + brickConfig.width && b.y + b.radius > brick.y && b.y - b.radius < brick.y + brickConfig.height) {
+                            unlockAchievement('FIRST_BLOOD');
+
+                            if (brick.type === 'TNT') {
+                                triggerTNTExplosion(r, c);
+                            } else if (brick.type === 'PORTAL') {
+                                audio.playPortalWarp();
+                                b.x = canvas.width - b.x; b.dy = -b.dy;
+                                createParticles(b.x, b.y, '#38bdf8', 12);
+                            } else {
+                                brick.hp--; combo++;
+                                if (combo >= 10) unlockAchievement('COMBO_KING');
+                                addMp(15); audio.playHitMonster();
+
+                                if (brick.hp <= 0) {
+                                    brick.status = 0;
+                                    score += brick.points * (1 + Math.floor(combo / 5));
+                                    gold += (selectedClass === 'ROGUE' ? 10 : 5);
+                                    updateScoreUI(); updateGoldUI();
+                                    createParticles(brick.x + brickConfig.width / 2, brick.y + brickConfig.height / 2, brick.color, 16);
+                                    if (Math.random() < 0.25) spawnLoot(brick.x + brickConfig.width / 2 - 10, brick.y + brickConfig.height / 2);
+                                }
+                            }
+
+                            if (!b.isFireball) b.dy = -b.dy;
+                            if (activeBricksCount - 1 === 0 && !boss.active) openShopOrNextFloor();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateScoreUI() { scoreText.innerText = String(score).padStart(5, '0'); }
+        function updateLivesUI() {
+            let icons = ''; for (let i = 0; i < lives; i++) icons += '❤️ ';
+            livesContainer.innerText = icons.trim();
+        }
+
+        function openShopOrNextFloor() {
+            gameState = 'SHOP'; audio.playVictory();
+            shopGoldText.innerText = `💰 ${gold}`;
+            shopOverlay.classList.remove('hidden');
+        }
+
+        function buyShopItem(itemType, cost) {
+            if (gold >= cost) {
+                gold -= cost; updateGoldUI();
+                if (itemType === 'HEAL') { lives = Math.min(5, lives + 1); updateLivesUI(); }
+                else if (itemType === 'SHIELD') { paddle.baseWidth += 20; paddle.width += 20; }
+                else if (itemType === 'MULTIBALL') { spawnMultiBalls(); }
+                audio.playLootPickup();
+            }
+        }
+
+        function closeShopAndContinue() {
+            shopOverlay.classList.add('hidden');
+            currentFloor++; floorText.innerText = `B${currentFloor}F`;
+            initBricks(); resetBallAndPaddle();
+            gameState = 'PLAYING';
+        }
+
+        function startGame() {
+            audio.init(); audio.startBGM();
+            score = 0; gold = 0; mp = 0;
+            lives = selectedClass === 'KNIGHT' ? 4 : 3;
+            currentFloor = 1; floorText.innerText = 'B1F';
+            loots = []; playerLasers = []; petBullets = [];
+            paddle.laserAmmo = 0;
+            updateScoreUI(); updateGoldUI(); updateLivesUI(); updateMpUI();
+            initBricks(); resetBallAndPaddle();
+            gameState = 'PLAYING';
+            overlay.classList.add('hidden');
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            document.getElementById('overlay-icon').innerText = '💀';
+            document.getElementById('overlay-title').innerText = 'YOU DIED';
+            document.getElementById('overlay-msg').innerHTML = `勇者倒在地下城...<br>得分：<span class="pixel-text-gold text-lg font-bold">${score}</span>`;
+            startBtn.innerText = 'RETRY QUEST';
+            overlay.classList.remove('hidden');
+        }
+
+        function gameWin() {
+            gameState = 'WIN';
+            document.getElementById('overlay-icon').innerText = '👑';
+            document.getElementById('overlay-title').innerText = 'DUNGEON CLEAR!';
+            document.getElementById('overlay-msg').innerHTML = `恭喜勇者！討伐討魔王成功！<br>得分：<span class="pixel-text-green text-lg font-bold">${score}</span>`;
+            startBtn.innerText = 'PLAY AGAIN';
+            overlay.classList.remove('hidden');
+        }
+
+        function gameLoop() {
+            drawDungeonBackground();
+            if (gameState === 'PLAYING') {
+                updatePaddle(); updateBalls(); updateBoss(); updatePetAndBullets();
+                updateLasers(); updateLoots(); updateParticles();
+            }
+            drawBricks(); drawBoss(); drawPetAndBullets(); drawLasers();
+            drawLoots(); drawParticles(); drawPaddle(); drawBalls();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            else if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            else if (e.code === 'Space' || e.code === 'ShiftLeft') {
+                e.preventDefault();
+                if (gameState === 'PLAYING') useHeroSkill();
+                else if (gameState === 'START' || gameState === 'GAMEOVER' || gameState === 'WIN') startGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            else if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        });
+
+        startBtn.addEventListener('click', startGame);
+
+        window.onload = function() {
+            initBricks(); resetBallAndPaddle(); gameLoop();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

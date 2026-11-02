@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Tetris - 賽博俄羅斯方塊</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Orbitron & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* 發光特效與科技感邊框 */
+        .neon-glow-cyan {
+            box-shadow: 0 0 18px rgba(6, 182, 212, 0.35), inset 0 0 10px rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.5);
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+        .neon-text-fuchsia {
+            text-shadow: 0 0 10px rgba(217, 70, 239, 0.8), 0 0 20px rgba(217, 70, 239, 0.4);
+        }
+        .neon-text-amber {
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+        }
+        .cyber-panel {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(3, 7, 18, 0.95));
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .cyber-grid-bg {
+            background-image: 
+                radial-gradient(circle at 50% 30%, rgba(14, 165, 233, 0.08) 0%, rgba(3, 7, 18, 0.95) 100%),
+                linear-gradient(to right, rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 28px 28px, 28px 28px;
+        }
+        .ctrl-btn {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: all 0.15s ease;
+        }
+        .ctrl-btn:active {
+            transform: scale(0.94);
+            background: rgba(14, 165, 233, 0.3);
+            border-color: rgba(56, 189, 248, 0.8);
+        }
+    </style>
+</head>
+<body class="cyber-grid-bg min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
+
+    <!-- 頂部標題與功能控制列 -->
+    <header class="w-full max-w-2xl flex items-center justify-between cyber-panel rounded-2xl px-4 py-3 mb-2 shadow-lg shadow-cyan-950/20 z-10">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl animate-pulse">🧩</span>
+            <h1 class="font-orbitron text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-fuchsia-500 tracking-wider">
+                CYBER TETRIS
+            </h1>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- 暫停按鈕 -->
+            <button id="pauseBtn" title="暫停/繼續 (P)" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-cyan-400 hover:border-cyan-500 hover:bg-slate-700 transition flex items-center gap-1 text-xs font-semibold">
+                <svg id="pauseIcon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                <svg id="playIcon" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span class="hidden sm:inline" id="pauseBtnText">PAUSE</span>
+            </button>
+            <!-- 重新開始按鈕 -->
+            <button id="restartBtn" title="重新開始" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-cyan-400 hover:border-cyan-500 hover:bg-slate-700 transition flex items-center gap-1 text-xs font-semibold">
+                <svg class="w-4 h-4 stroke-current fill-none stroke-2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span class="hidden sm:inline">RESTART</span>
+            </button>
+            <!-- 切換音效按鈕 -->
+            <button id="soundToggleBtn" title="音效切換" class="p-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:border-cyan-500 transition">
+                <svg id="soundOnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                <svg id="soundOffIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主遊戲容器 (Grid: Hold | Canvas | Stats & Next) -->
+    <main class="w-full max-w-2xl flex-grow flex flex-col items-center justify-center">
+        <div class="w-full flex items-start justify-center gap-2 sm:gap-4">
+
+            <!-- 左側邊欄: Hold 暫存方塊與控制提示 -->
+            <div class="flex flex-col gap-2 w-20 sm:w-28">
+                <!-- Hold Panel -->
+                <div class="cyber-panel rounded-xl p-2 sm:p-3 text-center shadow-lg">
+                    <div class="text-[10px] sm:text-xs font-orbitron font-semibold text-slate-400 mb-1">HOLD (C)</div>
+                    <div class="w-full aspect-square flex items-center justify-center bg-slate-950/80 rounded-lg border border-slate-800">
+                        <canvas id="holdCanvas" width="80" height="80" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Score Info (Mobile Compact) -->
+                <div class="cyber-panel rounded-xl p-2 sm:p-3 text-center shadow-lg font-orbitron">
+                    <div class="text-[10px] sm:text-xs font-semibold text-slate-400">LEVEL</div>
+                    <div id="levelText" class="text-base sm:text-xl font-bold text-amber-400 neon-text-amber">1</div>
+                    <div class="text-[10px] sm:text-xs font-semibold text-slate-400 mt-2">LINES</div>
+                    <div id="linesText" class="text-base sm:text-xl font-bold text-sky-400">0</div>
+                </div>
+
+                <!-- Keyboard Helper (Desktop) -->
+                <div class="hidden md:flex flex-col gap-1 p-2 bg-slate-900/60 rounded-xl border border-slate-800/80 text-[10px] text-slate-400">
+                    <div class="font-semibold text-cyan-400 mb-1">按鍵說明</div>
+                    <div><code class="text-white">←</code><code class="text-white">→</code> : 移動</div>
+                    <div><code class="text-white">↑</code> / <code class="text-white">Z</code> : 旋轉</div>
+                    <div><code class="text-white">↓</code> : 軟降</div>
+                    <div><code class="text-white">Space</code> : 硬降</div>
+                    <div><code class="text-white">C</code> : 暫存</div>
+                </div>
+            </div>
+
+            <!-- 中央遊戲主畫布 (Canvas) -->
+            <div class="relative flex-grow-0 flex-shrink-0">
+                <canvas id="tetrisCanvas" width="300" height="600" class="rounded-2xl border-2 border-cyan-500/40 bg-slate-950 shadow-2xl shadow-cyan-950/50 block max-h-[62vh] sm:max-h-[68vh] aspect-[1/2] h-auto"></canvas>
+
+                <!-- 特效爆破 Toast 提示 (如 TETRIS! / COMBO) -->
+                <div id="comboToast" class="absolute top-12 left-1/2 transform -translate-x-1/2 pointer-events-none opacity-0 transition-all duration-300 scale-75 font-orbitron font-black text-xl sm:text-2xl text-amber-300 neon-text-amber z-30 text-center whitespace-nowrap">
+                    TETRIS!
+                </div>
+
+                <!-- Pause Overlay -->
+                <div id="pauseOverlay" class="absolute inset-0 hidden flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md rounded-2xl z-20">
+                    <h3 class="text-3xl font-black font-orbitron text-cyan-400 neon-text-cyan mb-2">PAUSED</h3>
+                    <p class="text-xs text-slate-400">按下 P 或點擊 Resume 繼續遊戲</p>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" class="absolute inset-0 hidden flex-col items-center justify-center bg-slate-950/90 backdrop-blur-lg rounded-2xl p-4 text-center z-20">
+                    <h2 class="text-3xl sm:text-4xl font-black font-orbitron text-rose-500 neon-text-fuchsia mb-1">GAME OVER</h2>
+                    <p class="text-xs text-slate-400 mb-4">核心矩陣已滿，能量過載！</p>
+                    
+                    <div class="cyber-panel rounded-xl p-3 w-48 mb-4 font-orbitron">
+                        <div class="text-[10px] text-slate-400">FINAL SCORE</div>
+                        <div id="finalScore" class="text-2xl sm:text-3xl font-extrabold text-cyan-400 neon-text-cyan">0</div>
+                    </div>
+
+                    <button id="modalRestartBtn" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-orbitron font-extrabold text-sm hover:brightness-110 active:scale-95 transition shadow-lg shadow-cyan-500/30">
+                        PLAY AGAIN
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右側邊欄: Next 下一個方塊與分數資訊 -->
+            <div class="flex flex-col gap-2 w-20 sm:w-28">
+                <!-- Next Panel -->
+                <div class="cyber-panel rounded-xl p-2 sm:p-3 text-center shadow-lg">
+                    <div class="text-[10px] sm:text-xs font-orbitron font-semibold text-slate-400 mb-1">NEXT</div>
+                    <div class="w-full aspect-square flex items-center justify-center bg-slate-950/80 rounded-lg border border-slate-800">
+                        <canvas id="nextCanvas" width="80" height="80" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Score & HighScore -->
+                <div class="cyber-panel rounded-xl p-2 sm:p-3 text-center shadow-lg font-orbitron">
+                    <div class="text-[10px] sm:text-xs font-semibold text-slate-400">SCORE</div>
+                    <div id="scoreText" class="text-sm sm:text-lg font-bold text-cyan-400 neon-text-cyan truncate">0</div>
+
+                    <div class="text-[10px] sm:text-xs font-semibold text-slate-400 mt-2">HIGH</div>
+                    <div id="highScoreText" class="text-sm sm:text-lg font-bold text-fuchsia-400 neon-text-fuchsia truncate">0</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 行動端/觸控專用虛擬按鈕 -->
+    <footer class="w-full max-w-2xl mt-2 flex flex-col gap-2">
+        <div id="mobileControls" class="grid grid-cols-5 gap-1.5 sm:gap-2 px-1">
+            <button id="btnHold" class="ctrl-btn py-3 rounded-xl text-amber-400 font-orbitron font-bold text-xs flex flex-col items-center justify-center">
+                <span>HOLD</span>
+                <span class="text-[9px] text-slate-400">C</span>
+            </button>
+            <button id="btnLeft" class="ctrl-btn py-3 rounded-xl text-cyan-400 font-orbitron font-bold text-base flex items-center justify-center">
+                ◀
+            </button>
+            <button id="btnSoftDrop" class="ctrl-btn py-3 rounded-xl text-cyan-400 font-orbitron font-bold text-base flex items-center justify-center">
+                ▼
+            </button>
+            <button id="btnRight" class="ctrl-btn py-3 rounded-xl text-cyan-400 font-orbitron font-bold text-base flex items-center justify-center">
+                ▶
+            </button>
+            <button id="btnRotateCW" class="ctrl-btn py-3 rounded-xl text-fuchsia-400 font-orbitron font-bold text-xs flex flex-col items-center justify-center">
+                <span>ROTATE</span>
+                <span class="text-[9px] text-slate-400">↻</span>
+            </button>
+        </div>
+        <!-- 底部硬降強效按鈕 -->
+        <div class="px-1">
+            <button id="btnHardDrop" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500/20 via-cyan-500/30 to-sky-500/20 border border-cyan-500/40 text-cyan-300 font-orbitron font-bold text-xs tracking-wider flex items-center justify-center gap-2 active:bg-cyan-500/40">
+                ⚡ HARD DROP (SPACE)
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // =========================================================================
+        // 1. 遊戲核心變數與 Canvas 設定
+        // =========================================================================
+        const canvas = document.getElementById('tetrisCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        const holdCanvas = document.getElementById('holdCanvas');
+        const holdCtx = holdCanvas.getContext('2d');
+
+        // UI 元素
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const levelText = document.getElementById('levelText');
+        const linesText = document.getElementById('linesText');
+        const finalScore = document.getElementById('finalScore');
+        const comboToast = document.getElementById('comboToast');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const pauseBtnText = document.getElementById('pauseBtnText');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const playIcon = document.getElementById('playIcon');
+        const restartBtn = document.getElementById('restartBtn');
+        const modalRestartBtn = document.getElementById('modalRestartBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundOnIcon = document.getElementById('soundOnIcon');
+        const soundOffIcon = document.getElementById('soundOffIcon');
+
+        // 網格尺寸 (10 欄 x 20 列)
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30; // 300 / 10 = 30px
+
+        let grid = [];
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let combo = -1;
+        let gameOver = false;
+        let isPaused = false;
+        let soundEnabled = true;
+        let highScore = localStorage.getItem('cyber_tetris_highscore') || 0;
+        highScoreText.innerText = highScore;
+
+        // 掉落時間與計時器
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        const keysPressed = {};
+        let isSoftDroppingMobile = false;
+
+        // DAS (Delayed Auto-Shift) 左右加速按鍵處理
+        const DAS_DELAY = 150;
+        const ARR_INTERVAL = 35;
+        let dasTimerLeft = null, arrIntervalLeft = null;
+        let dasTimerRight = null, arrIntervalRight = null;
+        let isHoldLeftMobile = false, isHoldRightMobile = false;
+
+        // 暫存 (Hold) 與 下一個 (Next) 隊列
+        let currentPiece = null;
+        let nextPiece = null;
+        let holdPiece = null;
+        let canHold = true;
+
+        // 特效粒子與畫面震動
+        let particles = [];
+        let screenShakeTime = 0;
+
+        // =========================================================================
+        // 2. 方塊矩陣形狀與霓虹色彩定義 (I, J, L, O, S, T, Z)
+        // =========================================================================
+        const TETROMINOES = {
+            I: {
+                shape: [
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                color: '#06b6d4', // Cyan
+                glow: 'rgba(6, 182, 212, 0.8)'
+            },
+            J: {
+                shape: [
+                    [1, 0, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#3b82f6', // Blue
+                glow: 'rgba(59, 130, 246, 0.8)'
+            },
+            L: {
+                shape: [
+                    [0, 0, 1],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#f97316', // Orange
+                glow: 'rgba(249, 115, 22, 0.8)'
+            },
+            O: {
+                shape: [
+                    [1, 1],
+                    [1, 1]
+                ],
+                color: '#eab308', // Yellow
+                glow: 'rgba(234, 179, 8, 0.8)'
+            },
+            S: {
+                shape: [
+                    [0, 1, 1],
+                    [1, 1, 0],
+                    [0, 0, 0]
+                ],
+                color: '#22c55e', // Green
+                glow: 'rgba(34, 197, 94, 0.8)'
+            },
+            T: {
+                shape: [
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#a855f7', // Purple
+                glow: 'rgba(168, 85, 247, 0.8)'
+            },
+            Z: {
+                shape: [
+                    [1, 1, 0],
+                    [0, 1, 1],
+                    [0, 0, 0]
+                ],
+                color: '#ef4444', // Red
+                glow: 'rgba(239, 68, 68, 0.8)'
+            }
+        };
+
+        const PIECE_TYPES = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+
+        // =========================================================================
+        // 3. 原生 Web Audio 音效合成引擎
+        // =========================================================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, type, duration, startVol = 0.15, endVol = 0.001) {
+                if (!soundEnabled) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(Math.max(endVol, 0.0001), this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            move() { this.playTone(320, 'sine', 0.04, 0.1); }
+            rotate() { this.playTone(480, 'triangle', 0.06, 0.15); }
+            drop() { this.playTone(220, 'sine', 0.08, 0.2); }
+            hardDrop() {
+                this.playTone(150, 'sawtooth', 0.12, 0.3);
+                setTimeout(() => this.playTone(300, 'sine', 0.08, 0.15), 50);
+            }
+            hold() { this.playTone(580, 'triangle', 0.08, 0.15); }
+            clearLine() {
+                const notes = [523.25, 659.25, 783.99];
+                notes.forEach((f, idx) => setTimeout(() => this.playTone(f, 'sine', 0.1, 0.2), idx * 60));
+            }
+            tetrisClear() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((f, idx) => setTimeout(() => this.playTone(f, 'square', 0.15, 0.22), idx * 80));
+            }
+            gameOver() {
+                if (!soundEnabled) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.8);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.8);
+                } catch(e) {}
+            }
+        }
+        const sfx = new SoundEngine();
+
+        // =========================================================================
+        // 4. 遊戲狀態初始化與 7-Bag 隨機洗牌發牌器
+        // =========================================================================
+        let pieceBag = [];
+
+        function getNextFromBag() {
+            if (pieceBag.length === 0) {
+                pieceBag = [...PIECE_TYPES];
+                for (let i = pieceBag.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pieceBag[i], pieceBag[j]] = [pieceBag[j], pieceBag[i]];
+                }
+            }
+            const type = pieceBag.pop();
+            const proto = TETROMINOES[type];
+            return {
+                type: type,
+                matrix: proto.shape,
+                color: proto.color,
+                glow: proto.glow,
+                x: Math.floor((COLS - proto.shape[0].length) / 2),
+                y: 0
+            };
+        }
+
+        function createGrid() {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function initGame() {
+            sfx.init();
+            createGrid();
+            score = 0;
+            lines = 0;
+            level = 1;
+            combo = -1;
+            gameOver = false;
+            isPaused = false;
+            dropInterval = 1000;
+            canHold = true;
+            holdPiece = null;
+            particles = [];
+
+            stopMoveLeft();
+            stopMoveRight();
+
+            pieceBag = [];
+            currentPiece = getNextFromBag();
+            nextPiece = getNextFromBag();
+
+            scoreText.innerText = score;
+            levelText.innerText = level;
+            linesText.innerText = lines;
+
+            pauseOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            gameOverOverlay.classList.remove('flex');
+            updatePauseUI();
+
+            drawPreview(nextCtx, nextPiece);
+            drawPreview(holdCtx, null);
+        }
+
+        // =========================================================================
+        // 5. 碰撞檢測與旋轉 (Wall Kick) 邏輯
+        // =========================================================================
+        function collide(board, piece, offsetX = 0, offsetY = 0, testMatrix = null) {
+            const m = testMatrix || piece.matrix;
+            for (let r = 0; r < m.length; r++) {
+                for (let c = 0; c < m[r].length; c++) {
+                    if (m[r][c] !== 0) {
+                        const newX = piece.x + c + offsetX;
+                        const newY = piece.y + r + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+                        if (newY >= 0 && board[newY][newX] !== 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function rotateMatrix(matrix) {
+            const N = matrix.length;
+            const result = Array.from({ length: N }, () => Array(N).fill(0));
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    result[c][N - 1 - r] = matrix[r][c];
+                }
+            }
+            return result;
+        }
+
+        function rotatePiece() {
+            if (isPaused || gameOver) return;
+            const rotated = rotateMatrix(currentPiece.matrix);
+            const offsets = [0, -1, 1, -2, 2];
+            for (let offset of offsets) {
+                if (!collide(grid, currentPiece, offset, 0, rotated)) {
+                    currentPiece.matrix = rotated;
+                    currentPiece.x += offset;
+                    sfx.rotate();
+                    return;
+                }
+            }
+        }
+
+        function getGhostPosition() {
+            let ghostY = currentPiece.y;
+            while (!collide(grid, currentPiece, 0, ghostY - currentPiece.y + 1)) {
+                ghostY++;
+            }
+            return ghostY;
+        }
+
+        function hardDrop() {
+            if (isPaused || gameOver) return;
+            let dropDistance = 0;
+            while (!collide(grid, currentPiece, 0, 1)) {
+                currentPiece.y++;
+                dropDistance++;
+            }
+            score += dropDistance * 2;
+            scoreText.innerText = score;
+            screenShakeTime = 5;
+            sfx.hardDrop();
+            lockPiece();
+        }
+
+        // =========================================================================
+        // 6. 鎖定方塊、消行檢測與暫存 (Hold)
+        // =========================================================================
+        function lockPiece() {
+            const m = currentPiece.matrix;
+            for (let r = 0; r < m.length; r++) {
+                for (let c = 0; c < m[r].length; c++) {
+                    if (m[r][c] !== 0) {
+                        const boardY = currentPiece.y + r;
+                        const boardX = currentPiece.x + c;
+                        if (boardY < 0) {
+                            triggerGameOver();
+                            return;
+                        }
+                        grid[boardY][boardX] = {
+                            color: currentPiece.color,
+                            glow: currentPiece.glow
+                        };
+                    }
+                }
+            }
+
+            checkLineClears();
+
+            currentPiece = nextPiece;
+            nextPiece = getNextFromBag();
+            canHold = true;
+
+            drawPreview(nextCtx, nextPiece);
+
+            if (collide(grid, currentPiece)) {
+                triggerGameOver();
+            }
+        }
+
+        function checkLineClears() {
+            let clearedRows = [];
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (grid[r].every(cell => cell !== 0)) {
+                    clearedRows.push(r);
+                }
+            }
+
+            if (clearedRows.length > 0) {
+                clearedRows.forEach(r => {
+                    for (let c = 0; c < COLS; c++) {
+                        const color = grid[r][c].color || '#06b6d4';
+                        createParticles(c * BLOCK_SIZE + BLOCK_SIZE / 2, r * BLOCK_SIZE + BLOCK_SIZE / 2, color);
+                    }
+                });
+
+                clearedRows.forEach(r => {
+                    grid.splice(r, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                });
+
+                combo++;
+                lines += clearedRows.length;
+                
+                const basePoints = [0, 100, 300, 500, 800];
+                let points = basePoints[clearedRows.length] * level;
+                if (combo > 0) points += combo * 50 * level;
+                score += points;
+
+                const newLevel = Math.floor(lines / 10) + 1;
+                if (newLevel > level) {
+                    level = newLevel;
+                    dropInterval = Math.max(100, 1000 - (level - 1) * 85);
+                }
+
+                scoreText.innerText = score;
+                levelText.innerText = level;
+                linesText.innerText = lines;
+
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('cyber_tetris_highscore', highScore);
+                    highScoreText.innerText = highScore;
+                }
+
+                if (clearedRows.length === 4) {
+                    sfx.tetrisClear();
+                    showComboToast(`TETRIS! +${points}`);
+                } else {
+                    sfx.clearLine();
+                    if (combo > 0) {
+                        showComboToast(`COMBO x${combo + 1}! +${points}`);
+                    } else {
+                        showComboToast(`+${points}`);
+                    }
+                }
+            } else {
+                combo = -1;
+            }
+        }
+
+        function holdCurrentPiece() {
+            if (isPaused || gameOver || !canHold) return;
+            sfx.hold();
+            
+            if (holdPiece === null) {
+                holdPiece = {
+                    type: currentPiece.type,
+                    matrix: TETROMINOES[currentPiece.type].shape,
+                    color: currentPiece.color,
+                    glow: currentPiece.glow
+                };
+                currentPiece = nextPiece;
+                nextPiece = getNextFromBag();
+                drawPreview(nextCtx, nextPiece);
+            } else {
+                const temp = {
+                    type: currentPiece.type,
+                    matrix: TETROMINOES[currentPiece.type].shape,
+                    color: currentPiece.color,
+                    glow: currentPiece.glow
+                };
+                currentPiece = {
+                    type: holdPiece.type,
+                    matrix: TETROMINOES[holdPiece.type].shape,
+                    color: holdPiece.color,
+                    glow: holdPiece.glow,
+                    x: Math.floor((COLS - TETROMINOES[holdPiece.type].shape[0].length) / 2),
+                    y: 0
+                };
+                holdPiece = temp;
+            }
+            
+            currentPiece.x = Math.floor((COLS - currentPiece.matrix[0].length) / 2);
+            currentPiece.y = 0;
+            canHold = false;
+            drawPreview(holdCtx, holdPiece);
+        }
+
+        // =========================================================================
+        // 7. 特效粒子與 Toast 提示
+        // =========================================================================
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 0.03 + Math.random() * 0.03
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.life;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 6;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                ctx.restore();
+            }
+        }
+
+        function showComboToast(text) {
+            comboToast.innerText = text;
+            comboToast.classList.remove('opacity-0', 'scale-75');
+            comboToast.classList.add('opacity-100', 'scale-100');
+            setTimeout(() => {
+                comboToast.classList.remove('opacity-100', 'scale-100');
+                comboToast.classList.add('opacity-0', 'scale-75');
+            }, 800);
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+            sfx.gameOver();
+            finalScore.innerText = score;
+            gameOverOverlay.classList.remove('hidden');
+            gameOverOverlay.classList.add('flex');
+        }
+
+        // =========================================================================
+        // 8. 畫布渲染邏輯 (Draw Board, Ghost & Previews)
+        // =========================================================================
+        function drawPreview(pCtx, piece) {
+            pCtx.clearRect(0, 0, pCtx.canvas.width, pCtx.canvas.height);
+            if (!piece) return;
+            const m = piece.matrix;
+            const size = 16;
+            const offsetX = (pCtx.canvas.width - m[0].length * size) / 2;
+            const offsetY = (pCtx.canvas.height - m.length * size) / 2;
+
+            for (let r = 0; r < m.length; r++) {
+                for (let c = 0; c < m[r].length; c++) {
+                    if (m[r][c] !== 0) {
+                        pCtx.fillStyle = piece.color;
+                        pCtx.shadowColor = piece.glow;
+                        pCtx.shadowBlur = 8;
+                        pCtx.fillRect(offsetX + c * size + 1, offsetY + r * size + 1, size - 2, size - 2);
+                        pCtx.shadowBlur = 0;
+                    }
+                }
+            }
+        }
+
+        function drawBlock(pCtx, x, y, color, glow, isGhost = false) {
+            const px = x * BLOCK_SIZE;
+            const py = y * BLOCK_SIZE;
+
+            if (isGhost) {
+                pCtx.strokeStyle = color;
+                pCtx.lineWidth = 1.5;
+                pCtx.strokeRect(px + 2, py + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                return;
+            }
+
+            pCtx.save();
+            pCtx.fillStyle = color;
+            pCtx.shadowColor = glow || color;
+            pCtx.shadowBlur = 10;
+            pCtx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+            pCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            pCtx.fillRect(px + 2, py + 2, BLOCK_SIZE - 4, 3);
+            pCtx.restore();
+        }
+
+        function drawBoard() {
+            ctx.save();
+
+            if (screenShakeTime > 0) {
+                const dx = (Math.random() - 0.5) * 6;
+                const dy = (Math.random() - 0.5) * 6;
+                ctx.translate(dx, dy);
+                screenShakeTime--;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製背景網格
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+            ctx.lineWidth = 0.5;
+            for (let r = 0; r <= ROWS; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, r * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let c = 0; c <= COLS; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * BLOCK_SIZE, 0);
+                ctx.lineTo(c * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+
+            // 繪製固定的磚塊
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (grid[r][c] !== 0) {
+                        drawBlock(ctx, c, r, grid[r][c].color, grid[r][c].glow);
+                    }
+                }
+            }
+
+            if (currentPiece && !gameOver) {
+                // 繪製 Ghost Piece 落點預測
+                const ghostY = getGhostPosition();
+                const m = currentPiece.matrix;
+                for (let r = 0; r < m.length; r++) {
+                    for (let c = 0; c < m[r].length; c++) {
+                        if (m[r][c] !== 0) {
+                            drawBlock(ctx, currentPiece.x + c, ghostY + r, currentPiece.color, currentPiece.glow, true);
+                        }
+                    }
+                }
+
+                // 繪製當前活動方塊
+                for (let r = 0; r < m.length; r++) {
+                    for (let c = 0; c < m[r].length; c++) {
+                        if (m[r][c] !== 0) {
+                            drawBlock(ctx, currentPiece.x + c, currentPiece.y + r, currentPiece.color, currentPiece.glow);
+                        }
+                    }
+                }
+            }
+
+            updateAndDrawParticles();
+            ctx.restore();
+        }
+
+        // =========================================================================
+        // 9. 事件監聽 (Keyboard & Mobile Touch Controls)
+        // =========================================================================
+        function moveLeft() {
+            if (isPaused || gameOver) return;
+            if (!collide(grid, currentPiece, -1, 0)) {
+                currentPiece.x--;
+                sfx.move();
+            }
+        }
+
+        function moveRight() {
+            if (isPaused || gameOver) return;
+            if (!collide(grid, currentPiece, 1, 0)) {
+                currentPiece.x++;
+                sfx.move();
+            }
+        }
+
+        function startMoveLeft() {
+            if (dasTimerLeft || arrIntervalLeft) return;
+            moveLeft();
+            dasTimerLeft = setTimeout(() => {
+                arrIntervalLeft = setInterval(() => {
+                    if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A'] || isHoldLeftMobile) {
+                        moveLeft();
+                    } else {
+                        stopMoveLeft();
+                    }
+                }, ARR_INTERVAL);
+            }, DAS_DELAY);
+        }
+
+        function stopMoveLeft() {
+            clearTimeout(dasTimerLeft);
+            clearInterval(arrIntervalLeft);
+            dasTimerLeft = null;
+            arrIntervalLeft = null;
+        }
+
+        function startMoveRight() {
+            if (dasTimerRight || arrIntervalRight) return;
+            moveRight();
+            dasTimerRight = setTimeout(() => {
+                arrIntervalRight = setInterval(() => {
+                    if (keysPressed['ArrowRight'] || keysPressed['d'] || keysPressed['D'] || isHoldRightMobile) {
+                        moveRight();
+                    } else {
+                        stopMoveRight();
+                    }
+                }, ARR_INTERVAL);
+            }, DAS_DELAY);
+        }
+
+        function stopMoveRight() {
+            clearTimeout(dasTimerRight);
+            clearInterval(arrIntervalRight);
+            dasTimerRight = null;
+            arrIntervalRight = null;
+        }
+
+        function softDrop() {
+            if (isPaused || gameOver) return;
+            if (!collide(grid, currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 1;
+                scoreText.innerText = score;
+                sfx.drop();
+            } else {
+                lockPiece();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                togglePause();
+                return;
+            }
+            if (isPaused || gameOver) return;
+
+            if (keysPressed[e.key]) return;
+            keysPressed[e.key] = true;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    startMoveLeft();
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    startMoveRight();
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    softDrop();
+                    break;
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                case 'z':
+                case 'Z':
+                case 'x':
+                case 'X':
+                    rotatePiece();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'c':
+                case 'C':
+                case 'Shift':
+                    holdCurrentPiece();
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') stopMoveLeft();
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') stopMoveRight();
+        });
+
+        function bindHoldBtn(id, startAction, stopAction) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const handleStart = (e) => {
+                e.preventDefault();
+                sfx.init();
+                startAction();
+            };
+            const handleStop = (e) => {
+                e.preventDefault();
+                stopAction();
+            };
+            btn.addEventListener('touchstart', handleStart, { passive: false });
+            btn.addEventListener('mousedown', handleStart);
+            btn.addEventListener('touchend', handleStop);
+            btn.addEventListener('mouseup', handleStop);
+            btn.addEventListener('mouseleave', handleStop);
+        }
+
+        bindHoldBtn('btnLeft', () => { isHoldLeftMobile = true; startMoveLeft(); }, () => { isHoldLeftMobile = false; stopMoveLeft(); });
+        bindHoldBtn('btnRight', () => { isHoldRightMobile = true; startMoveRight(); }, () => { isHoldRightMobile = false; stopMoveRight(); });
+
+        const softDropBtn = document.getElementById('btnSoftDrop');
+        if (softDropBtn) {
+            const startPress = (e) => {
+                e.preventDefault();
+                sfx.init();
+                isSoftDroppingMobile = true;
+                softDrop();
+            };
+            const endPress = (e) => {
+                e.preventDefault();
+                isSoftDroppingMobile = false;
+            };
+            softDropBtn.addEventListener('touchstart', startPress, { passive: false });
+            softDropBtn.addEventListener('mousedown', startPress);
+            softDropBtn.addEventListener('touchend', endPress);
+            softDropBtn.addEventListener('mouseup', endPress);
+            softDropBtn.addEventListener('mouseleave', endPress);
+        }
+
+        function bindClickBtn(id, action) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const handleAction = (e) => {
+                e.preventDefault();
+                sfx.init();
+                action();
+            };
+            btn.addEventListener('touchstart', handleAction, { passive: false });
+            btn.addEventListener('mousedown', handleAction);
+        }
+
+        bindClickBtn('btnRotateCW', rotatePiece);
+        bindClickBtn('btnHardDrop', hardDrop);
+        bindClickBtn('btnHold', holdCurrentPiece);
+
+        function togglePause() {
+            if (gameOver) return;
+            isPaused = !isPaused;
+            updatePauseUI();
+        }
+
+        function updatePauseUI() {
+            pauseOverlay.classList.toggle('hidden', !isPaused);
+            pauseOverlay.classList.toggle('flex', isPaused);
+            pauseIcon.classList.toggle('hidden', isPaused);
+            playIcon.classList.toggle('hidden', !isPaused);
+            pauseBtnText.innerText = isPaused ? 'RESUME' : 'PAUSE';
+        }
+
+        pauseBtn.addEventListener('click', togglePause);
+        restartBtn.addEventListener('click', initGame);
+        modalRestartBtn.addEventListener('click', initGame);
+
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundOnIcon.classList.toggle('hidden', !soundEnabled);
+            soundOffIcon.classList.toggle('hidden', soundEnabled);
+        });
+
+        // =========================================================================
+        // 10. 主遊戲動畫迴圈 (Game Loop)
+        // =========================================================================
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused && !gameOver) {
+                dropCounter += deltaTime;
+
+                const isSoftDropActive = keysPressed['ArrowDown'] || keysPressed['s'] || keysPressed['S'] || isSoftDroppingMobile;
+                const effectiveInterval = isSoftDropActive ? 35 : dropInterval;
+
+                if (dropCounter > effectiveInterval) {
+                    if (!collide(grid, currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        if (isSoftDropActive) {
+                            score += 1;
+                            scoreText.innerText = score;
+                            sfx.drop();
+                        }
+                    } else {
+                        lockPiece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            drawBoard();
+            requestAnimationFrame(update);
+        }
+
+        // 啟動遊戲
+        initGame();
+        window.onload = function() {
+            requestAnimationFrame(update);
+        };
+    </script>
+</body>
+</html>

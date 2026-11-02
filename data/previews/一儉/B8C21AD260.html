@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Macaron Sweet Snake - 馬卡龍夢幻貪吃蛇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #fce7f3 0%, #f0fdf4 50%, #e0f2fe 100%);
+            color: #475569;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        /* 馬卡龍柔和陰影 */
+        .macaron-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 3px solid #ffffff;
+            box-shadow: 0 10px 25px -5px rgba(244, 114, 182, 0.15), 0 8px 10px -6px rgba(167, 139, 250, 0.1);
+            border-radius: 24px;
+        }
+
+        /* Canvas 柔和外框 */
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 12px 30px rgba(251, 146, 60, 0.15), 0 4px 12px rgba(192, 132, 252, 0.1);
+            border: 6px solid #ffffff;
+            border-radius: 24px;
+            overflow: hidden;
+            aspect-ratio: 1 / 1;
+            background-color: #fffbeb;
+        }
+
+        /* 可愛馬卡龍按鈕 */
+        .btn-macaron {
+            background: linear-gradient(135deg, #f472b6 0%, #38bdf8 100%);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 6px 15px rgba(244, 114, 182, 0.35);
+        }
+        .btn-macaron:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 10px 20px rgba(244, 114, 182, 0.45);
+        }
+        .btn-macaron:active {
+            transform: scale(0.98) translateY(1px);
+        }
+
+        .skin-btn {
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .skin-btn.active {
+            border-color: #f472b6;
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);
+        }
+
+        .d-pad-btn {
+            background: rgba(255, 255, 255, 0.85);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(148, 163, 184, 0.15);
+            backdrop-filter: blur(4px);
+            touch-action: manipulation;
+            border-radius: 16px;
+            color: #64748b;
+        }
+        .d-pad-btn:active {
+            background: #fbcfe8;
+            color: #db2777;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4 select-none">
+
+    <!-- 頂部標題與數據區 -->
+    <header class="w-full max-w-lg flex flex-col items-center mb-1">
+        <h1 class="text-2xl md:text-3xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-sky-400 mb-2 flex items-center gap-2 drop-shadow-sm">
+            <i class="fa-solid fa-cookie-bite text-pink-400"></i> SWEET SNAKE
+        </h1>
+
+        <!-- 計分板 -->
+        <div class="w-full flex justify-between items-center macaron-card px-5 py-2.5 text-sm md:text-base">
+            <div class="flex items-center gap-1.5">
+                <span class="text-pink-400 font-bold">SCORE:</span>
+                <span id="score-display" class="text-pink-500 text-lg md:text-xl font-black">0</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-sky-400 font-bold">SPEED:</span>
+                <span id="speed-display" class="text-sky-500 text-lg md:text-xl font-black">LV.1</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-purple-400 font-bold">HIGH:</span>
+                <span id="highscore-display" class="text-purple-500 text-lg md:text-xl font-black">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 畫布容器與皮膚選擇器 -->
+    <main class="relative w-full max-w-lg flex-1 flex flex-col items-center justify-center">
+        <!-- 皮膚花紋選擇選單 -->
+        <div class="w-full mb-2 flex justify-center items-center gap-2 macaron-card py-2 px-3">
+            <span class="text-xs font-bold text-slate-500 flex items-center gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i> 花紋:
+            </span>
+            <button class="skin-btn active px-2.5 py-1 rounded-xl text-xs font-bold bg-pink-100 text-pink-600" data-skin="dots">
+                🍬 彩點
+            </button>
+            <button class="skin-btn px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-100 text-purple-600" data-skin="stripes">
+                🍭 條紋
+            </button>
+            <button class="skin-btn px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-100 text-sky-600" data-skin="sandwich">
+                🍩 夾心
+            </button>
+            <button class="skin-btn px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-100 text-amber-600" data-skin="gradient">
+                ✨ 漸層
+            </button>
+        </div>
+
+        <div id="canvas-container" class="relative w-full flex items-center justify-center">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+
+            <!-- Overlay 遊戲覆蓋層（開始 / 遊戲結束 / 暫停） -->
+            <div id="overlay" class="absolute inset-0 bg-white/85 backdrop-blur-md flex flex-col items-center justify-center p-6 transition-opacity duration-300 z-10">
+                <div id="overlay-content" class="text-center max-w-md">
+                    <h2 id="overlay-title" class="text-3xl md:text-4xl font-black text-pink-500 mb-2 tracking-wide drop-shadow-sm">SWEET SNAKE</h2>
+                    <p id="overlay-desc" class="text-slate-600 mb-6 text-xs md:text-sm font-semibold">吃到可口的馬卡龍甜點，小心別撞到牆壁或自己的身體喔！</p>
+                    
+                    <button id="start-btn" class="btn-macaron text-white font-black px-8 py-3.5 rounded-full text-base md:text-lg tracking-wider flex items-center gap-2 mx-auto">
+                        <i class="fa-solid fa-play"></i> <span id="btn-text">START GAME</span>
+                    </button>
+
+                    <!-- 操作指引 -->
+                    <div class="mt-6 pt-4 border-t border-pink-100 text-xs text-slate-400 flex justify-center gap-4 font-bold">
+                        <span class="flex items-center gap-1"><kbd class="px-2 py-0.5 bg-pink-100 text-pink-600 rounded-lg">↑↓←→</kbd> 移動</span>
+                        <span class="flex items-center gap-1"><kbd class="px-2 py-0.5 bg-pink-100 text-pink-600 rounded-lg">P</kbd> 暫停</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手機/觸控螢幕 D-Pad 方向盤 -->
+        <div class="w-full max-w-xs mt-2 grid grid-cols-3 gap-2 md:hidden">
+            <div></div>
+            <button id="btn-up" class="d-pad-btn h-11 flex items-center justify-center text-lg font-bold">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <div></div>
+            <button id="btn-left" class="d-pad-btn h-11 flex items-center justify-center text-lg font-bold">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button id="btn-down" class="d-pad-btn h-11 flex items-center justify-center text-lg font-bold">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <button id="btn-right" class="d-pad-btn h-11 flex items-center justify-center text-lg font-bold">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+    </main>
+
+    <!-- 控制列 -->
+    <footer class="w-full max-w-lg mt-1 flex justify-between items-center text-xs text-slate-400 px-2 font-bold">
+        <span>© Macaron Cyber Snake</span>
+        <div class="flex gap-2">
+            <button id="pause-btn" class="px-3 py-1 bg-white hover:bg-pink-50 text-slate-600 rounded-xl border border-slate-200 flex items-center gap-1 transition shadow-sm">
+                <i class="fa-solid fa-pause text-pink-400"></i> 暫停
+            </button>
+            <button id="sound-btn" class="px-3 py-1 bg-white hover:bg-pink-50 text-slate-600 rounded-xl border border-slate-200 flex items-center gap-1 transition shadow-sm">
+                <i class="fa-solid fa-volume-high text-sky-400"></i> 音效
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // --- 核心變數與設定 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        // UI 元素
+        const scoreDisplay = document.getElementById('score-display');
+        const speedDisplay = document.getElementById('speed-display');
+        const highscoreDisplay = document.getElementById('highscore-display');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayDesc = document.getElementById('overlay-desc');
+        const startBtn = document.getElementById('start-btn');
+        const btnText = document.getElementById('btn-text');
+        const pauseBtn = document.getElementById('pause-btn');
+        const soundBtn = document.getElementById('sound-btn');
+        const skinBtns = document.querySelectorAll('.skin-btn');
+
+        // 網格尺寸設定 (20x20 格)
+        const GRID_SIZE = 20;
+        const CELL_SIZE = 20; 
+        canvas.width = GRID_SIZE * CELL_SIZE;
+        canvas.height = GRID_SIZE * CELL_SIZE;
+
+        // 遊戲狀態
+        let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let score = 0;
+        let level = 1;
+        let highScore = window.__galleryStorage.getItem('snake_highscore') || 0;
+        highscoreDisplay.textContent = highScore;
+        let soundEnabled = true;
+        let currentSkin = 'dots'; // 'dots', 'stripes', 'sandwich', 'gradient'
+
+        // 馬卡龍粉嫩色彩盤
+        const MACARON_COLORS = {
+            bg: '#fffbeb',        // 奶油黃背景
+            grid: '#fef3c7',      // 網格線
+            pink: '#f472b6',      // 馬卡龍粉
+            mint: '#34d399',      // 馬卡龍薄荷綠
+            sky: '#38bdf8',       // 馬卡龍天空藍
+            yellow: '#fbbf24',    // 奶油黃
+            purple: '#c084fc'     // 薰衣草紫
+        };
+
+        // 蛇與移動
+        let snake = [];
+        let dir = { x: 1, y: 0 };
+        let nextDir = { x: 1, y: 0 };
+        let food = { x: 0, y: 0, isSpecial: false, flavor: 0 };
+        let particles = [];
+        
+        // 時間與循環控制
+        let lastTime = 0;
+        let moveTimer = 0;
+        let baseSpeed = 200; // 毫秒/格 (放慢基礎速度)
+
+        // Web Audio API 音效合成
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'eat') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'eat_special') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(587.33, now); // D5
+                    osc.frequency.setValueAtTime(880, now + 0.08); // A5
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'die') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(150, now + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function spawnFood() {
+            let valid = false;
+            while (!valid) {
+                food.x = Math.floor(Math.random() * GRID_SIZE);
+                food.y = Math.floor(Math.random() * GRID_SIZE);
+                valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+            }
+            food.isSpecial = Math.random() < 0.25;
+            food.flavor = Math.floor(Math.random() * 3); // 甜點口味種數
+        }
+
+        function createParticles(x, y, color, count = 12) {
+            const px = (x + 0.5) * CELL_SIZE;
+            const py = (y + 0.5) * CELL_SIZE;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2.5 + 0.8;
+                particles.push({
+                    x: px, y: py,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    radius: Math.random() * 3 + 2,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.015
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function startGame() {
+            initAudio();
+            score = 0;
+            level = 1;
+            scoreDisplay.textContent = score;
+            speedDisplay.textContent = `LV.${level}`;
+            
+            snake = [
+                { x: 5, y: 10 },
+                { x: 4, y: 10 },
+                { x: 3, y: 10 }
+            ];
+            dir = { x: 1, y: 0 };
+            nextDir = { x: 1, y: 0 };
+            particles = [];
+            
+            spawnFood();
+            gameState = 'PLAYING';
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function updateSnake() {
+            dir = { ...nextDir };
+            const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+            // 撞牆檢查
+            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                gameOver();
+                return;
+            }
+
+            // 撞自己身體檢查
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // 吃食物檢查
+            if (head.x === food.x && head.y === food.y) {
+                const pts = food.isSpecial ? 30 : 10;
+                score += pts;
+                scoreDisplay.textContent = score;
+
+                if (score > highScore) {
+                    highScore = score;
+                    highscoreDisplay.textContent = highScore;
+                    window.__galleryStorage.setItem('snake_highscore', highScore);
+                }
+
+                level = Math.floor(score / 50) + 1;
+                speedDisplay.textContent = `LV.${level}`;
+
+                const particleColor = food.isSpecial ? '#fef08a' : MACARON_COLORS.pink;
+                createParticles(food.x, food.y, particleColor, 14);
+                playSound(food.isSpecial ? 'eat_special' : 'eat');
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            createParticles(snake[0].x, snake[0].y, '#f472b6', 20);
+            playSound('die');
+            showOverlay('GAME OVER', `得分: ${score} 分！休息一下再來一局甜點大冒險吧！`, 'TRY AGAIN');
+        }
+
+        function drawGrid() {
+            ctx.fillStyle = MACARON_COLORS.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = MACARON_COLORS.grid;
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function drawSnake() {
+            snake.forEach((seg, index) => {
+                ctx.save();
+                const isHead = index === 0;
+                const x = seg.x * CELL_SIZE;
+                const y = seg.y * CELL_SIZE;
+
+                if (isHead) {
+                    // 頭部基底 (柔軟馬卡龍圓角)
+                    ctx.fillStyle = MACARON_COLORS.pink;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 8);
+                    ctx.fill();
+
+                    // 可愛腮紅
+                    ctx.fillStyle = 'rgba(251, 113, 133, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(x + 4, y + CELL_SIZE - 5, 2.5, 0, Math.PI * 2);
+                    ctx.arc(x + CELL_SIZE - 4, y + CELL_SIZE - 5, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 眼睛 (可愛大圓眼與高光)
+                    ctx.fillStyle = '#334155';
+                    let eyeX1, eyeY1, eyeX2, eyeY2;
+                    if (dir.x === 1) {
+                        eyeX1 = eyeX2 = x + CELL_SIZE - 6; eyeY1 = y + 5; eyeY2 = y + CELL_SIZE - 5;
+                    } else if (dir.x === -1) {
+                        eyeX1 = eyeX2 = x + 6; eyeY1 = y + 5; eyeY2 = y + CELL_SIZE - 5;
+                    } else if (dir.y === -1) {
+                        eyeY1 = eyeY2 = y + 6; eyeX1 = x + 5; eyeX2 = x + CELL_SIZE - 5;
+                    } else {
+                        eyeY1 = eyeY2 = y + CELL_SIZE - 6; eyeX1 = x + 5; eyeX2 = x + CELL_SIZE - 5;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(eyeX1, eyeY1, 2.5, 0, Math.PI * 2);
+                    ctx.arc(eyeX2, eyeY2, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 眼中小白點高光
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(eyeX1 - 0.8, eyeY1 - 0.8, 0.9, 0, Math.PI * 2);
+                    ctx.arc(eyeX2 - 0.8, eyeY2 - 0.8, 0.9, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 根據選定皮膚繪製身體花紋
+                    if (currentSkin === 'dots') {
+                        // 1. 馬卡龍糖彩波點 (Polka Dots)
+                        ctx.fillStyle = (index % 2 === 0) ? '#f472b6' : '#38bdf8';
+                        ctx.beginPath();
+                        ctx.roundRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3, 6);
+                        ctx.fill();
+
+                        // 身體上的波點紋路
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+
+                    } else if (currentSkin === 'stripes') {
+                        // 2. 繽紛雙色條紋 (Candy Stripes)
+                        ctx.fillStyle = (index % 2 === 0) ? '#a78bfa' : '#f472b6';
+                        ctx.beginPath();
+                        ctx.roundRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3, 5);
+                        ctx.fill();
+
+                        // 斜向條紋裝飾
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.lineWidth = 2.5;
+                        ctx.beginPath();
+                        ctx.moveTo(x + 4, y + CELL_SIZE - 4);
+                        ctx.lineTo(x + CELL_SIZE - 4, y + 4);
+                        ctx.stroke();
+
+                    } else if (currentSkin === 'sandwich') {
+                        // 3. 可口夾心甜甜圈 (Sandwich Roll)
+                        ctx.fillStyle = '#fbbf24'; // 外層餅乾黃
+                        ctx.beginPath();
+                        ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
+                        ctx.fill();
+
+                        // 中間夾心色彩
+                        const creamColors = ['#f472b6', '#38bdf8', '#34d399', '#c084fc'];
+                        ctx.fillStyle = creamColors[index % creamColors.length];
+                        ctx.beginPath();
+                        ctx.roundRect(x + 4, y + 4, CELL_SIZE - 8, CELL_SIZE - 8, 4);
+                        ctx.fill();
+
+                    } else if (currentSkin === 'gradient') {
+                        // 4. 夢幻漸層粉彩 (Pastel Gradient)
+                        const hue = (index * 18 + 320) % 360; // 柔和彩虹色調變化
+                        ctx.fillStyle = `hsl(${hue}, 85%, 75%)`;
+                        ctx.beginPath();
+                        ctx.roundRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 6);
+                        ctx.fill();
+
+                        // 高光白點
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(x + 6, y + 6, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                ctx.restore();
+            });
+        }
+
+        function drawFood() {
+            ctx.save();
+            const x = food.x * CELL_SIZE;
+            const y = food.y * CELL_SIZE;
+
+            if (food.isSpecial) {
+                // 特殊金黃蛋糕/星星
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE / 2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 亮光白色奶油點裝飾
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE / 4, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // 馬卡龍小甜點 (三種繽紛口味)
+                const flavors = ['#f472b6', '#38bdf8', '#c084fc'];
+                const foodColor = flavors[food.flavor % flavors.length];
+
+                // 外層馬卡龍殼
+                ctx.fillStyle = foodColor;
+                ctx.beginPath();
+                ctx.roundRect(x + 2, y + 3, CELL_SIZE - 4, CELL_SIZE - 6, 6);
+                ctx.fill();
+
+                // 中間白色夾心夾層
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 2, y + CELL_SIZE / 2 - 1.5, CELL_SIZE - 4, 3);
+            }
+            ctx.restore();
+        }
+
+        function render() {
+            drawGrid();
+            drawFood();
+            drawSnake();
+            drawParticles();
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const delta = timestamp - lastTime;
+            lastTime = timestamp;
+
+            if (gameState === 'PLAYING') {
+                moveTimer += delta;
+                const currentSpeed = Math.max(80, baseSpeed - (level - 1) * 10);
+
+                if (moveTimer >= currentSpeed) {
+                    updateSnake();
+                    moveTimer = 0;
+                }
+            }
+
+            updateParticles();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function changeDirection(newX, newY) {
+            if (gameState !== 'PLAYING') return;
+            if (newX !== -dir.x || newY !== -dir.y) {
+                nextDir = { x: newX, y: newY };
+            }
+        }
+
+        function showOverlay(title, desc, buttonText) {
+            overlayTitle.textContent = title;
+            overlayDesc.textContent = desc;
+            btnText.textContent = buttonText;
+
+            if (title === 'GAME OVER') {
+                overlayTitle.className = "text-3xl md:text-4xl font-black text-pink-500 mb-2 tracking-wide drop-shadow-sm";
+            } else {
+                overlayTitle.className = "text-3xl md:text-4xl font-black text-pink-500 mb-2 tracking-wide drop-shadow-sm";
+            }
+
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                showOverlay('PAUSED', '遊戲已暫停', 'RESUME');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        // 鍵盤操控
+        window.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp': case 'w': case 'W':
+                    changeDirection(0, -1);
+                    break;
+                case 'ArrowDown': case 's': case 'S':
+                    changeDirection(0, 1);
+                    break;
+                case 'ArrowLeft': case 'a': case 'A':
+                    changeDirection(-1, 0);
+                    break;
+                case 'ArrowRight': case 'd': case 'D':
+                    changeDirection(1, 0);
+                    break;
+                case 'p': case 'P':
+                    togglePause();
+                    break;
+            }
+        });
+
+        // 皮膚按鈕切換
+        skinBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                skinBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSkin = btn.getAttribute('data-skin');
+                render();
+            });
+        });
+
+        // 手機 D-Pad 控制按鈕
+        document.getElementById('btn-up').addEventListener('click', () => changeDirection(0, -1));
+        document.getElementById('btn-down').addEventListener('click', () => changeDirection(0, 1));
+        document.getElementById('btn-left').addEventListener('click', () => changeDirection(-1, 0));
+        document.getElementById('btn-right').addEventListener('click', () => changeDirection(1, 0));
+
+        // 手勢 Swipe 控制
+        let touchStartX = 0;
+        let touchStartY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!touchStartX || !touchStartY) return;
+            const diffX = e.changedTouches[0].clientX - touchStartX;
+            const diffY = e.changedTouches[0].clientY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > 20) {
+                    changeDirection(diffX > 0 ? 1 : -1, 0);
+                }
+            } else {
+                if (Math.abs(diffY) > 20) {
+                    changeDirection(0, diffY > 0 ? 1 : -1);
+                }
+            }
+            touchStartX = 0;
+            touchStartY = 0;
+        }, { passive: true });
+
+        // 功能按鈕
+        startBtn.addEventListener('click', () => {
+            if (gameState === 'PAUSED') {
+                togglePause();
+            } else {
+                startGame();
+            }
+        });
+
+        pauseBtn.addEventListener('click', togglePause);
+
+        soundBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundBtn.innerHTML = soundEnabled 
+                ? '<i class="fa-solid fa-volume-high text-sky-400"></i> 音效' 
+                : '<i class="fa-solid fa-volume-xmark text-slate-400"></i> 靜音';
+            soundBtn.classList.toggle('text-rose-400', !soundEnabled);
+        });
+
+        // 初始化
+        window.onload = () => {
+            render();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

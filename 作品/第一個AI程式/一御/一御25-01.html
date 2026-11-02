@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Cyberpunk Brick Breaker - 霓虹打磚塊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
+            background-color: #030308;
+            color: #00f3ff;
+            touch-action: manipulation;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .neon-box {
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 15px rgba(0, 243, 255, 0.15);
+            border: 2px solid rgba(0, 243, 255, 0.5);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.8), 0 0 18px rgba(0, 243, 255, 0.4);
+        }
+
+        .neon-text-pink {
+            text-shadow: 0 0 8px rgba(255, 0, 127, 0.8), 0 0 18px rgba(255, 0, 127, 0.4);
+        }
+
+        .btn-glow {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.9);
+            transform: translateY(-2px);
+        }
+
+        .btn-glow:active {
+            transform: translateY(1px);
+        }
+
+        canvas {
+            background: radial-gradient(circle at center, #0a0a16 0%, #020205 100%);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center p-2 sm:p-4 select-none">
+
+    <!-- 頂部數據狀態欄 -->
+    <header class="w-full max-w-2xl flex justify-between items-center bg-gray-900/90 backdrop-blur border border-cyan-500/40 rounded-xl px-4 py-2.5 shadow-xl">
+        <div class="flex items-center space-x-4 sm:space-x-6">
+            <div>
+                <span class="text-[9px] sm:text-[10px] text-cyan-400 block tracking-widest uppercase">SCORE</span>
+                <span id="score" class="text-xl sm:text-2xl font-black text-white neon-text-cyan">0</span>
+            </div>
+            <div>
+                <span class="text-[9px] sm:text-[10px] text-pink-400 block tracking-widest uppercase">LEVEL</span>
+                <span id="level" class="text-xl sm:text-2xl font-black text-pink-400 neon-text-pink">1</span>
+            </div>
+            <div>
+                <span class="text-[9px] sm:text-[10px] text-yellow-400 block tracking-widest uppercase">LIVES</span>
+                <div id="lives" class="flex text-yellow-400 text-lg sm:text-xl font-bold tracking-widest">❤️❤️❤️</div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button id="sound-btn" class="p-2 bg-gray-800 hover:bg-gray-700 border border-cyan-500/40 rounded-lg text-cyan-400 transition">
+                <svg id="sound-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>
+                </svg>
+                <svg id="sound-off" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                </svg>
+            </button>
+            <button id="pause-btn" class="p-2 bg-gray-800 hover:bg-gray-700 border border-cyan-500/40 rounded-lg text-cyan-400 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas 畫布與 Overlay 區域 -->
+    <div class="relative flex-1 w-full max-w-2xl flex justify-center items-center overflow-hidden my-auto py-2">
+        <canvas id="gameCanvas" width="600" height="720" class="neon-box rounded-xl w-full h-full max-h-[78vh] object-contain"></canvas>
+
+        <!-- 開始選單 Overlay -->
+        <div id="startMenu" class="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col justify-center items-center text-center p-6 rounded-xl border border-cyan-500/40">
+            <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-500 mb-3 tracking-wider neon-text-cyan">
+                NEON BREAKOUT
+            </h1>
+            <p class="text-cyan-200/80 mb-6 text-xs sm:text-sm max-w-md leading-relaxed">
+                經典賽博朋克打磚塊遊戲！<br>
+                控制底部滑塊反彈小球，收集道具擊碎所有磚塊！
+            </p>
+
+            <div class="bg-gray-900/80 border border-cyan-500/30 rounded-lg p-3 mb-6 text-left text-xs text-cyan-300 space-y-1">
+                <p>🎮 <b>[←] [→] / [A] [D]</b>：左右移動滑塊</p>
+                <p>🚀 <b>[Space 空白鍵]</b>：發射小球 / 發射雷射</p>
+                <p>⏸️ <b>[P]</b>：暫停遊戲 | 🖱️ <b>滑鼠/觸控</b>：平滑拖拽操作</p>
+            </div>
+
+            <button onclick="startGame()" class="btn-glow px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 font-bold text-base rounded-full shadow-lg text-white border border-cyan-300 tracking-wider">
+                開始遊戲 (START)
+            </button>
+        </div>
+
+        <!-- 遊戲結束 Overlay -->
+        <div id="gameOverMenu" class="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col justify-center items-center text-center p-6 rounded-xl border border-pink-500/40 hidden">
+            <h2 class="text-4xl sm:text-5xl font-black text-pink-500 mb-2 neon-text-pink">GAME OVER</h2>
+            <p class="text-cyan-200 mb-6 text-sm sm:text-base">最終得分：<span id="finalScore" class="text-2xl font-bold text-yellow-400">0</span></p>
+
+            <button onclick="startGame()" class="btn-glow px-8 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-base rounded-full shadow-lg text-white border border-pink-300 tracking-wider">
+                再玩一次 (REPLAY)
+            </button>
+        </div>
+
+        <!-- 關卡勝出 Overlay -->
+        <div id="levelClearMenu" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col justify-center items-center text-center p-6 rounded-xl border border-cyan-500/40 hidden">
+            <h2 class="text-3xl sm:text-4xl font-black text-cyan-400 mb-2 neon-text-cyan">LEVEL CLEAR!</h2>
+            <p class="text-cyan-200 mb-6 text-sm">準備進入下一個挑戰關卡</p>
+
+            <button onclick="nextLevel()" class="btn-glow px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-emerald-500 font-bold text-base rounded-full shadow-lg text-white border border-cyan-300 tracking-wider">
+                進入下一關 (NEXT)
+            </button>
+        </div>
+
+        <!-- 暫停 Overlay -->
+        <div id="pauseMenu" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center text-center p-6 rounded-xl hidden">
+            <h2 class="text-3xl font-bold text-cyan-400 mb-6 tracking-widest neon-text-cyan">PAUSED</h2>
+            <button onclick="togglePause()" class="btn-glow px-8 py-3.5 bg-cyan-600 hover:bg-cyan-500 font-bold rounded-full text-white tracking-wider">
+                繼續遊戲 (RESUME)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio API 音效引擎 ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            play(type) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'hit-paddle') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'hit-brick') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(850, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'explode') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'powerup') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(900, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'die') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 核心物件狀態
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+        let isPaused = false;
+        let isGameOver = false;
+        let animationFrameId = null;
+
+        // 滑塊 Paddle
+        const paddle = {
+            width: 100,
+            height: 14,
+            x: canvas.width / 2 - 50,
+            y: canvas.height - 35,
+            speed: 8,
+            dx: 0,
+            hasLaser: false,
+            hasShield: false,
+            laserTimer: 0
+        };
+
+        // 小球陣列 (支援 Multi-ball 多重球)
+        let balls = [];
+
+        // 磚塊與關卡設定
+        const brickConfig = {
+            rows: 6,
+            cols: 8,
+            padding: 8,
+            offsetTop: 70,
+            offsetLeft: 15,
+            width: 0,
+            height: 22
+        };
+        brickConfig.width = (canvas.width - brickConfig.offsetLeft * 2 - (brickConfig.cols - 1) * brickConfig.padding) / brickConfig.cols;
+
+        let bricks = [];
+        let powerups = [];
+        let lasers = [];
+        let particles = [];
+
+        // 鍵盤狀態
+        const keys = {
+            left: false,
+            right: false,
+            space: false
+        };
+
+        function createBricksForLevel(lvl) {
+            bricks = [];
+            const rows = Math.min(5 + Math.floor(lvl / 2), 9);
+            const cols = brickConfig.cols;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    // 隨機種類磚塊
+                    let type = 'normal'; // 1 Hit
+                    let hp = 1;
+                    const rand = Math.random();
+
+                    if (rand < 0.15 + lvl * 0.02) {
+                        type = 'hard'; // 2 Hits
+                        hp = 2;
+                    } else if (rand < 0.25 && r > 1) {
+                        type = 'bomb'; // 爆炸磚塊
+                        hp = 1;
+                    } else if (rand < 0.32 && r > 2 && lvl > 1) {
+                        type = 'steel'; // 鋼鐵不壞磚 (除雷射/炸彈外)
+                        hp = Infinity;
+                    }
+
+                    const bx = brickConfig.offsetLeft + c * (brickConfig.width + brickConfig.padding);
+                    const by = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+
+                    bricks.push({
+                        x: bx,
+                        y: by,
+                        w: brickConfig.width,
+                        h: brickConfig.height,
+                        type: type,
+                        hp: hp,
+                        maxHp: hp,
+                        color: getBrickColor(type, hp)
+                    });
+                }
+            }
+        }
+
+        function getBrickColor(type, hp) {
+            if (type === 'steel') return '#718096';
+            if (type === 'bomb') return '#ff0055';
+            if (type === 'hard') return hp === 2 ? '#a855f7' : '#c084fc';
+            return '#00f3ff';
+        }
+
+        function spawnBallOnPaddle() {
+            balls = [{
+                x: paddle.x + paddle.width / 2,
+                y: paddle.y - 10,
+                radius: 7,
+                dx: 0,
+                dy: 0,
+                speed: 6.5 + level * 0.3,
+                attached: true
+            }];
+        }
+
+        function startGame() {
+            audio.init();
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('levelClearMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
+
+            score = 0;
+            level = 1;
+            lives = 3;
+            isGameOver = false;
+            isPaused = false;
+
+            resetPaddle();
+            createBricksForLevel(level);
+            spawnBallOnPaddle();
+
+            updateUI();
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function nextLevel() {
+            level++;
+            document.getElementById('levelClearMenu').classList.add('hidden');
+            resetPaddle();
+            createBricksForLevel(level);
+            spawnBallOnPaddle();
+            updateUI();
+            isPaused = false;
+        }
+
+        function resetPaddle() {
+            paddle.width = 100;
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+            paddle.hasLaser = false;
+            paddle.hasShield = false;
+            powerups = [];
+            lasers = [];
+            particles = [];
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('level').innerText = level;
+            document.getElementById('lives').innerText = '❤️'.repeat(Math.max(0, lives));
+        }
+
+        function launchBall() {
+            balls.forEach(ball => {
+                if (ball.attached) {
+                    ball.attached = false;
+                    const angle = (Math.random() * 0.4 - 0.2) - Math.PI / 2; // 微傾斜向上發射
+                    ball.dx = ball.speed * Math.cos(angle);
+                    ball.dy = ball.speed * Math.sin(angle);
+                }
+            });
+        }
+
+        function fireLaser() {
+            if (!paddle.hasLaser) return;
+            audio.play('laser');
+            lasers.push({ x: paddle.x + 12, y: paddle.y, w: 4, h: 14, dy: -12 });
+            lasers.push({ x: paddle.x + paddle.width - 16, y: paddle.y, w: 4, h: 14, dy: -12 });
+        }
+
+        function update() {
+            if (isPaused || isGameOver) return;
+
+            // 1. 移動滑塊
+            if (keys.left && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+            if (keys.right && paddle.x + paddle.width < canvas.width) {
+                paddle.x += paddle.speed;
+            }
+
+            // 2. 移動附著在滑塊上的球
+            balls.forEach(ball => {
+                if (ball.attached) {
+                    ball.x = paddle.x + paddle.width / 2;
+                }
+            });
+
+            // 3. 移動雷射並與磚塊碰撞
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const l = lasers[i];
+                l.y += l.dy;
+                if (l.y < 0) {
+                    lasers.splice(i, 1);
+                    continue;
+                }
+
+                // 雷射擊中磚塊
+                for (let j = bricks.length - 1; j >= 0; j--) {
+                    const b = bricks[j];
+                    if (l.x > b.x && l.x < b.x + b.w && l.y > b.y && l.y < b.y + b.h) {
+                        lasers.splice(i, 1);
+                        damageBrick(b, j);
+                        break;
+                    }
+                }
+            }
+
+            // 4. 移動道具並檢測吃取
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.y += p.dy;
+
+                // 道具與滑塊碰撞
+                if (p.x > paddle.x && p.x < paddle.x + paddle.width && p.y + p.h > paddle.y && p.y < paddle.y + paddle.height) {
+                    applyPowerup(p.type);
+                    powerups.splice(i, 1);
+                    audio.play('powerup');
+                    continue;
+                }
+
+                // 掉出底層
+                if (p.y > canvas.height) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // 5. 球體物理運動與碰撞
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                if (ball.attached) continue;
+
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // 牆壁反彈 (左右)
+                if (ball.x - ball.radius < 0) {
+                    ball.x = ball.radius;
+                    ball.dx *= -1;
+                } else if (ball.x + ball.radius > canvas.width) {
+                    ball.x = canvas.width - ball.radius;
+                    ball.dx *= -1;
+                }
+
+                // 牆壁反彈 (頂部)
+                if (ball.y - ball.radius < 0) {
+                    ball.y = ball.radius;
+                    ball.dy *= -1;
+                }
+
+                // 底部防護罩反彈或落底死亡
+                if (ball.y + ball.radius > canvas.height - 10) {
+                    if (paddle.hasShield) {
+                        ball.dy = -Math.abs(ball.dy);
+                        paddle.hasShield = false; // 護盾抵擋一次後消耗
+                        audio.play('hit-paddle');
+                        continue;
+                    }
+                }
+
+                if (ball.y - ball.radius > canvas.height) {
+                    balls.splice(i, 1);
+                    continue;
+                }
+
+                // 與滑塊碰撞
+                if (ball.dy > 0 &&
+                    ball.x > paddle.x - ball.radius &&
+                    ball.x < paddle.x + paddle.width + ball.radius &&
+                    ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height) {
+
+                    audio.play('hit-paddle');
+                    ball.y = paddle.y - ball.radius;
+
+                    // 切擊角度計算：根據擊中滑塊位置改變反彈角度
+                    const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    const maxAngle = Math.PI / 3; // 最大 60 度
+                    const angle = hitPoint * maxAngle;
+
+                    ball.dx = ball.speed * Math.sin(angle);
+                    ball.dy = -ball.speed * Math.cos(angle);
+                }
+
+                // 與磚塊碰撞
+                for (let j = bricks.length - 1; j >= 0; j--) {
+                    const b = bricks[j];
+
+                    if (ball.x + ball.radius > b.x &&
+                        ball.x - ball.radius < b.x + b.w &&
+                        ball.y + ball.radius > b.y &&
+                        ball.y - ball.radius < b.y + b.h) {
+
+                        // 反彈物理計算
+                        const overlapLeft = (ball.x + ball.radius) - b.x;
+                        const overlapRight = (b.x + b.w) - (ball.x - ball.radius);
+                        const overlapTop = (ball.y + ball.radius) - b.y;
+                        const overlapBottom = (b.y + b.h) - (ball.y - ball.radius);
+
+                        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                        if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+                            ball.dx *= -1;
+                        } else {
+                            ball.dy *= -1;
+                        }
+
+                        damageBrick(b, j);
+                        break;
+                    }
+                }
+            }
+
+            // 6. 檢查生命與勝負條件
+            if (balls.length === 0) {
+                lives--;
+                audio.play('die');
+                updateUI();
+
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    spawnBallOnPaddle();
+                }
+            }
+
+            // 檢查是否消滅所有非鋼鐵磚塊
+            const remainingDestructible = bricks.filter(b => b.type !== 'steel').length;
+            if (remainingDestructible === 0) {
+                isPaused = true;
+                document.getElementById('levelClearMenu').classList.remove('hidden');
+            }
+
+            // 7. 更新粒子運動
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function damageBrick(brick, index) {
+            if (brick.type === 'steel') {
+                audio.play('hit-paddle');
+                return;
+            }
+
+            brick.hp--;
+            if (brick.hp > 0) {
+                brick.color = getBrickColor(brick.type, brick.hp);
+                audio.play('hit-brick');
+                createParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 6);
+            } else {
+                // 磚塊被毀
+                score += (brick.type === 'bomb' ? 25 : 10) * level;
+                updateUI();
+
+                createParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 14);
+
+                // 炸彈磚塊引爆周圍
+                if (brick.type === 'bomb') {
+                    audio.play('explode');
+                    triggerBombExplosion(brick.x + brick.w / 2, brick.y + brick.h / 2);
+                } else {
+                    audio.play('hit-brick');
+                }
+
+                // 隨機掉落道具 (20% 機率)
+                if (Math.random() < 0.22) {
+                    spawnPowerup(brick.x + brick.w / 2, brick.y + brick.h / 2);
+                }
+
+                bricks.splice(index, 1);
+            }
+        }
+
+        function triggerBombExplosion(cx, cy) {
+            const radius = 80;
+            for (let i = bricks.length - 1; i >= 0; i--) {
+                const b = bricks[i];
+                const bx = b.x + b.w / 2;
+                const by = b.y + b.h / 2;
+                const dist = Math.hypot(bx - cx, by - cy);
+
+                if (dist < radius && b.type !== 'steel') {
+                    score += 10 * level;
+                    createParticles(bx, by, b.color, 10);
+                    bricks.splice(i, 1);
+                }
+            }
+        }
+
+        function spawnPowerup(x, y) {
+            const types = ['MULTIBALL', 'EXPAND', 'LASER', 'SHIELD', 'LIFE'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerups.push({ x: x, y: y, w: 22, h: 22, dy: 2.5, type: type });
+        }
+
+        function applyPowerup(type) {
+            score += 50;
+            updateUI();
+
+            if (type === 'EXPAND') {
+                paddle.width = Math.min(170, paddle.width + 30);
+            } else if (type === 'MULTIBALL') {
+                const count = balls.length;
+                for (let i = 0; i < count; i++) {
+                    const b = balls[i];
+                    if (!b.attached) {
+                        balls.push({ ...b, dx: b.dx * 0.8 + 2, dy: -b.dy });
+                        balls.push({ ...b, dx: -b.dx * 0.8 - 2, dy: -b.dy });
+                    }
+                }
+            } else if (type === 'LASER') {
+                paddle.hasLaser = true;
+            } else if (type === 'SHIELD') {
+                paddle.hasShield = true;
+            } else if (type === 'LIFE') {
+                lives = Math.min(5, lives + 1);
+                updateUI();
+            }
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 繪製底部防護罩
+            if (paddle.hasShield) {
+                ctx.save();
+                ctx.strokeStyle = '#00f3ff';
+                ctx.lineWidth = 4;
+                ctx.shadowColor = '#00f3ff';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - 8);
+                ctx.lineTo(canvas.width, canvas.height - 8);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 2. 繪製磚塊
+            bricks.forEach(b => {
+                ctx.save();
+                ctx.fillStyle = b.color;
+                ctx.shadowColor = b.color;
+                ctx.shadowBlur = b.type === 'steel' ? 2 : 10;
+                ctx.beginPath();
+                ctx.roundRect(b.x, b.y, b.w, b.h, [4]);
+                ctx.fill();
+
+                // 2 Hit 硬化磚塊顯示紋路裂痕
+                if (b.type === 'hard' && b.hp === 1) {
+                    ctx.strokeStyle = '#030308';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(b.x + 5, b.y + 3);
+                    ctx.lineTo(b.x + b.w / 2, b.y + b.h - 3);
+                    ctx.lineTo(b.x + b.w - 5, b.y + 4);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            });
+
+            // 3. 繪製滑塊 Paddle
+            ctx.save();
+            ctx.fillStyle = paddle.hasLaser ? '#ff0055' : '#00f3ff';
+            ctx.shadowColor = paddle.hasLaser ? '#ff0055' : '#00f3ff';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, [7]);
+            ctx.fill();
+
+            // 若有雷射砲，繪製槍管
+            if (paddle.hasLaser) {
+                ctx.fillStyle = '#ff0055';
+                ctx.fillRect(paddle.x + 8, paddle.y - 6, 6, 6);
+                ctx.fillRect(paddle.x + paddle.width - 14, paddle.y - 6, 6, 6);
+            }
+            ctx.restore();
+
+            // 4. 繪製小球 Balls
+            balls.forEach(ball => {
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00f3ff';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 5. 繪製雷射 Lasers
+            lasers.forEach(l => {
+                ctx.save();
+                ctx.fillStyle = '#ff0055';
+                ctx.shadowColor = '#ff0055';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(l.x, l.y, l.w, l.h);
+                ctx.restore();
+            });
+
+            // 6. 繪製道具 Powerups
+            powerups.forEach(p => {
+                ctx.save();
+                let color = '#00f3ff';
+                let symbol = 'P';
+                if (p.type === 'EXPAND') { color = '#00f3ff'; symbol = '↔'; }
+                if (p.type === 'MULTIBALL') { color = '#a855f7'; symbol = '●'; }
+                if (p.type === 'LASER') { color = '#ff0055'; symbol = '⚡'; }
+                if (p.type === 'SHIELD') { color = '#3b82f6'; symbol = '🛡️'; }
+                if (p.type === 'LIFE') { color = '#ef4444'; symbol = '❤️'; }
+
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(symbol, p.x, p.y);
+                ctx.restore();
+            });
+
+            // 7. 繪製爆炸粒子 Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+        }
+
+        function togglePause() {
+            if (isGameOver) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else {
+                document.getElementById('pauseMenu').classList.add('hidden');
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- 控制 Event Listeners ---
+        window.addEventListener('keydown', e => {
+            audio.init();
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === ' ') {
+                e.preventDefault();
+                launchBall();
+                fireLaser();
+            }
+            if (e.key === 'p' || e.key === 'P') togglePause();
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        // 滑鼠與觸控移動控制
+        function handlePointerMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const mouseX = clientX - rect.left;
+            const scaleX = canvas.width / rect.width;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, mouseX * scaleX - paddle.width / 2));
+        }
+
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', (e) => {
+            handlePointerMove(e);
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('click', () => {
+            audio.init();
+            launchBall();
+            fireLaser();
+        });
+
+        document.getElementById('pause-btn').addEventListener('click', togglePause);
+
+        const soundBtn = document.getElementById('sound-btn');
+        const soundOn = document.getElementById('sound-on');
+        const soundOff = document.getElementById('sound-off');
+
+        soundBtn.addEventListener('click', () => {
+            audio.init();
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                soundOn.classList.add('hidden');
+                soundOff.classList.remove('hidden');
+            } else {
+                soundOn.classList.remove('hidden');
+                soundOff.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

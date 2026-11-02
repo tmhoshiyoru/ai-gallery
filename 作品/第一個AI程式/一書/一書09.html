@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Chrome T-Rex Runner - 天氣與晝夜變化版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Press Start 2P', monospace, cursive;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .pixel-text {
+      font-family: 'Press Start 2P', monospace;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+
+  <!-- Main Game Container -->
+  <div class="relative w-full max-w-4xl bg-gray-800 rounded-xl shadow-2xl p-3 sm:p-6 border border-gray-700 flex flex-col items-center">
+    
+    <!-- Top Header & Controls bar -->
+    <div class="w-full flex justify-between items-center mb-3 px-2 text-xs sm:text-sm">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🦖</span>
+        <h1 class="font-bold tracking-wider hidden sm:inline text-gray-200">DINO RUNNER</h1>
+      </div>
+
+      <!-- Current Weather & Time Badge -->
+      <div id="weatherBadge" class="flex items-center gap-2 bg-gray-700/70 px-3 py-1.5 rounded-full border border-gray-600 text-xs transition-all duration-500">
+        <span id="weatherIcon" class="text-base">☀️</span>
+        <span id="weatherText" class="text-yellow-300 font-semibold">日間晴朗</span>
+      </div>
+
+      <!-- Audio & Control Buttons -->
+      <div class="flex items-center gap-2">
+        <button id="soundBtn" class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition text-sm focus:outline-none" title="音效開關">
+          🔊
+        </button>
+        <button id="pauseBtn" class="bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition text-sm focus:outline-none" title="暫停遊戲">
+          ⏸️
+        </button>
+      </div>
+    </div>
+
+    <!-- Canvas Game Frame -->
+    <div class="relative w-full aspect-[16/7] bg-black rounded-lg overflow-hidden border-2 border-gray-600 shadow-inner">
+      <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+      <!-- Overlay Screens (Start & Game Over) -->
+      <div id="startScreen" class="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4">
+        <div class="text-2xl sm:text-4xl font-bold mb-4 text-yellow-400 drop-shadow-md">T-REX RUNNER</div>
+        <p class="text-xs sm:text-sm text-gray-300 mb-6 leading-relaxed max-w-md">
+          按下 <span class="bg-gray-700 px-2 py-1 rounded text-white border border-gray-500">空白鍵</span> 或 <span class="bg-gray-700 px-2 py-1 rounded text-white border border-gray-500">點擊螢幕</span> 跳躍<br/>
+          按下 <span class="bg-gray-700 px-2 py-1 rounded text-white border border-gray-500">向下箭頭 ↓</span> 蹲下
+        </p>
+        <button id="startBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-lg border-b-4 border-emerald-800 hover:border-emerald-700 active:border-b-0 active:translate-y-1 transition text-xs sm:text-sm shadow-lg">
+          開始遊戲 START
+        </button>
+      </div>
+
+      <div id="gameOverScreen" class="hidden absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-center p-4">
+        <div class="text-xl sm:text-3xl font-bold mb-2 text-red-500 tracking-widest">GAME OVER</div>
+        <p id="finalScoreText" class="text-xs sm:text-sm text-gray-300 mb-6">SCORE: 00000</p>
+        <button id="restartBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-6 rounded-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 transition text-xs sm:text-sm shadow-lg flex items-center gap-2">
+          <span>🔄</span> 重新開始 (SPACE)
+        </button>
+      </div>
+    </div>
+
+    <!-- Touch Control Panel for Mobile -->
+    <div class="w-full grid grid-cols-2 gap-3 mt-3 sm:hidden">
+      <button id="touchJumpBtn" class="bg-indigo-600 active:bg-indigo-700 text-white py-4 rounded-xl font-bold text-center border-b-4 border-indigo-900 active:border-b-0 shadow-md touch-none">
+        🦘 跳躍 JUMP
+      </button>
+      <button id="touchDuckBtn" class="bg-amber-600 active:bg-amber-700 text-white py-4 rounded-xl font-bold text-center border-b-4 border-amber-900 active:border-b-0 shadow-md touch-none">
+        👇 蹲下 DUCK
+      </button>
+    </div>
+
+    <!-- Instruction Hints -->
+    <div class="hidden sm:flex justify-between w-full mt-3 text-[10px] text-gray-400 px-1">
+      <span>提示: 隨分數增加將進入 夕陽、暴風雨閃電 與 星空夜景</span>
+      <span>按 ESC 可暫停</span>
+    </div>
+
+  </div>
+
+  <!-- JavaScript Implementation -->
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+
+      playJump() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.12);
+        } catch(e) {}
+      }
+
+      playPoint() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880, now + 0.08); // A5
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } catch(e) {}
+      }
+
+      playGameOver() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } catch(e) {}
+      }
+
+      playThunder() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const bufferSize = this.ctx.sampleRate * 0.5;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const output = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          const whiteNoise = this.ctx.createBufferSource();
+          whiteNoise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 300;
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+          whiteNoise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          whiteNoise.start();
+        } catch(e) {}
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Canvas Virtual Resolution
+    const V_WIDTH = 1000;
+    const V_HEIGHT = 400;
+    const GROUND_Y = 320;
+
+    function resizeCanvas() {
+      canvas.width = V_WIDTH;
+      canvas.height = V_HEIGHT;
+    }
+    resizeCanvas();
+
+    // Weather & Day/Night States Definition
+    const WEATHERS = {
+      DAY: { name: '日間晴朗', icon: '☀️', skyColor: '#87CEEB', textColor: '#d97706', groundColor: '#d2b48c', subGroundColor: '#8b5a2b' },
+      SUNSET: { name: '黃昏夕陽', icon: '🌅', skyColor: '#FD5E53', textColor: '#f97316', groundColor: '#c8965d', subGroundColor: '#6b3e19' },
+      RAIN: { name: '暴雨閃電', icon: '⛈️', skyColor: '#374151', textColor: '#60a5fa', groundColor: '#6b7280', subGroundColor: '#374151' },
+      NIGHT: { name: '璀璨星夜', icon: '🌙', skyColor: '#0f172a', textColor: '#a7f3d0', groundColor: '#334155', subGroundColor: '#1e293b' }
+    };
+
+    let gameState = 'START'; // START, RUNNING, PAUSED, GAMEOVER
+    let score = 0;
+    let highScore = localStorage.getItem('dino_hi_score') || 0;
+    let gameSpeed = 7;
+    let frameCount = 0;
+    let currentWeather = WEATHERS.DAY;
+
+    // Background Environmental Particle Systems
+    let rainDrops = [];
+    let stars = [];
+    let clouds = [];
+    let lightningTimer = 0;
+    let isLightningActive = false;
+
+    // Initialize Starfield
+    for (let i = 0; i < 60; i++) {
+      stars.push({
+        x: Math.random() * V_WIDTH,
+        y: Math.random() * (GROUND_Y - 50),
+        size: Math.random() * 2 + 1,
+        alpha: Math.random()
+      });
+    }
+
+    // Initialize Clouds
+    for (let i = 0; i < 5; i++) {
+      clouds.push({
+        x: Math.random() * V_WIDTH,
+        y: 40 + Math.random() * 80,
+        speed: 0.5 + Math.random() * 0.8,
+        width: 60 + Math.random() * 40
+      });
+    }
+
+    // Initialize Rain
+    for (let i = 0; i < 80; i++) {
+      rainDrops.push({
+        x: Math.random() * V_WIDTH,
+        y: Math.random() * V_HEIGHT,
+        length: 12 + Math.random() * 10,
+        speed: 12 + Math.random() * 6
+      });
+    }
+
+    class Dinosaur {
+      constructor() {
+        this.x = 80;
+        this.y = GROUND_Y - 60;
+        this.width = 50;
+        this.height = 60;
+        this.normalHeight = 60;
+        this.duckHeight = 35;
+        this.velocityY = 0;
+        this.gravity = 0.85;
+        this.fastDropGravity = 3.5; // Fast gravity acceleration when pressing down in air
+        this.isGrounded = true;
+        this.isDucking = false;
+        this.isFastDropping = false;
+        this.legFrame = 0;
+      }
+
+      jump() {
+        if (this.isGrounded && !this.isDucking) {
+          this.velocityY = -16.5;
+          this.isGrounded = false;
+          sound.playJump();
+        }
+      }
+
+      duck(ducking) {
+        if (this.isGrounded) {
+          // Normal ducking on ground
+          this.isDucking = ducking;
+          this.isFastDropping = false;
+          if (ducking) {
+            this.height = this.duckHeight;
+            this.y = GROUND_Y - this.duckHeight;
+          } else {
+            this.height = this.normalHeight;
+            this.y = GROUND_Y - this.normalHeight;
+          }
+        } else {
+          // Mid-air fast drop trigger
+          if (ducking) {
+            this.isFastDropping = true;
+            // Force downwards velocity if moving up or falling slowly
+            if (this.velocityY < 8) {
+              this.velocityY = 12;
+            }
+          } else {
+            this.isFastDropping = false;
+          }
+        }
+      }
+
+      update() {
+        // Apply Gravity (accelerated gravity if fast dropping in air)
+        const currentGravity = (!this.isGrounded && this.isFastDropping) ? this.fastDropGravity : this.gravity;
+        this.velocityY += currentGravity;
+        this.y += this.velocityY;
+
+        // Ground Floor Collision
+        const currentH = (this.isDucking && this.isGrounded) ? this.duckHeight : this.normalHeight;
+        if (this.y + currentH >= GROUND_Y) {
+          this.y = GROUND_Y - currentH;
+          this.velocityY = 0;
+          this.isGrounded = true;
+
+          // Transition to ground ducking if down key is still held
+          if (this.isFastDropping) {
+            this.isFastDropping = false;
+            this.isDucking = true;
+            this.height = this.duckHeight;
+            this.y = GROUND_Y - this.duckHeight;
+          }
+        }
+
+        // Animate legs while running
+        if (frameCount % 6 === 0) {
+          this.legFrame = (this.legFrame + 1) % 2;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#e2e8f0' : '#334155';
+
+        if (!this.isDucking || !this.isGrounded) {
+          // Standing or Mid-Air Dino (including Fast Drop pose)
+          // Body
+          ctx.fillRect(this.x + 15, this.y + 15, 25, 25);
+          // Head
+          ctx.fillRect(this.x + 25, this.y, 25, 20);
+          // Eye
+          ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#0f172a' : '#ffffff';
+          ctx.fillRect(this.x + 40, this.y + 4, 4, 4);
+          // Snout/Mouth gap
+          ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#e2e8f0' : '#334155';
+          ctx.fillRect(this.x + 35, this.y + 14, 15, 4);
+          // Arm
+          ctx.fillRect(this.x + 38, this.y + 22, 6, 6);
+          // Tail
+          ctx.fillRect(this.x, this.y + 18, 15, 10);
+          ctx.fillRect(this.x - 5, this.y + 15, 6, 6);
+
+          // Legs & Fast Drop visual indication
+          if (!this.isGrounded) {
+            if (this.isFastDropping) {
+              // Tucked legs during fast drop
+              ctx.fillRect(this.x + 20, this.y + 40, 8, 8);
+              ctx.fillRect(this.x + 30, this.y + 40, 8, 8);
+              // Visual wind lines above dino during fast drop
+              ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.3)';
+              ctx.fillRect(this.x + 10, this.y - 12, 3, 10);
+              ctx.fillRect(this.x + 25, this.y - 18, 3, 14);
+              ctx.fillRect(this.x + 40, this.y - 10, 3, 8);
+            } else {
+              // Standard Jump pose
+              ctx.fillRect(this.x + 18, this.y + 40, 6, 12);
+              ctx.fillRect(this.x + 30, this.y + 40, 6, 12);
+            }
+          } else {
+            if (this.legFrame === 0) {
+              ctx.fillRect(this.x + 18, this.y + 40, 6, 20);
+              ctx.fillRect(this.x + 30, this.y + 40, 6, 10);
+            } else {
+              ctx.fillRect(this.x + 18, this.y + 40, 6, 10);
+              ctx.fillRect(this.x + 30, this.y + 40, 6, 20);
+            }
+          }
+        } else {
+          // Ground Ducking Pixel Dino
+          this.width = 65;
+          // Lower Body
+          ctx.fillRect(this.x, this.y + 10, 50, 18);
+          // Low Head
+          ctx.fillRect(this.x + 40, this.y, 25, 18);
+          // Eye
+          ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#0f172a' : '#ffffff';
+          ctx.fillRect(this.x + 58, this.y + 4, 4, 4);
+          ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#e2e8f0' : '#334155';
+          // Tail
+          ctx.fillRect(this.x - 8, this.y + 8, 10, 8);
+          // Legs
+          if (this.legFrame === 0) {
+            ctx.fillRect(this.x + 15, this.y + 28, 6, 8);
+            ctx.fillRect(this.x + 32, this.y + 28, 6, 4);
+          } else {
+            ctx.fillRect(this.x + 15, this.y + 28, 6, 4);
+            ctx.fillRect(this.x + 32, this.y + 28, 6, 8);
+          }
+        }
+      }
+
+      getHitbox() {
+        const padding = 6;
+        const duckingState = this.isDucking && this.isGrounded;
+        return {
+          x: this.x + padding,
+          y: this.y + padding,
+          width: (duckingState ? 60 : 40) - padding * 2,
+          height: (duckingState ? this.duckHeight : this.normalHeight) - padding * 2
+        };
+      }
+    }
+
+    class Obstacle {
+      constructor() {
+        this.markedForDeletion = false;
+      }
+    }
+
+    class Cactus extends Obstacle {
+      constructor(type) {
+        super();
+        this.type = type; // 1: Single, 2: Double, 3: Large
+        this.x = V_WIDTH + 50;
+        this.width = type === 1 ? 24 : (type === 2 ? 46 : 65);
+        this.height = type === 3 ? 65 : 50;
+        this.y = GROUND_Y - this.height;
+      }
+
+      update() {
+        this.x -= gameSpeed;
+        if (this.x + this.width < -50) this.markedForDeletion = true;
+      }
+
+      draw() {
+        ctx.fillStyle = currentWeather === WEATHERS.RAIN ? '#047857' : '#15803d';
+        
+        const drawSingleCactus = (ox, w, h) => {
+          // Main stem
+          ctx.fillRect(ox + w*0.35, this.y, w*0.3, h);
+          // Left arm
+          ctx.fillRect(ox, this.y + h*0.3, w*0.35, h*0.12);
+          ctx.fillRect(ox, this.y + h*0.15, w*0.12, h*0.25);
+          // Right arm
+          ctx.fillRect(ox + w*0.65, this.y + h*0.4, w*0.35, h*0.12);
+          ctx.fillRect(ox + w*0.88, this.y + h*0.25, w*0.12, h*0.25);
+        };
+
+        if (this.type === 1) {
+          drawSingleCactus(this.x, this.width, this.height);
+        } else if (this.type === 2) {
+          drawSingleCactus(this.x, 22, this.height);
+          drawSingleCactus(this.x + 24, 22, this.height);
+        } else {
+          drawSingleCactus(this.x, 20, this.height);
+          drawSingleCactus(this.x + 22, 22, this.height + 5);
+          drawSingleCactus(this.x + 45, 20, this.height - 5);
+        }
+      }
+
+      getHitbox() {
+        return {
+          x: this.x + 4,
+          y: this.y + 4,
+          width: this.width - 8,
+          height: this.height - 4
+        };
+      }
+    }
+
+    class Pterodactyl extends Obstacle {
+      constructor() {
+        super();
+        this.x = V_WIDTH + 50;
+        this.width = 46;
+        this.height = 36;
+        // Fly height options: High (jump under), Medium (duck under), Low (jump over)
+        const heights = [GROUND_Y - 35, GROUND_Y - 60, GROUND_Y - 95];
+        this.y = heights[Math.floor(Math.random() * heights.length)];
+        this.wingFrame = 0;
+      }
+
+      update() {
+        this.x -= gameSpeed * 1.15; // Flies slightly faster
+        if (frameCount % 12 === 0) {
+          this.wingFrame = (this.wingFrame + 1) % 2;
+        }
+        if (this.x + this.width < -50) this.markedForDeletion = true;
+      }
+
+      draw() {
+        ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#cbd5e1' : '#475569';
+        // Body
+        ctx.fillRect(this.x + 12, this.y + 14, 22, 10);
+        // Head & Beak
+        ctx.fillRect(this.x + 30, this.y + 8, 16, 8);
+        ctx.fillRect(this.x + 40, this.y + 12, 10, 4);
+
+        // Wings Wings Animation
+        if (this.wingFrame === 0) {
+          // Wing Up
+          ctx.fillRect(this.x + 16, this.y - 10, 10, 24);
+          ctx.fillRect(this.x + 22, this.y - 16, 6, 10);
+        } else {
+          // Wing Down
+          ctx.fillRect(this.x + 16, this.y + 18, 10, 18);
+        }
+      }
+
+      getHitbox() {
+        return {
+          x: this.x + 4,
+          y: this.y + 4,
+          width: this.width - 8,
+          height: this.height - 8
+        };
+      }
+    }
+
+    let dino = new Dinosaur();
+    let obstacles = [];
+    let obstacleTimer = 0;
+
+    // Helper: AABB Collision Test
+    function isColliding(rect1, rect2) {
+      return (
+        rect1.x < rect2.x + rect2.width &&
+        rect1.x + rect1.width > rect2.x &&
+        rect1.y < rect2.y + rect2.height &&
+        rect1.y + rect1.height > rect2.y
+      );
+    }
+
+    function updateWeatherSystem() {
+      // Transition weather based on score milestones
+      let nextWeather = WEATHERS.DAY;
+      const cycle = Math.floor(score / 400) % 4;
+
+      switch(cycle) {
+        case 0: nextWeather = WEATHERS.DAY; break;
+        case 1: nextWeather = WEATHERS.SUNSET; break;
+        case 2: nextWeather = WEATHERS.RAIN; break;
+        case 3: nextWeather = WEATHERS.NIGHT; break;
+      }
+
+      if (currentWeather !== nextWeather) {
+        currentWeather = nextWeather;
+        // Update UI Badge
+        document.getElementById('weatherIcon').textContent = currentWeather.icon;
+        document.getElementById('weatherText').textContent = currentWeather.name;
+        document.getElementById('weatherText').style.color = currentWeather.textColor;
+      }
+
+      // Lightning trigger during Rain
+      if (currentWeather === WEATHERS.RAIN) {
+        lightningTimer++;
+        if (lightningTimer > 180 && Math.random() < 0.015) {
+          isLightningActive = true;
+          sound.playThunder();
+          setTimeout(() => { isLightningActive = false; }, 80);
+          setTimeout(() => { isLightningActive = true; }, 140);
+          setTimeout(() => { isLightningActive = false; }, 200);
+          lightningTimer = 0;
+        }
+      }
+    }
+
+    function drawBackground() {
+      // 1. Sky Gradient Background
+      if (isLightningActive) {
+        ctx.fillStyle = '#ffffff'; // Lightning flash effect
+      } else {
+        ctx.fillStyle = currentWeather.skyColor;
+      }
+      ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+      // 2. Stars rendering (Night time)
+      if (currentWeather === WEATHERS.NIGHT) {
+        ctx.fillStyle = '#ffffff';
+        stars.forEach(star => {
+          star.alpha += (Math.random() - 0.5) * 0.05;
+          star.alpha = Math.max(0.2, Math.min(1, star.alpha));
+          ctx.globalAlpha = star.alpha;
+          ctx.fillRect(star.x, star.y, star.size, star.size);
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Draw Moon
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(820, 80, 26, 0, Math.PI * 2);
+        ctx.fill();
+        // Moon Shadow
+        ctx.fillStyle = currentWeather.skyColor;
+        ctx.beginPath();
+        ctx.arc(810, 75, 24, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 3. Sun / Sunset Sun
+      if (currentWeather === WEATHERS.DAY) {
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(850, 70, 22, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentWeather === WEATHERS.SUNSET) {
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.arc(750, 180, 36, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4. Parallax Clouds
+      ctx.fillStyle = currentWeather === WEATHERS.RAIN ? '#4b5563' : 'rgba(255, 255, 255, 0.75)';
+      clouds.forEach(cloud => {
+        if (gameState === 'RUNNING') cloud.x -= cloud.speed;
+        if (cloud.x + cloud.width < -50) cloud.x = V_WIDTH + 50;
+
+        ctx.fillRect(cloud.x, cloud.y, cloud.width, 14);
+        ctx.fillRect(cloud.x + 10, cloud.y - 10, cloud.width - 20, 10);
+      });
+
+      // 5. Desert Mountain Horizon Silhouette
+      ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#1e293b' : (currentWeather === WEATHERS.SUNSET ? '#881337' : '#ca8a04');
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(120, GROUND_Y - 45);
+      ctx.lineTo(240, GROUND_Y);
+      ctx.lineTo(450, GROUND_Y - 70);
+      ctx.lineTo(600, GROUND_Y);
+      ctx.lineTo(800, GROUND_Y - 50);
+      ctx.lineTo(V_WIDTH, GROUND_Y);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // 6. Ground Soil Structure & Lines
+      ctx.fillStyle = currentWeather.groundColor;
+      ctx.fillRect(0, GROUND_Y, V_WIDTH, 12);
+
+      ctx.fillStyle = currentWeather.subGroundColor;
+      ctx.fillRect(0, GROUND_Y + 12, V_WIDTH, V_HEIGHT - GROUND_Y - 12);
+
+      // Moving Ground Bump Pixels
+      ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#64748b' : '#a16207';
+      const offset = (frameCount * gameSpeed) % 40;
+      for (let x = -offset; x < V_WIDTH; x += 40) {
+        ctx.fillRect(x, GROUND_Y + 18, 16, 3);
+        ctx.fillRect(x + 20, GROUND_Y + 35, 8, 3);
+      }
+
+      // 7. Rain Particle Animation Overlay
+      if (currentWeather === WEATHERS.RAIN) {
+        ctx.strokeStyle = 'rgba(191, 219, 254, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        rainDrops.forEach(drop => {
+          if (gameState === 'RUNNING') {
+            drop.y += drop.speed;
+            drop.x -= 2;
+            if (drop.y > V_HEIGHT) {
+              drop.y = -20;
+              drop.x = Math.random() * V_WIDTH;
+            }
+          }
+          ctx.moveTo(drop.x, drop.y);
+          ctx.lineTo(drop.x - 4, drop.y + drop.length);
+        });
+        ctx.stroke();
+      }
+    }
+
+    function drawHUD() {
+      ctx.fillStyle = currentWeather === WEATHERS.NIGHT ? '#f1f5f9' : '#1e293b';
+      ctx.font = '16px "Press Start 2P", monospace';
+      ctx.textAlign = 'right';
+
+      const padScore = (s) => String(Math.floor(s)).padStart(5, '0');
+      const scoreStr = `HI ${padScore(highScore)}  ${padScore(score)}`;
+      
+      ctx.fillText(scoreStr, V_WIDTH - 25, 38);
+    }
+
+    function spawnObstacles() {
+      obstacleTimer++;
+      const minInterval = Math.max(50, 110 - Math.floor(score / 80));
+
+      if (obstacleTimer > minInterval) {
+        if (Math.random() < 0.75) {
+          // Spawn Cactus
+          const type = Math.random() < 0.5 ? 1 : (Math.random() < 0.7 ? 2 : 3);
+          obstacles.push(new Cactus(type));
+        } else if (score > 150) {
+          // Spawn Pterodactyl flying dinosaur
+          obstacles.push(new Pterodactyl());
+        }
+        obstacleTimer = 0;
+      }
+    }
+
+    function gameLoop() {
+      // Clear Screen
+      ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+      // Render Environment
+      drawBackground();
+
+      if (gameState === 'RUNNING') {
+        frameCount++;
+        score += 0.15;
+        gameSpeed = 7 + Math.floor(score / 100) * 0.6; // Progressive speed boost
+
+        // High Score Sound Event
+        if (Math.floor(score) > 0 && Math.floor(score) % 100 === 0 && Math.floor(score % 100 * 0.15) === 0) {
+          sound.playPoint();
+        }
+
+        updateWeatherSystem();
+        spawnObstacles();
+
+        // Update Dino
+        dino.update();
+
+        // Update & Check Obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.update();
+
+          // Collision Check
+          if (isColliding(dino.getHitbox(), obs.getHitbox())) {
+            triggerGameOver();
+          }
+
+          if (obs.markedForDeletion) {
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      // Draw Characters
+      dino.draw();
+      obstacles.forEach(obs => obs.draw());
+
+      // Draw HUD
+      drawHUD();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function triggerGameOver() {
+      gameState = 'GAMEOVER';
+      sound.playGameOver();
+
+      if (score > highScore) {
+        highScore = Math.floor(score);
+        localStorage.setItem('dino_hi_score', highScore);
+      }
+
+      document.getElementById('finalScoreText').textContent = `FINAL SCORE: ${String(Math.floor(score)).padStart(5, '0')}`;
+      document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    function resetGame() {
+      score = 0;
+      gameSpeed = 7;
+      frameCount = 0;
+      obstacles = [];
+      obstacleTimer = 0;
+      dino = new Dinosaur();
+      gameState = 'RUNNING';
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('gameOverScreen').classList.add('hidden');
+    }
+
+    // Keyboard Controls
+    window.addEventListener('keydown', (e) => {
+      sound.init(); // Initialize audio context on first user action
+
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        if (gameState === 'START' || gameState === 'GAMEOVER') {
+          resetGame();
+        } else if (gameState === 'RUNNING') {
+          dino.jump();
+        }
+      }
+
+      if (e.code === 'ArrowDown' && gameState === 'RUNNING') {
+        e.preventDefault();
+        dino.duck(true);
+      }
+
+      if (e.code === 'Escape' && (gameState === 'RUNNING' || gameState === 'PAUSED')) {
+        togglePause();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowDown') {
+        dino.duck(false);
+      }
+    });
+
+    // Touch Controls (Mobile)
+    const touchJump = document.getElementById('touchJumpBtn');
+    const touchDuck = document.getElementById('touchDuckBtn');
+
+    touchJump.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      sound.init();
+      if (gameState === 'START' || gameState === 'GAMEOVER') {
+        resetGame();
+      } else if (gameState === 'RUNNING') {
+        dino.jump();
+      }
+    });
+
+    touchDuck.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (gameState === 'RUNNING') dino.duck(true);
+    });
+
+    touchDuck.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (gameState === 'RUNNING') dino.duck(false);
+    });
+
+    // Tap directly on canvas
+    canvas.addEventListener('pointerdown', (e) => {
+      sound.init();
+      if (gameState === 'START' || gameState === 'GAMEOVER') {
+        resetGame();
+      } else if (gameState === 'RUNNING') {
+        dino.jump();
+      }
+    });
+
+    // Button Listeners
+    document.getElementById('startBtn').addEventListener('click', () => { sound.init(); resetGame(); });
+    document.getElementById('restartBtn').addEventListener('click', () => { sound.init(); resetGame(); });
+
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      soundBtn.textContent = sound.enabled ? '🔊' : '🔇';
+    });
+
+    const pauseBtn = document.getElementById('pauseBtn');
+    function togglePause() {
+      if (gameState === 'RUNNING') {
+        gameState = 'PAUSED';
+        pauseBtn.textContent = '▶️';
+      } else if (gameState === 'PAUSED') {
+        gameState = 'RUNNING';
+        pauseBtn.textContent = '⏸️';
+      }
+    }
+    pauseBtn.addEventListener('click', togglePause);
+
+    // Launch Loop on Window Load
+    window.onload = () => {
+      gameLoop();
+    };
+  </script>
+</body>
+</html>

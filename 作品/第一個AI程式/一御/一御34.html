@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stellar Conquest - 星球吞噬者</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Orbitron & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', 'Orbitron', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .cyber-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* 宇宙光暈與玻璃擬物效果 */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(56, 189, 248, 0.1);
+        }
+
+        .neon-glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        .neon-text-purple {
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.8), 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+
+        .cyber-btn {
+            background: linear-gradient(135deg, #0284c7, #7c3aed);
+            color: #ffffff;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-btn:hover {
+            background: linear-gradient(135deg, #0369a1, #6d28d9);
+            box-shadow: 0 0 25px rgba(124, 58, 237, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .cyber-btn:active {
+            transform: translateY(1px);
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 呼吸進度條動畫 */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 5px #06b6d4); }
+            50% { opacity: 1; filter: drop-shadow(0 0 15px #3b82f6); }
+        }
+
+        .progress-glow {
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full flex flex-col justify-between items-center">
+
+    <!-- 頂部資訊 HUD -->
+    <div class="absolute top-3 left-3 right-3 z-10 flex flex-wrap justify-between items-center gap-2 pointer-events-none">
+        <!-- 玩家階級與進化度 -->
+        <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto max-w-full sm:max-w-md">
+            <div id="stageBadge" class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-xl shadow-lg border border-cyan-300/40 shrink-0">
+                🪨
+            </div>
+            <div class="flex flex-col flex-1 min-w-[140px]">
+                <div class="flex justify-between items-center text-xs text-slate-300 font-semibold mb-1">
+                    <span id="stageTitle" class="text-cyan-400 font-bold tracking-wider">宇宙隕石</span>
+                    <span id="massText" class="cyber-font text-cyan-200">質量: 15</span>
+                </div>
+                <!-- 進化進度條 -->
+                <div class="w-full bg-slate-800/80 rounded-full h-2.5 p-0.5 border border-slate-700/60 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 h-full rounded-full transition-all duration-300 progress-glow" style="width: 10%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 數據統計區 (分數, 最高分, 音效) -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-4 text-xs sm:text-sm">
+                <div>
+                    <span class="text-slate-400 block text-[10px]">CURRENT SCORE</span>
+                    <span id="scoreText" class="cyber-font text-lg font-black text-cyan-400 neon-text-cyan">0</span>
+                </div>
+                <div class="w-px h-6 bg-slate-700"></div>
+                <div>
+                    <span class="text-slate-400 block text-[10px]">HIGH SCORE</span>
+                    <span id="highScoreText" class="cyber-font text-lg font-black text-purple-400">0</span>
+                </div>
+            </div>
+
+            <!-- 音效開關 -->
+            <button id="soundToggleBtn" class="glass-panel p-2.5 rounded-2xl hover:bg-slate-800/60 text-slate-300 hover:text-white transition cursor-pointer flex items-center justify-center">
+                <span id="soundIcon" class="text-lg">🔊</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 啟用中狀態效果提示 (護盾, 磁鐵, 加速) -->
+    <div id="buffContainer" class="absolute top-20 left-4 z-10 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- 宇宙擴張/事件通知提示條 -->
+    <div id="toastNotification" class="absolute top-20 left-1/2 -translate-x-1/2 z-20 glass-panel px-6 py-2.5 rounded-2xl text-cyan-300 font-bold text-sm sm:text-base border border-cyan-400/50 shadow-2xl transition-all duration-500 opacity-0 pointer-events-none transform -translate-y-4">
+        <span id="toastText">🌌 宇宙邊界已擴大！</span>
+    </div>
+
+    <!-- 右下角宇宙微型雷達 (Minimap) -->
+    <div class="absolute bottom-4 right-4 z-10 glass-panel p-1.5 rounded-2xl pointer-events-auto flex flex-col items-center">
+        <div class="text-[10px] cyber-font text-slate-400 mb-1 tracking-widest uppercase flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> RADAR
+        </div>
+        <canvas id="radarCanvas" class="w-28 h-28 rounded-xl bg-slate-950/90 border border-slate-800"></canvas>
+    </div>
+
+    <!-- 左下角操作提示 -->
+    <div class="absolute bottom-4 left-4 z-10 hidden sm:flex glass-panel px-3 py-1.5 rounded-xl text-xs text-slate-400 pointer-events-none items-center gap-2">
+        <span>🎮 控制：<span class="text-cyan-300 font-semibold">移動滑鼠/觸控</span> 指引吞噬方向</span>
+    </div>
+
+    <!-- 主遊戲 Canvas 畫布 -->
+    <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+    <!-- 遊戲選單 / 結束彈窗 (Modal Window) -->
+    <div id="gameModal" class="absolute inset-0 z-20 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+        <div class="glass-panel p-8 sm:p-10 rounded-3xl max-w-lg w-full flex flex-col items-center border border-cyan-500/30 neon-glow-cyan">
+            <div id="modalIcon" class="text-6xl mb-3 animate-bounce">🌌</div>
+            <h1 id="modalTitle" class="text-3xl sm:text-5xl font-black cyber-font text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-500 mb-2 tracking-wider">
+                STELLAR CONQUEST
+            </h1>
+            <p id="modalSubtitle" class="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
+                漫遊廣袤宇宙，吞噬比你微小的星雲與天體，避免被龐大的巨星吞滅！逐步演化為吞噬萬物的<span class="text-cyan-400 font-bold">黑洞主宰</span>！
+            </p>
+
+            <!-- 數據統計區 (GameOver/Win 顯示) -->
+            <div id="statsBox" class="hidden w-full bg-slate-900/80 rounded-2xl p-4 mb-6 border border-slate-800 grid grid-cols-2 gap-4">
+                <div class="flex flex-col items-center">
+                    <span class="text-xs text-slate-400">最終質量</span>
+                    <span id="finalMass" class="cyber-font text-2xl font-bold text-cyan-400">0</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-xs text-slate-400">最終得分</span>
+                    <span id="finalScore" class="cyber-font text-2xl font-bold text-fuchsia-400">0</span>
+                </div>
+            </div>
+
+            <button id="startBtn" class="cyber-btn w-full py-3.5 rounded-2xl text-lg font-bold cyber-font uppercase tracking-widest shadow-xl cursor-pointer">
+                進入宇宙
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. Web Audio API 音效合成引擎
+        // ==========================================
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.1, startVol = 0.25) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            // 吞噬小物件音效 (音高隨玩家質量調適)
+            playEat(massRatio = 1) {
+                const baseFreq = Math.max(120, 500 - massRatio * 80);
+                this.playTone(baseFreq, 'sine', 0.08, 0.2);
+            }
+
+            // 吞噬較大行星音效
+            playDevour() {
+                if (!this.enabled || !this.ctx) return;
+                this.playTone(180, 'triangle', 0.18, 0.35);
+                setTimeout(() => this.playTone(280, 'sine', 0.15, 0.25), 50);
+            }
+
+            // 拾取寶珠音效
+            playPowerup() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [440, 554, 659, 880];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'sine', 0.12, 0.2), i * 60);
+                });
+            }
+
+            // 進化躍升音效
+            playEvolve() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [261, 329, 392, 523, 659, 783];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.2, 0.25), i * 70);
+                });
+            }
+
+            // 受到傷害/碰觸威脅
+            playDamage() {
+                if (!this.enabled || !this.ctx) return;
+                this.playTone(120, 'sawtooth', 0.2, 0.4);
+            }
+
+            // 遊戲結束音效
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                setTimeout(() => this.playTone(300, 'sawtooth', 0.25, 0.3), 0);
+                setTimeout(() => this.playTone(220, 'sawtooth', 0.3, 0.35), 180);
+                setTimeout(() => this.playTone(140, 'sawtooth', 0.45, 0.4), 360);
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // ==========================================
+        // 2. 遊戲設定與進化階級配置
+        // ==========================================
+        let WORLD_SIZE = 5000; // 宇宙世界邊界 (達「灼熱恆星」時動態擴充至 12000)
+
+        // 6 階段天體進化配置表
+        const EVOLUTION_STAGES = [
+            { stage: 0, title: '宇宙微塵/隕石', icon: '🪨', minMass: 10, maxMass: 60, baseRadius: 16, color: '#94a3b8' },
+            { stage: 1, title: '類地行星', icon: '🌍', minMass: 60, maxMass: 250, baseRadius: 32, color: '#38bdf8' },
+            { stage: 2, title: '氣態巨行星', icon: '🪐', minMass: 250, maxMass: 900, baseRadius: 58, color: '#f59e0b' },
+            { stage: 3, title: '灼熱恆星', icon: '☀️', minMass: 900, maxMass: 3000, baseRadius: 95, color: '#ef4444' },
+            { stage: 4, title: '藍超巨星', icon: '💥', minMass: 3000, maxMass: 9000, baseRadius: 150, color: '#818cf8' },
+            { stage: 5, title: '超大質量黑洞', icon: '🕳️', minMass: 9000, maxMass: 25000, baseRadius: 220, color: '#a855f7' }
+        ];
+
+        // 彈出式事件通知提示
+        function showNotification(msg) {
+            const toast = document.getElementById('toastNotification');
+            const toastText = document.getElementById('toastText');
+            if (!toast || !toastText) return;
+            toastText.textContent = msg;
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-4');
+            }, 3500);
+        }
+
+        // 擴展宇宙邊界與天體密度
+        function expandWorldBounds(newSize) {
+            WORLD_SIZE = newSize;
+            // 補充額外星辰與天體
+            for (let i = 0; i < 400; i++) dusts.push(new CosmicDust());
+            for (let i = 0; i < 25; i++) {
+                const p = new AIPlanet();
+                p.respawn(player.mass);
+                aiPlanets.push(p);
+            }
+            for (let i = 0; i < 200; i++) {
+                backgroundStars.push({
+                    x: Math.random() * WORLD_SIZE,
+                    y: Math.random() * WORLD_SIZE,
+                    size: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    twinkleSpeed: Math.random() * 0.02 + 0.005
+                });
+            }
+            showNotification('☀️ 達到「灼熱恆星」階級！宇宙邊界擴大，日冕重力場已開啟！');
+        }
+
+        // Canvas 與畫布初始化
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const radarCanvas = document.getElementById('radarCanvas');
+        const radarCtx = radarCanvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            radarCanvas.width = 112;
+            radarCanvas.height = 112;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 遊戲狀態變數
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER', 'WIN'
+        let score = 0;
+        let highScore = localStorage.getItem('stellar_conquest_high') || 0;
+        let camera = { x: 0, y: 0, zoom: 1 };
+        let mouseWorldPos = { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 };
+
+        // ==========================================
+        // 3. 宇宙實體 (Player, Dust, AI Planets, Hazards, Powerups)
+        // ==========================================
+        
+        // 背景遙遠星辰
+        let backgroundStars = [];
+        function initBackgroundStars() {
+            backgroundStars = [];
+            for (let i = 0; i < 400; i++) {
+                backgroundStars.push({
+                    x: Math.random() * WORLD_SIZE,
+                    y: Math.random() * WORLD_SIZE,
+                    size: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    twinkleSpeed: Math.random() * 0.02 + 0.005
+                });
+            }
+        }
+
+        // 玩家實體
+        class Player {
+            constructor() {
+                this.x = WORLD_SIZE / 2;
+                this.y = WORLD_SIZE / 2;
+                this.vx = 0;
+                this.vy = 0;
+                this.mass = 15;
+                this.radius = Math.sqrt(this.mass) * 4;
+                this.stageIndex = 0;
+                this.speed = 4.5;
+                
+                // 狀態寶珠效果
+                this.shield = false;
+                this.magnetTime = 0;
+                this.boostTime = 0;
+                
+                this.trail = [];
+                this.angle = 0;
+            }
+
+            update() {
+                // 計算方向向量
+                const dx = mouseWorldPos.x - this.x;
+                const dy = mouseWorldPos.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                let currentSpeed = this.speed;
+                if (this.boostTime > 0) {
+                    currentSpeed *= 1.8;
+                    this.boostTime--;
+                }
+                if (this.magnetTime > 0) this.magnetTime--;
+
+                // 隨質量增大，移動阻力稍增
+                const massFactor = Math.max(0.4, 1 - (this.mass / 20000));
+                const targetVx = dist > 5 ? (dx / dist) * currentSpeed * massFactor : 0;
+                const targetVy = dist > 5 ? (dy / dist) * currentSpeed * massFactor : 0;
+
+                this.vx += (targetVx - this.vx) * 0.08;
+                this.vy += (targetVy - this.vy) * 0.08;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 邊界限制
+                this.x = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.x));
+                this.y = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.y));
+
+                // 半徑與質量換算
+                this.radius = Math.sqrt(this.mass) * 4;
+
+                // 更新進化階級
+                this.updateStage();
+
+                // 軌跡粒子
+                if (Math.hypot(this.vx, this.vy) > 0.5) {
+                    this.trail.push({ x: this.x, y: this.y, radius: this.radius * 0.3, alpha: 0.6 });
+                    if (this.trail.length > 12) this.trail.shift();
+                }
+                this.trail.forEach(t => t.alpha -= 0.04);
+            }
+
+            updateStage() {
+                let oldStage = this.stageIndex;
+                for (let i = EVOLUTION_STAGES.length - 1; i >= 0; i--) {
+                    if (this.mass >= EVOLUTION_STAGES[i].minMass) {
+                        this.stageIndex = i;
+                        break;
+                    }
+                }
+                if (this.stageIndex > oldStage) {
+                    sound.playEvolve();
+                    createExplosion(this.x, this.y, EVOLUTION_STAGES[this.stageIndex].color, 35);
+                    
+                    // 1. 當玩家達到「灼熱恆星」(Stage >= 3) 且宇宙尚未擴張時，擴大宇宙範圍
+                    if (this.stageIndex >= 3 && WORLD_SIZE === 5000) {
+                        expandWorldBounds(12000);
+                    }
+
+                    // 2. 當成長至下一階段時，於玩家 2.5 倍半徑之外生成較大的新天體
+                    spawnLargerPlanetsOnEvolve(this.stageIndex);
+
+                    if (this.stageIndex === 5 && gameState === 'PLAYING') {
+                        triggerVictory();
+                    }
+                }
+            }
+
+            addMass(val) {
+                this.mass += val;
+                score += Math.round(val * 10);
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('stellar_conquest_high', highScore);
+                }
+            }
+        }
+
+        // AI 天體 (行星 / 恆星 / 隕石)
+        class AIPlanet {
+            constructor(targetStage = null) {
+                this.respawn(player ? player.mass : 15, targetStage);
+            }
+
+            respawn(playerMass = 15, targetStage = null, forceMinDist = null) {
+                // 1. 若未指定階級，依據🪨隕石 -> 🌍類地 -> 🪐氣態 -> ☀️恆星 -> 💥藍超巨星 -> 🕳️黑洞 遞進機率判定
+                if (targetStage === null) {
+                    const currentStage = player ? player.stageIndex : 0;
+                    // 根據玩家進度按比例產生漸進階級的天體 (由小至大生成)
+                    const rand = Math.random();
+                    if (rand < 0.35) targetStage = 0; // 🪨 宇宙微塵/隕石
+                    else if (rand < 0.65) targetStage = Math.min(5, currentStage); // 🌍 類地行星
+                    else if (rand < 0.85) targetStage = Math.min(5, currentStage + 1); // 🪐 氣態巨行星
+                    else if (rand < 0.95) targetStage = Math.min(5, currentStage + 2); // ☀️ 灼熱恆星 / 💥 藍超巨星
+                    else targetStage = Math.min(5, currentStage + 3); // 🕳️ 超大質量黑洞
+                }
+
+                this.stageIndex = targetStage;
+                const stageInfo = EVOLUTION_STAGES[this.stageIndex];
+
+                // 2. 計算生成的質量與半徑
+                const massRange = stageInfo.maxMass - stageInfo.minMass;
+                this.mass = stageInfo.minMass + Math.random() * massRange;
+                this.radius = Math.sqrt(this.mass) * 4;
+
+                // 3. 計算生成位置 (如果設定了 forceMinDist，必須生成在操控天體的兩倍半徑之外)
+                const angle = Math.random() * Math.PI * 2;
+                const minDist = forceMinDist ? forceMinDist : 300 + Math.random() * 1200;
+                
+                if (player && forceMinDist) {
+                    this.x = player.x + Math.cos(angle) * (forceMinDist + this.radius + 50);
+                    this.y = player.y + Math.sin(angle) * (forceMinDist + this.radius + 50);
+                } else if (player) {
+                    this.x = player.x + Math.cos(angle) * (minDist + player.radius * 2.5);
+                    this.y = player.y + Math.sin(angle) * (minDist + player.radius * 2.5);
+                } else {
+                    this.x = Math.random() * WORLD_SIZE;
+                    this.y = Math.random() * WORLD_SIZE;
+                }
+
+                this.x = Math.max(100, Math.min(WORLD_SIZE - 100, this.x));
+                this.y = Math.max(100, Math.min(WORLD_SIZE - 100, this.y));
+
+                // 4. 給予微幅漂移速度
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+
+                // 5. 特效與色彩依進化階級決定
+                this.color = stageInfo.color;
+                this.hasRing = this.stageIndex === 2 || (this.stageIndex === 1 && Math.random() > 0.7);
+                this.ringAngle = Math.random() * Math.PI;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 反彈邊界
+                if (this.x < this.radius || this.x > WORLD_SIZE - this.radius) this.vx *= -1;
+                if (this.y < this.radius || this.y > WORLD_SIZE - this.radius) this.vy *= -1;
+            }
+        }
+
+        // 當玩家進階時，在兩倍半徑之外生成較大天體 (從小至大等級排列)
+        function spawnLargerPlanetsOnEvolve(newStage) {
+            const nextLargerStage = Math.min(5, newStage + 1);
+            const safeDistance = player.radius * 2.5; // 保障生成在兩倍半徑外
+
+            for (let i = 0; i < 8; i++) {
+                const targetTier = Math.min(5, newStage + Math.floor(i / 2));
+                const p = new AIPlanet(targetTier);
+                p.respawn(player.mass, targetTier, safeDistance + Math.random() * 400);
+                aiPlanets.push(p);
+            }
+            showNotification(`✨ 演化完成！周圍 2.5 倍距離外出現新的【${EVOLUTION_STAGES[nextLargerStage].title}】！`);
+        }
+
+        // 宇宙微塵 (Dust)
+        class CosmicDust {
+            constructor() {
+                this.x = Math.random() * WORLD_SIZE;
+                this.y = Math.random() * WORLD_SIZE;
+                this.mass = 1 + Math.random() * 2;
+                this.radius = 3 + Math.random() * 3;
+                const colors = ['#67e8f9', '#c084fc', '#fde047', '#a7f3d0'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+        }
+
+        // 宇宙黑洞危險體 (Hazard Black Hole)
+        class BlackHole {
+            constructor() {
+                this.x = Math.random() * WORLD_SIZE;
+                this.y = Math.random() * WORLD_SIZE;
+                this.radius = 70 + Math.random() * 50;
+                this.mass = 4000;
+                this.pullRadius = this.radius * 4;
+                this.angle = 0;
+            }
+
+            update() {
+                this.angle += 0.02;
+            }
+        }
+
+        // 宇宙寶珠 (Power-ups: 護盾, 磁鐵, 光速)
+        class PowerUp {
+            constructor() {
+                this.x = Math.random() * WORLD_SIZE;
+                this.y = Math.random() * WORLD_SIZE;
+                this.radius = 16;
+                const types = ['shield', 'magnet', 'boost'];
+                this.type = types[Math.floor(Math.random() * types.length)];
+                this.pulse = 0;
+            }
+
+            update() {
+                this.pulse += 0.05;
+            }
+        }
+
+        // 粒子特效
+        let particles = [];
+        function createExplosion(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 4 + 1.5,
+                    color: color,
+                    alpha: 1,
+                    life: 0.02 + Math.random() * 0.02
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.life;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // 實體容器與初始化
+        let player = new Player();
+        let aiPlanets = [];
+        let dusts = [];
+        let hazards = [];
+        let powerups = [];
+
+        function initWorld() {
+            WORLD_SIZE = 5000; // 重設宇宙基礎大小
+            player = new Player();
+            aiPlanets = [];
+            dusts = [];
+            hazards = [];
+            powerups = [];
+            particles = [];
+
+            // 初始微塵
+            for (let i = 0; i < 600; i++) dusts.push(new CosmicDust());
+
+            // 初始 AI 行星：依據 6 個階級由小至大按順序生成
+            for (let stage = 0; stage <= 4; stage++) {
+                const count = Math.max(3, 12 - stage * 2);
+                for (let i = 0; i < count; i++) {
+                    const p = new AIPlanet(stage);
+                    aiPlanets.push(p);
+                }
+            }
+
+            // 宇宙黑洞危險區
+            for (let i = 0; i < 4; i++) hazards.push(new BlackHole());
+
+            // 宇宙寶珠
+            for (let i = 0; i < 10; i++) powerups.push(new PowerUp());
+
+            initBackgroundStars();
+        }
+
+        // ==========================================
+        // 4. 物理運算與碰撞檢測 Engine
+        // ==========================================
+        function updatePhysics() {
+            if (gameState !== 'PLAYING') return;
+
+            // 1. 更新玩家
+            player.update();
+
+            // 2. 螢幕可視範圍面積恆保持玩家操控天體面積之 100 倍
+            const playerArea = Math.PI * player.radius * player.radius;
+            const targetViewArea = playerArea * 100;
+            const targetZoom = Math.sqrt((canvas.width * canvas.height) / targetViewArea);
+            camera.zoom += (targetZoom - camera.zoom) * 0.08;
+            camera.x = player.x - (canvas.width / 2) / camera.zoom;
+            camera.y = player.y - (canvas.height / 2) / camera.zoom;
+
+            // 3. 磁鐵引力或「灼熱恆星」日冕重力場吸引周圍微塵與小行星
+            const solarAuraActive = player.stageIndex >= 3;
+            const magnetRadius = solarAuraActive ? player.radius * 4 : (player.magnetTime > 0 ? player.radius * 5 : 0);
+
+            if (magnetRadius > 0) {
+                dusts.forEach(d => {
+                    const dist = Math.hypot(player.x - d.x, player.y - d.y);
+                    if (dist < magnetRadius) {
+                        d.x += (player.x - d.x) * 0.12;
+                        d.y += (player.y - d.y) * 0.12;
+                    }
+                });
+                aiPlanets.forEach(p => {
+                    if (p.mass < player.mass * 0.5) {
+                        const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                        if (dist < magnetRadius) {
+                            p.x += (player.x - p.x) * 0.06;
+                            p.y += (player.y - p.y) * 0.06;
+                        }
+                    }
+                });
+            }
+
+            // 4. 玩家 vs 微塵 (Dust)
+            for (let i = dusts.length - 1; i >= 0; i--) {
+                const d = dusts[i];
+                if (Math.hypot(player.x - d.x, player.y - d.y) < player.radius + d.radius) {
+                    player.addMass(d.mass * 0.8);
+                    sound.playEat(player.mass / 200);
+                    dusts.splice(i, 1);
+                    dusts.push(new CosmicDust()); // 補充微塵
+                }
+            }
+
+            // 5. 玩家 vs AI 行星
+            for (let i = aiPlanets.length - 1; i >= 0; i--) {
+                const p = aiPlanets[i];
+                p.update();
+
+                const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                if (dist < player.radius + p.radius * 0.8) {
+                    // 玩家比較大：吞噬 AI 行星
+                    if (player.mass > p.mass * 1.1) {
+                        player.addMass(p.mass * 0.45);
+                        sound.playDevour();
+                        createExplosion(p.x, p.y, p.color, 20);
+                        p.respawn(player.mass);
+                    } 
+                    // AI 行星比較大：傷害或吞噬玩家
+                    else if (p.mass > player.mass * 1.2) {
+                        if (player.shield) {
+                            player.shield = false;
+                            sound.playDamage();
+                            createExplosion(player.x, player.y, '#38bdf8', 25);
+                            // 彈開玩家
+                            const angle = Math.atan2(player.y - p.y, player.x - p.x);
+                            player.x += Math.cos(angle) * 80;
+                            player.y += Math.sin(angle) * 80;
+                        } else {
+                            triggerGameOver();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 6. 黑洞引力拉扯與傷害
+            hazards.forEach(h => {
+                h.update();
+                const dist = Math.hypot(player.x - h.x, player.y - h.y);
+                if (dist < h.pullRadius) {
+                    // 引力拉扯
+                    const pullStrength = (1 - dist / h.pullRadius) * 1.2;
+                    player.x += (h.x - player.x) * 0.02 * pullStrength;
+                    player.y += (h.y - player.y) * 0.02 * pullStrength;
+
+                    if (dist < player.radius + h.radius * 0.5) {
+                        if (player.stageIndex === 5) {
+                            // 玩家已達到黑洞階級：可吞噬敵方黑洞！
+                            player.addMass(1500);
+                            sound.playDevour();
+                            createExplosion(h.x, h.y, '#a855f7', 40);
+                            h.x = Math.random() * WORLD_SIZE;
+                            h.y = Math.random() * WORLD_SIZE;
+                        } else if (player.shield) {
+                            player.shield = false;
+                            sound.playDamage();
+                            player.x += (player.x - h.x) * 0.5;
+                            player.y += (player.y - h.y) * 0.5;
+                        } else {
+                            triggerGameOver();
+                        }
+                    }
+                }
+            });
+
+            // 7. 寶珠拾取 (Power-ups)
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const pow = powerups[i];
+                pow.update();
+                if (Math.hypot(player.x - pow.x, player.y - pow.y) < player.radius + pow.radius) {
+                    sound.playPowerup();
+                    if (pow.type === 'shield') player.shield = true;
+                    if (pow.type === 'magnet') player.magnetTime = 600; // 10秒
+                    if (pow.type === 'boost') player.boostTime = 360;   // 6秒
+                    
+                    createExplosion(pow.x, pow.y, '#fde047', 15);
+                    powerups.splice(i, 1);
+                    
+                    // 補充寶珠
+                    setTimeout(() => powerups.push(new PowerUp()), 8000);
+                }
+            }
+
+            updateParticles();
+            updateHUDUI();
+        }
+
+        // ==========================================
+        // 5. Canvas 渲染系統 (Rendering)
+        // ==========================================
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            // 套用鏡頭縮放與位移
+            ctx.scale(camera.zoom, camera.zoom);
+            ctx.translate(-camera.x, -camera.y);
+
+            // 1. 繪製太空背景細密網格與遙遠星辰
+            drawCosmicGrid();
+
+            // 2. 繪製宇宙微塵 (Dust)
+            dusts.forEach(d => {
+                ctx.fillStyle = d.color;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 3. 繪製宇宙寶珠 (Powerups)
+            powerups.forEach(pow => {
+                ctx.save();
+                const glow = Math.sin(pow.pulse) * 4;
+                ctx.shadowBlur = 12 + glow;
+                
+                if (pow.type === 'shield') {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.shadowColor = '#38bdf8';
+                } else if (pow.type === 'magnet') {
+                    ctx.fillStyle = '#c084fc';
+                    ctx.shadowColor = '#c084fc';
+                } else {
+                    ctx.fillStyle = '#fde047';
+                    ctx.shadowColor = '#fde047';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(pow.x, pow.y, pow.radius + glow * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 標記圖示
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 12px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const icon = pow.type === 'shield' ? '🛡️' : pow.type === 'magnet' ? '🧲' : '⚡';
+                ctx.fillText(icon, pow.x, pow.y);
+                ctx.restore();
+            });
+
+            // 4. 繪製宇宙黑洞危險體 (Black Holes)
+            hazards.forEach(h => {
+                ctx.save();
+                ctx.translate(h.x, h.y);
+                ctx.rotate(h.angle);
+
+                // 引力光暈層
+                const grad = ctx.createRadialGradient(0, 0, h.radius * 0.2, 0, 0, h.pullRadius);
+                grad.addColorStop(0, 'rgba(15, 23, 42, 0.9)');
+                grad.addColorStop(0.4, 'rgba(168, 85, 247, 0.2)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, h.pullRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 旋轉吸積盤 (Accretion Disk)
+                ctx.strokeStyle = 'rgba(216, 180, 254, 0.7)';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, h.radius * 1.5, h.radius * 0.6, Math.PI / 4, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 黑洞中心奇點
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(0, 0, h.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            // 5. 繪製 AI 行星
+            aiPlanets.forEach(p => drawCelestialBody(p.x, p.y, p.radius, p.color, p.hasRing, p.ringAngle, p.mass > player.mass * 1.1));
+
+            // 6. 繪製玩家天體 (Player)
+            drawPlayer();
+
+            // 7. 繪製爆炸粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 8. 繪製宇宙邊界牆 (Boundary Wall)
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+            ctx.restore();
+
+            // 繪製雷達 Minimap
+            drawMinimap();
+        }
+
+        // 繪製背景星空與網格
+        function drawCosmicGrid() {
+            // 背景星辰
+            backgroundStars.forEach(s => {
+                s.alpha += Math.sin(Date.now() * s.twinkleSpeed) * 0.01;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(s.alpha)})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 網格線
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+            ctx.lineWidth = 1;
+            const gridSize = 200;
+            for (let x = 0; x <= WORLD_SIZE; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, WORLD_SIZE);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= WORLD_SIZE; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(WORLD_SIZE, y);
+                ctx.stroke();
+            }
+        }
+
+        // 通用天體繪製函式
+        function drawCelestialBody(x, y, radius, color, hasRing = false, ringAngle = 0, isDangerous = false) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 危險氣場提示 (若敵方行星比玩家大)
+            if (isDangerous) {
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 15;
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 星球本體漸層
+            const grad = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, color);
+            grad.addColorStop(1, '#0f172a');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 行星環 (Saturn Style Ring)
+            if (hasRing) {
+                ctx.rotate(ringAngle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, radius * 1.8, radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(253, 224, 71, 0.6)';
+                ctx.lineWidth = Math.max(2, radius * 0.15);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        // 繪製玩家天體 (動態呈現黑洞 / 恆星 / 行星)
+        function drawPlayer() {
+            ctx.save();
+
+            // 1. 軌跡尾羽
+            player.trail.forEach(t => {
+                ctx.fillStyle = `rgba(56, 189, 248, ${t.alpha * 0.4})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.translate(player.x, player.y);
+
+            // 2. 護盾氣場
+            if (player.shield) {
+                ctx.strokeStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 20;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius + 12, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 3. 磁鐵吸引光暈
+            if (player.magnetTime > 0) {
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius * 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 4. 根據進化階級繪製外觀
+            const stageConfig = EVOLUTION_STAGES[player.stageIndex];
+            
+            // 階級 5: 超大質量黑洞型態
+            if (player.stageIndex === 5) {
+                ctx.shadowColor = '#a855f7';
+                ctx.shadowBlur = 30;
+
+                // 吸積光環
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, player.radius * 1.4, player.radius * 0.5, Date.now() * 0.002, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 核心黑洞
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#e879f9';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            } 
+            // 階級 3&4: 恆星/藍超巨星型態
+            else if (player.stageIndex >= 3) {
+                ctx.shadowColor = stageConfig.color;
+                ctx.shadowBlur = 25;
+
+                const grad = ctx.createRadialGradient(0, 0, player.radius * 0.2, 0, 0, player.radius);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.5, stageConfig.color);
+                grad.addColorStop(1, '#991b1b');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+            } 
+            // 階級 0~2: 隕石 / 行星型態
+            else {
+                drawCelestialBody(0, 0, player.radius, stageConfig.color, player.stageIndex === 2, 0.4, false);
+            }
+
+            ctx.restore();
+        }
+
+        // 繪製右下角雷達 Minimap
+        function drawMinimap() {
+            radarCtx.clearRect(0, 0, radarCanvas.width, radarCanvas.height);
+
+            const scale = radarCanvas.width / WORLD_SIZE;
+
+            // 1. 雷達背景邊界
+            radarCtx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+            radarCtx.strokeRect(0, 0, radarCanvas.width, radarCanvas.height);
+
+            // 2. 標記 AI 大型威脅 (紅點)
+            aiPlanets.forEach(p => {
+                if (p.mass > player.mass * 1.1) {
+                    radarCtx.fillStyle = '#ef4444';
+                    radarCtx.beginPath();
+                    radarCtx.arc(p.x * scale, p.y * scale, 2.5, 0, Math.PI * 2);
+                    radarCtx.fill();
+                }
+            });
+
+            // 3. 標記黑洞 (紫點)
+            hazards.forEach(h => {
+                radarCtx.fillStyle = '#a855f7';
+                radarCtx.beginPath();
+                radarCtx.arc(h.x * scale, h.y * scale, 3, 0, Math.PI * 2);
+                radarCtx.fill();
+            });
+
+            // 4. 標記玩家 (閃爍綠/青點)
+            radarCtx.fillStyle = '#38bdf8';
+            radarCtx.shadowColor = '#38bdf8';
+            radarCtx.shadowBlur = 6;
+            radarCtx.beginPath();
+            radarCtx.arc(player.x * scale, player.y * scale, 3.5, 0, Math.PI * 2);
+            radarCtx.fill();
+            radarCtx.shadowBlur = 0;
+        }
+
+        // 即時更新 UI 狀態面板
+        function updateHUDUI() {
+            const currentStage = EVOLUTION_STAGES[player.stageIndex];
+            
+            document.getElementById('stageBadge').textContent = currentStage.icon;
+            document.getElementById('stageTitle').textContent = currentStage.title;
+            document.getElementById('massText').textContent = `質量: ${Math.round(player.mass)}`;
+            document.getElementById('scoreText').textContent = score;
+            document.getElementById('highScoreText').textContent = highScore;
+
+            // 計算當前階段進度百分比
+            const range = currentStage.maxMass - currentStage.minMass;
+            const progress = Math.min(100, Math.max(0, ((player.mass - currentStage.minMass) / range) * 100));
+            document.getElementById('progressBar').style.width = `${progress}%`;
+
+            // 更新 Buff 提示列
+            const buffContainer = document.getElementById('buffContainer');
+            buffContainer.innerHTML = '';
+            
+            if (player.shield) {
+                buffContainer.innerHTML += `
+                    <div class="glass-panel px-3 py-1 rounded-xl text-xs text-cyan-300 flex items-center gap-1.5 shadow-md">
+                        <span>🛡️ 宇宙護盾已開啟</span>
+                    </div>`;
+            }
+            if (player.magnetTime > 0) {
+                buffContainer.innerHTML += `
+                    <div class="glass-panel px-3 py-1 rounded-xl text-xs text-purple-300 flex items-center gap-1.5 shadow-md">
+                        <span>🧲 引力磁場 (${Math.ceil(player.magnetTime / 60)}s)</span>
+                    </div>`;
+            }
+            if (player.boostTime > 0) {
+                buffContainer.innerHTML += `
+                    <div class="glass-panel px-3 py-1 rounded-xl text-xs text-yellow-300 flex items-center gap-1.5 shadow-md">
+                        <span>⚡ 光速突進 (${Math.ceil(player.boostTime / 60)}s)</span>
+                    </div>`;
+            }
+        }
+
+        // ==========================================
+        // 6. 控制與事件監聽 (Controls & Events)
+        // ==========================================
+        function handlePointerMove(e) {
+            sound.init();
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const screenX = clientX - rect.left;
+            const screenY = clientY - rect.top;
+
+            // 將螢幕座標反推為宇宙世界座標
+            mouseWorldPos.x = camera.x + screenX / camera.zoom;
+            mouseWorldPos.y = camera.y + screenY / camera.zoom;
+        }
+
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handlePointerMove(e);
+        }, { passive: false });
+
+        // 音效切換按鈕
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        soundToggleBtn.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            soundIcon.textContent = sound.enabled ? '🔊' : '🔇';
+        });
+
+        // 開始 / 重新開始按鈕
+        const startBtn = document.getElementById('startBtn');
+        const gameModal = document.getElementById('gameModal');
+
+        startBtn.addEventListener('click', () => {
+            sound.init();
+            initWorld();
+            gameState = 'PLAYING';
+            gameModal.classList.add('opacity-0', 'pointer-events-none');
+        });
+
+        // 遊戲結束處理
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            sound.playGameOver();
+
+            document.getElementById('modalIcon').textContent = '💥';
+            document.getElementById('modalTitle').textContent = 'GAME OVER';
+            document.getElementById('modalTitle').className = 'text-3xl sm:text-5xl font-black cyber-font text-rose-500 neon-text-pink mb-2 tracking-wider';
+            document.getElementById('modalSubtitle').textContent = '你的天體遭到龐大巨星吞滅！請重新整裝再戰宇宙！';
+            
+            document.getElementById('finalMass').textContent = Math.round(player.mass);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('statsBox').classList.remove('hidden');
+            document.getElementById('startBtn').textContent = '再戰宇宙';
+
+            gameModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        // 終極勝利處理 (到達黑洞階段)
+        function triggerVictory() {
+            gameState = 'WIN';
+            sound.playEvolve();
+
+            document.getElementById('modalIcon').textContent = '👑';
+            document.getElementById('modalTitle').textContent = 'COSMIC CONQUEST!';
+            document.getElementById('modalTitle').className = 'text-3xl sm:text-5xl font-black cyber-font text-cyan-400 neon-text-cyan mb-2 tracking-wider';
+            document.getElementById('modalSubtitle').textContent = '恭喜！你成功演化為「超大質量黑洞」，成為主宰宇宙萬物的終極天體！';
+            
+            document.getElementById('finalMass').textContent = Math.round(player.mass);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('statsBox').classList.remove('hidden');
+            document.getElementById('startBtn').textContent = '無盡漫遊';
+
+            gameModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        // ==========================================
+        // 7. 主遊戲迴圈 (Game Loop)
+        // ==========================================
+        function gameLoop() {
+            updatePhysics();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 啟動遊戲引擎
+        initWorld();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

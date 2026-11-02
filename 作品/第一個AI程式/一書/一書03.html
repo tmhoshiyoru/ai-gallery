@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Modern Dino Runner - 精緻小恐龍遊戲</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+
+        /* 玻璃擬物 UI 風格 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 畫面震動效果 (Screen Shake) */
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 6px); }
+            40% { transform: translate(8px, -6px); }
+            60% { transform: translate(-6px, 4px); }
+            80% { transform: translate(6px, -2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .screen-shake {
+            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center p-0 md:p-4 bg-slate-950 text-white">
+
+    <!-- 主遊戲容器 -->
+    <div id="gameContainer" class="relative w-full max-w-6xl h-full md:h-[680px] md:rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl border border-white/10">
+        
+        <!-- Canvas 遊戲畫布 -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+        <!-- 頂部資訊與控制欄 (HUD) -->
+        <div class="relative z-10 w-full p-4 md:p-6 flex justify-between items-start pointer-events-none">
+            
+            <!-- 標題與遊戲狀態 -->
+            <div class="flex items-center gap-3">
+                <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto">
+                    <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" id="statusDot"></span>
+                    <span class="font-extrabold tracking-wider text-sm md:text-base bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">DINO RUNNER</span>
+                </div>
+            </div>
+
+            <!-- 右側得分板與功能按鈕 -->
+            <div class="flex items-center gap-3 pointer-events-auto">
+                <div class="glass-panel px-5 py-2.5 rounded-2xl flex items-center gap-4 text-xs md:text-sm font-bold tracking-widest">
+                    <div class="text-white/50">HI <span id="highScoreText" class="text-white">00000</span></div>
+                    <div class="text-emerald-400 font-extrabold text-base md:text-lg" id="scoreText">00000</div>
+                </div>
+
+                <!-- 音效切換 -->
+                <button id="soundBtn" class="glass-button p-3 rounded-2xl text-white/80 hover:text-white" title="音效切換">
+                    <svg id="soundOnIcon" class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <svg id="soundOffIcon" class="w-5 h-5 fill-current hidden" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                </button>
+
+                <!-- 日夜/夕陽主題切換 -->
+                <button id="themeBtn" class="glass-button p-3 rounded-2xl text-white/80 hover:text-white" title="切換場景">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 遊戲開始 / 結束 Overlay 畫面 -->
+        <div id="startOverlay" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-md p-6 transition-all duration-300">
+            <div class="glass-panel max-w-md w-full p-8 rounded-3xl text-center flex flex-col items-center gap-5 border border-white/20">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <svg class="w-10 h-10 text-slate-950 fill-current" viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg>
+                </div>
+
+                <div>
+                    <h2 id="overlayTitle" class="text-2xl md:text-3xl font-black tracking-wide bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">精緻小恐龍冒險</h2>
+                    <p id="overlaySub" class="text-xs md:text-sm text-slate-300/80 mt-2 font-medium">跳躍避開仙人掌與翼龍！特別注意：高空的雲朵擁有實體，跳太高撞擊雲朵會立即結束遊戲！</p>
+                </div>
+
+                <div class="w-full pt-2 flex flex-col gap-3">
+                    <button id="startBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-950 font-black text-base shadow-xl shadow-emerald-500/25 hover:brightness-110 active:scale-[0.98] transition">
+                        開始遊戲 (SPACE)
+                    </button>
+                    <div class="text-[11px] text-white/50 flex justify-center gap-4 pt-1 font-semibold">
+                        <span>↑ / 空白鍵 : 跳躍</span>
+                        <span>↓ 鍵 : 蹲下避雲</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 觸控手機專用控制按紐 -->
+        <div class="relative z-10 w-full p-4 flex gap-3 md:hidden pointer-events-auto">
+            <button id="touchDuckBtn" class="flex-1 py-4 glass-button rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 active:bg-white/30">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>
+                蹲下避雲
+            </button>
+            <button id="touchJumpBtn" class="flex-[2] py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:brightness-90">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
+                跳躍 (JUMP)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Web Audio API 音效處理引擎
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // 流暢跳躍音效
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            // 撞擊雲朵爆裂音效
+            playCloudHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(520, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            // 撞擊障礙物音效
+            playObstacleHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            // 突破百位分數慶祝音效
+            playScoreMilestone() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                    gain.gain.setValueAtTime(0.1, now + idx * 0.06);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.06 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.12);
+                });
+            }
+        }
+
+        const soundEngine = new SoundEngine();
+
+        const container = document.getElementById('gameContainer');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 定義標準內部 Canvas 邏輯尺寸
+        const V_WIDTH = 1200;
+        const V_HEIGHT = 600;
+        const GROUND_Y = 500;
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 全域狀態變數
+        let isRunning = false;
+        let isGameOver = false;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('dino_modern_hi') || '0', 10);
+        let gameSpeed = 9;
+        let frameCount = 0;
+        let themeIndex = 0; // 0: 日光白天, 1: 夢幻黃昏, 2: 深藍星空
+
+        const themes = [
+            {
+                name: 'day',
+                skyGradient: ['#38bdf8', '#818cf8', '#c084fc'],
+                sunMoonColor: '#fde047',
+                mountainFar: '#6366f1',
+                mountainNear: '#4f46e5',
+                groundColor: '#1e1b4b',
+                groundLine: '#818cf8',
+                dinoColor: '#10b981',
+                cloudColor: 'rgba(255, 255, 255, 0.95)',
+                cloudShadow: 'rgba(148, 163, 184, 0.4)'
+            },
+            {
+                name: 'sunset',
+                skyGradient: ['#f43f5e', '#fb923c', '#fde047'],
+                sunMoonColor: '#fff1f2',
+                mountainFar: '#9f1239',
+                mountainNear: '#881337',
+                groundColor: '#4c0519',
+                groundLine: '#fb7185',
+                dinoColor: '#38bdf8',
+                cloudColor: 'rgba(254, 242, 242, 0.95)',
+                cloudShadow: 'rgba(251, 113, 133, 0.3)'
+            },
+            {
+                name: 'night',
+                skyGradient: ['#0f172a', '#1e1b4b', '#311b92'],
+                sunMoonColor: '#f1f5f9',
+                mountainFar: '#1e293b',
+                mountainNear: '#0f172a',
+                groundColor: '#020617',
+                groundLine: '#38bdf8',
+                dinoColor: '#34d399',
+                cloudColor: 'rgba(226, 232, 240, 0.9)',
+                cloudShadow: 'rgba(51, 65, 85, 0.5)'
+            }
+        ];
+
+        class Particle {
+            constructor(x, y, vx, vy, size, color, life, type = 'circle') {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = size;
+                this.color = color;
+                this.maxLife = life;
+                this.life = life;
+                this.type = type;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+
+            draw(ctx, scaleX, scaleY) {
+                const opacity = Math.max(0, this.life / this.maxLife);
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = this.color;
+
+                const drawX = this.x * scaleX;
+                const drawY = this.y * scaleY;
+                const drawSize = this.size * scaleX;
+
+                if (this.type === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(drawX, drawY, drawSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'square') {
+                    ctx.fillRect(drawX - drawSize / 2, drawY - drawSize / 2, drawSize, drawSize);
+                }
+                ctx.restore();
+            }
+        }
+
+        let particles = [];
+        let floatingTexts = [];
+
+        function spawnDust(x, y) {
+            for (let i = 0; i < 2; i++) {
+                particles.push(new Particle(
+                    x, y,
+                    -Math.random() * 2 - 1,
+                    -Math.random() * 1.5,
+                    Math.random() * 4 + 2,
+                    'rgba(255, 255, 255, 0.5)',
+                    20
+                ));
+            }
+        }
+
+        function spawnExplosion(x, y, color) {
+            for (let i = 0; i < 25; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 2;
+                particles.push(new Particle(
+                    x, y,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed,
+                    Math.random() * 6 + 3,
+                    color,
+                    35 + Math.random() * 15
+                ));
+            }
+        }
+
+        function spawnFloatingText(text, x, y) {
+            floatingTexts.push({ text, x, y, vy: -2, life: 40, maxLife: 40 });
+        }
+
+        const dino = {
+            x: 120,
+            y: GROUND_Y,
+            width: 64,
+            height: 72,
+            vy: 0,
+            isJumping: false,
+            isDucking: false,
+            groundY: GROUND_Y,
+            blinkTimer: 0,
+            isBlinking: false,
+            animFrame: 0,
+
+            reset() {
+                this.x = 120;
+                this.height = 72;
+                this.width = 64;
+                this.y = this.groundY - this.height;
+                this.vy = 0;
+                this.isJumping = false;
+                this.isDucking = false;
+            },
+
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = -16.8;
+                    this.isJumping = true;
+                    soundEngine.playJump();
+                }
+            },
+
+            duck(ducking) {
+                if (this.isJumping) {
+                    if (ducking) this.vy += 4; // 快降
+                    return;
+                }
+                this.isDucking = ducking;
+                if (ducking) {
+                    this.height = 46;
+                    this.width = 88;
+                } else {
+                    this.height = 72;
+                    this.width = 64;
+                }
+                this.y = this.groundY - this.height;
+            },
+
+            update() {
+                // 跳躍物理
+                if (this.isJumping) {
+                    this.y += this.vy;
+                    this.vy += 0.78; // 重力
+
+                    if (this.y + this.height >= this.groundY) {
+                        this.y = this.groundY - this.height;
+                        this.isJumping = false;
+                        this.vy = 0;
+                        spawnDust(this.x + 20, this.groundY);
+                    }
+                } else {
+                    // 跑步腳下產生微塵
+                    if (isRunning && frameCount % 6 === 0) {
+                        spawnDust(this.x + 10, this.groundY - 2);
+                    }
+                }
+
+                // 眨眼動畫計時
+                this.blinkTimer++;
+                if (this.blinkTimer > 180) {
+                    this.isBlinking = true;
+                    if (this.blinkTimer > 192) {
+                        this.isBlinking = false;
+                        this.blinkTimer = 0;
+                    }
+                }
+
+                if (frameCount % 6 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            },
+
+            draw(ctx, scaleX, scaleY) {
+                ctx.save();
+                const curTheme = themes[themeIndex];
+                ctx.fillStyle = curTheme.dinoColor;
+
+                const dx = this.x * scaleX;
+                const dy = this.y * scaleY;
+                const dw = this.width * scaleX;
+                const dh = this.height * scaleY;
+
+                if (this.isDucking && !this.isJumping) {
+                    // --- 向量蹲下姿態 ---
+                    // 身體橢圓
+                    ctx.beginPath();
+                    ctx.ellipse(dx + dw * 0.5, dy + dh * 0.55, dw * 0.45, dh * 0.4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 延伸頭部
+                    ctx.beginPath();
+                    ctx.roundRect(dx + dw * 0.5, dy, dw * 0.48, dh * 0.6, [12]);
+                    ctx.fill();
+
+                    // 眼睛
+                    ctx.fillStyle = '#0f172a';
+                    if (!this.isBlinking) {
+                        ctx.beginPath();
+                        ctx.arc(dx + dw * 0.8, dy + dh * 0.25, 4 * scaleX, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // 手臂
+                    ctx.fillStyle = curTheme.dinoColor;
+                    ctx.fillRect(dx + dw * 0.4, dy + dh * 0.5, 12 * scaleX, 5 * scaleY);
+
+                    // 腳部步進
+                    ctx.fillStyle = curTheme.dinoColor;
+                    const legOffset = this.animFrame === 0 ? 6 * scaleX : -6 * scaleX;
+                    ctx.fillRect(dx + dw * 0.3 + legOffset, dy + dh * 0.85, 8 * scaleX, 10 * scaleY);
+                    ctx.fillRect(dx + dw * 0.6 - legOffset, dy + dh * 0.85, 8 * scaleX, 10 * scaleY);
+
+                } else {
+                    // --- 向量站立/跳躍姿態 ---
+                    // 身體
+                    ctx.beginPath();
+                    ctx.roundRect(dx + dw * 0.1, dy + dh * 0.35, dw * 0.65, dh * 0.5, [18]);
+                    ctx.fill();
+
+                    // 頸部與頭部
+                    ctx.beginPath();
+                    ctx.roundRect(dx + dw * 0.35, dy, dw * 0.6, dh * 0.48, [16]);
+                    ctx.fill();
+
+                    // 圓潤嘴部
+                    ctx.beginPath();
+                    ctx.roundRect(dx + dw * 0.55, dy + dh * 0.18, dw * 0.42, dh * 0.25, [8]);
+                    ctx.fill();
+
+                    // 眼睛 (圓大靈動)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(dx + dw * 0.72, dy + dh * 0.16, 6 * scaleX, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0f172a';
+                    if (isGameOver) {
+                        // 死亡 X 眼神
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = 2 * scaleX;
+                        ctx.beginPath();
+                        ctx.moveTo(dx + dw * 0.67, dy + dh * 0.12);
+                        ctx.lineTo(dx + dw * 0.77, dy + dh * 0.20);
+                        ctx.moveTo(dx + dw * 0.77, dy + dh * 0.12);
+                        ctx.lineTo(dx + dw * 0.67, dy + dh * 0.20);
+                        ctx.stroke();
+                    } else if (!this.isBlinking) {
+                        ctx.beginPath();
+                        ctx.arc(dx + dw * 0.74, dy + dh * 0.16, 3 * scaleX, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // 可愛小短手
+                    ctx.fillStyle = curTheme.dinoColor;
+                    ctx.beginPath();
+                    ctx.roundRect(dx + dw * 0.6, dy + dh * 0.45, 12 * scaleX, 6 * scaleY, [3]);
+                    ctx.fill();
+
+                    // 俏皮尾巴
+                    ctx.beginPath();
+                    ctx.moveTo(dx + dw * 0.15, dy + dh * 0.5);
+                    ctx.lineTo(dx - dw * 0.1, dy + dh * 0.4);
+                    ctx.lineTo(dx + dw * 0.1, dy + dh * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // 腳步動畫
+                    if (this.isJumping) {
+                        ctx.fillRect(dx + dw * 0.25, dy + dh * 0.82, 8 * scaleX, 10 * scaleY);
+                        ctx.fillRect(dx + dw * 0.5, dy + dh * 0.82, 8 * scaleX, 10 * scaleY);
+                    } else {
+                        const leg1 = this.animFrame === 0 ? 12 * scaleY : 4 * scaleY;
+                        const leg2 = this.animFrame === 0 ? 4 * scaleY : 12 * scaleY;
+                        ctx.fillRect(dx + dw * 0.25, dy + dh * 0.82, 8 * scaleX, leg1);
+                        ctx.fillRect(dx + dw * 0.5, dy + dh * 0.82, 8 * scaleX, leg2);
+                    }
+                }
+                ctx.restore();
+            },
+
+            getHitbox() {
+                const p = 6;
+                return {
+                    x: this.x + p,
+                    y: this.y + p,
+                    width: this.width - p * 2,
+                    height: this.height - p * 2
+                };
+            }
+        };
+
+        let clouds = [];
+
+        class VectorCloud {
+            constructor() {
+                this.width = 120;
+                this.height = 54;
+                this.x = V_WIDTH + Math.random() * 300;
+                // 天空高處 懸掛 (Y: 60 ~ 170)
+                this.y = 60 + Math.random() * 110;
+                this.speed = 1.5 + Math.random() * 0.8;
+            }
+
+            update() {
+                if (isRunning) this.x -= this.speed;
+                if (this.x + this.width < -150) {
+                    this.x = V_WIDTH + Math.random() * 250;
+                    this.y = 60 + Math.random() * 110;
+                }
+            }
+
+            draw(ctx, scaleX, scaleY) {
+                ctx.save();
+                const curTheme = themes[themeIndex];
+                const cx = this.x * scaleX;
+                const cy = this.y * scaleY;
+                const cw = this.width * scaleX;
+                const ch = this.height * scaleY;
+
+                // 陰影層
+                ctx.fillStyle = curTheme.cloudShadow;
+                ctx.beginPath();
+                ctx.arc(cx + cw * 0.3, cy + ch * 0.6, ch * 0.45, 0, Math.PI * 2);
+                ctx.arc(cx + cw * 0.55, cy + ch * 0.5, ch * 0.55, 0, Math.PI * 2);
+                ctx.arc(cx + cw * 0.78, cy + ch * 0.65, ch * 0.38, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 本體亮層
+                ctx.fillStyle = curTheme.cloudColor;
+                ctx.beginPath();
+                ctx.arc(cx + cw * 0.28, cy + ch * 0.5, ch * 0.42, 0, Math.PI * 2);
+                ctx.arc(cx + cw * 0.52, cy + ch * 0.4, ch * 0.52, 0, Math.PI * 2);
+                ctx.arc(cx + cw * 0.76, cy + ch * 0.55, ch * 0.36, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            getHitbox() {
+                // 精確收縮碰撞箱
+                return {
+                    x: this.x + 12,
+                    y: this.y + 10,
+                    width: this.width - 24,
+                    height: this.height - 18
+                };
+            }
+        }
+
+        let obstacles = [];
+
+        class Obstacle {
+            constructor(type) {
+                this.type = type;
+                this.markedForDeletion = false;
+
+                if (type === 'cactus_small') {
+                    this.width = 36;
+                    this.height = 64;
+                    this.y = GROUND_Y - this.height;
+                } else if (type === 'cactus_large') {
+                    this.width = 62;
+                    this.height = 86;
+                    this.y = GROUND_Y - this.height;
+                } else if (type === 'bird') {
+                    this.width = 68;
+                    this.height = 46;
+                    // 三種飛行高度：低(需跳)、中(需蹲)、高(危險空域)
+                    const heights = [GROUND_Y - 55, GROUND_Y - 95, GROUND_Y - 145];
+                    this.y = heights[Math.floor(Math.random() * heights.length)];
+                    this.wingFrame = 0;
+                }
+                this.x = V_WIDTH + 60;
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                if (this.x + this.width < -80) {
+                    this.markedForDeletion = true;
+                }
+
+                if (this.type === 'bird' && frameCount % 7 === 0) {
+                    this.wingFrame = (this.wingFrame + 1) % 2;
+                }
+            }
+
+            draw(ctx, scaleX, scaleY) {
+                ctx.save();
+                const ox = this.x * scaleX;
+                const oy = this.y * scaleY;
+                const ow = this.width * scaleX;
+                const oh = this.height * scaleY;
+
+                if (this.type.startsWith('cactus')) {
+                    // 可愛圓潤向量仙人掌
+                    ctx.fillStyle = '#10b981';
+
+                    // 主幹
+                    ctx.beginPath();
+                    ctx.roundRect(ox + ow * 0.35, oy, ow * 0.3, oh, [10]);
+                    ctx.fill();
+
+                    // 分支 1
+                    ctx.beginPath();
+                    ctx.roundRect(ox, oy + oh * 0.25, ow * 0.4, oh * 0.2, [6]);
+                    ctx.roundRect(ox, oy + oh * 0.1, ow * 0.15, oh * 0.3, [6]);
+                    ctx.fill();
+
+                    // 分支 2
+                    ctx.beginPath();
+                    ctx.roundRect(ox + ow * 0.6, oy + oh * 0.38, ow * 0.4, oh * 0.2, [6]);
+                    ctx.roundRect(ox + ow * 0.85, oy + oh * 0.2, ow * 0.15, oh * 0.3, [6]);
+                    ctx.fill();
+
+                } else if (this.type === 'bird') {
+                    // 精緻向量翼龍
+                    ctx.fillStyle = '#f43f5e';
+
+                    // 鳥身
+                    ctx.beginPath();
+                    ctx.ellipse(ox + ow * 0.5, oy + oh * 0.5, ow * 0.3, oh * 0.25, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 頭與鳥嘴
+                    ctx.beginPath();
+                    ctx.moveTo(ox + ow * 0.3, oy + oh * 0.4);
+                    ctx.lineTo(ox - ow * 0.1, oy + oh * 0.5);
+                    ctx.lineTo(ox + ow * 0.3, oy + oh * 0.65);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // 翅膀拍打動畫
+                    ctx.beginPath();
+                    if (this.wingFrame === 0) {
+                        ctx.moveTo(ox + ow * 0.4, oy + oh * 0.4);
+                        ctx.lineTo(ox + ow * 0.55, oy - oh * 0.4);
+                        ctx.lineTo(ox + ow * 0.7, oy + oh * 0.4);
+                    } else {
+                        ctx.moveTo(ox + ow * 0.4, oy + oh * 0.6);
+                        ctx.lineTo(ox + ow * 0.55, oy + oh * 1.3);
+                        ctx.lineTo(ox + ow * 0.7, oy + oh * 0.6);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            getHitbox() {
+                const p = 6;
+                return {
+                    x: this.x + p,
+                    y: this.y + p,
+                    width: this.width - p * 2,
+                    height: this.height - p * 2
+                };
+            }
+        }
+
+        function drawParallaxBackground(scaleX, scaleY) {
+            const curTheme = themes[themeIndex];
+
+            // 1. 天空漸層背景
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, curTheme.skyGradient[0]);
+            skyGrad.addColorStop(0.5, curTheme.skyGradient[1]);
+            skyGrad.addColorStop(1, curTheme.skyGradient[2]);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. 太陽 / 月亮
+            ctx.fillStyle = curTheme.sunMoonColor;
+            ctx.beginPath();
+            ctx.arc(canvas.width - 120 * scaleX, 100 * scaleY, 36 * scaleX, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. 遠山視差 (Far Mountain)
+            ctx.fillStyle = curTheme.mountainFar;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let i = 0; i <= V_WIDTH; i += 150) {
+                const mx = i * scaleX;
+                const my = (GROUND_Y - 140 - Math.sin(i * 0.01) * 40) * scaleY;
+                ctx.lineTo(mx, my);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. 近丘視差 (Near Hills)
+            ctx.fillStyle = curTheme.mountainNear;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let i = 0; i <= V_WIDTH; i += 100) {
+                const mx = i * scaleX;
+                const my = (GROUND_Y - 60 - Math.cos(i * 0.02) * 25) * scaleY;
+                ctx.lineTo(mx, my);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // 5. 地面與草地條線
+            ctx.fillStyle = curTheme.groundColor;
+            ctx.fillRect(0, GROUND_Y * scaleY, canvas.width, canvas.height - GROUND_Y * scaleY);
+
+            ctx.fillStyle = curTheme.groundLine;
+            ctx.fillRect(0, GROUND_Y * scaleY, canvas.width, 4 * scaleY);
+        }
+
+        function checkAABBCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        let obstacleTimer = 0;
+        let nextObstacleInterval = 80;
+
+        function handleObstacles() {
+            obstacleTimer++;
+            if (obstacleTimer > nextObstacleInterval) {
+                obstacleTimer = 0;
+                const types = ['cactus_small', 'cactus_large'];
+                if (score > 100) types.push('bird');
+
+                const chosenType = types[Math.floor(Math.random() * types.length)];
+                obstacles.push(new Obstacle(chosenType));
+
+                nextObstacleInterval = Math.floor(Math.random() * 50) + Math.max(30, 95 - gameSpeed * 3);
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.update();
+                obs.draw(ctx, canvas.width / V_WIDTH, canvas.height / V_HEIGHT);
+
+                // 障礙物碰撞
+                if (checkAABBCollision(dino.getHitbox(), obs.getHitbox())) {
+                    triggerGameOver('Obstacle', obs.x + obs.width / 2, obs.y + obs.height / 2);
+                }
+
+                if (obs.markedForDeletion) obstacles.splice(i, 1);
+            }
+        }
+
+        function handleClouds() {
+            for (let cloud of clouds) {
+                cloud.update();
+                cloud.draw(ctx, canvas.width / V_WIDTH, canvas.height / V_HEIGHT);
+
+                // **核心機制：高空雲朵碰撞死亡**
+                if (checkAABBCollision(dino.getHitbox(), cloud.getHitbox())) {
+                    triggerGameOver('Cloud', dino.x + dino.width / 2, dino.y);
+                }
+            }
+        }
+
+        function triggerGameOver(reason, hitX, hitY) {
+            isRunning = false;
+            isGameOver = true;
+
+            const scaleX = canvas.width / V_WIDTH;
+            const scaleY = canvas.height / V_HEIGHT;
+
+            // 畫面震動特效
+            container.classList.add('screen-shake');
+            setTimeout(() => container.classList.remove('screen-shake'), 350);
+
+            if (reason === 'Cloud') {
+                soundEngine.playCloudHit();
+                spawnExplosion(hitX, hitY, '#38bdf8');
+                spawnFloatingText('☁️️ 撞擊雲朵!', hitX, hitY);
+            } else {
+                soundEngine.playObstacleHit();
+                spawnExplosion(hitX, hitY, '#f43f5e');
+                spawnFloatingText('💥 碰撞事故!', hitX, hitY);
+            }
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('dino_modern_hi', highScore);
+                document.getElementById('highScoreText').textContent = String(highScore).padStart(5, '0');
+            }
+
+            // 顯示結算 Modal
+            document.getElementById('overlayTitle').textContent = reason === 'Cloud' ? '☁️ 撞擊高空雲朵！' : '💥 撞擊地面障礙！';
+            document.getElementById('overlaySub').textContent = `得分: ${score} 分 | 最高紀錄: ${highScore} 分`;
+            document.getElementById('startBtn').textContent = '重新開始 (SPACE / R)';
+            document.getElementById('startOverlay').classList.remove('hidden');
+            document.getElementById('statusDot').className = "w-3 h-3 rounded-full bg-rose-500";
+        }
+
+        function updateScore() {
+            score++;
+            document.getElementById('scoreText').textContent = String(score).padStart(5, '0');
+
+            // 每 100 分里程碑慶祝
+            if (score > 0 && score % 100 === 0) {
+                soundEngine.playScoreMilestone();
+                spawnFloatingText('+100 BONUS!', dino.x + 30, dino.y - 20);
+                for (let i = 0; i < 15; i++) {
+                    particles.push(new Particle(
+                        dino.x + 30, dino.y - 20,
+                        (Math.random() - 0.5) * 6, -Math.random() * 5,
+                        Math.random() * 5 + 2, '#fde047', 30
+                    ));
+                }
+            }
+
+            // 加速
+            if (gameSpeed < 20) {
+                gameSpeed += 0.0025;
+            }
+        }
+
+        function gameLoop() {
+            frameCount++;
+            const scaleX = canvas.width / V_WIDTH;
+            const scaleY = canvas.height / V_HEIGHT;
+
+            // 1. 視差背景
+            drawParallaxBackground(scaleX, scaleY);
+
+            // 2. 雲朵 (包含碰撞檢測)
+            handleClouds();
+
+            // 3. 小恐龍更新與繪製
+            dino.update();
+            dino.draw(ctx, scaleX, scaleY);
+
+            // 4. 進行中邏輯
+            if (isRunning) {
+                handleObstacles();
+
+                if (frameCount % 4 === 0) {
+                    updateScore();
+                }
+            }
+
+            // 5. 繪製粒子系統
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw(ctx, scaleX, scaleY);
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // 6. 繪製浮動文字
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy;
+                ft.life--;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+                ctx.fillStyle = '#fde047';
+                ctx.font = `800 ${18 * scaleX}px Outfit`;
+                ctx.fillText(ft.text, ft.x * scaleX, ft.y * scaleY);
+                ctx.restore();
+
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            soundEngine.init();
+            if (isRunning) return;
+
+            isRunning = true;
+            isGameOver = false;
+            score = 0;
+            gameSpeed = 9;
+            obstacles = [];
+            particles = [];
+            floatingTexts = [];
+            dino.reset();
+
+            // 初始化雲朵
+            clouds = [new VectorCloud(), new VectorCloud(), new VectorCloud(), new VectorCloud()];
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('statusDot').className = "w-3 h-3 rounded-full bg-emerald-400 animate-pulse";
+            document.getElementById('highScoreText').textContent = String(highScore).padStart(5, '0');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (!isRunning || isGameOver) startGame();
+                else dino.jump();
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                if (isRunning) dino.duck(true);
+            } else if (e.code === 'KeyR' && isGameOver) {
+                startGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                if (isRunning) dino.duck(false);
+            }
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+
+        // 手機觸控按鈕
+        const touchJumpBtn = document.getElementById('touchJumpBtn');
+        const touchDuckBtn = document.getElementById('touchDuckBtn');
+
+        touchJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isRunning || isGameOver) startGame();
+            else dino.jump();
+        });
+
+        touchDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isRunning) dino.duck(true);
+        });
+
+        touchDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRunning) dino.duck(false);
+        });
+
+        // 音效切換
+        const soundBtn = document.getElementById('soundBtn');
+        soundBtn.addEventListener('click', () => {
+            soundEngine.init();
+            soundEngine.muted = !soundEngine.muted;
+            document.getElementById('soundOnIcon').classList.toggle('hidden', soundEngine.muted);
+            document.getElementById('soundOffIcon').classList.toggle('hidden', !soundEngine.muted);
+        });
+
+        // 日夜主題切換
+        document.getElementById('themeBtn').addEventListener('click', () => {
+            themeIndex = (themeIndex + 1) % themes.length;
+        });
+
+        // 啟動繪製
+        clouds = [new VectorCloud(), new VectorCloud(), new VectorCloud()];
+        document.getElementById('highScoreText').textContent = String(highScore).padStart(5, '0');
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>

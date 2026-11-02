@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Google 離線小恐龍 (高清四季環球版)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Press+Start+2P&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes seasonNotice {
+            0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+            15% { opacity: 1; transform: translateY(0) scale(1); }
+            85% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+        }
+
+        .season-toast {
+            animation: seasonNotice 2.5s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 select-none overflow-x-hidden">
+
+    <header class="w-full max-w-5xl flex flex-col sm:flex-row justify-between items-center gap-3 mb-2">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl sm:text-4xl filter drop-shadow">🦕</span>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-wider bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                    DINO WORLD RUNNER
+                </h1>
+                <p class="text-xs text-slate-400">高清 4K · 多恐龍 · 環球景色 · 动态四季氣候</p>
+            </div>
+        </div>
+        
+        <!-- Top Controls -->
+        <div class="flex items-center gap-2 text-xs">
+            <button id="soundToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl border border-slate-700 transition flex items-center gap-2">
+                <span id="soundIcon">🔊</span>
+                <span id="soundText" class="hidden sm:inline">音效: 開</span>
+            </button>
+            <button id="pauseBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl border border-slate-700 transition flex items-center gap-2">
+                <span id="pauseIcon">⏸️</span>
+                <span id="pauseText" class="hidden sm:inline">暫停</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="w-full max-w-5xl flex flex-col gap-2 mb-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+        <!-- Dino Character Selection -->
+        <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full pb-1">
+            <span class="text-xs text-slate-400 font-semibold px-1 whitespace-nowrap">角色:</span>
+            <button class="dino-select-btn active-dino bg-emerald-600/30 text-emerald-300 border-emerald-500 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-dino="trex">
+                <span>🦖</span> 暴龍 (T-Rex)
+            </button>
+            <button class="dino-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-dino="brachio">
+                <span>🦕</span> 雷龍 (Brachio)
+            </button>
+            <button class="dino-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-dino="tricera">
+                <span>🦏</span> 三角龍 (Tricera)
+            </button>
+            <button class="dino-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-dino="raptor">
+                <span>🐊</span> 迅猛龍 (Raptor)
+            </button>
+        </div>
+
+        <!-- Scenery Selection -->
+        <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full pt-1 border-t border-slate-800">
+            <span class="text-xs text-slate-400 font-semibold px-1 whitespace-nowrap">景色:</span>
+            <button class="scene-select-btn active-scene bg-cyan-600/30 text-cyan-300 border-cyan-500 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-scene="taipei">
+                <span>🏙️</span> 台北101
+            </button>
+            <button class="scene-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-scene="fuji">
+                <span>🗻</span> 富士山
+            </button>
+            <button class="scene-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-scene="pyramids">
+                <span>🏜️</span> 埃及金字塔
+            </button>
+            <button class="scene-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-scene="alpine">
+                <span>🌲</span> 阿爾卑斯雪山
+            </button>
+        </div>
+
+        <!-- Seasonal Selection -->
+        <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full pt-1 border-t border-slate-800">
+            <span class="text-xs text-amber-400 font-semibold px-1 whitespace-nowrap flex items-center gap-1">
+                <span>🍂</span> 季節:
+            </span>
+            <button class="season-select-btn active-season bg-amber-600/30 text-amber-300 border-amber-500 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-season="auto">
+                <span>🔄</span> 自動輪播
+            </button>
+            <button class="season-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-season="spring">
+                <span>🌸</span> 春櫻 (Spring)
+            </button>
+            <button class="season-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-season="summer">
+                <span>☀️</span> 夏日 (Summer)
+            </button>
+            <button class="season-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-season="autumn">
+                <span>🍁</span> 秋楓 (Autumn)
+            </button>
+            <button class="season-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-season="winter">
+                <span>❄️</span> 冬雪 (Winter)
+            </button>
+        </div>
+
+        <!-- Time of Day Selection -->
+        <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full pt-1 border-t border-slate-800">
+            <span class="text-xs text-indigo-400 font-semibold px-1 whitespace-nowrap flex items-center gap-1">
+                <span>🌆</span> 時段:
+            </span>
+            <button class="time-select-btn active-time bg-indigo-600/30 text-indigo-300 border-indigo-500 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-time="auto">
+                <span>🔄</span> 自動輪播
+            </button>
+            <button class="time-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-time="day">
+                <span>☀️</span> 白天 (Day)
+            </button>
+            <button class="time-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-time="dusk">
+                <span>🌇</span> 黃昏 (Dusk)
+            </button>
+            <button class="time-select-btn bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 border px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition whitespace-nowrap" data-time="night">
+                <span>🌙</span> 深夜 (Night)
+            </button>
+        </div>
+    </div>
+
+    <main class="w-full max-w-5xl flex-1 flex flex-col items-center justify-center relative">
+        <div id="gameWrapper" class="w-full bg-slate-900 border-2 border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden relative transition-all duration-500">
+            
+            <!-- Dynamic Seasonal Notification Banner -->
+            <div id="seasonToast" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 border border-amber-500/50 text-amber-300 px-4 py-1.5 rounded-full text-xs font-bold shadow-lg pointer-events-none flex items-center gap-2">
+                <span id="seasonToastIcon">🌸</span>
+                <span id="seasonToastText">季節變更：春櫻</span>
+            </div>
+
+            <!-- Real-time Score Overlay -->
+            <div class="absolute top-4 right-6 flex items-center gap-5 text-xs sm:text-sm font-pixel z-10 pointer-events-none drop-shadow-md">
+                <div id="hiScoreDisplay" class="text-slate-300/80">HI <span id="hiScoreVal">00000</span></div>
+                <div id="currentScoreDisplay" class="text-amber-300 font-extrabold text-base sm:text-lg">00000</div>
+            </div>
+
+            <!-- Start / Game Over Overlay -->
+            <div id="gameOverlay" class="absolute inset-0 flex flex-col items-center justify-center glass-panel z-20 transition-all duration-300">
+                <div class="p-6 sm:p-10 text-center max-w-md shadow-2xl rounded-3xl">
+                    <div id="overlayDinoIcon" class="text-5xl mb-3 animate-bounce">🦖</div>
+                    <div id="overlayTitle" class="text-2xl sm:text-3xl text-emerald-400 font-black tracking-wide mb-2">
+                        READY TO RUN?
+                    </div>
+                    <p id="overlaySub" class="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
+                        按 <kbd class="bg-slate-800 px-2 py-1 rounded-md text-emerald-300 border border-slate-700 font-mono">Space</kbd> / <kbd class="bg-slate-800 px-2 py-1 rounded-md text-emerald-300 border border-slate-700 font-mono">↑</kbd> 跳躍，<kbd class="bg-slate-800 px-2 py-1 rounded-md text-emerald-300 border border-slate-700 font-mono">↓</kbd> 蹲下
+                    </p>
+                    <button id="startBtn" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-95 text-slate-950 font-black py-3.5 px-8 rounded-2xl shadow-xl transition duration-200 text-sm sm:text-base tracking-wide flex items-center justify-center gap-2">
+                        <span>▶</span> 開始遊戲 START
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas Element -->
+            <canvas id="gameCanvas" class="w-full h-[260px] sm:h-[320px] block cursor-pointer"></canvas>
+        </div>
+
+        <!-- Touch Controls for Mobile Devices -->
+        <div class="w-full grid grid-cols-2 gap-3 mt-3 sm:hidden">
+            <button id="mobileDuckBtn" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 py-3.5 rounded-2xl border border-slate-700 font-bold text-sm flex items-center justify-center gap-2 shadow-md">
+                <span>⬇️</span> 蹲下 (DUCK)
+            </button>
+            <button id="mobileJumpBtn" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg">
+                <span>⬆️</span> 跳躍 (JUMP)
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-5xl text-center text-xs text-slate-500 mt-3">
+        <p>4K HD Retina Engine — HTML5 Canvas & Web Audio Synthesizer</p>
+    </footer>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.12);
+
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch (e) {}
+            }
+
+            playScore() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch (e) {}
+            }
+
+            playHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } catch (e) {}
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverlay = document.getElementById('gameOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const overlayDinoIcon = document.getElementById('overlayDinoIcon');
+        const startBtn = document.getElementById('startBtn');
+        const currentScoreDisplay = document.getElementById('currentScoreDisplay');
+        const hiScoreVal = document.getElementById('hiScoreVal');
+        const seasonToast = document.getElementById('seasonToast');
+        const seasonToastIcon = document.getElementById('seasonToastIcon');
+        const seasonToastText = document.getElementById('seasonToastText');
+
+        const LOGICAL_WIDTH = 900;
+        const LOGICAL_HEIGHT = 280;
+        const GROUND_Y = 230;
+
+        let scaleFactor = 1;
+
+        function resizeCanvasHD() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+
+            ctx.resetTransform();
+            ctx.scale((rect.width / LOGICAL_WIDTH) * dpr, (rect.height / LOGICAL_HEIGHT) * dpr);
+            scaleFactor = rect.width / LOGICAL_WIDTH;
+        }
+
+        window.addEventListener('resize', resizeCanvasHD);
+
+        const DINO_SPECIES = {
+            trex: {
+                name: '暴龍 T-Rex',
+                icon: '🦖',
+                color: '#10b981',
+                secondary: '#047857',
+                width: 48,
+                height: 52,
+                jumpForce: -12.5,
+                gravity: 0.65
+            },
+            brachio: {
+                name: '雷龍 Brachio',
+                icon: '🦕',
+                color: '#06b6d4',
+                secondary: '#0e7490',
+                width: 56,
+                height: 64,
+                jumpForce: -13.2,
+                gravity: 0.62
+            },
+            tricera: {
+                name: '三角龍 Tricera',
+                icon: '🦏',
+                color: '#f59e0b',
+                secondary: '#b45309',
+                width: 54,
+                height: 44,
+                jumpForce: -11.8,
+                gravity: 0.68
+            },
+            raptor: {
+                name: '迅猛龍 Raptor',
+                icon: '🐊',
+                color: '#ec4899',
+                secondary: '#be185d',
+                width: 46,
+                height: 44,
+                jumpForce: -12.0,
+                gravity: 0.65
+            }
+        };
+
+        let selectedDinoKey = 'trex';
+
+        const SCENERY_THEMES = {
+            taipei: {
+                name: '台北101 Skyline',
+                skyTop: '#0f172a',
+                skyBottom: '#1e1b4b',
+                landmarks: 'taipei101'
+            },
+            fuji: {
+                name: '日本富士山 Fuji',
+                skyTop: '#2e1065',
+                skyBottom: '#701a75',
+                landmarks: 'fuji'
+            },
+            pyramids: {
+                name: '埃及金字塔 Pyramids',
+                skyTop: '#451a03',
+                skyBottom: '#78350f',
+                landmarks: 'pyramids'
+            },
+            alpine: {
+                name: '阿爾卑斯雪山 Alpine',
+                skyTop: '#0284c7',
+                skyBottom: '#38bdf8',
+                landmarks: 'mountains'
+            }
+        };
+
+        let selectedSceneKey = 'taipei';
+
+        const SEASON_CONFIG = {
+            spring: {
+                name: '春櫻 (Spring)',
+                icon: '🌸',
+                groundLine: '#f472b6',
+                groundBody: '#334155',
+                particleType: 'sakura',
+                overlayTint: 'rgba(251, 207, 232, 0.08)'
+            },
+            summer: {
+                name: '夏日 (Summer)',
+                icon: '☀️',
+                groundLine: '#22c55e',
+                groundBody: '#1e293b',
+                particleType: 'firefly',
+                overlayTint: 'rgba(254, 240, 138, 0.06)'
+            },
+            autumn: {
+                name: '秋楓 (Autumn)',
+                icon: '🍁',
+                groundLine: '#f97316',
+                groundBody: '#451a03',
+                particleType: 'maple',
+                overlayTint: 'rgba(254, 215, 170, 0.1)'
+            },
+            winter: {
+                name: '冬雪 (Winter)',
+                icon: '❄️',
+                groundLine: '#e0f2fe',
+                groundBody: '#1e293b',
+                particleType: 'snow',
+                overlayTint: 'rgba(224, 242, 254, 0.12)'
+            }
+        };
+
+        const SEASON_KEYS = ['spring', 'summer', 'autumn', 'winter'];
+        let selectedSeasonSetting = 'auto'; // 'auto', 'spring', 'summer', 'autumn', 'winter'
+        let currentSeasonKey = 'spring';
+
+        const TIME_CONFIG = {
+            day: {
+                name: '亮麗白天 (Day)',
+                icon: '☀️',
+                skyTop: '#38bdf8',
+                skyBottom: '#bae6fd',
+                sunMoonColor: '#facc15',
+                sunMoonGlow: 'rgba(254, 240, 138, 0.4)',
+                isNight: false,
+                ambientTint: 'rgba(255, 255, 255, 0.02)',
+                celestialX: 750,
+                celestialY: 50,
+                celestialSize: 22
+            },
+            dusk: {
+                name: '夕陽黃昏 (Dusk)',
+                icon: '🌇',
+                skyTop: '#431407',
+                skyBottom: '#ea580c',
+                sunMoonColor: '#f97316',
+                sunMoonGlow: 'rgba(253, 186, 116, 0.5)',
+                isNight: false,
+                ambientTint: 'rgba(249, 115, 22, 0.12)',
+                celestialX: 680,
+                celestialY: 120,
+                celestialSize: 28
+            },
+            night: {
+                name: '靜謐深夜 (Night)',
+                icon: '🌙',
+                skyTop: '#020617',
+                skyBottom: '#0f172a',
+                sunMoonColor: '#fef08a',
+                sunMoonGlow: 'rgba(254, 243, 199, 0.3)',
+                isNight: true,
+                ambientTint: 'rgba(15, 23, 42, 0.35)',
+                celestialX: 720,
+                celestialY: 55,
+                celestialSize: 18
+            }
+        };
+
+        const TIME_KEYS = ['day', 'dusk', 'night'];
+        let selectedTimeSetting = 'auto';
+        let currentTimeKey = 'day';
+
+        const nightStars = Array.from({ length: 40 }, () => ({
+            x: Math.random() * LOGICAL_WIDTH,
+            y: Math.random() * (GROUND_Y - 70),
+            size: Math.random() * 2 + 0.8,
+            alpha: Math.random() * 0.8 + 0.2,
+            twinkleSpeed: Math.random() * 0.03 + 0.01
+        }));
+
+        class SeasonalParticle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * LOGICAL_WIDTH;
+                this.y = -20 - Math.random() * 50;
+                this.size = Math.random() * 6 + 4;
+                this.speedY = Math.random() * 1.5 + 0.8;
+                this.speedX = Math.random() * 1.2 - 0.2;
+                this.angle = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+                this.opacity = Math.random() * 0.6 + 0.4;
+            }
+
+            update(seasonType) {
+                if (seasonType === 'snow') {
+                    this.y += this.speedY * 1.2;
+                    this.x += Math.sin(this.y * 0.03) * 0.8;
+                } else if (seasonType === 'sakura') {
+                    this.y += this.speedY;
+                    this.x += this.speedX + 0.8;
+                    this.angle += this.rotationSpeed;
+                } else if (seasonType === 'maple') {
+                    this.y += this.speedY * 1.1;
+                    this.x += Math.sin(this.y * 0.04) * 1.5 + 0.5;
+                    this.angle += this.rotationSpeed * 1.5;
+                } else if (seasonType === 'firefly') {
+                    this.y += Math.sin(this.angle) * 0.6;
+                    this.x += Math.cos(this.angle) * 0.6 - 0.5;
+                    this.angle += 0.03;
+                    this.opacity = 0.3 + Math.abs(Math.sin(this.angle * 2)) * 0.6;
+                }
+
+                if (this.y > LOGICAL_HEIGHT + 20 || this.x > LOGICAL_WIDTH + 20 || this.x < -20) {
+                    this.reset();
+                }
+            }
+
+            draw(ctx, seasonType) {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                if (seasonType === 'sakura') {
+                    // Sakura Petal
+                    ctx.fillStyle = '#f472b6';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size, this.size * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (seasonType === 'maple') {
+                    // Maple Leaf
+                    ctx.fillStyle = '#ea580c';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(-1, 0, 2, this.size * 1.2);
+                } else if (seasonType === 'firefly') {
+                    // Glowing Summer Particle
+                    ctx.fillStyle = '#fef08a';
+                    ctx.shadowColor = '#fde047';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (seasonType === 'snow') {
+                    // Snowflake
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        const seasonParticles = Array.from({ length: 40 }, () => new SeasonalParticle());
+
+        let gameState = 'START';
+        let speed = 7;
+        const INITIAL_SPEED = 7;
+        const MAX_SPEED = 16;
+        let score = 0;
+        let hiScore = parseInt(localStorage.getItem('dino_world_hi_score') || '0', 10);
+        let frameCount = 0;
+        let parallaxX = 0;
+
+        const dino = {
+            x: 70,
+            y: 0,
+            width: 48,
+            height: 52,
+            duckHeight: 28,
+            vy: 0,
+            isJumping: false,
+            isDucking: false,
+            legFrame: 0,
+            animTimer: 0,
+
+            reset() {
+                const spec = DINO_SPECIES[selectedDinoKey];
+                this.width = spec.width;
+                this.height = spec.height;
+                this.y = GROUND_Y - this.height;
+                this.vy = 0;
+                this.isJumping = false;
+                this.isDucking = false;
+                this.legFrame = 0;
+            },
+
+            jump() {
+                if (!this.isJumping) {
+                    const spec = DINO_SPECIES[selectedDinoKey];
+                    this.vy = spec.jumpForce;
+                    this.isJumping = true;
+                    soundFX.playJump();
+                }
+            },
+
+            duck(ducking) {
+                if (this.isJumping) {
+                    if (ducking) this.vy += 2.8;
+                    return;
+                }
+                const spec = DINO_SPECIES[selectedDinoKey];
+                if (ducking && !this.isDucking) {
+                    this.isDucking = true;
+                    this.y = GROUND_Y - this.duckHeight;
+                } else if (!ducking && this.isDucking) {
+                    this.isDucking = false;
+                    this.y = GROUND_Y - spec.height;
+                }
+            },
+
+            update() {
+                const spec = DINO_SPECIES[selectedDinoKey];
+                if (this.isJumping) {
+                    this.vy += spec.gravity;
+                    this.y += this.vy;
+
+                    const curH = this.isDucking ? this.duckHeight : spec.height;
+                    if (this.y >= GROUND_Y - curH) {
+                        this.y = GROUND_Y - curH;
+                        this.vy = 0;
+                        this.isJumping = false;
+                    }
+                }
+
+                this.animTimer++;
+                if (this.animTimer % 6 === 0) {
+                    this.legFrame = (this.legFrame + 1) % 2;
+                }
+            },
+
+            draw() {
+                const spec = DINO_SPECIES[selectedDinoKey];
+                const px = this.x;
+                const py = this.y;
+
+                ctx.save();
+                
+                if (selectedDinoKey === 'trex') {
+                    this.drawTRex(px, py, spec);
+                } else if (selectedDinoKey === 'brachio') {
+                    this.drawBrachio(px, py, spec);
+                } else if (selectedDinoKey === 'tricera') {
+                    this.drawTricera(px, py, spec);
+                } else if (selectedDinoKey === 'raptor') {
+                    this.drawRaptor(px, py, spec);
+                }
+
+                ctx.restore();
+            },
+
+            drawTRex(x, y, spec) {
+                const isDuck = this.isDucking;
+                const bodyColor = spec.color;
+
+                ctx.fillStyle = bodyColor;
+                if (!isDuck) {
+                    ctx.beginPath();
+                    ctx.roundRect(x + 22, y, 26, 20, 6);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x + 38, y + 6, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(x + 39, y + 6, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = bodyColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 10, y + 16, 28, 22, 8);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(x + 10, y + 20);
+                    ctx.lineTo(x - 12, y + 18);
+                    ctx.lineTo(x + 10, y + 32);
+                    ctx.fill();
+
+                    ctx.fillStyle = spec.secondary;
+                    ctx.fillRect(x + 34, y + 24, 8, 3);
+
+                    this.drawLegs(x + 18, y + 36, x + 28, y + 36, bodyColor);
+                } else {
+                    ctx.beginPath();
+                    ctx.roundRect(x + 10, y + 4, 38, 18, 6);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.roundRect(x + 34, y + 2, 22, 14, 4);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x + 48, y + 6, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    this.drawLegs(x + 16, y + 20, x + 28, y + 20, bodyColor);
+                }
+            },
+
+            drawBrachio(x, y, spec) {
+                const bodyColor = spec.color;
+                ctx.fillStyle = bodyColor;
+
+                if (!this.isDucking) {
+                    ctx.beginPath();
+                    ctx.roundRect(x + 32, y, 12, 40, 4);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.roundRect(x + 32, y - 6, 20, 12, 4);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x + 44, y - 2, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = bodyColor;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 8, y + 24, 36, 26, 10);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(x + 8, y + 30);
+                    ctx.lineTo(x - 14, y + 38);
+                    ctx.lineTo(x + 8, y + 42);
+                    ctx.fill();
+
+                    this.drawLegs(x + 14, y + 46, x + 30, y + 46, bodyColor);
+                } else {
+                    ctx.beginPath();
+                    ctx.roundRect(x + 8, y + 8, 42, 18, 6);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.roundRect(x + 38, y + 2, 18, 12, 4);
+                    ctx.fill();
+                    this.drawLegs(x + 14, y + 22, x + 32, y + 22, bodyColor);
+                }
+            },
+
+            drawTricera(x, y, spec) {
+                const bodyColor = spec.color;
+                ctx.fillStyle = bodyColor;
+
+                ctx.beginPath();
+                ctx.roundRect(x + 28, y + 6, 22, 22, 6);
+                ctx.fill();
+
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.moveTo(x + 44, y + 8);
+                ctx.lineTo(x + 54, y + 2);
+                ctx.lineTo(x + 42, y + 14);
+                ctx.fill();
+
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.roundRect(x + 6, y + 14, 32, 20, 8);
+                ctx.fill();
+
+                this.drawLegs(x + 12, y + 30, x + 26, y + 30, bodyColor);
+            },
+
+            drawRaptor(x, y, spec) {
+                const bodyColor = spec.color;
+                ctx.fillStyle = bodyColor;
+
+                ctx.beginPath();
+                ctx.roundRect(x + 16, y + 6, 24, 18, 5);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.roundRect(x + 28, y + 4, 18, 10, 3);
+                ctx.fill();
+
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(x + 36, y + 8, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.moveTo(x + 16, y + 10);
+                ctx.lineTo(x - 14, y + 4);
+                ctx.lineTo(x + 16, y + 20);
+                ctx.fill();
+
+                this.drawLegs(x + 18, y + 22, x + 28, y + 22, bodyColor);
+            },
+
+            drawLegs(lx1, ly1, lx2, ly2, color) {
+                ctx.fillStyle = color;
+                if (this.isJumping) {
+                    ctx.fillRect(lx1, ly1, 6, 12);
+                    ctx.fillRect(lx2, ly2, 6, 12);
+                } else if (this.legFrame === 0) {
+                    ctx.fillRect(lx1, ly1, 6, 14);
+                    ctx.fillRect(lx2, ly2, 6, 8);
+                } else {
+                    ctx.fillRect(lx1, ly1, 6, 8);
+                    ctx.fillRect(lx2, ly2, 6, 14);
+                }
+            }
+        };
+
+        function drawRealWorldBackground() {
+            const scene = SCENERY_THEMES[selectedSceneKey];
+            const season = SEASON_CONFIG[currentSeasonKey];
+            const timeOfDay = TIME_CONFIG[currentTimeKey];
+
+            // 1. Sky Gradient (Combines scenery base with time of day palette)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            skyGrad.addColorStop(0, timeOfDay.skyTop);
+            skyGrad.addColorStop(1, timeOfDay.skyBottom);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+            // 2. Night Starfield
+            if (timeOfDay.isNight) {
+                ctx.save();
+                nightStars.forEach(star => {
+                    star.alpha += Math.sin(frameCount * star.twinkleSpeed) * 0.05;
+                    const clampedAlpha = Math.max(0.1, Math.min(1, star.alpha));
+                    ctx.fillStyle = `rgba(255, 255, 255, ${clampedAlpha})`;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+
+            // 3. Celestial Body (Sun / Sunset Sun / Moon)
+            ctx.save();
+            ctx.fillStyle = timeOfDay.sunMoonGlow;
+            ctx.beginPath();
+            ctx.arc(timeOfDay.celestialX, timeOfDay.celestialY, timeOfDay.celestialSize * 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = timeOfDay.sunMoonColor;
+            ctx.beginPath();
+            ctx.arc(timeOfDay.celestialX, timeOfDay.celestialY, timeOfDay.celestialSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Moon shadow effect for night time
+            if (timeOfDay.isNight) {
+                ctx.fillStyle = timeOfDay.skyTop;
+                ctx.beginPath();
+                ctx.arc(timeOfDay.celestialX - 6, timeOfDay.celestialY - 4, timeOfDay.celestialSize * 0.85, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Seasonal & Time Ambient Overlays
+            ctx.fillStyle = season.overlayTint;
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+            ctx.fillStyle = timeOfDay.ambientTint;
+            ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+            // 4. Distant Landmarks
+            ctx.save();
+            if (scene.landmarks === 'taipei101') {
+                drawTaipei101Landmark(parallaxX * 0.2, timeOfDay.isNight);
+            } else if (scene.landmarks === 'fuji') {
+                drawFujiLandmark(parallaxX * 0.15, timeOfDay.isNight);
+            } else if (scene.landmarks === 'pyramids') {
+                drawPyramidsLandmark(parallaxX * 0.2, timeOfDay.isNight);
+            } else if (scene.landmarks === 'mountains') {
+                drawAlpineLandmark(parallaxX * 0.2, timeOfDay.isNight);
+            }
+            ctx.restore();
+
+            // 5. Ground Line & Seasonal Color
+            ctx.fillStyle = timeOfDay.isNight ? '#090d16' : season.groundBody;
+            ctx.fillRect(0, GROUND_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - GROUND_Y);
+
+            // Seasonal Ground Top Border
+            ctx.fillStyle = season.groundLine;
+            ctx.fillRect(0, GROUND_Y, LOGICAL_WIDTH, 4);
+
+            // Ground parallax dashes
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+            for (let i = 0; i < LOGICAL_WIDTH; i += 40) {
+                const dashX = (i - (parallaxX % 40) + LOGICAL_WIDTH) % LOGICAL_WIDTH;
+                ctx.fillRect(dashX, GROUND_Y + 12, 16, 2);
+            }
+
+            // Render Weather Particles
+            seasonParticles.forEach(p => {
+                p.update(season.particleType);
+                p.draw(ctx, season.particleType);
+            });
+        }
+
+        function drawTaipei101Landmark(offset, isNight) {
+            const bx = (350 - (offset % 600) + 600) % 600;
+
+            const bldgColor = isNight ? 'rgba(15, 23, 42, 0.85)' : 'rgba(14, 116, 144, 0.4)';
+            const windowColor = isNight ? '#fef08a' : 'rgba(255, 255, 255, 0.2)';
+
+            ctx.fillStyle = bldgColor;
+            const tX = bx + 100;
+            ctx.fillRect(tX + 18, GROUND_Y - 180, 8, 30);
+            for (let i = 0; i < 8; i++) {
+                const segY = GROUND_Y - 150 + (i * 15);
+                const w = 20 + i * 2;
+                ctx.fillRect(tX + 22 - w/2, segY, w, 12);
+                if (isNight && i % 2 === 0) {
+                    ctx.fillStyle = windowColor;
+                    ctx.fillRect(tX + 22 - w/4, segY + 4, w/2, 3);
+                    ctx.fillStyle = bldgColor;
+                }
+            }
+            ctx.fillRect(tX + 8, GROUND_Y - 30, 28, 30);
+
+            ctx.fillStyle = isNight ? 'rgba(15, 23, 42, 0.9)' : 'rgba(30, 41, 59, 0.6)';
+            ctx.fillRect(bx, GROUND_Y - 80, 45, 80);
+            ctx.fillRect(bx + 55, GROUND_Y - 110, 35, 110);
+            ctx.fillRect(bx + 150, GROUND_Y - 95, 50, 95);
+            ctx.fillRect(bx + 210, GROUND_Y - 70, 40, 70);
+        }
+
+        function drawFujiLandmark(offset, isNight) {
+            const fx = (250 - (offset % 700) + 700) % 700;
+
+            ctx.fillStyle = isNight ? '#0f172a' : '#312e81';
+            ctx.beginPath();
+            ctx.moveTo(fx, GROUND_Y);
+            ctx.lineTo(fx + 140, GROUND_Y - 120);
+            ctx.lineTo(fx + 180, GROUND_Y - 120);
+            ctx.lineTo(fx + 320, GROUND_Y);
+            ctx.fill();
+
+            ctx.fillStyle = isNight ? '#94a3b8' : '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(fx + 110, GROUND_Y - 94);
+            ctx.lineTo(fx + 140, GROUND_Y - 120);
+            ctx.lineTo(fx + 180, GROUND_Y - 120);
+            ctx.lineTo(fx + 210, GROUND_Y - 94);
+            ctx.lineTo(fx + 170, GROUND_Y - 80);
+            ctx.fill();
+        }
+
+        function drawPyramidsLandmark(offset, isNight) {
+            const px = (200 - (offset % 650) + 650) % 650;
+
+            ctx.fillStyle = isNight ? '#451a03' : '#92400e';
+            ctx.beginPath();
+            ctx.moveTo(px, GROUND_Y);
+            ctx.lineTo(px + 120, GROUND_Y - 110);
+            ctx.lineTo(px + 240, GROUND_Y);
+            ctx.fill();
+
+            ctx.fillStyle = isNight ? '#292524' : '#78350f';
+            ctx.beginPath();
+            ctx.moveTo(px + 120, GROUND_Y - 110);
+            ctx.lineTo(px + 240, GROUND_Y);
+            ctx.lineTo(px + 170, GROUND_Y);
+            ctx.fill();
+        }
+
+        function drawAlpineLandmark(offset, isNight) {
+            const ax = (150 - (offset % 600) + 600) % 600;
+
+            ctx.fillStyle = isNight ? '#020617' : '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(ax, GROUND_Y);
+            ctx.lineTo(ax + 100, GROUND_Y - 130);
+            ctx.lineTo(ax + 200, GROUND_Y);
+            ctx.fill();
+
+            ctx.fillStyle = isNight ? '#64748b' : '#f8fafc';
+            ctx.beginPath();
+            ctx.moveTo(ax + 70, GROUND_Y - 91);
+            ctx.lineTo(ax + 100, GROUND_Y - 130);
+            ctx.lineTo(ax + 130, GROUND_Y - 91);
+            ctx.fill();
+        }
+
+        let obstacles = [];
+
+        class Obstacle {
+            constructor() {
+                this.x = LOGICAL_WIDTH + 30;
+                this.type = Math.random() < 0.7 ? 'cactus' : 'bird';
+
+                if (this.type === 'cactus') {
+                    this.width = 24 + Math.floor(Math.random() * 20);
+                    this.height = 42 + Math.floor(Math.random() * 16);
+                    this.y = GROUND_Y - this.height;
+                } else {
+                    this.width = 38;
+                    this.height = 28;
+                    const flyHeights = [GROUND_Y - 35, GROUND_Y - 65, GROUND_Y - 90];
+                    this.y = flyHeights[Math.floor(Math.random() * flyHeights.length)];
+                    this.wingFrame = 0;
+                    this.animTimer = 0;
+                }
+
+                this.markedForDeletion = false;
+            }
+
+            update() {
+                this.x -= speed;
+                if (this.x + this.width < -20) this.markedForDeletion = true;
+
+                if (this.type === 'bird') {
+                    this.animTimer++;
+                    if (this.animTimer % 8 === 0) {
+                        this.wingFrame = (this.wingFrame + 1) % 2;
+                    }
+                }
+            }
+
+            draw() {
+                if (this.type === 'cactus') {
+                    ctx.fillStyle = currentSeasonKey === 'winter' ? '#38bdf8' : '#10b981';
+                    ctx.beginPath();
+                    ctx.roundRect(this.x, this.y, this.width, this.height, 6);
+                    ctx.fill();
+                    ctx.fillRect(this.x - 6, this.y + 12, 6, 12);
+                    ctx.fillRect(this.x + this.width, this.y + 18, 6, 12);
+                } else {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.roundRect(this.x + 8, this.y + 8, 22, 12, 4);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#e11d48';
+                    if (this.wingFrame === 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 14, this.y + 8);
+                        ctx.lineTo(this.x + 22, this.y - 10);
+                        ctx.lineTo(this.x + 26, this.y + 8);
+                        ctx.fill();
+                    } else {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 14, this.y + 16);
+                        ctx.lineTo(this.x + 22, this.y + 30);
+                        ctx.lineTo(this.x + 26, this.y + 16);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            const padX = 8;
+            const padY = 6;
+            return (
+                rect1.x + padX < rect2.x + rect2.width - padX &&
+                rect1.x + rect1.width - padX > rect2.x + padX &&
+                rect1.y + padY < rect2.y + rect2.height - padY &&
+                rect1.y + rect1.height - padY > rect2.y + padY
+            );
+        }
+
+        let obstacleTimer = 0;
+
+        function notifySeasonChange(seasonKey) {
+            const config = SEASON_CONFIG[seasonKey];
+            seasonToastIcon.textContent = config.icon;
+            seasonToastText.textContent = `季節變更：${config.name}`;
+            seasonToast.classList.remove('hidden', 'season-toast');
+            void seasonToast.offsetWidth; // Trigger reflow for animation
+            seasonToast.classList.add('season-toast');
+        }
+
+        function notifyTimeChange(timeKey) {
+            const config = TIME_CONFIG[timeKey];
+            seasonToastIcon.textContent = config.icon;
+            seasonToastText.textContent = `時段更替：${config.name}`;
+            seasonToast.classList.remove('hidden', 'season-toast');
+            void seasonToast.offsetWidth; // Trigger reflow
+            seasonToast.classList.add('season-toast');
+        }
+
+        function updateGame() {
+            if (gameState !== 'RUNNING') return;
+
+            frameCount++;
+            parallaxX += speed;
+
+            // Score & Season/Time Rotation Logic
+            if (frameCount % 3 === 0) {
+                score++;
+                if (speed < MAX_SPEED) speed += 0.002;
+
+                if (score > 0 && score % 100 === 0) {
+                    soundFX.playScore();
+                }
+
+                // Auto season cycle every 200 points
+                if (selectedSeasonSetting === 'auto' && score > 0 && score % 200 === 0) {
+                    const currentIndex = SEASON_KEYS.indexOf(currentSeasonKey);
+                    const nextSeasonKey = SEASON_KEYS[(currentIndex + 1) % SEASON_KEYS.length];
+                    currentSeasonKey = nextSeasonKey;
+                    notifySeasonChange(nextSeasonKey);
+                }
+
+                // Auto time-of-day cycle every 150 points
+                if (selectedTimeSetting === 'auto' && score > 0 && score % 150 === 0) {
+                    const currentTimeIndex = TIME_KEYS.indexOf(currentTimeKey);
+                    const nextTimeKey = TIME_KEYS[(currentTimeIndex + 1) % TIME_KEYS.length];
+                    currentTimeKey = nextTimeKey;
+                    notifyTimeChange(nextTimeKey);
+                }
+            }
+
+            // Spawn Obstacles
+            obstacleTimer++;
+            const spawnRate = Math.max(45, 110 - Math.floor(speed * 3));
+            if (obstacleTimer > spawnRate) {
+                obstacleTimer = 0;
+                obstacles.push(new Obstacle());
+            }
+
+            // Dino update
+            dino.update();
+
+            // Obstacles update & collision
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.update();
+
+                if (checkCollision(dino, obs)) {
+                    triggerGameOver();
+                }
+
+                if (obs.markedForDeletion) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Update UI
+            currentScoreDisplay.textContent = String(score).padStart(5, '0');
+            hiScoreVal.textContent = String(hiScore).padStart(5, '0');
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            soundFX.playHit();
+
+            if (score > hiScore) {
+                hiScore = score;
+                localStorage.setItem('dino_world_hi_score', hiScore.toString());
+            }
+
+            overlayDinoIcon.textContent = DINO_SPECIES[selectedDinoKey].icon;
+            overlayTitle.textContent = 'GAME OVER';
+            overlaySub.innerHTML = `得分: <span class="text-amber-300 font-bold font-mono text-lg">${score}</span>`;
+            startBtn.innerHTML = '<span>🔄</span> 再試一次 RETRY';
+            gameOverlay.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            score = 0;
+            speed = INITIAL_SPEED;
+            obstacles = [];
+            obstacleTimer = 0;
+            frameCount = 0;
+            parallaxX = 0;
+            dino.reset();
+            gameState = 'RUNNING';
+            gameOverlay.classList.add('hidden');
+        }
+
+        function render() {
+            drawRealWorldBackground();
+            obstacles.forEach(obs => obs.draw());
+            dino.draw();
+            updateGame();
+
+            requestAnimationFrame(render);
+        }
+
+        function handleJumpAction() {
+            soundFX.init();
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                resetGame();
+            } else if (gameState === 'RUNNING') {
+                dino.jump();
+            }
+        }
+
+        function handleDuckAction(isDucking) {
+            soundFX.init();
+            if (gameState === 'RUNNING') {
+                dino.duck(isDucking);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleJumpAction();
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                handleDuckAction(true);
+            } else if (e.code === 'KeyP') {
+                togglePause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                handleDuckAction(false);
+            }
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handleJumpAction();
+        });
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleJumpAction();
+        });
+
+        // Mobile Button Listeners
+        const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+        const mobileDuckBtn = document.getElementById('mobileDuckBtn');
+
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJumpAction();
+        });
+
+        mobileDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDuckAction(true);
+        });
+
+        mobileDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleDuckAction(false);
+        });
+
+        // Dino Switchers
+        document.querySelectorAll('.dino-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.dino-select-btn').forEach(b => {
+                    b.classList.remove('active-dino', 'bg-emerald-600/30', 'text-emerald-300', 'border-emerald-500');
+                    b.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                });
+                btn.classList.add('active-dino', 'bg-emerald-600/30', 'text-emerald-300', 'border-emerald-500');
+                
+                selectedDinoKey = btn.getAttribute('data-dino');
+                overlayDinoIcon.textContent = DINO_SPECIES[selectedDinoKey].icon;
+                dino.reset();
+            });
+        });
+
+        // Scene Switchers
+        document.querySelectorAll('.scene-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.scene-select-btn').forEach(b => {
+                    b.classList.remove('active-scene', 'bg-cyan-600/30', 'text-cyan-300', 'border-cyan-500');
+                    b.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                });
+                btn.classList.add('active-scene', 'bg-cyan-600/30', 'text-cyan-300', 'border-cyan-500');
+                
+                selectedSceneKey = btn.getAttribute('data-scene');
+            });
+        });
+
+        // Season Switchers
+        document.querySelectorAll('.season-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.season-select-btn').forEach(b => {
+                    b.classList.remove('active-season', 'bg-amber-600/30', 'text-amber-300', 'border-amber-500');
+                    b.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                });
+                btn.classList.add('active-season', 'bg-amber-600/30', 'text-amber-300', 'border-amber-500');
+                
+                selectedSeasonSetting = btn.getAttribute('data-season');
+                if (selectedSeasonSetting !== 'auto') {
+                    currentSeasonKey = selectedSeasonSetting;
+                    notifySeasonChange(currentSeasonKey);
+                } else {
+                    notifySeasonChange('spring');
+                    currentSeasonKey = 'spring';
+                }
+            });
+        });
+
+        document.querySelectorAll('.time-select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.time-select-btn').forEach(b => {
+                    b.classList.remove('active-time', 'bg-indigo-600/30', 'text-indigo-300', 'border-indigo-500');
+                    b.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                });
+                btn.classList.add('active-time', 'bg-indigo-600/30', 'text-indigo-300', 'border-indigo-500');
+                
+                selectedTimeSetting = btn.getAttribute('data-time');
+                if (selectedTimeSetting !== 'auto') {
+                    currentTimeKey = selectedTimeSetting;
+                    notifyTimeChange(currentTimeKey);
+                } else {
+                    notifyTimeChange('day');
+                    currentTimeKey = 'day';
+                }
+            });
+        });
+
+        // Sound Toggle
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            soundFX.enabled = !soundFX.enabled;
+            document.getElementById('soundIcon').textContent = soundFX.enabled ? '🔊' : '🔇';
+            document.getElementById('soundText').textContent = soundFX.enabled ? '音效: 開' : '音效: 關';
+        });
+
+        // Pause Toggle
+        function togglePause() {
+            if (gameState === 'RUNNING') {
+                gameState = 'PAUSED';
+                document.getElementById('pauseIcon').textContent = '▶️';
+                document.getElementById('pauseText').textContent = '繼續';
+            } else if (gameState === 'PAUSED') {
+                gameState = 'RUNNING';
+                document.getElementById('pauseIcon').textContent = '⏸️';
+                document.getElementById('pauseText').textContent = '暫停';
+            }
+        }
+
+        document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+        window.onload = function() {
+            resizeCanvasHD();
+            dino.reset();
+            hiScoreVal.textContent = String(hiScore).padStart(5, '0');
+            render();
+        };
+    </script>
+</body>
+</html>

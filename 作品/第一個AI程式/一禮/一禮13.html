@@ -1,0 +1,410 @@
+<!DOCTYPE1 html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOYNEXTDOOR 綜藝魔王級考驗</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .quiz-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 650px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+            position: relative;
+        }
+        .header {
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .title {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3182ce;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .question-num {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+        .question-text {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: #1a202c;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .option-btn {
+            background-color: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 0.98rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #2d3748;
+            line-height: 1.4;
+        }
+        .option-btn:hover:not(:disabled) {
+            background-color: #ebf8ff;
+            border-color: #63b3ed;
+        }
+        .option-btn.correct {
+            background-color: #c6f6d5 !important;
+            border-color: #38a169 !important;
+            color: #22543d !important;
+            font-weight: bold;
+        }
+        .option-btn.wrong {
+            background-color: #fed7d7 !important;
+            border-color: #e53e3e !important;
+            color: #742a2a !important;
+        }
+        .explanation {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f7fafc;
+            border-left: 4px solid #3182ce;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            display: none;
+        }
+        .next-btn {
+            margin-top: 25px;
+            width: 100%;
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            transition: background 0.2s;
+        }
+        .next-btn:hover {
+            background-color: #2b6cb0;
+        }
+        .result-container {
+            text-align: center;
+            display: none;
+        }
+        .score-title {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .score-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #3182ce;
+            margin-bottom: 15px;
+        }
+        .score-comment {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .restart-btn {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .restart-btn:hover {
+            background-color: #2b6cb0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card">
+    <!-- 遊戲進行介面 -->
+    <div id="quiz-screen">
+        <div class="header">
+            <div class="title">BOYNEXTDOOR 綜藝魔王級考驗</div>
+            <div class="question-num" id="question-num">題目 1 / 10</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="question-text" id="question-text">載入中...</div>
+
+        <div class="options-container" id="options-container">
+            <!-- 動態生成選項按鈕 -->
+        </div>
+
+        <div class="explanation" id="explanation"></div>
+
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">下一題</button>
+    </div>
+
+    <!-- 結算畫面介面 -->
+    <div class="result-container" id="result-screen">
+        <div class="score-title">挑戰結束！</div>
+        <div class="score-number" id="final-score">0 / 10</div>
+        <div class="score-comment" id="score-comment">解析中...</div>
+        <button class="restart-btn" onclick="restartQuiz()">再試一次</button>
+    </div>
+</div>
+
+<script>
+const quizData = [
+    {
+        question: "在 BOYNEXTDOOR 的自製綜藝《WHAT? DOOR!》第 1 集的鬼屋冒險中，成員們雙雙組隊進入鬼屋。當 Jaehyun 與 Riwoo 被鬼嚇到魂飛魄散時，Jaehyun 在慌亂之中對著鬼說出了哪句極度爆笑的名台詞？",
+        options: [
+            "你好！我是 KOZ 的隊長 Jaehyun，請多多指教！",
+            "哥！哥！我們真的只是過路人，有話好商量！",
+            "如果把我嚇暈了，今天的拍攝可就得暫停了喔！",
+            "你也是 ONEDOOR 嗎？要不要簽名？"
+        ],
+        answer: 0,
+        explanation: "正解：Jaehyun 在鬼屋裡忙著慌張問好「我是 KOZ 隊長 Jaehyun」，禮貌滿分的求生禮儀成為爆笑名場面！"
+    },
+    {
+        question: "在《偶像人間劇場》（Idol Human Theater）中，BOYNEXTDOOR 成員們沉浸在「練習室霸凌與搶座位」情境劇時，當成員們開始搞笑互嗆，Sungho 為了維持大哥形象卻反被弟弟們集體吐槽時，Leehan 補刀說了哪句名台詞？",
+        options: [
+            "大哥，你是不是昨晚偷偷背了搞笑劇本才來的？",
+            "哥，你講話這口氣，感覺已經在這個隊裡待了二十年了！",
+            "如果你是大哥，那我們就是這間公司的股東了。",
+            "大家冷靜，大哥的額頭已經開始冒冷汗了。"
+        ],
+        answer: 1,
+        explanation: "正解：Leehan 精準吐槽 Sungho 展現熟練老成的長輩架勢：「哥，你講話這口氣，感覺已經在這個隊裡待了二十年了！」"
+    },
+    {
+        question: "在團綜《FUNNEXTDOOR》中，成員們進行室內遊戲輸掉的人需要執行懲罰。當 Woonhak 嘗試辯解自己沒有犯規時，Taesan 毫不留情地用哪句經典名言直接打斷了他？",
+        options: [
+            "你的存在本身就是一種犯規，请接受懲罰吧。",
+            "犯規的人通常都會說自己沒有犯規，這就是證據。",
+            "法律面前人人平等，在哥的面前你只能認錯。",
+            "你再說一句，等下的洗碗懲罰就再加倍。"
+        ],
+        answer: 0,
+        explanation: "正解：Taesan 用極具個人個人色彩的酷帥毒舌直接宣判：「你的存在本身就是一種犯規，請接受懲罰吧。」"
+    },
+    {
+        question: "在一段打歌期幕後 Vlog（BOYNEXTDOOR Vlog / Behind）中，Leehan 興奮地向成員介紹自己最新養的寵物魚水族箱時，Jaehyun 湊過來看了半天後給出了什麼超掃興又爆笑的評價？",
+        options: [
+            "Leehan 啊，這看起來跟我們家附近海鮮店的水槽有什麼不一樣？",
+            "這魚看起來運動量很大，感覺煮成魚湯會很有彈性。",
+            "你對這些魚比對我們這些成員還要溫柔，我吃醋了。",
+            "這水箱的電費是從宿舍公費扣還是算在你頭上？"
+        ],
+        answer: 1,
+        explanation: "正解：Jaehyun 看著精緻的水族箱，脫口而出超現實感的主廚視角打趣「煮成魚湯很有彈性」，讓 Leehan 瞬間傻眼。"
+    },
+    {
+        question: "在《WHAT? DOOR!》的黑手黨（Mafia / 狼人殺）遊戲環節中，Riwoo 被大家集體懷疑是黑手黨。當所有人圍攻他時，平時內向冷靜的 Riwoo 為了澄清自己，極度混亂地喊出了哪句名台詞？",
+        options: [
+            "我真的不是！我連自己的角色牌都差點看不懂！",
+            "你們懷疑我？那我們這局遊戲結束後練習室見！",
+            "如果我是黑手黨，我現在就出去把大門吃掉！",
+            "信任呢？我們不是隔壁鄰居嗎？"
+        ],
+        answer: 0,
+        explanation: "正解：Riwoo 自爆式洗白「我連自己的牌都差點看不懂」，荒謬的真誠瞬間引爆全場大笑。"
+    },
+    {
+        question: "在《Weekly Idol》（週刊偶像）的個人技與隨機舞蹈環節中，忙內 Woonhak 被要求展現「青春動感體力」時，他突然做了個意想不到的動作，讓主持人和哥組成員瞬間傻眼。請問他當時做了什麼？",
+        options: [
+            "突然連續做了 30 個極速俯臥撐，邊做邊對鏡頭大喊「ONEDOOR 我愛你們！」",
+            "突然對著鏡頭進行極度賣力的「爆音版」活力招呼，導致麥克風直接爆音傳出巨響。",
+            "試圖表演空中後空翻，結果衣服不小心卡住鞋子摔了個結實。",
+            "拿著道具直接跑出攝影棚外，繞了電視台一圈才回來。"
+        ],
+        answer: 1,
+        explanation: "正解：Woonhak 能量輸出過猛，招呼聲與吶喊讓麥克風瞬間 Peak 爆音，展現頂級巨大犬忙內氣場。"
+    },
+    {
+        question: "在《WHAT? DOOR!》的戶外露營/烹飪集數中，成員們分工做飯。當 Sungho 認真在廚房調味時，Jaehyun 與 Taesan 在旁邊不斷搗亂，Sungho 終於忍不住爆發，對著他們喊出了哪句名台詞？",
+        options: [
+            "你們兩個如果再靠近廚房一步，今天的晚飯就只有白飯跟醬油！",
+            "出去！你們兩個留在這裡只會增加食物的碳水化合物！",
+            "這是我煮的湯，不允許任何非廚師人員進行物理干擾！",
+            "你們想餓肚子就直說，我現在就把瓦斯關掉！"
+        ],
+        answer: 0,
+        explanation: "正解：掌廚的大哥 Sungho 發起終極警告：「再靠近一步晚飯就只有白飯跟醬油！」成功鎮壓搗亂的弟弟們。"
+    },
+    {
+        question: "在一次 Weverse 直播中，成員們聊到平時宿舍生活與洗澡順序時，成員們爆料誰每次洗澡都洗最久，而且裡面還會傳出像是在開演唱會一樣的聲音？",
+        options: [
+            "Jaehyun，因為他要在浴室裡練習他的 Rap 和舞台 Ad-lib。",
+            "Leehan，因為他在浴室裡邊洗澡邊放音樂，甚至還會跟音樂合唱。",
+            "Woonhak，因為他在裡面邊洗邊給自己加戲進行一人舞台分飾角。",
+            "Sungho，因為他會邊洗邊自我反省檢討今天的舞蹈細節。"
+        ],
+        answer: 1,
+        explanation: "正解：成員一致指認 Leehan 洗澡超慢，伴隨音響音樂進行專屬浴室演唱會。"
+    },
+    {
+        question: "在《偶像人間劇場》中，BOYNEXTDOOR 被要求挑戰「無聲練習室」遊戲（做動作不能發出超過指定分貝的聲音）。當隊長 Jaehyun 試圖小心翼翼走動時，卻因為什麼意想不到的狀況直接導致分貝儀爆表？",
+        options: [
+            "旁邊的 Woonhak 故意講搞笑話逗他，讓他瞬間大爆笑。",
+            "他腳上的鞋子突然發出極其響亮的「唧唧聲」（Shoe Squeak）。",
+            "他的口袋裡突然傳出手機未關靜音的訊息提醒聲。",
+            "他太緊張手滑把道具麥克風掉到了地板上。"
+        ],
+        answer: 1,
+        explanation: "正解：Jaehyun 極度謹慎慢動作移動，卻被地板跟球鞋產生的巨大唧唧聲破功，引發爆笑。"
+    },
+    {
+        question: "在《WHAT? DOOR!》的一期角色扮演劇集中，Taesan 飾演一位冷酷的偵探/調查員。當他試圖嚴肅審問「嫌犯」Woonhak 時，Woonhak 講了一句什麼話，直接讓努力維持撲克臉的 Taesan 破功大笑？",
+        options: [
+            "你可以審問我，但我要求先吃一口你的下午茶蛋糕！",
+            "哥，你的偵探帽子戴反了，這樣看起來很像做章魚燒的大叔。",
+            "偵探先生，你肚子剛才咕嚕叫的聲音比我回答的聲音還大。",
+            "如果你抓了我，誰來陪你在宿舍打電玩？"
+        ],
+        answer: 1,
+        explanation: "正解：Woonhak 的反擊直接攻擊裝扮：「帽子戴反看起來很像做章魚燒的大叔」，一秒擊潰 Taesan 的撲克臉演技。"
+    }
+];
+
+let currentQuestion = 0;
+let score = 0;
+let answered = false;
+
+function loadQuestion() {
+    answered = false;
+    const q = quizData[currentQuestion];
+    
+    // 更新進度與題目
+    document.getElementById("question-num").innerText = `題目 ${currentQuestion + 1} / ${quizData.length}`;
+    document.getElementById("question-text").innerText = q.question;
+    document.getElementById("progress-bar").style.width = `${((currentQuestion + 1) / quizData.length) * 100}%`;
+    
+    // 隱藏解析與下一題按鈕
+    const expEl = document.getElementById("explanation");
+    expEl.style.display = "none";
+    expEl.innerText = "";
+    document.getElementById("next-btn").style.display = "none";
+
+    // 生成選項
+    const optionsContainer = document.getElementById("options-container");
+    optionsContainer.innerHTML = "";
+    
+    q.options.forEach((opt, index) => {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
+        btn.innerText = opt;
+        btn.onclick = () => selectOption(index);
+        optionsContainer.appendChild(btn);
+    });
+}
+
+function selectOption(selectedIndex) {
+    if (answered) return;
+    answered = true;
+
+    const q = quizData[currentQuestion];
+    const buttons = document.querySelectorAll(".option-btn");
+
+    if (selectedIndex === q.answer) {
+        score++;
+        buttons[selectedIndex].classList.add("correct");
+    } else {
+        buttons[selectedIndex].classList.add("wrong");
+        buttons[q.answer].classList.add("correct");
+    }
+
+    // 禁用所有按鈕
+    buttons.forEach(btn => btn.disabled = true);
+
+    // 顯示解析與下一題按鈕
+    const expEl = document.getElementById("explanation");
+    expEl.innerText = q.explanation;
+    expEl.style.display = "block";
+
+    document.getElementById("next-btn").style.display = "block";
+}
+
+function nextQuestion() {
+    currentQuestion++;
+    if (currentQuestion < quizData.length) {
+        loadQuestion();
+    } else {
+        showResults();
+    }
+}
+
+function showResults() {
+    document.getElementById("quiz-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+    
+    document.getElementById("final-score").innerText = `${score} / ${quizData.length}`;
+
+    let comment = "";
+    if (score === 10) {
+        comment = "【神級 ONEDOOR】太震撼了！你連最微小的綜藝細節、爆笑名台詞都瞭如指掌，絕對是 BOYNEXTDOOR 的頂級大粉絲！";
+    } else if (score >= 7) {
+        comment = "【資深 ONEDOOR】表現非常出色！大部分的名場面與爆笑互虧你都記得，綜藝感十足！";
+    } else if (score >= 4) {
+        comment = "【熱情 ONEDOOR】還不錯喔！已經掌握了不少綜藝名場面，有空可以再去重溫《WHAT? DOOR!》補完魔王細節！";
+    } else {
+        comment = "【潛力 ONEDOOR】題目確實相當艱深！現在正是補追團綜名場面的最佳時刻，快去感受鄰家男孩們的混亂魅力吧！";
+    }
+    
+    document.getElementById("score-comment").innerText = comment;
+}
+
+function restartQuiz() {
+    currentQuestion = 0;
+    score = 0;
+    document.getElementById("result-screen").style.display = "none";
+    document.getElementById("quiz-screen").style.display = "block";
+    loadQuestion();
+}
+
+// 啟動遊戲
+loadQuestion();
+</script>
+
+</body>
+</html>

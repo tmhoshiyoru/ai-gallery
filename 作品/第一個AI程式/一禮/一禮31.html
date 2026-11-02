@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活化！未來科系與職涯性向探索測驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Microsoft JhengHei', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .option-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-compass text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-lg sm:text-xl leading-tight">生活化！科系與職涯探索測驗</h1>
+                    <p class="text-xs text-slate-500">20個生活情境測驗，發現最適合你的大學與未來</p>
+                </div>
+            </div>
+            <button id="restart-btn" onclick="resetQuiz()" class="hidden text-xs sm:text-sm text-slate-500 hover:text-brand-600 flex items-center space-x-1 transition font-medium">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>重新測驗</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-6 w-full flex-grow">
+        
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-10 text-center fade-in">
+            <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-600 text-3xl">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">用日常生活習慣，測出你的命定科系！</h2>
+            <p class="text-slate-600 mb-8 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+                不用面對硬邦邦的理論！我們精心準備了 20 個非常生活化的日常情境題（包含逛街、旅遊規劃、打工經驗、朋友相處與休閒娛樂等），透過你的真實反應，深度分析最適合你的前 5 名大學科系與未來職場出路！
+            </p>
+            <button onclick="startQuiz()" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold px-8 py-3.5 rounded-xl shadow-md transition transform active:scale-95 text-base inline-flex items-center space-x-2">
+                <span>開啟情境測驗</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden fade-in">
+            <!-- Progress Bar -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center text-xs sm:text-sm font-medium text-slate-500 mb-2">
+                    <span id="question-progress-text">問題 1 / 20</span>
+                    <span id="progress-percent" class="text-brand-600 font-semibold">5%</span>
+                </div>
+                <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-brand-600 h-full w-[5%] transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                <div class="inline-block bg-brand-50 text-brand-700 text-xs font-semibold px-3 py-1 rounded-full mb-3" id="question-category">
+                    個人特質
+                </div>
+                <h3 id="question-text" class="text-lg sm:text-xl font-bold text-slate-900 mb-6 leading-snug">
+                    題目載入中...
+                </h3>
+
+                <!-- Dynamic Options -->
+                <div id="options-container" class="space-y-3"></div>
+            </div>
+
+            <!-- Quiz Navigation Controls -->
+            <div class="mt-6 flex justify-between items-center">
+                <button id="prev-btn" onclick="prevQuestion()" class="px-4 py-2 text-sm text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed font-medium flex items-center space-x-1" disabled>
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                    <span>上一題</span>
+                </button>
+                <span class="text-xs text-slate-400">點選選項後自動切換下一題</span>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden fade-in space-y-6">
+            <div class="bg-gradient-to-br from-brand-600 to-indigo-800 text-white rounded-2xl p-6 sm:p-8 shadow-md">
+                <div class="flex items-center space-x-3 mb-2">
+                    <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">性向分析結果</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold mb-2">適合你的前 5 大科系與未來職涯</h2>
+                <p class="text-brand-100 text-sm opacity-90">綜合評估你的生活反應、興趣傾向、理想工作型態與職涯期望。</p>
+            </div>
+
+            <!-- Dynamic Top 5 Recommendations -->
+            <div class="space-y-6" id="recommendations-container"></div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 text-center">
+                <h4 class="font-bold text-slate-800 mb-2">想換個想法重新測試嗎？</h4>
+                <p class="text-xs text-slate-500 mb-4">隨時重新測試，探索不同性格走向的職涯可能性。</p>
+                <button onclick="resetQuiz()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-2.5 rounded-xl transition text-sm">
+                    重新進行測試
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-8">
+        <p>© 2026 大學科系與職涯性向探索測驗. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // 維度定義:
+        // STEM: 理工/資訊/工程
+        // BIZ: 商管/金融/行銷
+        // SOC: 社會人文/心理/教育
+        // ART: 設計/藝術/傳播
+        // MED: 醫藥/護理/生技
+
+        const questions = [
+            // --- 個人特質 (1-5) ---
+            {
+                category: "個人特質",
+                text: "1. 朋友約大家出去玩，你通常在團隊裡自動扮演什麼角色？",
+                options: [
+                    { text: "規劃最划算的機票住宿、預算分配與行程時間表", score: { BIZ: 3, STEM: 1 } },
+                    { text: "研究地圖路線、大眾運輸轉乘與景點的最佳排序邏輯", score: { STEM: 3 } },
+                    { text: "照顧大家的精神狀況、關心誰累了需要休息或安撫突發情緒", score: { SOC: 3, MED: 1 } },
+                    { text: "尋找特色私房景點、打卡拍照好看的地點並設計聚會主題", score: { ART: 3 } },
+                    { text: "準備好急救包、防蚊液、確認備用方案與安全措施", score: { MED: 3 } },
+                    { text: "不確定 / 沒有特別偏好，大家開心就好，隨機應變", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人特質",
+                text: "2. 當你剛買一台新的複雜家電或組裝家具（如 IKEA 櫃子），你習慣怎麼做？",
+                options: [
+                    { text: "按部就班看懂每一頁說明書與結構圖，精準依照步驟安裝", score: { STEM: 3 } },
+                    { text: "找朋友或家人一起動手，邊組裝邊聊天享受合作過程", score: { SOC: 3 } },
+                    { text: "看看外觀跟配件，憑感覺與直覺動手，甚至自己改良外觀細節", score: { ART: 3 } },
+                    { text: "先評估自己組裝花的時間成本，思考叫人工組裝是否比較划算", score: { BIZ: 3 } },
+                    { text: "仔細檢查零件數量、品質是否有瑕疵，確保使用時絕對安全", score: { MED: 3 } },
+                    { text: "不確定 / 看當時心情，沒特定習慣或直接交給別人組裝", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人特質",
+                text: "3. 朋友失戀找你傾訴，你的第一反應通常是？",
+                options: [
+                    { text: "溫柔地傾聽他倒垃圾，給予擁抱與情緒上的理解同理", score: { SOC: 3 } },
+                    { text: "幫他客觀分析這段關係失敗的原因，條列出未來改善建議", score: { STEM: 3 } },
+                    { text: "幫他規劃新的生活社交目標，找事給他做，讓他重新站起來", score: { BIZ: 3 } },
+                    { text: "陪他去唱KTV、畫畫、做手工藝，透過藝術創作抒發情感", score: { ART: 3 } },
+                    { text: "帶他去吃健康美食、關注他的作息，確保他身心沒有因此病倒", score: { MED: 3 } },
+                    { text: "不確定 / 視當下情況而定，靜靜陪在他身邊就好", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人特質",
+                text: "4. 如果你在生活或學習中遇到一個卡很久的難題，你通常怎麼處理？",
+                options: [
+                    { text: "非得弄清楚根本原理不可，不查到核心答案絕不罷休", score: { STEM: 3 } },
+                    { text: "尋找有沒有更快、更省力或能請人幫忙的「捷徑/資源」", score: { BIZ: 3 } },
+                    { text: "找同學或朋友一起討論，聽聽大家的想法與想法衝擊", score: { SOC: 3 } },
+                    { text: "暫時放下，去散步看點美的事物，等靈感突如其來冒出來", score: { ART: 3 } },
+                    { text: "用極其嚴謹細心的態度反覆驗證，排除每一種可能的錯誤", score: { MED: 3 } },
+                    { text: "不確定 / 看難題的重要程度，沒有固定的解決方式", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人特質",
+                text: "5. 在高中分組報告時，你最享受發揮什麼樣的個人優勢？",
+                options: [
+                    { text: "寫出流暢又有美感的簡報排版，或是製作吸引人的動畫影片", score: { ART: 3 } },
+                    { text: "上台台風穩健地報告，展現強大說服力並回應QA問答", score: { BIZ: 3 } },
+                    { text: "負責最艱難的數據計算、公式推導或程式架構建立", score: { STEM: 3 } },
+                    { text: "統籌大家的情緒與進度，讓組內每個人都覺得被重視", score: { SOC: 3 } },
+                    { text: "字字斟酌地校對內容，確保引用的數據資料絕對真實精準", score: { MED: 3 } },
+                    { text: "不確定 / 看組員缺什麼我就配合補什麼位置", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+
+            // --- 個人興趣 (6-10) ---
+            {
+                category: "個人興趣",
+                text: "6. 滑手機逛社群或 YouTube 時，你最容易被哪類影片吸引而點進去？",
+                options: [
+                    { text: "3C開箱、AI技術突破、酷炫自動化裝置或科學實驗影片", score: { STEM: 3 } },
+                    { text: "商業故事、知名企業興衰、個人投資理財與談判技巧", score: { BIZ: 3 } },
+                    { text: "心理學解析、社會議題討論、人際關係談話節目", score: { SOC: 3 } },
+                    { text: "房間改造、平面設計教學、電影視覺特效解析或攝影Vlog", score: { ART: 3 } },
+                    { text: "人體奧秘、醫學科普急救、健身營養學或生物探秘", score: { MED: 3 } },
+                    { text: "不確定 / 滑到什麼看什麼，沒有特定領域偏好", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人興趣",
+                text: "7. 假期的午後，你覺得以下哪種休閒活動最讓你充飽電？",
+                options: [
+                    { text: "去逛現代美術館、文創市集，或是拍一些好看的照片", score: { ART: 3 } },
+                    { text: "打電動研究遊戲破關最佳解、組裝新電腦或學習新工具", score: { STEM: 3 } },
+                    { text: "去擔任志工、陪伴小朋友/長者，或跟老朋友深度的咖啡廳心靈對話", score: { SOC: 3 } },
+                    { text: "研究最近紅什麼商品、關注市場熱門趨勢，甚至做點小買賣", score: { BIZ: 3 } },
+                    { text: "閱讀科普書籍、關心健康議題，或是種植照顧室內植物觀察成長", score: { MED: 3 } },
+                    { text: "不確定 / 在家睡覺休息放空，沒有固定規劃", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人興趣",
+                text: "8. 玩線上遊戲或是桌遊時，你最喜歡哪種風格的遊戲體驗？",
+                options: [
+                    { text: "畫面精美、配樂優美、角色的服裝外觀非常有美感設計", score: { ART: 3 } },
+                    { text: "考研邏輯計算、精準數值管理與最佳化資源配置的策略遊戲", score: { STEM: 3 } },
+                    { text: "有金錢交易、陣營談判、拍賣與商業競爭機制的遊戲", score: { BIZ: 3 } },
+                    { text: "注重團隊合作、角色扮演與深厚故事劇情的遊戲", score: { SOC: 3 } },
+                    { text: "擔任補血救援者（Healer/奶媽），精準控場照顧隊友生命值的角色", score: { MED: 3 } },
+                    { text: "不確定 / 我很少玩遊戲，或沒有特定偏好的類型", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人興趣",
+                text: "9. 如果要你經營一個自己的自媒體頻道，你最有興趣分享什麼主題？",
+                options: [
+                    { text: "分享寫程式技巧、最新科技產品實測與軟體教學", score: { STEM: 3 } },
+                    { text: "分享小資理財、創業心得與行銷企劃解析", score: { BIZ: 3 } },
+                    { text: "分享心理學故事、教育思維與溫暖的人性洞察", score: { SOC: 3 } },
+                    { text: "分享插畫繪圖、電影影評、穿搭美學或音樂創作", score: { ART: 3 } },
+                    { text: "分享保健養生知識、醫藥新聞解密或飲食營養學", score: { MED: 3 } },
+                    { text: "不確定 / 分享生活隨筆日記，或沒特別想當創作者", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "個人興趣",
+                text: "10. 如果學校辦園遊會，你最想負責攤位的哪一部分？",
+                options: [
+                    { text: "設計攤位的招牌海報、宣傳單與整體擺設視覺", score: { ART: 3 } },
+                    { text: "擔任攤位「CEO」，計算食材成本、定價策略與利潤分配", score: { BIZ: 3 } },
+                    { text: "負責前台招呼客人、熱情拉客與顧客滿意度維護", score: { SOC: 3 } },
+                    { text: "架設攤位點餐系統、自動化收銀與現場燈光音響設備", score: { STEM: 3 } },
+                    { text: "負責食品衛生安全管理、設備消毒與緊急救護站", score: { MED: 3 } },
+                    { text: "不確定 / 移動式支援，哪裡缺人就去哪裡幫忙", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+
+            // --- 對職業條件的要求 (11-15) ---
+            {
+                category: "對職業條件的要求",
+                text: "11. 關於未來的「薪資與獎金型態」，你最偏好哪一種？",
+                options: [
+                    { text: "憑藉獨家專業技術門檻，起薪高且年資越深技術越值錢", score: { STEM: 3 } },
+                    { text: "底薪加上無上限的業績分紅，只要能為公司賺錢就能拿高薪", score: { BIZ: 3 } },
+                    { text: "薪資穩定成長，比起賺大錢，更重視工作帶來的社會價值與溫暖", score: { SOC: 3 } },
+                    { text: "接案論件計酬或按作品質量給獎金，擁有極高發揮空間", score: { ART: 3 } },
+                    { text: "國家考照認證保障，具有極高的職業不可替代性與穩定高收入", score: { MED: 3 } },
+                    { text: "不確定 / 目前還沒認真思考過薪資結構的偏好", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對職業條件的要求",
+                text: "12. 你理想中的「工作場所與日常型態」是怎樣的？",
+                options: [
+                    { text: "彈性工時，可以在家遠端（Remote）辦公，看成果說話", score: { STEM: 2, ART: 1 } },
+                    { text: "高級商辦大樓，經常有機會跨國出差、與不同領域強者談判合作", score: { BIZ: 3 } },
+                    { text: "學校、社福機構或輔導諮詢室，能面對面與人互動並給予支持", score: { SOC: 3 } },
+                    { text: "充滿靈感的個人工作室，或是富有美感與創意氛圍的空間", score: { ART: 3 } },
+                    { text: "專業、乾淨且儀器完善的醫療機構、診所或生技實驗室", score: { MED: 3 } },
+                    { text: "不確定 / 能適應各種不同的工作環境", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對職業條件的要求",
+                text: "13. 對於工作上的「穩定度與風險承受力」，你的想法是？",
+                options: [
+                    { text: "只要產業前景大好，我願意花時間承受技術快速更新的學習壓力", score: { STEM: 3 } },
+                    { text: "高風險高報酬！願意承受市場競爭與挑戰，渴望創業或突破自我", score: { BIZ: 3 } },
+                    { text: "喜歡穩定有保障的體制，讓我可以長遠深耕並陪伴他人成長", score: { SOC: 3 } },
+                    { text: "不太在意體制是否穩定，只要能維持創作自由與靈魂獨立", score: { ART: 3 } },
+                    { text: "極度重視專業證照帶來的職涯保障，不怕景氣波動影響飯碗", score: { MED: 3 } },
+                    { text: "不確定 / 覺得各有利弊，需要視當時個人階段而定", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對職業條件的要求",
+                text: "14. 你期待未來的職場同事與團隊氣氛是什麼樣子的？",
+                options: [
+                    { text: "大家都很有邏輯，溝通講求數據與事實，不講情緒話", score: { STEM: 3 } },
+                    { text: "大家充滿企圖心與目標感，像個高效率的狼性運動團隊", score: { BIZ: 3 } },
+                    { text: "富有包容力、彼此關心與陪伴，像個溫暖的人際大家庭", score: { SOC: 3 } },
+                    { text: "個性鮮明、充滿創意，經常腦力激盪出酷炫點子", score: { ART: 3 } },
+                    { text: "講求嚴謹紀律與高度信任，大家分工精準、絕不出錯", score: { MED: 3 } },
+                    { text: "不確定 / 只要能好溝通、互相尊重即可", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對職業條件的要求",
+                text: "15. 你希望自己在職場上的「升遷路線」呈現什麼軌跡？",
+                options: [
+                    { text: "成為技術領域的權威大師（如：資深架構師/技術總監）", score: { STEM: 3 } },
+                    { text: "一路晉升為高階管理層（如：總經理/CEO），引領公司方向", score: { BIZ: 3 } },
+                    { text: "成為受人尊敬的心理顧問、教育家或社會推手", score: { SOC: 3 } },
+                    { text: "建立自己的個人品牌，成為著名設計師、導演或藝術家", score: { ART: 3 } },
+                    { text: "考取高考證照，成為主治醫師、藥師、法醫或生醫權威", score: { MED: 3 } },
+                    { text: "不確定 / 順其自然，著重於當下工作的順利進行", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+
+            // --- 對工作的希望 (16-20) ---
+            {
+                category: "對工作的希望",
+                text: "16. 退休前回顧這一生，你希望這份工作帶給你最大的「成就感」是什麼？",
+                options: [
+                    { text: "我研發或打造出改善人類生活便利性的軟體/硬體系統", score: { STEM: 3 } },
+                    { text: "我打造了一間成功的企業，創造了極高的商業與經濟價值", score: { BIZ: 3 } },
+                    { text: "我真實陪伴與幫助了許多迷茫的人，讓社會變得更溫暖", score: { SOC: 3 } },
+                    { text: "我留下了能夠打動人心、流傳後世的藝術作品或設計美學", score: { ART: 3 } },
+                    { text: "我救治了許多病患的健康，推進了生命科學的進步", score: { MED: 3 } },
+                    { text: "不確定 / 能平衡生活與家庭，平安順利就是最大成就", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對工作的希望",
+                text: "17. 你希望工作在你每天的生活中扮演什麼樣的角色？",
+                options: [
+                    { text: "像是在解一套精妙的智力謎題，每天都能享受思考邏輯的樂趣", score: { STEM: 3 } },
+                    { text: "像是在玩一場刺激的商業競賽，每天都有新的突破與市場機會", score: { BIZ: 3 } },
+                    { text: "像是傳遞愛與價值的橋樑，每天都能建立深厚的人際連結", score: { SOC: 3 } },
+                    { text: "像是自我實現的畫布，讓我盡情發揮想像力與個人審美", score: { ART: 3 } },
+                    { text: "像是守護健康的防線，用極高的專業給予世界安全感", score: { MED: 3 } },
+                    { text: "不確定 / 工作就是獲取生活資源的工具，重視生活品質", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對工作的希望",
+                text: "18. 在工作中，「持續學習」哪種新知識會最讓你感到興奮？",
+                options: [
+                    { text: "學習最新的 AI 演算法、新程式語言或前沿硬體架構", score: { STEM: 3 } },
+                    { text: "學習最新的市場行銷模式、談判策略與商業模式創新", score: { BIZ: 3 } },
+                    { text: "學習最新的人類心理學研究、輔導技巧與社會議題發展", score: { SOC: 3 } },
+                    { text: "學習全新的視覺繪圖軟體、影音特效與藝術媒材創作", score: { ART: 3 } },
+                    { text: "學習最新的醫學期刊研究、臨床技術與生醫新藥開發", score: { MED: 3 } },
+                    { text: "不確定 / 看工作實際需求，需要用到什麼就學什麼", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對工作的希望",
+                text: "19. 你最無法忍受以下哪種工作壞狀況？",
+                options: [
+                    { text: "邏輯混亂、沒有 SOP，每天都在做沒有效率的體力活", score: { STEM: 3 } },
+                    { text: "死板無趣、多做少做都領固定死薪水，毫無升遷與激勵機制", score: { BIZ: 3 } },
+                    { text: "職場氛圍極度冷漠、勾心鬥角，完全不在乎人的心理感受", score: { SOC: 3 } },
+                    { text: "毫無發揮創意的空間，每天只能複製貼上別人的樣板風格", score: { ART: 3 } },
+                    { text: "工作缺乏精確標準，隨便馬虎可能會威脅到別人的健康或生命", score: { MED: 3 } },
+                    { text: "不確定 / 只要環境不要太極端，多數狀況都能設法調整適應", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            },
+            {
+                category: "對工作的希望",
+                text: "20. 如果你有機會獲得一筆無條件啟動資金，你最想成立什麼機構？",
+                options: [
+                    { text: "前沿科技與 AI 軟體研發工作室", score: { STEM: 3 } },
+                    { text: "具備高成長潛力的創新品牌公司或新創投資基金", score: { BIZ: 3 } },
+                    { text: "關懷青少年心理健康與教育進步的非營利基金會", score: { SOC: 3 } },
+                    { text: "頂尖跨媒體視覺設計事務所或藝術展演空間", score: { ART: 3 } },
+                    { text: "前瞻生醫科技研發中心或現代化醫療照顧機構", score: { MED: 3 } },
+                    { text: "不確定 / 暫時還沒想過，可能先將資金投入理財規劃", score: { STEM: 1, BIZ: 1, SOC: 1, ART: 1, MED: 1 } }
+                ]
+            }
+        ];
+
+        const majorDatabase = [
+            {
+                name: "資訊工程系 / 軟體工程系",
+                category: "STEM",
+                icon: "fa-code",
+                tags: ["高薪首選", "技術導向", "邏輯極強"],
+                reason: "你的生活習慣顯示出強烈的邏輯拆解與除錯思維！資工系能滿足你對系統原理的探索欲，並為你帶來高度技術門檻與遠端彈性工作的選擇權。",
+                careers: [
+                    "軟體工程師 (前端 / 後端 / 全端)",
+                    "AI / 機器學習工程師",
+                    "資訊安全專家 / 雲端架構師"
+                ]
+            },
+            {
+                name: "電機與電子工程學系",
+                category: "STEM",
+                icon: "fa-microchip",
+                tags: ["硬體核心", "科技產業柱石", "高技術門檻"],
+                reason: "你具備極強的理性分析力與對技術規律的專注度。電機系涵蓋半導體、IC設計與硬體系統，非常適合喜好精密系統與科技高含金量工作的你。",
+                careers: [
+                    "IC設計工程師 (數位/類比)",
+                    "半導體研發/製程工程師",
+                    "嵌入式系統開發工程師"
+                ]
+            },
+            {
+                name: "企業管理系 / 國際企業學系",
+                category: "BIZ",
+                icon: "fa-chart-line",
+                tags: ["領導溝通", "商業視野", "團隊核心"],
+                reason: "你在日常活動中展現出極佳的組織協調力、目標導向與成本效益敏銳度！企管與國企系將教你整合行銷、財務與策略，打造全方位的商業領袖視野。",
+                careers: [
+                    "產品經理 (Product Manager / PM)",
+                    "管理顧問 (Management Consultant)",
+                    "跨國企業儲備幹部 (MA)"
+                ]
+            },
+            {
+                name: "財務金融學系 / 經濟學系",
+                category: "BIZ",
+                icon: "fa-coins",
+                tags: ["數據敏感", "高薪回報", "市場趨勢"],
+                reason: "你對市場動態、數據效益與資本運作有相當高的敏感度。財金與經濟系結合了數學分析與商業決策，滿足你追求高效益與商業博弈的渴望。",
+                careers: [
+                    "投資銀行分析師 / 證券分析師",
+                    "量化交易員 / 基金經理人",
+                    "企業財務分析師 (FP&A)"
+                ]
+            },
+            {
+                name: "心理學系 / 諮商心理學系",
+                category: "SOC",
+                icon: "fa-brain",
+                tags: ["同理傾聽", "深度洞察", "助人專業"],
+                reason: "你在朋友眼中是個富有同理心且溫暖的傾聽者。心理系將科學研究方法與社會關懷相結合，適合希望深入理解人性並協助他人解決心理困境的你。",
+                careers: [
+                    "臨床心理師 / 諮商心理師",
+                    "企業人力資源專員 (HR) / 組織顧問",
+                    "使用者體驗研究員 (UX Researcher)"
+                ]
+            },
+            {
+                name: "社會工作學系 / 教育學系",
+                category: "SOC",
+                icon: "fa-hands-holding-child",
+                tags: ["社會價值", "利他精神", "穩定發展"],
+                reason: "你非常重視工作帶來的社會價值與利他成就感。社工與教育學系能給予你專業的社會支持體系知識，讓你在溫暖且具有深遠意義的領域發揮所長。",
+                careers: [
+                    "學校教師 / 教育訓練師",
+                    "公私立機構社會工作師",
+                    "非營利組織 (NPO/NGO) 專案經理"
+                ]
+            },
+            {
+                name: "視覺傳達設計系 / 多媒體動畫系",
+                category: "ART",
+                icon: "fa-palette",
+                tags: ["創意無限", "美學表達", "視覺包裝"],
+                reason: "你具有獨特的視覺美感、富於想像力且善於用圖像傳達故事。視傳與多媒體系能將你的美學靈感轉化為商業與藝術兼具的精彩作品。",
+                careers: [
+                    "UI/UX 視覺設計師",
+                    "品牌視覺總監 / 廣告美術指導",
+                    "動態圖像設計師 (Motion Designer)"
+                ]
+            },
+            {
+                name: "大眾傳播系 / 數位影音創作學系",
+                category: "ART",
+                icon: "fa-video",
+                tags: ["內容創作", "媒體影響力", "跨界整合"],
+                reason: "你對訊息傳播、流行趨勢與影音故事表達有極高熱情。傳播系將培養你整合影音、文字與數位媒體的能力，成為新媒體時代的影響力人物。",
+                careers: [
+                    "新媒體內容導演 / 影音製作人",
+                    "數位行銷企劃 / 品牌公關",
+                    "自媒體創作者 / 劇本編劇"
+                ]
+            },
+            {
+                name: "醫學系 / 牙醫學系",
+                category: "MED",
+                icon: "fa-user-doctor",
+                tags: ["高專業認證", "救人使命", "極高穩定度"],
+                reason: "你追求高高度專業技術門檻、責任感極強，且渴望直接拯救與維護生命。醫學相關科系將提供極高度的職涯穩定度與社會尊重。",
+                careers: [
+                    "臨床醫師 / 專科醫師",
+                    "醫學研究員",
+                    "醫療機構管理者"
+                ]
+            },
+            {
+                name: "生物藥學系 / 生物科技學系",
+                category: "MED",
+                icon: "fa-flask-vial",
+                tags: ["生命科學", "前沿研發", "嚴謹實驗"],
+                reason: "你對生命科學的奧秘充滿好奇，並具備嚴謹細心的態度。生藥與生科技系能讓你在實驗室中探索前沿醫療技術與新藥開發。",
+                careers: [
+                    "藥廠研發工程師 (R&D)",
+                    "臨床試驗專員 (CRA)",
+                    "生醫科技專利師"
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null);
+        let categoryScores = { STEM: 0, BIZ: 0, SOC: 0, ART: 0, MED: 0 };
+
+        function startQuiz() {
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('restart-btn').classList.remove('hidden');
+            currentQuestionIndex = 0;
+            userAnswers = new Array(questions.length).fill(null);
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            
+            // Progress Update
+            const progressPercent = Math.round(((currentQuestionIndex + 1) / questions.length) * 100);
+            document.getElementById('question-progress-text').innerText = `問題 ${currentQuestionIndex + 1} / ${questions.length}`;
+            document.getElementById('progress-percent').innerText = `${progressPercent}%`;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // Question Details
+            document.getElementById('question-category').innerText = q.category;
+            document.getElementById('question-text').innerText = q.text;
+
+            // Option Cards Setup
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const isSelected = userAnswers[currentQuestionIndex] === idx;
+                const isUncertainOption = idx === 5; // Option F: 不確定
+                
+                const optionEl = document.createElement('div');
+                optionEl.className = `option-card border rounded-xl p-4 cursor-pointer transition flex items-center justify-between ${
+                    isSelected 
+                    ? (isUncertainOption ? 'border-slate-500 bg-slate-100 text-slate-800 font-medium' : 'border-brand-600 bg-brand-50 text-brand-700 font-medium')
+                    : (isUncertainOption ? 'border-slate-200 hover:border-slate-400 bg-slate-50/60 text-slate-500' : 'border-slate-200 hover:border-brand-300 bg-white text-slate-700')
+                }`;
+                
+                optionEl.onclick = () => selectOption(idx);
+
+                optionEl.innerHTML = `
+                    <div class="flex items-center space-x-3 pr-2">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${
+                            isSelected 
+                            ? (isUncertainOption ? 'bg-slate-600 text-white border-slate-600' : 'bg-brand-600 text-white border-brand-600')
+                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                        }">
+                            ${String.fromCharCode(65 + idx)}
+                        </span>
+                        <span class="text-sm sm:text-base leading-snug">${opt.text}</span>
+                    </div>
+                    <i class="fa-regular ${isSelected ? (isUncertainOption ? 'fa-circle-check text-slate-600' : 'fa-circle-check text-brand-600') : 'fa-circle text-slate-300'} text-lg"></i>
+                `;
+                container.appendChild(optionEl);
+            });
+
+            // Nav Controls
+            document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
+        }
+
+        function selectOption(index) {
+            userAnswers[currentQuestionIndex] = index;
+            renderQuestion();
+
+            // Smooth Auto-advance
+            setTimeout(() => {
+                if (currentQuestionIndex < questions.length - 1) {
+                    currentQuestionIndex++;
+                    renderQuestion();
+                } else {
+                    calculateResults();
+                }
+            }, 220);
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+            }
+        }
+
+        function resetQuiz() {
+            categoryScores = { STEM: 0, BIZ: 0, SOC: 0, ART: 0, MED: 0 };
+            userAnswers = new Array(questions.length).fill(null);
+            currentQuestionIndex = 0;
+            
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('welcome-screen').classList.remove('hidden');
+            document.getElementById('restart-btn').classList.add('hidden');
+        }
+
+        function calculateResults() {
+            categoryScores = { STEM: 0, BIZ: 0, SOC: 0, ART: 0, MED: 0 };
+
+            userAnswers.forEach((ansIdx, qIdx) => {
+                if (ansIdx !== null) {
+                    const selectedScore = questions[qIdx].options[ansIdx].score;
+                    for (const [cat, pts] of Object.entries(selectedScore)) {
+                        categoryScores[cat] += pts;
+                    }
+                }
+            });
+
+            const maxCategoryScore = Math.max(...Object.values(categoryScores));
+            
+            const rankedMajors = majorDatabase.map(major => {
+                const baseScore = categoryScores[major.category] || 0;
+                const fitPercentage = Math.min(98, Math.max(68, Math.round((baseScore / (maxCategoryScore || 1)) * 30 + 68)));
+                return {
+                    ...major,
+                    score: baseScore,
+                    fitPercentage: fitPercentage
+                };
+            });
+
+            rankedMajors.sort((a, b) => b.fitPercentage - a.fitPercentage);
+            const top5 = rankedMajors.slice(0, 5);
+
+            displayResults(top5);
+        }
+
+        function displayResults(top5) {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const container = document.getElementById('recommendations-container');
+            container.innerHTML = '';
+
+            top5.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition fade-in";
+                
+                let badgeStyle = "bg-slate-100 text-slate-700";
+                if (index === 0) badgeStyle = "bg-amber-100 text-amber-800 border border-amber-300 font-bold";
+                else if (index === 1) badgeStyle = "bg-slate-200 text-slate-800 font-bold";
+                else if (index === 2) badgeStyle = "bg-orange-100 text-orange-800 font-bold";
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-3 py-1 rounded-full text-xs ${badgeStyle}">
+                                第 ${index + 1} 推薦
+                            </span>
+                            <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg shrink-0">
+                                <i class="fa-solid ${item.icon}"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">${item.name}</h3>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    ${item.tags.map(t => `<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${t}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 sm:self-center bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-500">契合度</span>
+                            <span class="text-lg font-extrabold text-brand-600">${item.fitPercentage}%</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> 為何適合你？
+                        </h4>
+                        <p class="text-slate-600 text-sm leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                            ${item.reason}
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            <i class="fa-solid fa-briefcase text-brand-500 mr-1"></i> 未來主要職涯出路
+                        </h4>
+                        <ul class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            ${item.careers.map(c => `
+                                <li class="text-xs bg-brand-50/50 text-brand-900 font-medium px-3 py-2 rounded-lg border border-brand-100/60 flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-check text-brand-500 text-[10px]"></i>
+                                    <span>${c}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

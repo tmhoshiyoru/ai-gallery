@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自然選擇與生態演化模擬器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* Custom scrollbar for control panels */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(71, 85, 105, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col overflow-hidden select-none">
+
+    <!-- Top Header Navigation -->
+    <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30">
+                <i class="fa-solid font-bold fa-dna text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide text-slate-100 flex items-center gap-2">
+                    自然選擇與生態演化模擬器
+                    <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">v2.5 Live</span>
+                </h1>
+                <p class="text-xs text-slate-400">觀察基因突變、天擇壓力與動態生態平衡</p>
+            </div>
+        </div>
+
+        <!-- Simulation HUD & Control Shortcuts -->
+        <div class="flex items-center space-x-3">
+            <div class="hidden md:flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs space-x-4">
+                <div><span class="text-slate-500">世代 (Gen):</span> <span id="hudGen" class="font-mono text-emerald-400 font-bold">1</span></div>
+                <div><span class="text-slate-500">時間 (s):</span> <span id="hudTime" class="font-mono text-slate-200">0</span></div>
+                <div><span class="text-slate-500">生物總數:</span> <span id="hudTotal" class="font-mono text-cyan-400 font-bold">0</span></div>
+            </div>
+
+            <div class="flex items-center space-x-1.5 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+                <button id="btnPause" class="p-2 w-9 h-9 flex items-center justify-center rounded-md hover:bg-slate-700 text-slate-200 transition" title="暫停 / 繼續">
+                    <i class="fa-solid fa-pause"></i>
+                </button>
+                <button id="btnSpeed" class="px-2.5 h-9 flex items-center justify-center rounded-md hover:bg-slate-700 text-amber-400 text-xs font-bold transition" title="切換加速速度">
+                    1x
+                </button>
+                <button id="btnRestart" class="p-2 w-9 h-9 flex items-center justify-center rounded-md hover:bg-slate-700 text-rose-400 transition" title="重新初始化生態系">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col md:flex-row min-h-0 relative">
+
+        <!-- Canvas Display Container -->
+        <div id="canvasContainer" class="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center">
+            <canvas id="simCanvas" class="block w-full h-full cursor-crosshair"></canvas>
+
+            <!-- Dynamic On-screen Notifications Overlay -->
+            <div id="toastContainer" class="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none z-10"></div>
+
+            <!-- Inspect Card Floating Overlay -->
+            <div id="inspectorCard" class="hidden absolute right-4 top-4 w-72 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-4 shadow-2xl text-xs z-20 transition-all">
+                <div class="flex justify-between items-start mb-2 border-b border-slate-800 pb-2">
+                    <div>
+                        <span id="inspType" class="px-2 py-0.5 rounded font-bold uppercase text-[10px] bg-emerald-900/60 text-emerald-300 border border-emerald-700">草食動物</span>
+                        <h3 id="inspName" class="font-bold text-sm text-slate-100 mt-1">個體 #1024</h3>
+                    </div>
+                    <button id="closeInspector" class="text-slate-400 hover:text-slate-200 p-1"><i class="fa-solid fa-xmark text-sm"></i></button>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between"><span class="text-slate-400">生命值 / 能量:</span><span id="inspEnergy" class="font-mono text-emerald-400 font-semibold">80/100</span></div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="inspEnergyBar" class="bg-emerald-500 h-full w-3/4 transition-all duration-200"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+                        <div><span class="text-slate-500 block">世代</span><span id="inspGen" class="font-mono text-slate-200">G3</span></div>
+                        <div><span class="text-slate-500 block">年齡</span><span id="inspAge" class="font-mono text-slate-200">12.4 秒</span></div>
+                        <div><span class="text-slate-500 block">速度基因</span><span id="inspSpeed" class="font-mono text-cyan-400">2.4 px/f</span></div>
+                        <div><span class="text-slate-500 block">視野感知</span><span id="inspSense" class="font-mono text-indigo-400">95 px</span></div>
+                        <div><span class="text-slate-500 block">體型大小</span><span id="inspSize" class="font-mono text-amber-400">6.0</span></div>
+                        <div><span class="text-slate-500 block">擬態偽裝</span><span id="inspCamo" class="font-mono text-purple-400">72%</span></div>
+                    </div>
+                    <div class="pt-2 flex justify-between items-center text-slate-400 text-[11px]">
+                        <span>已繁殖後代: <span id="inspOffspring" class="text-slate-200 font-bold">2</span></span>
+                        <button id="btnFollow" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded transition border border-slate-700">
+                            <i class="fa-solid fa-video mr-1"></i>追蹤視角
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Control Sidebar & Analytics -->
+        <aside class="w-full md:w-80 lg:w-96 bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col shrink-0 h-64 md:h-auto overflow-hidden">
+            <!-- Sidebar Nav Tabs -->
+            <div class="flex border-b border-slate-800 bg-slate-950/60 text-xs font-medium">
+                <button id="tabControls" class="flex-1 py-3 border-b-2 border-emerald-500 text-emerald-400 font-semibold text-center hover:bg-slate-900 transition">
+                    <i class="fa-solid fa-sliders mr-1"></i>環境與參數
+                </button>
+                <button id="tabCharts" class="flex-1 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 text-center hover:bg-slate-900 transition">
+                    <i class="fa-solid fa-chart-line mr-1"></i>演化圖表
+                </button>
+                <button id="tabDisasters" class="flex-1 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 text-center hover:bg-slate-900 transition">
+                    <i class="fa-solid fa-bolt mr-1"></i>天災事件
+                </button>
+            </div>
+
+            <!-- Tab Content Panel Container -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+
+                <!-- PANEL 1: CONTROLS -->
+                <div id="panelControls" class="space-y-4">
+                    <!-- Environment Controls -->
+                    <div class="bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/80 space-y-3">
+                        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-seedling text-emerald-400"></i> 生態環境設定
+                        </h3>
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>植物生成速率 (Food Spawn Rate):</span>
+                                <span id="lblPlantRate" class="font-mono text-emerald-400">35</span>
+                            </div>
+                            <input id="sliderPlantRate" type="range" min="5" max="100" value="35" class="w-full accent-emerald-500 cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>植物營養能量 (Plant Energy):</span>
+                                <span id="lblPlantEnergy" class="font-mono text-emerald-400">25</span>
+                            </div>
+                            <input id="sliderPlantEnergy" type="range" min="10" max="60" value="25" class="w-full accent-emerald-500 cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>地形背景顏色 (影響偽裝隱蔽率):</span>
+                            </div>
+                            <div class="flex gap-2 mt-1">
+                                <button data-color="#0f172a" class="btnTerrainColor flex-1 py-1.5 rounded border border-slate-700 bg-slate-900 text-slate-300 active hover:border-slate-500">深色苔原</button>
+                                <button data-color="#14532d" class="btnTerrainColor flex-1 py-1.5 rounded border border-slate-700 bg-emerald-950 text-emerald-300 hover:border-slate-500">茂密草原</button>
+                                <button data-color="#78350f" class="btnTerrainColor flex-1 py-1.5 rounded border border-slate-700 bg-amber-950 text-amber-300 hover:border-slate-500">乾旱荒漠</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Genetics Controls -->
+                    <div class="bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/80 space-y-3">
+                        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-dna text-indigo-400"></i> 繁衍與突變率
+                        </h3>
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>基因突變強度 (Mutation Rate):</span>
+                                <span id="lblMutationRate" class="font-mono text-indigo-400">15%</span>
+                            </div>
+                            <input id="sliderMutationRate" type="range" min="0" max="50" value="15" class="w-full accent-indigo-500 cursor-pointer">
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-slate-300">顯示生物感應視角 (Sense Radius)</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input id="chkShowSense" type="checkbox" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Predator Ecosystem Balance Controls -->
+                    <div class="bg-slate-950/50 p-3.5 rounded-xl border border-rose-900/40 space-y-3">
+                        <h3 class="font-semibold text-rose-300 flex items-center gap-2">
+                            <i class="fa-solid fa-skull-crossbones text-rose-400"></i> 捕食者生存平衡調整
+                        </h3>
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>捕食進食獲得能量倍率:</span>
+                                <span id="lblPredatorEfficiency" class="font-mono text-rose-400">1.5x</span>
+                            </div>
+                            <input id="sliderPredatorEfficiency" type="range" min="8" max="35" value="15" class="w-full accent-rose-500 cursor-pointer">
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-slate-300">啟用瀕死求生衝刺 (Hunger Sprint)</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input id="chkHungerSprint" type="checkbox" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Add Manual Creatures -->
+                    <div class="bg-slate-950/50 p-3.5 rounded-xl border border-slate-800/80 space-y-2">
+                        <h3 class="font-semibold text-slate-200 mb-1">手動調派物種 (Spawn)</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btnAddHerbivore" class="py-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 rounded-lg flex items-center justify-center gap-1.5 transition font-medium">
+                                <i class="fa-solid fa-plus text-xs"></i> 新增草食兔 (+5)
+                            </button>
+                            <button id="btnAddCarnivore" class="py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-300 rounded-lg flex items-center justify-center gap-1.5 transition font-medium">
+                                <i class="fa-solid fa-plus text-xs"></i> 新增掠食狼 (+2)
+                            </button>
+                        </div>
+                        <button id="btnAddHawk" class="w-full py-2 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 rounded-lg flex items-center justify-center gap-1.5 transition font-medium mt-1">
+                            <i class="fa-solid fa-plus text-xs"></i> 新增頂級獵鷹 (+1)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: CHARTS -->
+                <div id="panelCharts" class="hidden space-y-4">
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-semibold text-slate-300 mb-2">族群數量動態 (Population Dynamics)</h4>
+                        <div class="h-44 w-full">
+                            <canvas id="chartPopulation"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                        <h4 class="font-semibold text-slate-300 mb-2">草食動物平均基因演化趨勢</h4>
+                        <div class="h-44 w-full">
+                            <canvas id="chartTraits"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL 3: DISASTERS -->
+                <div id="panelDisasters" class="hidden space-y-3">
+                    <!-- Auto Disaster Timer Header & Switch -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-amber-900/40 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-200 font-semibold flex items-center gap-1.5">
+                                <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> 自動定期天災循環 (60s)
+                            </span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input id="chkAutoDisaster" type="checkbox" checked class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex justify-between items-center pt-1 border-t border-slate-800/80">
+                            <span>當前狀態: <span id="autoDisasterStatus" class="text-amber-400 font-medium">倒數中</span></span>
+                            <span class="font-mono text-amber-300 font-bold text-sm" id="autoDisasterTimer">60s</span>
+                        </div>
+                    </div>
+
+                    <p class="text-slate-400 text-xs">點擊手動觸發外部人為或自然天擇事件，測試族群適應力：</p>
+                    <button id="disasterDrought" class="w-full p-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl text-left flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-amber-300 flex items-center gap-2"><i class="fa-solid fa-sun"></i> 大乾旱 (Drought)</div>
+                            <div class="text-[11px] text-amber-200/70">植物停止生長 10 秒，考驗糧食匱乏耐受度</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-amber-500"></i>
+                    </button>
+                    <button id="disasterPlague" class="w-full p-3 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/60 rounded-xl text-left flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-purple-300 flex items-center gap-2"><i class="fa-solid fa-virus"></i> 傳染病流行 (Plague)</div>
+                            <div class="text-[11px] text-purple-200/70">高密度族群中引發疾病，隨機淘汰 50% 生物</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-purple-500"></i>
+                    </button>
+                    <button id="disasterMutation" class="w-full p-3 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/60 rounded-xl text-left flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-indigo-300 flex items-center gap-2"><i class="fa-solid fa-radiation"></i> 基因放射線 (Radiation)</div>
+                            <div class="text-[11px] text-indigo-200/70">短時間內將基因突變機率提高至 100%</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-indigo-500"></i>
+                    </button>
+                    <button id="disasterIceAge" class="w-full p-3 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-800/60 rounded-xl text-left flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-cyan-300 flex items-center gap-2"><i class="fa-solid fa-snowflake"></i> 冰河期 (Ice Age)</div>
+                            <div class="text-[11px] text-cyan-200/70">所有生物基礎新陳代謝耗能翻倍</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-cyan-500"></i>
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Global Canvas Setup & Config
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvasContainer');
+
+        let width = container.clientWidth;
+        let height = container.clientHeight;
+
+        function resizeCanvas() {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Simulation Variables
+        let isPaused = false;
+        let timeSpeed = 1;
+        let simTime = 0;
+        let frameCount = 0;
+        let maxGeneration = 1;
+        let selectedCreature = null;
+        let followCreature = false;
+
+        class Vector {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+            add(v) { this.x += v.x; this.y += v.y; return this; }
+            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
+            mult(n) { this.x *= n; this.y *= n; return this; }
+            div(n) { this.x /= n; this.y /= n; return this; }
+            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() { let m = this.mag(); if (m !== 0) this.div(m); return this; }
+            limit(max) { if (this.mag() > max) { this.normalize(); this.mult(max); } return this; }
+            dist(v) { return Math.sqrt((this.x - v.x)**2 + (this.y - v.y)**2); }
+            copy() { return new Vector(this.x, this.y); }
+        }
+
+        let isMouseDown = false;
+        let isPlantingMode = false;
+        let mousePos = new Vector(0, 0);
+
+        let terrainColor = '#0f172a'; // Default slate dark
+
+        // Adjustable Parameters
+        let config = {
+            plantSpawnRate: 35, // plants generated per second batch
+            plantEnergy: 25,
+            mutationRate: 0.15,
+            showSenseRadius: false,
+            metabolismMultiplier: 1.0,
+            plantGrowthDisabled: false,
+            predatorEfficiency: 1.5, // 捕食獲取能量倍率
+            hungerSprintEnabled: true
+        };
+
+        // Entities Storage
+        let plants = [];
+        let herbivores = [];
+        let carnivores = [];
+        let apexPredators = [];
+
+        function randomRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 15, g: 23, b: 42 };
+        }
+
+        // Color distance helper to measure camouflage match
+        function colorSimilarity(hex1, hex2) {
+            let rgb1 = hexToRgb(hex1);
+            let rgb2 = hexToRgb(hex2);
+            let diff = Math.sqrt((rgb1.r - rgb2.r)**2 + (rgb1.g - rgb2.g)**2 + (rgb1.b - rgb2.b)**2);
+            let maxDiff = Math.sqrt(255**2 * 3);
+            return 1 - (diff / maxDiff);
+        }
+
+        class Plant {
+            constructor(x, y) {
+                this.pos = new Vector(x || randomRange(20, width - 20), y || randomRange(20, height - 20));
+                this.radius = 3.5;
+                this.energy = config.plantEnergy;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#10b981'; // Emerald plant color
+                ctx.shadowColor = '#059669';
+                ctx.shadowBlur = 4;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Creature {
+            constructor(x, y, traits = {}) {
+                this.pos = new Vector(x || randomRange(30, width - 30), y || randomRange(30, height - 30));
+                this.vel = new Vector(randomRange(-1, 1), randomRange(-1, 1)).normalize();
+                this.acc = new Vector(0, 0);
+                this.id = Math.floor(Math.random() * 900000) + 100000;
+
+                // Inherited or Initial Traits (Genetics)
+                this.maxSpeed = traits.maxSpeed || randomRange(1.8, 3.2);
+                this.senseRadius = traits.senseRadius || randomRange(60, 120);
+                this.size = traits.size || randomRange(5, 9);
+                this.color = traits.color || '#38bdf8'; // Default sky blue
+                this.generation = traits.generation || 1;
+
+                // Dynamic Status
+        this.energy = traits.energy || 100;
+        this.maxEnergy = 150 + this.size * 10;
+        this.age = 0;
+        this.offspringCount = 0;
+        this.wanderAngle = Math.random() * Math.PI * 2;
+        this.satiatedTimer = 0; // 捕食者進食後飽足冷卻倒數
+    }
+
+    // Energy metabolic formula: larger, faster & long-sighted creatures burn energy faster!
+            getMetabolismCost() {
+                let speedCost = Math.pow(this.maxSpeed, 1.8) * 0.025;
+                let sizeCost = Math.pow(this.size, 1.5) * 0.015;
+                let senseCost = this.senseRadius * 0.0008;
+                return (speedCost + sizeCost + senseCost + 0.02) * config.metabolismMultiplier;
+            }
+
+            updatePhysics() {
+                // 1. 邊界軟性防卡牆推力 (Soft boundary repulsion)
+                const margin = 35;
+                let wallForce = new Vector(0, 0);
+                if (this.pos.x < margin) wallForce.x = (margin - this.pos.x) * 0.15;
+                if (this.pos.x > width - margin) wallForce.x = (width - margin - this.pos.x) * 0.15;
+                if (this.pos.y < margin) wallForce.y = (margin - this.pos.y) * 0.15;
+                if (this.pos.y > height - margin) wallForce.y = (height - margin - this.pos.y) * 0.15;
+                this.applyForce(wallForce);
+
+                this.vel.add(this.acc);
+                this.vel.limit(this.maxSpeed);
+                this.pos.add(this.vel);
+                this.acc.mult(0); // Reset acceleration
+
+                // Screen Boundary Clamp with soft elastic rebound
+                if (this.pos.x < 15) { this.pos.x = 15; this.vel.x *= -0.5; }
+                if (this.pos.x > width - 15) { this.pos.x = width - 15; this.vel.x *= -0.5; }
+                if (this.pos.y < 15) { this.pos.y = 15; this.vel.y *= -0.5; }
+                if (this.pos.y > height - 15) { this.pos.y = height - 15; this.vel.y *= -0.5; }
+
+                // Energy decay & Aging
+                this.energy -= this.getMetabolismCost();
+                this.age += 0.016; // Approx 60FPS
+            }
+
+            // 2. 群體個體間防重疊排斥力 (Separation steering)
+            separate(others) {
+                let steering = new Vector(0, 0);
+                let count = 0;
+                let neighborDist = this.size * 2.8;
+
+                for (let other of others) {
+                    let d = this.pos.dist(other.pos);
+                    if (other !== this && d > 0 && d < neighborDist) {
+                        let diff = this.pos.copy().sub(other.pos);
+                        diff.normalize();
+                        diff.div(d); // 越近推力越大
+                        steering.add(diff);
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    steering.div(count);
+                    steering.normalize().mult(this.maxSpeed);
+                    steering.sub(this.vel);
+                    steering.limit(0.35);
+                    this.applyForce(steering);
+                }
+            }
+
+            applyForce(force) {
+                this.acc.add(force);
+            }
+
+            wander() {
+                this.wanderAngle += randomRange(-0.3, 0.3);
+                let circleCenter = this.vel.copy().normalize().mult(30);
+                let displacement = new Vector(Math.cos(this.wanderAngle), Math.sin(this.wanderAngle)).mult(15);
+                let wanderForce = circleCenter.add(displacement);
+                wanderForce.limit(0.2);
+                this.applyForce(wanderForce);
+            }
+
+            seek(targetPos) {
+                let desired = targetPos.copy().sub(this.pos);
+                desired.normalize().mult(this.maxSpeed);
+                let steer = desired.sub(this.vel);
+                steer.limit(0.3);
+                this.applyForce(steer);
+            }
+
+            flee(targetPos) {
+                let desired = this.pos.copy().sub(targetPos);
+                desired.normalize().mult(this.maxSpeed);
+                let steer = desired.sub(this.vel);
+                steer.limit(0.4);
+                this.applyForce(steer);
+            }
+        }
+
+        class Herbivore extends Creature {
+            constructor(x, y, traits = {}) {
+                if (!traits.color) {
+                    let r = Math.floor(randomRange(50, 220));
+                    let g = Math.floor(randomRange(120, 255));
+                    let b = Math.floor(randomRange(100, 220));
+                    traits.color = `rgb(${r},${g},${b})`;
+                }
+                super(x, y, traits);
+                this.type = 'herbivore';
+            }
+
+            update(plantsList, carnivoresList, hawksList, herbivoresList) {
+                if (herbivoresList) this.separate(herbivoresList);
+
+                let closestThreat = null;
+                let minDistToThreat = Infinity;
+
+                // Combine wolves and hawks as potential threats
+                let threats = [...carnivoresList, ...hawksList];
+                for (let predator of threats) {
+                    let d = this.pos.dist(predator.pos);
+                    let cMatch = colorSimilarity(this.color, terrainColor);
+                    // 強化保護色：高擬態度能顯著縮減天敵視覺發現距離
+                    let effectiveDetection = predator.senseRadius * (1 - cMatch * 0.50);
+
+                    if (d < effectiveDetection && d < minDistToThreat) {
+                        minDistToThreat = d;
+                        closestThreat = predator;
+                    }
+                }
+
+                if (closestThreat) {
+                    // 草食兔【驚嚇疾跑】：感知到強烈天敵逼近時獲得 35% 避險速度爆發
+                    let panicSpeed = this.maxSpeed * 1.35;
+                    let desired = this.pos.copy().sub(closestThreat.pos);
+                    desired.normalize().mult(panicSpeed);
+                    let steer = desired.sub(this.vel);
+                    steer.limit(0.45);
+                    this.applyForce(steer);
+                    this.energy -= 0.03; // 爆發衝刺消耗額外小量體力
+                } else {
+                    let closestPlant = null;
+                    let minDistToPlant = Infinity;
+
+                    for (let plant of plantsList) {
+                        let d = this.pos.dist(plant.pos);
+                        if (d < this.senseRadius && d < minDistToPlant) {
+                            minDistToPlant = d;
+                            closestPlant = plant;
+                        }
+                    }
+
+                    if (closestPlant) {
+                        this.seek(closestPlant.pos);
+                        if (minDistToPlant < this.size + closestPlant.radius) {
+                            this.energy = Math.min(this.maxEnergy, this.energy + closestPlant.energy);
+                            let index = plantsList.indexOf(closestPlant);
+                            if (index > -1) plantsList.splice(index, 1);
+                        }
+                    } else {
+                        this.wander();
+                    }
+                }
+
+                this.updatePhysics();
+            }
+
+            reproduce() {
+                // 降低繁衍能量門檻 (從 120 降至 95)，發揮草食動物「高繁殖率 r-對策」特性
+                if (this.energy > 95) {
+                    this.energy *= 0.55; // 保留 55% 能量
+                    this.offspringCount++;
+
+                    // Mutate genetic traits
+                    let mr = config.mutationRate;
+                    let childTraits = {
+                        maxSpeed: Math.max(0.8, this.maxSpeed + randomRange(-mr, mr)),
+                        senseRadius: Math.max(30, this.senseRadius + randomRange(-mr * 25, mr * 25)),
+                        size: Math.max(3, this.size + randomRange(-mr * 2, mr * 2)),
+                        color: this.mutateColor(this.color, mr),
+                        generation: this.generation + 1,
+                        energy: this.energy
+                    };
+
+                    if (childTraits.generation > maxGeneration) {
+                        maxGeneration = childTraits.generation;
+                    }
+
+                    let childX = Math.max(25, Math.min(width - 25, this.pos.x + randomRange(-15, 15)));
+                    let childY = Math.max(25, Math.min(height - 25, this.pos.y + randomRange(-15, 15)));
+                    let child = new Herbivore(childX, childY, childTraits);
+                    child.vel = new Vector(randomRange(-1, 1), randomRange(-1, 1)).normalize().mult(child.maxSpeed);
+                    return child;
+                }
+                return null;
+            }
+
+            mutateColor(hexOrRgb, rate) {
+                // Parse color
+                let rgb = hexToRgb(hexOrRgb);
+                if (hexOrRgb.startsWith('rgb')) {
+                    let nums = hexOrRgb.match(/\d+/g);
+                    if (nums) rgb = { r: parseInt(nums[0]), g: parseInt(nums[1]), b: parseInt(nums[2]) };
+                }
+                let r = Math.min(255, Math.max(20, rgb.r + Math.floor(randomRange(-rate * 60, rate * 60))));
+                let g = Math.min(255, Math.max(20, rgb.g + Math.floor(randomRange(-rate * 60, rate * 60))));
+                let b = Math.min(255, Math.max(20, rgb.b + Math.floor(randomRange(-rate * 60, rate * 60))));
+                return `rgb(${r},${g},${b})`;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+
+                // Draw Sense Radius if enabled
+                if (config.showSenseRadius || selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.senseRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = selectedCreature === this ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)';
+                    ctx.strokeStyle = selectedCreature === this ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = selectedCreature === this ? 1.5 : 0.8;
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                // Creature Body Alignment with Movement Velocity
+                let angle = Math.atan2(this.vel.y, this.vel.x);
+                ctx.rotate(angle);
+
+                // Body Shape (Rabbit/Herbivore Oval Body)
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.3, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 6;
+                ctx.fill();
+
+                // Eyes
+                ctx.beginPath();
+                ctx.arc(this.size * 0.6, -this.size * 0.4, Math.max(1, this.size * 0.25), 0, Math.PI * 2);
+                ctx.arc(this.size * 0.6, this.size * 0.4, Math.max(1, this.size * 0.25), 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+                // Selection Ring Marker
+                if (selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 1.8, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Carnivore extends Creature {
+            constructor(x, y, traits = {}) {
+                traits.color = traits.color || '#ef4444';
+                traits.maxSpeed = traits.maxSpeed || randomRange(2.4, 3.8);
+                traits.senseRadius = traits.senseRadius || randomRange(100, 170);
+                traits.size = traits.size || randomRange(8, 12);
+                super(x, y, traits);
+                this.type = 'carnivore';
+            }
+
+            getMetabolismCost() {
+                let baseCost = super.getMetabolismCost();
+                return baseCost * 0.60;
+            }
+
+            update(herbivoresList, carnivoresList, hawksList) {
+                if (carnivoresList) this.separate(carnivoresList);
+
+                // 處理進食後的飽足休憩時間倒數
+                if (this.satiatedTimer > 0) {
+                    this.satiatedTimer -= 0.016;
+                }
+
+                // 瀕死求生衝刺機制
+                let effectiveSpeed = this.maxSpeed;
+                let effectiveSense = this.senseRadius;
+                if (config.hungerSprintEnabled && (this.energy / this.maxEnergy) < 0.35) {
+                    effectiveSpeed *= 1.25;
+                    effectiveSense *= 1.2;
+                }
+
+                let closestHawk = null;
+                let minDistToHawk = Infinity;
+
+                if (hawksList) {
+                    for (let hawk of hawksList) {
+                        let d = this.pos.dist(hawk.pos);
+                        if (d < hawk.senseRadius && d < minDistToHawk) {
+                            minDistToHawk = d;
+                            closestHawk = hawk;
+                        }
+                    }
+                }
+
+                // Flee from Hawk if nearby
+                if (closestHawk) {
+                    this.flee(closestHawk.pos);
+                } else if (this.satiatedTimer > 0) {
+                    // 飽足狀態下不進行狩獵，改為悠閒散步，給予草食兔喘息時間
+                    this.wander();
+                } else {
+                    let closestPrey = null;
+                    let minDist = Infinity;
+
+                    for (let prey of herbivoresList) {
+                        let d = this.pos.dist(prey.pos);
+                        let cMatch = colorSimilarity(prey.color, terrainColor);
+                        let sensedDist = effectiveSense * (1 - cMatch * 0.45);
+
+                        if (d < sensedDist && d < minDist) {
+                            minDist = d;
+                            closestPrey = prey;
+                        }
+                    }
+
+                    if (closestPrey) {
+                        let desired = closestPrey.pos.copy().sub(this.pos);
+                        desired.normalize().mult(effectiveSpeed);
+                        let steer = desired.sub(this.vel);
+                        steer.limit(0.35);
+                        this.applyForce(steer);
+
+                        if (minDist < this.size + closestPrey.size) {
+                            let energyGained = (closestPrey.energy * 0.9 + 55) * config.predatorEfficiency;
+                            this.energy = Math.min(this.maxEnergy, this.energy + energyGained);
+                            this.satiatedTimer = 3.5; // 捕食成功後進入 3.5 秒飽足休憩期
+                            let index = herbivoresList.indexOf(closestPrey);
+                            if (index > -1) herbivoresList.splice(index, 1);
+                        }
+                    } else {
+                        this.wander();
+                    }
+                }
+
+                this.updatePhysics();
+            }
+
+            reproduce() {
+                // 降低繁衍能量門檻，並保留更多剩餘能量防止繁衍即餓死
+                if (this.energy > 110) {
+                    this.energy *= 0.65; // 母體保留 65% 能量
+                    this.offspringCount++;
+
+                    let mr = config.mutationRate;
+                    let childTraits = {
+                        maxSpeed: Math.max(1.5, this.maxSpeed + randomRange(-mr * 1.2, mr * 1.2)),
+                        senseRadius: Math.max(60, this.senseRadius + randomRange(-mr * 25, mr * 25)),
+                        size: Math.max(5, this.size + randomRange(-mr * 2, mr * 2)),
+                        color: '#ef4444',
+                        generation: this.generation + 1,
+                        energy: this.energy * 0.5
+                    };
+
+                    if (childTraits.generation > maxGeneration) maxGeneration = childTraits.generation;
+                    return new Carnivore(this.pos.x + randomRange(-8, 8), this.pos.y + randomRange(-8, 8), childTraits);
+                }
+                return null;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+
+                if (config.showSenseRadius || selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.senseRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                let angle = Math.atan2(this.vel.y, this.vel.x);
+                ctx.rotate(angle);
+
+                // Predator Sharp/Triangle Body
+                ctx.beginPath();
+                ctx.moveTo(this.size * 1.5, 0);
+                ctx.lineTo(-this.size, -this.size * 0.9);
+                ctx.lineTo(-this.size * 0.5, 0);
+                ctx.lineTo(-this.size, this.size * 0.9);
+                ctx.closePath();
+
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = '#dc2626';
+                ctx.shadowBlur = 8;
+                ctx.fill();
+
+                // Predator Eyes
+                ctx.beginPath();
+                ctx.arc(this.size * 0.5, -this.size * 0.3, Math.max(1, this.size * 0.2), 0, Math.PI * 2);
+                ctx.arc(this.size * 0.5, this.size * 0.3, Math.max(1, this.size * 0.2), 0, Math.PI * 2);
+                ctx.fillStyle = '#fef08a';
+                ctx.fill();
+
+                if (selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Hawk extends Creature {
+            constructor(x, y, traits = {}) {
+                traits.color = traits.color || '#f59e0b';
+                traits.maxSpeed = traits.maxSpeed || randomRange(3.2, 4.4);
+                traits.senseRadius = traits.senseRadius || randomRange(140, 210);
+                traits.size = traits.size || randomRange(11, 15);
+                super(x, y, traits);
+                this.type = 'hawk';
+                this.wingAngle = Math.random() * Math.PI * 2;
+            }
+
+            getMetabolismCost() {
+                let baseCost = super.getMetabolismCost();
+                return baseCost * 0.55;
+            }
+
+            update(carnivoresList, herbivoresList, hawksList) {
+                if (hawksList) this.separate(hawksList);
+
+                this.wingAngle += 0.25;
+
+                if (this.satiatedTimer > 0) {
+                    this.satiatedTimer -= 0.016;
+                }
+
+                let target = null;
+                let minDist = Infinity;
+
+                let effectiveSpeed = this.maxSpeed;
+                let effectiveSense = this.senseRadius;
+                if (config.hungerSprintEnabled && (this.energy / this.maxEnergy) < 0.35) {
+                    effectiveSpeed *= 1.25;
+                    effectiveSense *= 1.2;
+                }
+
+                if (this.satiatedTimer > 0) {
+                    // 飽足狀態下在高空盤旋滑翔，不展開主動獵殺
+                    this.wander();
+                } else {
+                    // Priority 1: Hunt Carnivores (Wolves)
+                    for (let c of carnivoresList) {
+                        let d = this.pos.dist(c.pos);
+                        if (d < effectiveSense && d < minDist) {
+                            minDist = d;
+                            target = c;
+                        }
+                    }
+
+                    // Priority 2: If no wolves nearby, hunt Herbivores (Rabbits)
+                    if (!target) {
+                        for (let h of herbivoresList) {
+                            let d = this.pos.dist(h.pos);
+                            let cMatch = colorSimilarity(h.color, terrainColor);
+                            let sensedDist = effectiveSense * (1 - cMatch * 0.45);
+
+                            if (d < sensedDist && d < minDist) {
+                                minDist = d;
+                                target = h;
+                            }
+                        }
+                    }
+
+                    if (target) {
+                        let desired = target.pos.copy().sub(this.pos);
+                        desired.normalize().mult(effectiveSpeed);
+                        let steer = desired.sub(this.vel);
+                        steer.limit(0.4);
+                        this.applyForce(steer);
+
+                        if (minDist < this.size + target.size) {
+                            let energyGained = (target.energy * 0.95 + 65) * config.predatorEfficiency;
+                            this.energy = Math.min(this.maxEnergy, this.energy + energyGained);
+                            this.satiatedTimer = 4.0; // 頂級獵鷹享用獵物後進入 4.0 秒飽足休憩期
+                            if (target.type === 'carnivore') {
+                                let idx = carnivoresList.indexOf(target);
+                                if (idx > -1) carnivoresList.splice(idx, 1);
+                            } else {
+                                let idx = herbivoresList.indexOf(target);
+                                if (idx > -1) herbivoresList.splice(idx, 1);
+                            }
+                        }
+                    } else {
+                        this.wander();
+                    }
+                }
+
+                this.updatePhysics();
+            }
+
+            reproduce() {
+                if (this.energy > 125) {
+                    this.energy *= 0.65;
+                    this.offspringCount++;
+
+                    let mr = config.mutationRate;
+                    let childTraits = {
+                        maxSpeed: Math.max(2.0, this.maxSpeed + randomRange(-mr * 1.2, mr * 1.2)),
+                        senseRadius: Math.max(90, this.senseRadius + randomRange(-mr * 25, mr * 25)),
+                        size: Math.max(8, this.size + randomRange(-mr * 2, mr * 2)),
+                        color: '#f59e0b',
+                        generation: this.generation + 1,
+                        energy: this.energy * 0.5
+                    };
+
+                    if (childTraits.generation > maxGeneration) maxGeneration = childTraits.generation;
+                    return new Hawk(this.pos.x + randomRange(-10, 10), this.pos.y + randomRange(-10, 10), childTraits);
+                }
+                return null;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+
+                if (config.showSenseRadius || selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.senseRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+                    ctx.strokeStyle = 'rgba(245, 158, 11, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                let angle = Math.atan2(this.vel.y, this.vel.x);
+                ctx.rotate(angle);
+
+                // Flying Wing Flap Animation
+                let wingFlap = Math.sin(this.wingAngle) * (this.size * 0.45);
+
+                // Hawk Winged Silhouette
+                ctx.beginPath();
+                ctx.moveTo(this.size * 1.8, 0); // Beak
+                ctx.lineTo(this.size * 0.8, -this.size * 0.4);
+                ctx.lineTo(0, -this.size * 2.2 + wingFlap); // Left Wing
+                ctx.lineTo(-this.size * 0.6, -this.size * 0.5);
+                ctx.lineTo(-this.size * 1.6, 0); // Tail
+                ctx.lineTo(-this.size * 0.6, this.size * 0.5);
+                ctx.lineTo(0, this.size * 2.2 - wingFlap); // Right Wing
+                ctx.lineTo(this.size * 0.8, this.size * 0.4);
+                ctx.closePath();
+
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = '#d97706';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+
+                // Beak accent
+                ctx.beginPath();
+                ctx.moveTo(this.size * 1.8, 0);
+                ctx.lineTo(this.size * 1.2, -this.size * 0.2);
+                ctx.lineTo(this.size * 1.2, this.size * 0.2);
+                ctx.closePath();
+                ctx.fillStyle = '#fef08a';
+                ctx.fill();
+
+                if (selectedCreature === this) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 2.4, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function initSimulation() {
+            plants = [];
+            herbivores = [];
+            carnivores = [];
+            apexPredators = [];
+            simTime = 0;
+            frameCount = 0;
+            maxGeneration = 1;
+            selectedCreature = null;
+
+            // Spawn Initial Plants
+            for (let i = 0; i < 90; i++) {
+                plants.push(new Plant());
+            }
+
+            // Spawn Initial Herbivores
+            for (let i = 0; i < 28; i++) {
+                herbivores.push(new Herbivore());
+            }
+
+            // Spawn Initial Carnivores
+            for (let i = 0; i < 6; i++) {
+                carnivores.push(new Carnivore());
+            }
+
+            for (let i = 0; i < 2; i++) {
+                apexPredators.push(new Hawk());
+            }
+
+            showToast('生態系初始化成功！已包含頂級獵鷹等多層級物種。', 'info');
+        }
+
+        // Main Simulation Step Loop
+        function updateSimulation() {
+            if (isPaused) return;
+
+            for (let step = 0; step < timeSpeed; step++) {
+                frameCount++;
+                simTime += 0.016;
+
+                // Plant Spawning Logic
+                if (!config.plantGrowthDisabled && frameCount % Math.max(1, Math.floor(600 / config.plantSpawnRate)) === 0) {
+                    if (plants.length < 250) {
+                        plants.push(new Plant());
+                    }
+                }
+
+                if (isMouseDown && isPlantingMode && frameCount % 4 === 0) {
+                    spawnPlantsAt(mousePos);
+                }
+
+                // Update Herbivores
+                for (let i = herbivores.length - 1; i >= 0; i--) {
+                    let h = herbivores[i];
+                    h.update(plants, carnivores, apexPredators, herbivores);
+
+                    if (h.energy <= 0 || h.age > 90) {
+                        if (selectedCreature === h) selectedCreature = null;
+                        herbivores.splice(i, 1);
+                        continue;
+                    }
+
+                    let child = h.reproduce();
+                    if (child) herbivores.push(child);
+                }
+
+                // Update Carnivores
+                for (let i = carnivores.length - 1; i >= 0; i--) {
+                    let c = carnivores[i];
+                    c.update(herbivores, carnivores, apexPredators);
+
+                    if (c.energy <= 0 || c.age > 100) {
+                        if (selectedCreature === c) selectedCreature = null;
+                        carnivores.splice(i, 1);
+                        continue;
+                    }
+
+                    let child = c.reproduce();
+                    if (child) carnivores.push(child);
+                }
+
+                for (let i = apexPredators.length - 1; i >= 0; i--) {
+                    let hawk = apexPredators[i];
+                    hawk.update(carnivores, herbivores, apexPredators);
+
+                    if (hawk.energy <= 0 || hawk.age > 120) {
+                        if (selectedCreature === hawk) selectedCreature = null;
+                        apexPredators.splice(i, 1);
+                        continue;
+                    }
+
+                    let child = hawk.reproduce();
+                    if (child) apexPredators.push(child);
+                }
+
+                // Chart Data Sampling
+                if (frameCount % 60 === 0) {
+                    recordChartData();
+                }
+            }
+        }
+
+        function renderSimulation() {
+            ctx.fillStyle = terrainColor;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            for (let y = 0; y < height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+
+            // Draw Entities
+            for (let p of plants) p.draw(ctx);
+            for (let h of herbivores) h.draw(ctx);
+            for (let c of carnivores) c.draw(ctx);
+            for (let hawk of apexPredators) hawk.draw(ctx);
+
+            if (selectedCreature && followCreature) {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(selectedCreature.pos.x, selectedCreature.pos.y, 30, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            document.getElementById('hudGen').innerText = maxGeneration;
+            document.getElementById('hudTime').innerText = Math.floor(simTime);
+            document.getElementById('hudTotal').innerText = herbivores.length + carnivores.length + apexPredators.length;
+
+            updateInspectorUI();
+        }
+
+        function gameLoop() {
+            updateSimulation();
+            renderSimulation();
+            requestAnimationFrame(gameLoop);
+        }
+
+        let chartPop, chartTraits;
+
+        function initCharts() {
+            const ctxPop = document.getElementById('chartPopulation').getContext('2d');
+            chartPop = new Chart(ctxPop, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: '植物', borderColor: '#10b981', data: [], borderWidth: 1.5, pointRadius: 0 },
+                        { label: '草食兔', borderColor: '#38bdf8', data: [], borderWidth: 1.5, pointRadius: 0 },
+                        { label: '掠食狼', borderColor: '#ef4444', data: [], borderWidth: 1.5, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { display: false },
+                        y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } }
+                }
+            });
+
+            const ctxTraits = document.getElementById('chartTraits').getContext('2d');
+            chartTraits = new Chart(ctxTraits, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: '平均速度', borderColor: '#06b6d4', data: [], borderWidth: 1.5, pointRadius: 0 },
+                        { label: '平均視野 (1/10)', borderColor: '#818cf8', data: [], borderWidth: 1.5, pointRadius: 0 },
+                        { label: '平均體型', borderColor: '#f59e0b', data: [], borderWidth: 1.5, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { display: false },
+                        y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#1e293b' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } }
+                }
+            });
+        }
+
+        function recordChartData() {
+            if (!chartPop || !chartTraits) return;
+
+            let timeLabel = Math.floor(simTime) + 's';
+
+            // Population Data
+            chartPop.data.labels.push(timeLabel);
+            chartPop.data.datasets[0].data.push(plants.length);
+            chartPop.data.datasets[1].data.push(herbivores.length);
+            chartPop.data.datasets[2].data.push(carnivores.length);
+
+            if (chartPop.data.labels.length > 30) {
+                chartPop.data.labels.shift();
+                chartPop.data.datasets.forEach(d => d.data.shift());
+            }
+            chartPop.update();
+
+            // Average Traits Calculation for Herbivores
+            if (herbivores.length > 0) {
+                let avgSpeed = herbivores.reduce((acc, h) => acc + h.maxSpeed, 0) / herbivores.length;
+                let avgSense = herbivores.reduce((acc, h) => acc + h.senseRadius, 0) / herbivores.length;
+                let avgSize = herbivores.reduce((acc, h) => acc + h.size, 0) / herbivores.length;
+
+                chartTraits.data.labels.push(timeLabel);
+                chartTraits.data.datasets[0].data.push(avgSpeed.toFixed(2));
+                chartTraits.data.datasets[1].data.push((avgSense / 10).toFixed(2));
+                chartTraits.data.datasets[2].data.push(avgSize.toFixed(2));
+
+                if (chartTraits.data.labels.length > 30) {
+                    chartTraits.data.labels.shift();
+                    chartTraits.data.datasets.forEach(d => d.data.shift());
+                }
+                chartTraits.update();
+            }
+        }
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return new Vector(clientX - rect.left, clientY - rect.top);
+        }
+
+        function spawnPlantsAt(pos) {
+            for (let i = 0; i < 2; i++) {
+                let px = Math.max(25, Math.min(width - 25, pos.x + randomRange(-15, 15)));
+                let py = Math.max(25, Math.min(height - 25, pos.y + randomRange(-15, 15)));
+                plants.push(new Plant(px, py));
+            }
+        }
+
+        function handlePointerDown(e) {
+            isMouseDown = true;
+            mousePos = getCanvasPos(e);
+
+            let clicked = null;
+            for (let h of herbivores) {
+                if (h.pos.dist(mousePos) < h.size * 2) { clicked = h; break; }
+            }
+            if (!clicked) {
+                for (let c of carnivores) {
+                    if (c.pos.dist(mousePos) < c.size * 2) { clicked = c; break; }
+                }
+            }
+            if (!clicked) {
+                for (let hawk of apexPredators) {
+                    if (hawk.pos.dist(mousePos) < hawk.size * 2) { clicked = hawk; break; }
+                }
+            }
+
+            if (clicked) {
+                selectedCreature = clicked;
+                document.getElementById('inspectorCard').classList.remove('hidden');
+                isPlantingMode = false;
+            } else {
+                isPlantingMode = true;
+                spawnPlantsAt(mousePos);
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isMouseDown) return;
+            mousePos = getCanvasPos(e);
+        }
+
+        function handlePointerUp() {
+            isMouseDown = false;
+            isPlantingMode = false;
+        }
+
+        // 滑鼠與觸控監聽器
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', handlePointerDown, { passive: true });
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+        window.addEventListener('touchend', handlePointerUp);
+
+        // Inspector UI Updating
+        function updateInspectorUI() {
+            if (!selectedCreature) return;
+
+            const c = selectedCreature;
+            document.getElementById('inspName').innerText = `個體 #${c.id}`;
+
+            let typeLabel = '草食動物 (Herbivore)';
+            let typeStyle = 'bg-emerald-900/60 text-emerald-300 border-emerald-700';
+
+            if (c.type === 'carnivore') {
+                typeLabel = '掠食狼 (Carnivore)';
+                typeStyle = 'bg-rose-900/60 text-rose-300 border-rose-700';
+            } else if (c.type === 'hawk') {
+                typeLabel = '頂級獵鷹 (Apex Hawk)';
+                typeStyle = 'bg-amber-900/60 text-amber-300 border-amber-700';
+            }
+
+            document.getElementById('inspType').innerText = typeLabel;
+            document.getElementById('inspType').className = `px-2 py-0.5 rounded font-bold uppercase text-[10px] border ${typeStyle}`;
+
+            document.getElementById('inspEnergy').innerText = `${Math.floor(c.energy)} / ${Math.floor(c.maxEnergy)}`;
+            let energyPct = Math.max(0, Math.min(100, (c.energy / c.maxEnergy) * 100));
+            document.getElementById('inspEnergyBar').style.width = `${energyPct}%`;
+
+            document.getElementById('inspGen').innerText = `G${c.generation}`;
+            document.getElementById('inspAge').innerText = `${c.age.toFixed(1)} 秒`;
+            document.getElementById('inspSpeed').innerText = `${c.maxSpeed.toFixed(2)} px/f`;
+            document.getElementById('inspSense').innerText = `${Math.floor(c.senseRadius)} px`;
+            document.getElementById('inspSize').innerText = c.size.toFixed(1);
+
+            let cMatch = (colorSimilarity(c.color, terrainColor) * 100).toFixed(0);
+            document.getElementById('inspCamo').innerText = `${cMatch}%`;
+            document.getElementById('inspOffspring').innerText = c.offspringCount;
+        }
+
+        document.getElementById('closeInspector').addEventListener('click', () => {
+            selectedCreature = null;
+            document.getElementById('inspectorCard').classList.add('hidden');
+            followCreature = false;
+        });
+
+        document.getElementById('btnFollow').addEventListener('click', () => {
+            followCreature = !followCreature;
+            const btn = document.getElementById('btnFollow');
+            if (followCreature) {
+                btn.classList.add('bg-cyan-900', 'text-cyan-300');
+            } else {
+                btn.classList.remove('bg-cyan-900', 'text-cyan-300');
+            }
+        });
+
+        // Setup Sidebar Tabs Switching
+        const tabControls = document.getElementById('tabControls');
+        const tabCharts = document.getElementById('tabCharts');
+        const tabDisasters = document.getElementById('tabDisasters');
+
+        const panelControls = document.getElementById('panelControls');
+        const panelCharts = document.getElementById('panelCharts');
+        const panelDisasters = document.getElementById('panelDisasters');
+
+        function switchTab(activeTab, activePanel) {
+            [tabControls, tabCharts, tabDisasters].forEach(tab => {
+                tab.classList.remove('border-emerald-500', 'text-emerald-400', 'font-semibold');
+                tab.classList.add('border-transparent', 'text-slate-400');
+            });
+            [panelControls, panelCharts, panelDisasters].forEach(panel => panel.classList.add('hidden'));
+
+            activeTab.classList.add('border-emerald-500', 'text-emerald-400', 'font-semibold');
+            activeTab.classList.remove('border-transparent', 'text-slate-400');
+            activePanel.classList.remove('hidden');
+        }
+
+        tabControls.addEventListener('click', () => switchTab(tabControls, panelControls));
+        tabCharts.addEventListener('click', () => switchTab(tabCharts, panelCharts));
+        tabDisasters.addEventListener('click', () => switchTab(tabDisasters, panelDisasters));
+
+        // Control UI Event Listeners
+        document.getElementById('btnPause').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('btnPause').innerHTML = isPaused ? '<i class="fa-solid fa-play"></i>' : '<i class="fa-solid fa-pause"></i>';
+        });
+
+        document.getElementById('btnSpeed').addEventListener('click', () => {
+            if (timeSpeed === 1) timeSpeed = 2;
+            else if (timeSpeed === 2) timeSpeed = 3;
+            else timeSpeed = 1;
+            document.getElementById('btnSpeed').innerText = `${timeSpeed}x`;
+        });
+
+        document.getElementById('btnRestart').addEventListener('click', () => {
+            initSimulation();
+        });
+
+        // Slider Controls Binding
+        document.getElementById('sliderPlantRate').addEventListener('input', (e) => {
+            config.plantSpawnRate = parseInt(e.target.value);
+            document.getElementById('lblPlantRate').innerText = config.plantSpawnRate;
+        });
+
+        document.getElementById('sliderPlantEnergy').addEventListener('input', (e) => {
+            config.plantEnergy = parseInt(e.target.value);
+            document.getElementById('lblPlantEnergy').innerText = config.plantEnergy;
+        });
+
+        document.getElementById('sliderMutationRate').addEventListener('input', (e) => {
+            config.mutationRate = parseInt(e.target.value) / 100;
+            document.getElementById('lblMutationRate').innerText = `${e.target.value}%`;
+        });
+
+        document.getElementById('chkShowSense').addEventListener('change', (e) => {
+            config.showSenseRadius = e.target.checked;
+        });
+
+        document.getElementById('sliderPredatorEfficiency').addEventListener('input', (e) => {
+            config.predatorEfficiency = parseInt(e.target.value) / 10;
+            document.getElementById('lblPredatorEfficiency').innerText = `${config.predatorEfficiency.toFixed(1)}x`;
+        });
+
+        document.getElementById('chkHungerSprint').addEventListener('change', (e) => {
+            config.hungerSprintEnabled = e.target.checked;
+        });
+
+        // Terrain Color Selection
+        document.querySelectorAll('.btnTerrainColor').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btnTerrainColor').forEach(b => b.classList.remove('active', 'border-emerald-500'));
+                e.target.classList.add('active', 'border-emerald-500');
+                terrainColor = e.target.getAttribute('data-color');
+            });
+        });
+
+        // Spawn Buttons Handlers
+        document.getElementById('btnAddHerbivore').addEventListener('click', () => {
+            for (let i = 0; i < 5; i++) herbivores.push(new Herbivore());
+            showToast('已加入 5 隻草食兔', 'success');
+        });
+
+        document.getElementById('btnAddCarnivore').addEventListener('click', () => {
+            for (let i = 0; i < 2; i++) carnivores.push(new Carnivore());
+            showToast('已加入 2 隻掠食狼', 'warning');
+        });
+
+        document.getElementById('btnAddHawk').addEventListener('click', () => {
+            apexPredators.push(new Hawk());
+            showToast('已加入 1 隻頂級獵鷹', 'warning');
+        });
+
+        // Disaster Logic & Auto Disaster Scheduler
+        let autoDisasterEnabled = true;
+        let disasterCountdown = 60;
+        let isDisasterActive = false;
+        let autoDisasterInterval = null;
+
+        function startAutoDisasterTimer() {
+            if (autoDisasterInterval) clearInterval(autoDisasterInterval);
+            autoDisasterInterval = setInterval(() => {
+                if (isPaused || !autoDisasterEnabled || isDisasterActive) return;
+
+                disasterCountdown--;
+                updateDisasterUI();
+
+                if (disasterCountdown <= 0) {
+                    triggerRandomDisaster();
+                }
+            }, 1000);
+        }
+
+        function updateDisasterUI() {
+            const timerElem = document.getElementById('autoDisasterTimer');
+            const statusElem = document.getElementById('autoDisasterStatus');
+            if (timerElem) timerElem.innerText = `${disasterCountdown}s`;
+            if (statusElem) {
+                if (!autoDisasterEnabled) {
+                    statusElem.innerText = '已關閉';
+                    statusElem.className = 'text-slate-500 font-medium';
+                } else if (isDisasterActive) {
+                    statusElem.innerText = '天災發生中';
+                    statusElem.className = 'text-rose-400 font-medium animate-pulse';
+                } else {
+                    statusElem.innerText = '倒數中';
+                    statusElem.className = 'text-amber-400 font-medium';
+                }
+            }
+        }
+
+        function triggerDrought() {
+            if (isDisasterActive) return;
+            isDisasterActive = true;
+            updateDisasterUI();
+
+            config.plantGrowthDisabled = true;
+            plants = plants.slice(0, 10);
+            showToast('【天災降臨】大乾旱爆發！植物大規模枯萎並停止生長 10 秒！', 'error');
+
+            setTimeout(() => {
+                config.plantGrowthDisabled = false;
+                showToast('乾旱結束，環境雨水漸漸復甦。', 'info');
+                isDisasterActive = false;
+                disasterCountdown = 60;
+                updateDisasterUI();
+            }, 10000);
+        }
+
+        function triggerPlague() {
+            if (isDisasterActive) return;
+            isDisasterActive = true;
+            updateDisasterUI();
+
+            herbivores = herbivores.filter(() => Math.random() > 0.5);
+            carnivores = carnivores.filter(() => Math.random() > 0.5);
+            apexPredators = apexPredators.filter(() => Math.random() > 0.5);
+            showToast('【天災降臨】傳染病流行！50% 的個體不幸淘汰。', 'error');
+
+            setTimeout(() => {
+                isDisasterActive = false;
+                disasterCountdown = 60;
+                updateDisasterUI();
+            }, 3000);
+        }
+
+        function triggerMutationDisaster() {
+            if (isDisasterActive) return;
+            isDisasterActive = true;
+            updateDisasterUI();
+
+            let previousMutationRate = config.mutationRate;
+            config.mutationRate = 0.5;
+            document.getElementById('sliderMutationRate').value = 50;
+            document.getElementById('lblMutationRate').innerText = '50%';
+            showToast('【天災降臨】強烈輻射照射！基因突變機率已飆升至 50% 達 10 秒！', 'warning');
+
+            setTimeout(() => {
+                config.mutationRate = previousMutationRate;
+                document.getElementById('sliderMutationRate').value = Math.round(previousMutationRate * 100);
+                document.getElementById('lblMutationRate').innerText = `${Math.round(previousMutationRate * 100)}%`;
+                showToast('輻射退去，基因突變率恢復正常。', 'info');
+                isDisasterActive = false;
+                disasterCountdown = 60;
+                updateDisasterUI();
+            }, 10000);
+        }
+
+        function triggerIceAge() {
+            if (isDisasterActive) return;
+            isDisasterActive = true;
+            updateDisasterUI();
+
+            config.metabolismMultiplier = 2.5;
+            let previousColor = terrainColor;
+            terrainColor = '#1e293b';
+            showToast('【天災降臨】冰河期啟動！基礎新陳代謝耗能翻倍！', 'error');
+
+            setTimeout(() => {
+                config.metabolismMultiplier = 1.0;
+                terrainColor = previousColor;
+                showToast('冰河期退去，氣候恢復常態。', 'info');
+                isDisasterActive = false;
+                disasterCountdown = 60;
+                updateDisasterUI();
+            }, 12000);
+        }
+
+        function triggerRandomDisaster() {
+            const disasters = [triggerDrought, triggerPlague, triggerMutationDisaster, triggerIceAge];
+            const randomIndex = Math.floor(Math.random() * disasters.length);
+            disasters[randomIndex]();
+        }
+
+        // Disasters Handlers Binding
+        document.getElementById('disasterDrought').addEventListener('click', triggerDrought);
+        document.getElementById('disasterPlague').addEventListener('click', triggerPlague);
+        document.getElementById('disasterMutation').addEventListener('click', triggerMutationDisaster);
+        document.getElementById('disasterIceAge').addEventListener('click', triggerIceAge);
+
+        document.getElementById('chkAutoDisaster').addEventListener('change', (e) => {
+            autoDisasterEnabled = e.target.checked;
+            if (autoDisasterEnabled && !isDisasterActive && disasterCountdown <= 0) {
+                disasterCountdown = 60;
+            }
+            updateDisasterUI();
+        });
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let bgClass = 'bg-slate-800 border-slate-700 text-slate-200';
+            if (type === 'error') bgClass = 'bg-rose-950/90 border-rose-800 text-rose-200';
+            if (type === 'warning') bgClass = 'bg-amber-950/90 border-amber-800 text-amber-200';
+            if (type === 'success') bgClass = 'bg-emerald-950/90 border-emerald-800 text-emerald-200';
+
+            toast.className = `px-3.5 py-2 rounded-lg border text-xs shadow-lg backdrop-blur transition-all duration-300 transform translate-y-2 opacity-0 flex items-center gap-2 ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${message}`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Window Load Bootstrapper
+        window.onload = function() {
+            initSimulation();
+            initCharts();
+            startAutoDisasterTimer();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

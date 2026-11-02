@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberDino - 離線小恐龍極限挑戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0d1117;
+            color: #f0f6fc;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .neon-glow-cyan {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+            border: 1px solid rgba(56, 189, 248, 0.5);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+        }
+
+        .neon-text-yellow {
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.7);
+        }
+
+        .cyber-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* Prevent unwanted text selection during rapid button taps */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex flex-col items-center justify-between p-3 md:p-6 no-select select-none">
+
+    <!-- Top HUD Navigation -->
+    <header class="w-full max-w-4xl flex items-center justify-between px-4 py-3 cyber-card rounded-2xl shadow-xl z-10">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/30">
+                <i class="fa-solid fa-dragon text-cyan-400 text-xl md:text-2xl animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="font-orbitron font-black text-lg md:text-2xl tracking-wider text-cyan-400 neon-text-cyan">
+                    CYBER<span class="text-yellow-400 neon-text-yellow">DINO</span>
+                </h1>
+                <p class="text-[10px] md:text-xs text-slate-400">CLASSIC RUNNER • OFFLINE EDITION</p>
+            </div>
+        </div>
+
+        <!-- Scoreboard HUD -->
+        <div class="flex items-center space-x-4 md:space-x-8 font-orbitron">
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-trophy text-yellow-400"></i> HI-SCORE
+                </span>
+                <span id="highScoreDisplay" class="text-base md:text-xl font-bold text-yellow-400 neon-text-yellow">00000</span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] md:text-xs text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-gauge-high"></i> SCORE
+                </span>
+                <span id="scoreDisplay" class="text-lg md:text-2xl font-bold text-cyan-400 neon-text-cyan">00000</span>
+            </div>
+            <button id="soundToggleBtn" class="p-2 md:px-3 md:py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl border border-cyan-500/30 transition active:scale-95 flex items-center space-x-1" title="切換音效">
+                <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                <span id="soundText" class="hidden md:inline text-xs">ON</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas Game Viewport Area -->
+    <main class="relative w-full max-w-4xl flex-1 flex flex-col items-center justify-center my-3">
+        <div class="relative w-full h-full max-h-[460px] rounded-2xl overflow-hidden neon-glow-cyan bg-slate-950 flex items-center justify-center">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+            <!-- Start Overlay -->
+            <div id="startOverlay" class="absolute inset-0 cyber-card flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="mb-6 animate-bounce">
+                    <i class="fa-solid fa-dragon text-6xl text-cyan-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)]"></i>
+                </div>
+                <h2 class="font-orbitron text-2xl md:text-4xl font-black text-cyan-400 neon-text-cyan mb-2">OFFLINE CYBER RUN</h2>
+                <p class="text-slate-300 text-xs md:text-sm max-w-md mb-6 leading-relaxed">
+                    穿越數位沙漠！跳躍避開仙人掌與巡航翼龍，持續奔馳挑戰最高分記錄！
+                </p>
+
+                <div class="grid grid-cols-2 gap-3 max-w-md w-full bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 mb-6 text-left">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 font-bold font-orbitron">SPACE / ↑</span>
+                        <span>跳躍 Jump</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 font-bold font-orbitron">↓ DOWN</span>
+                        <span>蹲下 Duck</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-slate-800 px-2 py-1 rounded text-yellow-400 font-bold font-orbitron">TAP</span>
+                        <span>點擊螢幕跳躍</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-slate-800 px-2 py-1 rounded text-purple-400 font-bold font-orbitron">DAY/NIGHT</span>
+                        <span>晝夜交替模式</span>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="font-orbitron text-base md:text-lg font-bold px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 rounded-xl shadow-lg transform transition active:scale-95 flex items-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>START RUNNING</span>
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 cyber-card flex-col items-center justify-center p-6 text-center z-20">
+                <div class="mb-4">
+                    <i class="fa-solid fa-skull-crossbones text-5xl text-rose-500 animate-pulse"></i>
+                </div>
+                <h2 class="font-orbitron text-3xl md:text-4xl font-black text-rose-500 mb-1">GAME OVER</h2>
+                <p class="text-slate-400 text-xs md:text-sm mb-6">小恐龍撞到了障礙物！</p>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 w-64 mb-6 space-y-3 font-orbitron">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">DISTANCE</span>
+                        <span id="finalScore" class="text-xl font-bold text-cyan-400">00000</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-t border-slate-800 pt-2">
+                        <span class="text-slate-400">BEST RECORD</span>
+                        <span id="finalHighScore" class="text-xl font-bold text-yellow-400">00000</span>
+                    </div>
+                </div>
+
+                <button id="restartBtn" class="font-orbitron text-base md:text-lg font-bold px-8 py-3.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white rounded-xl shadow-lg transform transition active:scale-95 flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>PLAY AGAIN</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls Bar for Mobile -->
+        <div class="w-full max-w-4xl grid grid-cols-2 gap-3 mt-3 md:hidden">
+            <button id="mobileDuckBtn" class="py-4 bg-slate-800/90 border border-slate-700 active:bg-cyan-500/20 text-cyan-400 font-bold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md">
+                <i class="fa-solid fa-arrow-down"></i>
+                <span>蹲下 (DUCK)</span>
+            </button>
+            <button id="mobileJumpBtn" class="py-4 bg-slate-800/90 border border-slate-700 active:bg-cyan-500/20 text-cyan-400 font-bold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md">
+                <i class="fa-solid fa-arrow-up"></i>
+                <span>跳躍 (JUMP)</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer Information -->
+    <footer class="w-full max-w-4xl flex items-center justify-between px-4 py-2 cyber-card rounded-xl text-xs text-slate-400">
+        <div class="flex items-center space-x-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>SYSTEM ONLINE</span>
+        </div>
+        <div class="font-orbitron text-[10px] md:text-xs">
+            CYBER DINO v1.0 • PURE HTML5 CANVAS
+        </div>
+    </footer>
+
+    <script>
+        // --- Web Audio API Synth Engine ---
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(420, this.ctx.currentTime + 0.12);
+
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch (e) { console.error(e); }
+            }
+
+            playScoreMilestone() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc1 = this.ctx.createOscillator();
+                    const osc2 = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc1.type = 'triangle';
+                    osc2.type = 'square';
+
+                    osc1.frequency.setValueAtTime(523.25, now); // C5
+                    osc1.frequency.setValueAtTime(659.25, now + 0.08); // E5
+
+                    osc2.frequency.setValueAtTime(1046.50, now + 0.08); // C6
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc1.start(now);
+                    osc2.start(now + 0.08);
+                    osc1.stop(now + 0.25);
+                    osc2.stop(now + 0.25);
+                } catch (e) { console.error(e); }
+            }
+
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(40, now + 0.25);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Element References
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const finalScore = document.getElementById('finalScore');
+        const finalHighScore = document.getElementById('finalHighScore');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const soundText = document.getElementById('soundText');
+        const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+        const mobileDuckBtn = document.getElementById('mobileDuckBtn');
+
+        // Virtual Resolution for Game Physics
+        const V_WIDTH = 800;
+        const V_HEIGHT = 300;
+        const GROUND_Y = 240;
+
+        let animationFrameId = null;
+        let gameState = 'START'; // 'START', 'RUNNING', 'GAMEOVER'
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('cyberdino_highscore') || '0');
+        let gameSpeed = 7;
+        const BASE_SPEED = 7;
+        const MAX_SPEED = 18;
+        let distanceTraveled = 0;
+        let lastMilestone = 0;
+
+        // Day/Night Cycle Control
+        let dayNightProgress = 0; // 0 (Day) to 1 (Night)
+        let isNight = false;
+
+        // Input Keys State
+        const keys = { jump: false, duck: false };
+
+        // Player Dino Entity
+        const dino = {
+            x: 70,
+            y: GROUND_Y - 48,
+            width: 44,
+            height: 48,
+            duckHeight: 28,
+            vy: 0,
+            gravity: 0.65,
+            jumpForce: -12.5,
+            isGrounded: true,
+            isDucking: false,
+            animTimer: 0,
+            animFrame: 0,
+            dustParticles: [],
+
+            reset() {
+                this.y = GROUND_Y - this.height;
+                this.vy = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.dustParticles = [];
+            },
+
+            update() {
+                // Apply Duck logic
+                if (keys.duck && this.isGrounded) {
+                    this.isDucking = true;
+                } else {
+                    this.isDucking = false;
+                }
+
+                const currentHeight = this.isDucking ? this.duckHeight : this.height;
+
+                // Jump Action
+                if (keys.jump && this.isGrounded && !this.isDucking) {
+                    this.vy = this.jumpForce;
+                    this.isGrounded = false;
+                    sound.playJump();
+                    this.createDustCluster(6);
+                }
+
+                // Fast Fall if ducking in air
+                if (keys.duck && !this.isGrounded) {
+                    this.vy += 1.2;
+                }
+
+                // Physics Acceleration
+                this.vy += this.gravity;
+                this.y += this.vy;
+
+                // Ground Collision
+                if (this.y + currentHeight >= GROUND_Y) {
+                    this.y = GROUND_Y - currentHeight;
+                    this.vy = 0;
+                    if (!this.isGrounded) {
+                        this.createDustCluster(4); // Landing dust
+                    }
+                    this.isGrounded = true;
+                }
+
+                // Running Animation Frame Counter
+                this.animTimer++;
+                if (this.animTimer % 5 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+
+                // Spawn running dust
+                if (this.isGrounded && this.animTimer % 6 === 0) {
+                    this.dustParticles.push({
+                        x: this.x + 5,
+                        y: GROUND_Y - 4,
+                        vx: -Math.random() * 2 - 1,
+                        vy: -Math.random() * 1,
+                        radius: Math.random() * 2.5 + 1,
+                        alpha: 0.8
+                    });
+                }
+
+                // Update dust particles
+                for (let i = this.dustParticles.length - 1; i >= 0; i--) {
+                    const p = this.dustParticles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.04;
+                    if (p.alpha <= 0) this.dustParticles.splice(i, 1);
+                }
+            },
+
+            createDustCluster(count) {
+                for (let i = 0; i < count; i++) {
+                    this.dustParticles.push({
+                        x: this.x + 15 + Math.random() * 15,
+                        y: GROUND_Y - 2,
+                        vx: -Math.random() * 3 - 1,
+                        vy: -Math.random() * 2 - 0.5,
+                        radius: Math.random() * 3 + 1.5,
+                        alpha: 0.9
+                    });
+                }
+            },
+
+            getBounds() {
+                const currentHeight = this.isDucking ? this.duckHeight : this.height;
+                const currentY = this.isDucking ? GROUND_Y - this.duckHeight : this.y;
+                // Slightly forgiving hitboxes (padded 4px)
+                return {
+                    left: this.x + 6,
+                    right: this.x + this.width - 6,
+                    top: currentY + 6,
+                    bottom: currentY + currentHeight - 4
+                };
+            },
+
+            draw(ctx) {
+                // Draw Dust Particles
+                this.dustParticles.forEach(p => {
+                    ctx.save();
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillStyle = isNight ? '#94a3b8' : '#64748b';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                ctx.save();
+                const color = '#38bdf8'; // Cyber Cyan
+                ctx.fillStyle = color;
+                ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+                ctx.shadowBlur = 10;
+
+                const currentY = this.isDucking ? GROUND_Y - this.duckHeight : this.y;
+
+                if (this.isDucking) {
+                    // --- Ducking Dino Sprite Rendering ---
+                    ctx.fillRect(this.x, currentY + 8, 48, 20); // Body
+                    ctx.fillRect(this.x + 36, currentY, 18, 16); // Head Extended
+                    // Eye
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(this.x + 46, currentY + 4, 4, 4);
+
+                    // Running Legs while ducking
+                    ctx.fillStyle = color;
+                    if (this.animFrame === 0) {
+                        ctx.fillRect(this.x + 8, currentY + 24, 6, 6);
+                        ctx.fillRect(this.x + 28, currentY + 24, 6, 4);
+                    } else {
+                        ctx.fillRect(this.x + 8, currentY + 24, 6, 4);
+                        ctx.fillRect(this.x + 28, currentY + 24, 6, 6);
+                    }
+                } else {
+                    // --- Standing/Jumping Dino Sprite Rendering ---
+                    // Main Body
+                    ctx.fillRect(this.x + 6, currentY + 16, 26, 20);
+                    // Tail
+                    ctx.fillRect(this.x, currentY + 18, 8, 8);
+                    ctx.fillRect(this.x - 4, currentY + 16, 6, 6);
+                    // Head
+                    ctx.fillRect(this.x + 18, currentY, 22, 18);
+                    ctx.fillRect(this.x + 24, currentY + 18, 12, 6); // Snout
+                    // Eye
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(this.x + 32, currentY + 4, 4, 4);
+
+                    // Small Cyber Arm
+                    ctx.fillStyle = color;
+                    ctx.fillRect(this.x + 26, currentY + 22, 6, 4);
+
+                    // Legs
+                    if (!this.isGrounded) {
+                        // Jump Pose (Legs tucked)
+                        ctx.fillRect(this.x + 10, currentY + 36, 6, 8);
+                        ctx.fillRect(this.x + 22, currentY + 36, 6, 8);
+                    } else {
+                        // Running Leg Cycle
+                        if (this.animFrame === 0) {
+                            ctx.fillRect(this.x + 10, currentY + 36, 6, 12); // Leg L down
+                            ctx.fillRect(this.x + 22, currentY + 36, 6, 6);  // Leg R up
+                        } else {
+                            ctx.fillRect(this.x + 10, currentY + 36, 6, 6);  // Leg L up
+                            ctx.fillRect(this.x + 22, currentY + 36, 6, 12); // Leg R down
+                        }
+                    }
+                }
+
+                ctx.restore();
+            }
+        };
+
+        // Obstacles Array & Spawner
+        let obstacles = [];
+        let nextObstacleTimer = 0;
+
+        function spawnObstacle() {
+            const minInterval = Math.max(45, 90 - gameSpeed * 2.5);
+            if (nextObstacleTimer > 0) {
+                nextObstacleTimer--;
+                return;
+            }
+
+            const types = ['cactus_small', 'cactus_large', 'cactus_group'];
+            // Only spawn Pterodactyls once score exceeds 200
+            if (score > 200) {
+                types.push('pterodactyl');
+            }
+
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            if (type === 'cactus_small') {
+                obstacles.push({
+                    type: 'cactus_small',
+                    x: V_WIDTH + 20,
+                    y: GROUND_Y - 36,
+                    width: 22,
+                    height: 36
+                });
+            } else if (type === 'cactus_large') {
+                obstacles.push({
+                    type: 'cactus_large',
+                    x: V_WIDTH + 20,
+                    y: GROUND_Y - 48,
+                    width: 28,
+                    height: 48
+                });
+            } else if (type === 'cactus_group') {
+                obstacles.push({
+                    type: 'cactus_group',
+                    x: V_WIDTH + 20,
+                    y: GROUND_Y - 40,
+                    width: 52,
+                    height: 40
+                });
+            } else if (type === 'pterodactyl') {
+                // Flying height options: High (can duck under), Mid (must jump or duck), Low (must jump)
+                const flyHeights = [GROUND_Y - 72, GROUND_Y - 50, GROUND_Y - 32];
+                const flyY = flyHeights[Math.floor(Math.random() * flyHeights.length)];
+                obstacles.push({
+                    type: 'pterodactyl',
+                    x: V_WIDTH + 20,
+                    y: flyY,
+                    width: 42,
+                    height: 30,
+                    animFrame: 0,
+                    animTimer: 0
+                });
+            }
+
+            nextObstacleTimer = minInterval + Math.random() * 40;
+        }
+
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= gameSpeed;
+
+                if (obs.type === 'pterodactyl') {
+                    obs.animTimer++;
+                    if (obs.animTimer % 10 === 0) {
+                        obs.animFrame = (obs.animFrame + 1) % 2;
+                    }
+                }
+
+                // Check Collision with Dino
+                const dinoBounds = dino.getBounds();
+                const obsBounds = {
+                    left: obs.x + 4,
+                    right: obs.x + obs.width - 4,
+                    top: obs.y + 4,
+                    bottom: obs.y + obs.height - 4
+                };
+
+                if (
+                    dinoBounds.left < obsBounds.right &&
+                    dinoBounds.right > obsBounds.left &&
+                    dinoBounds.top < obsBounds.bottom &&
+                    dinoBounds.bottom > obsBounds.top
+                ) {
+                    triggerGameOver();
+                    return;
+                }
+
+                // Remove offscreen obstacles
+                if (obs.x + obs.width < -30) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawObstacles(ctx) {
+            obstacles.forEach(obs => {
+                ctx.save();
+
+                if (obs.type.startsWith('cactus')) {
+                    // --- Neon Cactus Styling ---
+                    ctx.fillStyle = '#10b981'; // Emerald Green
+                    ctx.shadowColor = 'rgba(16, 185, 129, 0.7)';
+                    ctx.shadowBlur = 8;
+
+                    if (obs.type === 'cactus_small') {
+                        // Single Small Cactus
+                        ctx.fillRect(obs.x + 8, obs.y, 6, obs.height);
+                        ctx.fillRect(obs.x + 2, obs.y + 10, 18, 5);
+                        ctx.fillRect(obs.x + 2, obs.y + 4, 5, 8);
+                        ctx.fillRect(obs.x + 15, obs.y + 6, 5, 8);
+                    } else if (obs.type === 'cactus_large') {
+                        // Tall Cactus
+                        ctx.fillRect(obs.x + 10, obs.y, 8, obs.height);
+                        ctx.fillRect(obs.x + 2, obs.y + 14, 24, 6);
+                        ctx.fillRect(obs.x + 2, obs.y + 6, 6, 10);
+                        ctx.fillRect(obs.x + 20, obs.y + 8, 6, 10);
+                    } else if (obs.type === 'cactus_group') {
+                        // Multiple Cluster Cacti
+                        ctx.fillRect(obs.x + 6, obs.y + 6, 6, obs.height - 6);
+                        ctx.fillRect(obs.x + 22, obs.y, 8, obs.height);
+                        ctx.fillRect(obs.x + 38, obs.y + 10, 6, obs.height - 10);
+                    }
+                } else if (obs.type === 'pterodactyl') {
+                    // --- Cyber Flying Pterodactyl Styling ---
+                    ctx.fillStyle = '#f43f5e'; // Pink/Rose Neon
+                    ctx.shadowColor = 'rgba(244, 63, 94, 0.8)';
+                    ctx.shadowBlur = 10;
+
+                    // Body
+                    ctx.fillRect(obs.x + 10, obs.y + 10, 22, 10);
+                    // Head & Beak
+                    ctx.fillRect(obs.x, obs.y + 8, 12, 6);
+                    // Wing flapping cycle
+                    if (obs.animFrame === 0) {
+                        // Wings Up
+                        ctx.beginPath();
+                        ctx.moveTo(obs.x + 16, obs.y + 10);
+                        ctx.lineTo(obs.x + 26, obs.y - 10);
+                        ctx.lineTo(obs.x + 32, obs.y + 10);
+                        ctx.closePath();
+                        ctx.fill();
+                    } else {
+                        // Wings Down
+                        ctx.beginPath();
+                        ctx.moveTo(obs.x + 16, obs.y + 10);
+                        ctx.lineTo(obs.x + 26, obs.y + 26);
+                        ctx.lineTo(obs.x + 32, obs.y + 10);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+            });
+        }
+
+        // Starfield & Clouds Parallax Background
+        const stars = [];
+        for (let i = 0; i < 40; i++) {
+            stars.push({
+                x: Math.random() * V_WIDTH,
+                y: Math.random() * (GROUND_Y - 80),
+                radius: Math.random() * 1.5 + 0.5,
+                alpha: Math.random()
+            });
+        }
+
+        const clouds = [
+            { x: 100, y: 50, speed: 0.4, size: 40 },
+            { x: 380, y: 80, speed: 0.3, size: 55 },
+            { x: 650, y: 40, speed: 0.5, size: 35 }
+        ];
+
+        let groundOffset = 0;
+
+        function updateEnvironment() {
+            groundOffset = (groundOffset + gameSpeed) % 30;
+
+            // Update Clouds Parallax
+            clouds.forEach(c => {
+                c.x -= c.speed;
+                if (c.x + c.size * 2 < 0) {
+                    c.x = V_WIDTH + 50;
+                    c.y = 30 + Math.random() * 60;
+                }
+            });
+
+            // Day/Night Transition every 700 points
+            const cycle = Math.floor(score / 400) % 2;
+            isNight = cycle === 1;
+
+            if (isNight && dayNightProgress < 1) {
+                dayNightProgress += 0.02;
+            } else if (!isNight && dayNightProgress > 0) {
+                dayNightProgress -= 0.02;
+            }
+            dayNightProgress = Math.max(0, Math.min(1, dayNightProgress));
+        }
+
+        function drawEnvironment(ctx) {
+            // Smooth Sky Gradient Interpolation (Day to Cyber Night)
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+            if (dayNightProgress === 0) {
+                skyGradient.addColorStop(0, '#0f172a');
+                skyGradient.addColorStop(1, '#1e293b');
+            } else {
+                skyGradient.addColorStop(0, '#030712');
+                skyGradient.addColorStop(1, '#0f172a');
+            }
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            // Draw Stars in Night Mode
+            if (dayNightProgress > 0.1) {
+                ctx.save();
+                ctx.globalAlpha = dayNightProgress;
+                stars.forEach(s => {
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+
+            // Draw Parallax Clouds
+            clouds.forEach(c => {
+                ctx.save();
+                ctx.fillStyle = isNight ? 'rgba(51, 65, 85, 0.4)' : 'rgba(148, 163, 184, 0.25)';
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.size * 0.4, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.3, c.y - c.size * 0.2, c.size * 0.35, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.6, c.y, c.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw Ground Line & Texture Dots
+            ctx.save();
+            ctx.strokeStyle = isNight ? '#38bdf8' : '#0284c7';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+            ctx.shadowBlur = 6;
+
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(V_WIDTH, GROUND_Y);
+            ctx.stroke();
+
+            // Ground Pebbles Movement
+            ctx.fillStyle = isNight ? '#64748b' : '#475569';
+            for (let x = -groundOffset; x < V_WIDTH; x += 24) {
+                ctx.fillRect(x, GROUND_Y + 8, 8, 2);
+                ctx.fillRect(x + 12, GROUND_Y + 16, 4, 2);
+            }
+            ctx.restore();
+        }
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = V_WIDTH;
+            canvas.height = V_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function updateScore() {
+            distanceTraveled += gameSpeed * 0.05;
+            score = Math.floor(distanceTraveled);
+
+            scoreDisplay.textContent = String(score).padStart(5, '0');
+
+            // Sound chime every 100 points milestone
+            if (score > 0 && score % 100 === 0 && score !== lastMilestone) {
+                sound.playScoreMilestone();
+                lastMilestone = score;
+            }
+
+            // Gradually ramp up game speed
+            if (gameSpeed < MAX_SPEED) {
+                gameSpeed = BASE_SPEED + (score / 150);
+            }
+        }
+
+        function gameLoop() {
+            if (gameState !== 'RUNNING') return;
+
+            ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            updateEnvironment();
+            updateScore();
+            dino.update();
+            spawnObstacle();
+            updateObstacles();
+
+            drawEnvironment(ctx);
+            drawObstacles(ctx);
+            dino.draw(ctx);
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            distanceTraveled = 0;
+            lastMilestone = 0;
+            gameSpeed = BASE_SPEED;
+            obstacles = [];
+            nextObstacleTimer = 0;
+
+            dino.reset();
+
+            gameState = 'RUNNING';
+            startOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            gameOverOverlay.classList.remove('flex');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            sound.playHit();
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('cyberdino_highscore', highScore);
+            }
+
+            highScoreDisplay.textContent = String(highScore).padStart(5, '0');
+            finalScore.textContent = String(score).padStart(5, '0');
+            finalHighScore.textContent = String(highScore).padStart(5, '0');
+
+            gameOverOverlay.classList.remove('hidden');
+            gameOverOverlay.classList.add('flex');
+        }
+
+        // Input Keyboard Event Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (gameState === 'RUNNING') {
+                    keys.jump = true;
+                } else if (gameState === 'START' || gameState === 'GAMEOVER') {
+                    startGame();
+                }
+            }
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                keys.duck = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                keys.jump = false;
+            }
+            if (e.code === 'ArrowDown') {
+                keys.duck = false;
+            }
+        });
+
+        // Touch & Mouse Canvas Controls
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'RUNNING') {
+                keys.jump = true;
+            } else if (gameState === 'START' || gameState === 'GAMEOVER') {
+                startGame();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.jump = false;
+        }, { passive: false });
+
+        // Mobile On-Screen Buttons
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'RUNNING') keys.jump = true;
+        });
+        mobileJumpBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.jump = false;
+        });
+
+        mobileDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'RUNNING') keys.duck = true;
+        });
+        mobileDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys.duck = false;
+        });
+
+        // UI Buttons
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        soundToggleBtn.addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            if (sound.muted) {
+                soundIcon.className = 'fa-solid fa-volume-xmark text-slate-500';
+                if (soundText) soundText.textContent = 'OFF';
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-high text-cyan-400';
+                if (soundText) soundText.textContent = 'ON';
+            }
+        });
+
+        // Initial setup and idle menu rendering
+        highScoreDisplay.textContent = String(highScore).padStart(5, '0');
+        drawEnvironment(ctx);
+        dino.draw(ctx);
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

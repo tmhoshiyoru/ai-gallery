@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>卡比夢幻星之跑酷 Kirby Kawaii Dream Runner</title>
+    <style>
+        :root {
+            --kawaii-pink: #ff85a2;
+            --kawaii-soft-pink: #fbb1bd;
+            --kawaii-yellow: #fde047;
+            --kawaii-purple: #c084fc;
+            --kawaii-blue: #38bdf8;
+            --panel-bg: rgba(255, 240, 245, 0.88);
+            --panel-border: rgba(255, 182, 193, 0.6);
+            --text-dark: #701a75;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1e102a;
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 12px;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Glassmorphism Kawaii HUD Panel */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            border: 2px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 12px 22px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 10px 25px rgba(255, 133, 162, 0.25);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 900;
+            color: #db2777;
+            text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        .star-power-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 16px;
+            border-radius: 30px;
+            border: 2px solid var(--kawaii-soft-pink);
+        }
+
+        .star-power-label {
+            font-size: 12px;
+            font-weight: 800;
+            color: #d97706;
+            letter-spacing: 0.5px;
+        }
+
+        .power-bar-track {
+            width: 120px;
+            height: 14px;
+            background: #fbcfe8;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            border: 1.5px solid #f472b6;
+        }
+
+        .power-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #fde047, #ff85a2, #a855f7);
+            border-radius: 10px;
+            box-shadow: 0 0 10px #fde047;
+            transition: width 0.2s ease-out;
+        }
+
+        .weather-badge {
+            font-size: 13px;
+            font-weight: 800;
+            color: #be185d;
+            background: #fce7f3;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1.5px solid #f472b6;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-board {
+            font-size: 16px;
+            font-weight: 800;
+            color: #831843;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 6px 14px;
+            border-radius: 14px;
+        }
+
+        .score-highlight {
+            color: #db2777;
+            font-size: 18px;
+        }
+
+        /* Responsive Canvas Screen */
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 960 / 320;
+            border-radius: 24px;
+            border: 3px solid #fbcfe8;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 133, 162, 0.3);
+            background: #000;
+        }
+
+        /* Bottom Control Bar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            border: 2px solid var(--panel-border);
+            border-radius: 18px;
+            padding: 10px 20px;
+            backdrop-filter: blur(14px);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .time-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #831843;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        input[type=range] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: #fbcfe8;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--kawaii-pink);
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            background: #ffffff;
+            border: 2px solid #f472b6;
+            color: #9d174d;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 5px rgba(244, 114, 182, 0.2);
+        }
+
+        button:hover {
+            background: #fdf2f8;
+            transform: translateY(-2px) scale(1.04);
+            border-color: #db2777;
+        }
+
+        .mobile-controls {
+            display: none;
+            width: 100%;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls { display: flex; }
+            .power-bar-track { width: 80px; }
+        }
+
+        .touch-action-btn {
+            flex: 1;
+            padding: 16px;
+            font-size: 15px;
+            font-weight: 900;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #f472b6;
+            color: #be185d;
+            border-radius: 18px;
+            text-align: center;
+            touch-action: manipulation;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .touch-btn-power {
+            border-color: #f59e0b;
+            color: #d97706;
+            background: #fef3c7;
+        }
+
+        .game-guide {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fbcfe8;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="hud-header">
+        <div class="brand-title">
+            <span>✨</span> <span>KIRBY KAWAII RUNNER</span>
+        </div>
+        <div class="weather-badge" id="weather-badge">
+            <span id="weather-icon">☀️️</span> <span id="weather-name">晴朗 SUNNY</span>
+        </div>
+        <div class="star-power-container">
+            <span class="star-power-label">RAINBOW</span>
+            <div class="power-bar-track">
+                <div id="power-bar-fill" class="power-bar-fill"></div>
+            </div>
+        </div>
+        <div class="score-board">
+            HI <span id="hi-score-disp">00000</span> | SCORE <span id="score-disp" class="score-highlight">00000</span>
+        </div>
+    </div>
+
+    <canvas id="canvas" width="960" height="320"></canvas>
+
+    <div class="toolbar">
+        <div class="time-control">
+            <span id="sky-icon">☀️</span>
+            <span id="sky-time-text" style="min-width: 65px;">12:00</span>
+            <input type="range" id="time-slider" min="0" max="24" step="0.1" value="12">
+        </div>
+        <div class="btn-group">
+            <button id="btn-realtime">⚡ 即時 Live</button>
+            <button id="btn-sunset">🌅 夢幻粉霞 Sunset</button>
+            <button id="btn-night">🌌 星空夜景 Night</button>
+            <button id="btn-sound">🔊 音效: ON</button>
+        </div>
+    </div>
+
+    <div class="game-guide">
+        💖 操作說明：[Space] / [↑] 跳躍 | [↓] 蹲下滑行 | [Shift] / [Z] 彩虹星光衝刺 | 存活15秒歡慶勝利！💖
+    </div>
+
+    <div class="mobile-controls">
+        <div class="touch-action-btn" id="t-duck">蹲下 🔻</div>
+        <div class="touch-action-btn touch-btn-power" id="t-power">無敵衝刺 🌈</div>
+        <div class="touch-action-btn" id="t-jump">跳躍 🔺</div>
+    </div>
+</div>
+
+<script>
+class KawaiiAudio {
+    constructor() {
+        this.ctx = null;
+        this.enabled = true;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) this.ctx = new AudioContext();
+        }
+    }
+
+    playJump() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.18);
+    }
+
+    playStar() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(700, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(1100, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.22);
+    }
+
+    playTomato() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1040, this.ctx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+    }
+
+    playVictory() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.25);
+        });
+    }
+
+    playPowerUp() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.45);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.45);
+    }
+
+    playSmash() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+    }
+
+    playThunder() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.35);
+    }
+
+    playGameOver() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(120, this.ctx.currentTime + 0.55);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.55);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.55);
+    }
+}
+
+const sound = new KawaiiAudio();
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 320;
+const GROUND_Y = 250;
+const GRAVITY = 0.58;
+
+let gameState = 'START';
+let score = 0;
+let highScore = parseInt(localStorage.getItem('kirby_kawaii_hi') || '0', 10);
+let gameSpeed = 6.8;
+let frameCount = 0;
+
+let rainbowPowerGauge = 35;
+let isRainbowPower = false;
+let rainbowPowerTimer = 0;
+
+// Dynamic Weather & Survival Tracking
+const WEATHERS = [
+    { type: 'SUNNY', name: '晴朗 SUNNY', icon: '☀️', tint: [255, 255, 255, 0] },
+    { type: 'RAINY', name: '細雨 RAINY', icon: '🌧️', tint: [100, 140, 200, 0.2] },
+    { type: 'SNOWY', name: '飄雪 SNOWY', icon: '❄️', tint: [220, 235, 255, 0.15] },
+    { type: 'THUNDER', name: '雷雨 THUNDER', icon: '⛈️', tint: [50, 30, 80, 0.35] },
+    { type: 'RAINBOW', name: '極光 RAINBOW', icon: '🌈', tint: [255, 192, 203, 0.12] }
+];
+let currentWeather = WEATHERS[0];
+let weatherTimer = 0;
+let lightningFlash = 0;
+
+let survivalTimer = 0; // frames
+let victoryPoseTimer = 0; // frames for Kirby victory pose
+let victoryText = '';
+
+let weatherParticles = [];
+
+let isRealTime = false;
+let decimalHour = 12.0;
+
+document.getElementById('hi-score-disp').textContent = String(highScore).padStart(5, '0');
+
+function interpolateColor(c1, c2, factor) {
+    const f = Math.max(0, Math.min(1, factor));
+    return [
+        Math.round(c1[0] + f * (c2[0] - c1[0])),
+        Math.round(c1[1] + f * (c2[1] - c1[1])),
+        Math.round(c1[2] + f * (c2[2] - c1[2]))
+    ];
+}
+
+function colorString(c, alpha = 1) {
+    return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
+}
+
+function switchRandomWeather() {
+    const nextList = WEATHERS.filter(w => w.type !== currentWeather.type);
+    currentWeather = nextList[Math.floor(Math.random() * nextList.length)];
+    document.getElementById('weather-icon').textContent = currentWeather.icon;
+    document.getElementById('weather-name').textContent = currentWeather.name;
+    weatherTimer = Math.floor(15 + Math.random() * 10) * 60; // 15-25s
+
+    if (currentWeather.type === 'THUNDER') {
+        sound.playThunder();
+        lightningFlash = 12;
+    }
+}
+
+function updateWeatherParticles() {
+    if (currentWeather.type === 'RAINY' || currentWeather.type === 'THUNDER') {
+        if (Math.random() < 0.6) {
+            weatherParticles.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: -10,
+                vx: -2 - Math.random() * 2,
+                vy: 8 + Math.random() * 4,
+                length: 12 + Math.random() * 6,
+                type: 'RAIN'
+            });
+        }
+    } else if (currentWeather.type === 'SNOWY') {
+        if (Math.random() < 0.4) {
+            weatherParticles.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: -10,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: 1.5 + Math.random() * 1.5,
+                r: 2 + Math.random() * 2.5,
+                type: 'SNOW'
+            });
+        }
+    }
+
+    for (let i = weatherParticles.length - 1; i >= 0; i--) {
+        const p = weatherParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.type === 'RAIN') {
+            ctx.strokeStyle = currentWeather.type === 'THUNDER' ? 'rgba(192, 220, 255, 0.7)' : 'rgba(147, 197, 253, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.vx * 2, p.y + p.length);
+            ctx.stroke();
+        } else if (p.type === 'SNOW') {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (p.y > GROUND_Y + 30) weatherParticles.splice(i, 1);
+    }
+}
+
+function getSkyAtmosphere(hour) {
+    const nightTop = [20, 10, 45];
+    const nightMid = [40, 20, 80];
+    const nightBot = [70, 35, 110];
+
+    const dawnTop = [75, 45, 110];
+    const dawnMid = [220, 110, 160];
+    const dawnBot = [255, 190, 180];
+
+    const dayTop = [125, 210, 255];
+    const dayMid = [185, 230, 255];
+    const dayBot = [255, 235, 245];
+
+    const sunsetTop = [70, 30, 90];
+    const sunsetMid = [240, 110, 140];
+    const sunsetBot = [255, 195, 130];
+
+    let skyTop, skyMid, skyBot, starOpacity = 0, sunPos = null, moonPos = null, icon = '☀️', label = '';
+
+    if (hour >= 0 && hour < 5) {
+        skyTop = nightTop; skyMid = nightMid; skyBot = nightBot;
+        starOpacity = 1.0;
+        icon = '🌙'; label = '夢幻夜景 Night';
+        moonPos = getCelestialPos((hour + 7) / 24);
+    } else if (hour >= 5 && hour < 7) {
+        const t = (hour - 5) / 2;
+        skyTop = interpolateColor(nightTop, dawnTop, t);
+        skyMid = interpolateColor(nightMid, dawnMid, t);
+        skyBot = interpolateColor(nightBot, dawnBot, t);
+        starOpacity = 1 - t;
+        icon = '🌅'; label = '晨曦 Dawn';
+        sunPos = getCelestialPos((hour - 5) / 14);
+    } else if (hour >= 7 && hour < 17) {
+        skyTop = dayTop; skyMid = dayMid; skyBot = dayBot;
+        starOpacity = 0;
+        icon = '☀️'; label = '藍天 Day';
+        sunPos = getCelestialPos((hour - 5) / 14);
+    } else if (hour >= 17 && hour < 19.5) {
+        const t = (hour - 17) / 2.5;
+        skyTop = interpolateColor(dayTop, sunsetTop, t);
+        skyMid = interpolateColor(dayMid, sunsetMid, t);
+        skyBot = interpolateColor(dayBot, sunsetBot, t);
+        starOpacity = t * 0.8;
+        icon = '🌆'; label = '粉霞 Sunset';
+        sunPos = getCelestialPos((hour - 5) / 14);
+    } else {
+        const t = (hour - 19.5) / 4.5;
+        skyTop = interpolateColor(sunsetTop, nightTop, t);
+        skyMid = interpolateColor(sunsetMid, nightMid, t);
+        skyBot = interpolateColor(sunsetBot, nightBot, t);
+        starOpacity = 0.8 + t * 0.2;
+        icon = '🌌'; label = '璀璨星空 Twilight';
+        moonPos = getCelestialPos((hour - 17) / 12);
+    }
+
+    return { skyTop, skyMid, skyBot, starOpacity, sunPos, moonPos, icon, label };
+}
+
+function getCelestialPos(progress) {
+    const angle = Math.PI * (1 + progress);
+    const rx = CANVAS_WIDTH * 0.42;
+    const ry = CANVAS_HEIGHT * 0.65;
+    return {
+        x: CANVAS_WIDTH / 2 + rx * Math.cos(angle),
+        y: CANVAS_HEIGHT - 35 + ry * Math.sin(angle)
+    };
+}
+
+class Particle {
+    constructor(x, y, color, vx, vy, size, life) {
+        this.x = x; this.y = y;
+        this.color = color;
+        this.vx = vx; this.vy = vy;
+        this.size = size;
+        this.life = life;
+        this.maxLife = life;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+    }
+
+    draw() {
+        const alpha = Math.max(0, this.life / this.maxLife);
+        ctx.save();
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class StarField {
+    constructor() {
+        this.stars = [];
+        for (let i = 0; i < 70; i++) {
+            this.stars.push({
+                x: Math.random() * CANVAS_WIDTH,
+                y: Math.random() * (CANVAS_HEIGHT - 120),
+                r: Math.random() * 2 + 0.8,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    draw(opacity) {
+        if (opacity <= 0) return;
+        ctx.save();
+        this.stars.forEach(s => {
+            s.phase += 0.04;
+            const alpha = opacity * (0.3 + 0.7 * Math.abs(Math.sin(s.phase)));
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+}
+
+class CottonCloud {
+    constructor() {
+        this.x = CANVAS_WIDTH + Math.random() * 80;
+        this.y = 15 + Math.random() * 55;
+        this.speed = 0.2 + Math.random() * 0.3;
+        this.scale = 0.8 + Math.random() * 0.5;
+    }
+
+    update() { this.x -= this.speed; }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = currentWeather.type === 'THUNDER' ? 'rgba(100, 116, 139, 0.88)' : 'rgba(255, 255, 255, 0.88)';
+        const cx = this.x, cy = this.y, s = this.scale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 18 * s, cy - 10 * s, 22 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 40 * s, cy, 18 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cute Blush on Clouds
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.5)';
+        ctx.beginPath();
+        ctx.arc(cx + 8 * s, cy + 3 * s, 4 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 28 * s, cy + 3 * s, 4 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class KawaiiKirby {
+    constructor() {
+        this.x = 90;
+        this.y = GROUND_Y;
+        this.width = 46;
+        this.height = 46;
+        this.vy = 0;
+        this.isJumping = false;
+        this.isDucking = false;
+        this.animFrame = 0;
+    }
+
+    jump() {
+        if (!this.isJumping) {
+            this.vy = -13.0;
+            this.isJumping = true;
+            this.isDucking = false;
+            sound.playJump();
+            this.spawnSparkles(8);
+        }
+    }
+
+    duck(enable) {
+        if (this.isJumping) return;
+        this.isDucking = enable;
+        this.height = enable ? 26 : 46;
+    }
+
+    spawnSparkles(count) {
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(
+                this.x + 12,
+                GROUND_Y - 4,
+                '#fbcfe8',
+                (Math.random() - 0.5) * 3,
+                -Math.random() * 2,
+                Math.random() * 3 + 1,
+                18
+            ));
+        }
+    }
+
+    update() {
+        if (this.isJumping) {
+            this.y += this.vy;
+            this.vy += GRAVITY;
+
+            if (this.y >= GROUND_Y) {
+                this.y = GROUND_Y;
+                this.isJumping = false;
+                this.vy = 0;
+                this.spawnSparkles(6);
+            }
+        }
+
+        this.height = this.isDucking ? 26 : 46;
+
+        if (frameCount % 6 === 0) {
+            this.animFrame = (this.animFrame + 1) % 4;
+        }
+
+        if (isRainbowPower && frameCount % 2 === 0) {
+            const rainbowColors = ['#fde047', '#ff85a2', '#a855f7', '#38bdf8', '#4ade80'];
+            particles.push(new Particle(
+                this.x + Math.random() * 20,
+                this.y - Math.random() * 30,
+                rainbowColors[Math.floor(Math.random() * rainbowColors.length)],
+                -Math.random() * 3 - 2,
+                (Math.random() - 0.5) * 3,
+                Math.random() * 4 + 2,
+                20
+            ));
+        }
+    }
+
+    draw() {
+        const cx = this.x + 23;
+        const cy = this.y - (this.height / 2);
+
+        ctx.save();
+
+        // Rainbow Invincible Sparkle Aura
+        if (isRainbowPower) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(253, 224, 71, 0.4)';
+            ctx.shadowColor = '#fde047';
+            ctx.shadowBlur = 25;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Soft Ground Shadow
+        ctx.fillStyle = 'rgba(131, 24, 67, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(cx, GROUND_Y + 2, 22, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 1. GAME OVER / FAILURE CRYING & SITTING EXPRESSION
+        if (gameState === 'GAMEOVER') {
+            const radius = 22;
+            ctx.fillStyle = '#db2777';
+            // Sitting shoes
+            ctx.beginPath();
+            ctx.ellipse(cx - 18, cy + 14, 9, 6, -0.2, 0, Math.PI * 2);
+            ctx.ellipse(cx + 18, cy + 14, 9, 6, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crying Pink Body
+            const bodyGrad = ctx.createRadialGradient(cx, cy, 2, cx, cy, radius);
+            bodyGrad.addColorStop(0, '#ffc2d1');
+            bodyGrad.addColorStop(1, '#ff6584');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy + 2, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cheeks
+            ctx.fillStyle = '#ff1493';
+            ctx.beginPath();
+            ctx.arc(cx - 12, cy + 5, 4.5, 0, Math.PI * 2);
+            ctx.arc(cx + 12, cy + 5, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Teary (>_<) Eyes
+            ctx.strokeStyle = '#581c87';
+            ctx.lineWidth = 3;
+            // Left Eye >
+            ctx.beginPath();
+            ctx.moveTo(cx - 11, cy - 6);
+            ctx.lineTo(cx - 5, cy - 2);
+            ctx.lineTo(cx - 11, cy + 2);
+            ctx.stroke();
+
+            // Right Eye <
+            ctx.beginPath();
+            ctx.moveTo(cx + 11, cy - 6);
+            ctx.lineTo(cx + 5, cy - 2);
+            ctx.lineTo(cx + 11, cy + 2);
+            ctx.stroke();
+
+            // Sad Crying Mouth
+            ctx.beginPath();
+            ctx.arc(cx, cy + 12, 5, Math.PI, 0);
+            ctx.stroke();
+
+            // Teardrops flying off
+            if (frameCount % 12 < 6) {
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(cx - 16, cy, 3.5, 0, Math.PI * 2);
+                ctx.arc(cx + 16, cy, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+        } else if (victoryPoseTimer > 0) {
+            // 2. SURVIVAL 15s VICTORY DANCE / CELEBRATION POSE! (v^ヮ^)v
+            const radius = 23;
+            const danceHop = Math.abs(Math.sin(frameCount * 0.3)) * 10;
+            const currentCy = cy - danceHop;
+
+            ctx.fillStyle = '#db2777';
+            ctx.beginPath();
+            ctx.ellipse(cx - 14, currentCy + 16, 10, 6, -0.3, 0, Math.PI * 2);
+            ctx.ellipse(cx + 14, currentCy + 16, 10, 6, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            const bodyGrad = ctx.createRadialGradient(cx, currentCy, 2, cx, currentCy, radius);
+            bodyGrad.addColorStop(0, '#ffc2d1');
+            bodyGrad.addColorStop(1, '#ff6584');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(cx, currentCy, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Raised Arms (Victory Arms \o/)
+            ctx.beginPath();
+            ctx.ellipse(cx - 18, currentCy - 10, 6, 9, -0.6, 0, Math.PI * 2);
+            ctx.ellipse(cx + 18, currentCy - 10, 6, 9, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Happy Cheeks
+            ctx.fillStyle = '#ff1493';
+            ctx.beginPath();
+            ctx.arc(cx - 12, currentCy + 2, 5, 0, Math.PI * 2);
+            ctx.arc(cx + 12, currentCy + 2, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Happy Star Eyes (^ヮ^)
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('★', cx - 6, currentCy - 2);
+            ctx.fillText('★', cx + 6, currentCy - 2);
+
+            // Wide Happy Mouth
+            ctx.fillStyle = '#9f1239';
+            ctx.beginPath();
+            ctx.arc(cx, currentCy + 4, 6, 0, Math.PI);
+            ctx.fill();
+
+        } else if (this.isDucking) {
+            // Squishy Ducking Form
+            ctx.fillStyle = '#db2777';
+            ctx.beginPath();
+            ctx.ellipse(cx - 15, cy + 7, 10, 6, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 15, cy + 7, 10, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            const bodyGrad = ctx.createLinearGradient(cx - 25, cy - 10, cx + 25, cy + 10);
+            bodyGrad.addColorStop(0, '#ffb1c1');
+            bodyGrad.addColorStop(1, '#ff6584');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + 2, 25, 13, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff1493';
+            ctx.beginPath();
+            ctx.arc(cx - 12, cy + 3, 4, 0, Math.PI * 2);
+            ctx.arc(cx + 12, cy + 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#581c87';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(cx - 6, cy - 1, 3.5, Math.PI, 0);
+            ctx.arc(cx + 6, cy - 1, 3.5, Math.PI, 0);
+            ctx.stroke();
+
+        } else if (this.isJumping) {
+            // Puffed-Up Balloon Float Form
+            const radius = 24;
+
+            ctx.fillStyle = '#db2777';
+            ctx.beginPath();
+            ctx.ellipse(cx - 16, cy + 16, 10, 7, 0.2, 0, Math.PI * 2);
+            ctx.ellipse(cx + 16, cy + 16, 10, 7, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            const bodyGrad = ctx.createRadialGradient(cx - 6, cy - 8, 2, cx, cy, radius);
+            bodyGrad.addColorStop(0, '#ffc2d1');
+            bodyGrad.addColorStop(1, '#ff6584');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.ellipse(cx - 6, cy - 4, 3.5, 7.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 6, cy - 4, 3.5, 7.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx - 6, cy - 7, 1.8, 0, Math.PI * 2);
+            ctx.arc(cx + 6, cy - 7, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cheeks
+            ctx.fillStyle = '#ff1493';
+            ctx.beginPath();
+            ctx.arc(cx - 14, cy + 3, 5, 0, Math.PI * 2);
+            ctx.arc(cx + 14, cy + 3, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#9f1239';
+            ctx.beginPath();
+            ctx.arc(cx, cy + 4, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+        } else {
+            // Waddling Run Animation
+            const radius = 22;
+            const waddle = (this.animFrame % 2 === 0) ? -2 : 2;
+
+            ctx.fillStyle = '#db2777';
+            if (this.animFrame === 0 || this.animFrame === 2) {
+                ctx.beginPath();
+                ctx.ellipse(cx - 13, cy + 17, 10, 6, 0.1, 0, Math.PI * 2);
+                ctx.ellipse(cx + 13, cy + 14, 10, 6, -0.1, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.ellipse(cx - 13, cy + 14, 10, 6, -0.1, 0, Math.PI * 2);
+                ctx.ellipse(cx + 13, cy + 17, 10, 6, 0.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const bodyGrad = ctx.createRadialGradient(cx - 5, cy - 6 + waddle, 2, cx, cy + waddle, radius);
+            bodyGrad.addColorStop(0, '#ffc2d1');
+            bodyGrad.addColorStop(1, '#ff6584');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy + waddle, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stubby Arms
+            ctx.beginPath();
+            ctx.ellipse(cx - 18, cy + 2 + waddle, 6, 8, 0.4, 0, Math.PI * 2);
+            ctx.ellipse(cx + 18, cy + 2 + waddle, 6, 8, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.ellipse(cx - 5, cy - 4 + waddle, 3.2, 7.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 7, cy - 4 + waddle, 3.2, 7.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx - 5, cy - 7 + waddle, 1.6, 0, Math.PI * 2);
+            ctx.arc(cx + 7, cy - 7 + waddle, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cheeks
+            ctx.fillStyle = '#ff1493';
+            ctx.beginPath();
+            ctx.ellipse(cx - 13, cy + 3 + waddle, 4.5, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 15, cy + 3 + waddle, 4.5, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth
+            ctx.fillStyle = '#9f1239';
+            ctx.beginPath();
+            ctx.arc(cx + 1, cy + 4 + waddle, 3.2, 0, Math.PI);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    getBounds() {
+        const bw = this.isDucking ? 42 : 36;
+        return {
+            x: this.x + 5,
+            y: this.y - this.height,
+            width: bw,
+            height: this.height
+        };
+    }
+}
+
+class StarCollectable {
+    constructor(speed) {
+        this.x = CANVAS_WIDTH;
+        this.y = GROUND_Y - 65 - Math.random() * 45;
+        this.width = 30;
+        this.height = 30;
+        this.speed = speed;
+        this.floatPhase = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+        this.x -= this.speed;
+        this.floatPhase += 0.08;
+    }
+
+    draw() {
+        const floatY = this.y + Math.sin(this.floatPhase) * 6;
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.shadowColor = '#fde047';
+        ctx.shadowBlur = 12;
+
+        const cx = this.x + 15, cy = floatY + 15;
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            ctx.lineTo(cx + 14 * Math.cos((18 + i * 72) * Math.PI / 180), cy - 14 * Math.sin((18 + i * 72) * Math.PI / 180));
+            ctx.lineTo(cx + 6 * Math.cos((54 + i * 72) * Math.PI / 180), cy - 6 * Math.sin((54 + i * 72) * Math.PI / 180));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    getBounds() {
+        return { x: this.x, y: this.y, width: this.width, height: this.height };
+    }
+}
+
+class MaximTomato {
+    constructor(speed) {
+        this.x = CANVAS_WIDTH;
+        this.y = GROUND_Y - 55 - Math.random() * 30;
+        this.width = 32;
+        this.height = 32;
+        this.speed = speed;
+        this.floatPhase = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+        this.x -= this.speed;
+        this.floatPhase += 0.06;
+    }
+
+    draw() {
+        const floatY = this.y + Math.sin(this.floatPhase) * 5;
+        const cx = this.x + 16, cy = floatY + 16;
+        ctx.save();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.ellipse(cx - 4, cy - 12, 5, 2.5, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(cx + 4, cy - 12, 5, 2.5, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('M', cx, cy + 4.5);
+
+        ctx.restore();
+    }
+
+    getBounds() {
+        return { x: this.x, y: this.y, width: this.width, height: this.height };
+    }
+}
+
+class WispyAppleHazard {
+    constructor(speed) {
+        this.x = CANVAS_WIDTH;
+        this.width = 36;
+        this.height = 38;
+        this.speed = speed;
+        this.y = GROUND_Y - this.height;
+    }
+
+    update() { this.x -= this.speed; }
+
+    draw() {
+        const cx = this.x + 18, cy = this.y + 19;
+        ctx.save();
+
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, cy - 15, 6, 3, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(cx - 5, cy - 2, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 5, cy - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    getBounds() {
+        return { x: this.x + 2, y: this.y + 2, width: this.width - 4, height: this.height - 4 };
+    }
+}
+
+class GordoSpike {
+    constructor(speed) {
+        this.x = CANVAS_WIDTH;
+        this.width = 42;
+        this.height = 42;
+        this.speed = speed;
+        this.y = GROUND_Y - this.height;
+    }
+
+    update() { this.x -= this.speed; }
+
+    draw() {
+        const cx = this.x + 21, cy = this.y + 21;
+        ctx.save();
+
+        ctx.fillStyle = '#94a3b8';
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI / 4) + (frameCount * 0.02);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + 20 * Math.cos(angle - 0.2), cy + 20 * Math.sin(angle - 0.2));
+            ctx.lineTo(cx + 24 * Math.cos(angle), cy + 24 * Math.sin(angle));
+            ctx.lineTo(cx + 20 * Math.cos(angle + 0.2), cy + 20 * Math.sin(angle + 0.2));
+            ctx.fill();
+        }
+
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(cx - 4, cy - 2, 2.8, 0, Math.PI * 2);
+        ctx.arc(cx + 4, cy - 2, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    getBounds() {
+        return { x: this.x + 2, y: this.y + 2, width: this.width - 4, height: this.height - 4 };
+    }
+}
+
+class BrontoBurt {
+    constructor(speed) {
+        this.x = CANVAS_WIDTH;
+        this.width = 42;
+        this.height = 32;
+        this.speed = speed + 1.2;
+        this.y = GROUND_Y - 75 - Math.random() * 35;
+        this.wingPhase = 0;
+    }
+
+    update() {
+        this.x -= this.speed;
+        this.wingPhase += 0.25;
+    }
+
+    draw() {
+        const cx = this.x + 21, cy = this.y + 16;
+        const wingY = Math.sin(this.wingPhase) * 6;
+        ctx.save();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(cx - 13, cy - 5 + wingY, 12, 5, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(cx + 13, cy - 5 + wingY, 12, 5, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx - 5, cy - 2, 3.8, 0, Math.PI * 2);
+        ctx.arc(cx + 5, cy - 2, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(cx - 5, cy - 2, 1.8, 0, Math.PI * 2);
+        ctx.arc(cx + 5, cy - 2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    getBounds() {
+        return { x: this.x, y: this.y, width: this.width, height: this.height };
+    }
+}
+
+const kirby = new KawaiiKirby();
+const starField = new StarField();
+let particles = [];
+let clouds = [];
+let items = [];
+let obstacles = [];
+let nextSpawnTimer = 0;
+
+function resetGame() {
+    score = 0;
+    gameSpeed = 6.8;
+    particles = [];
+    clouds = [];
+    items = [];
+    obstacles = [];
+    rainbowPowerGauge = 35;
+    isRainbowPower = false;
+    rainbowPowerTimer = 0;
+    survivalTimer = 0;
+    victoryPoseTimer = 0;
+    weatherTimer = 0;
+    kirby.y = GROUND_Y;
+    kirby.isJumping = false;
+    kirby.isDucking = false;
+    nextSpawnTimer = 0;
+    switchRandomWeather();
+    updatePowerBar();
+}
+
+function updatePowerBar() {
+    document.getElementById('power-bar-fill').style.width = `${rainbowPowerGauge}%`;
+}
+
+function triggerRainbowPower() {
+    if (rainbowPowerGauge >= 100 && !isRainbowPower) {
+        isRainbowPower = true;
+        rainbowPowerTimer = 300;
+        rainbowPowerGauge = 0;
+        sound.playPowerUp();
+        updatePowerBar();
+
+        for (let i = 0; i < 25; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * 6 + 2;
+            particles.push(new Particle(
+                kirby.x + 20,
+                kirby.y - 20,
+                '#fde047',
+                Math.cos(angle) * spd,
+                Math.sin(angle) * spd,
+                Math.random() * 4 + 2,
+                30
+            ));
+        }
+    }
+}
+
+function gameLoop() {
+    frameCount++;
+
+    if (isRealTime) {
+        const now = new Date();
+        decimalHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+        document.getElementById('time-slider').value = decimalHour;
+    } else {
+        decimalHour = parseFloat(document.getElementById('time-slider').value);
+    }
+
+    const skyState = getSkyAtmosphere(decimalHour);
+    document.getElementById('sky-icon').textContent = skyState.icon;
+    document.getElementById('sky-time-text').textContent = skyState.label;
+
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+    skyGrad.addColorStop(0, colorString(skyState.skyTop));
+    skyGrad.addColorStop(0.55, colorString(skyState.skyMid));
+    skyGrad.addColorStop(1, colorString(skyState.skyBot));
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Weather Ambient Tint Overlay
+    ctx.fillStyle = colorString(currentWeather.tint, currentWeather.tint[3]);
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Thunder Lightning Flash Effect
+    if (lightningFlash > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${lightningFlash / 12})`;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        lightningFlash--;
+    }
+
+    starField.draw(skyState.starOpacity);
+
+    if (skyState.sunPos) {
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.shadowColor = '#fde047';
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.arc(skyState.sunPos.x, skyState.sunPos.y, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    if (skyState.moonPos) {
+        ctx.save();
+        ctx.fillStyle = '#f8fafc';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(skyState.moonPos.x, skyState.moonPos.y, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Parallax Kawaii Hills
+    ctx.fillStyle = colorString(interpolateColor(skyState.skyMid, [134, 239, 172], 0.5));
+    ctx.beginPath();
+    ctx.moveTo(0, GROUND_Y);
+    ctx.quadraticCurveTo(220, GROUND_Y - 55, 450, GROUND_Y - 20);
+    ctx.quadraticCurveTo(700, GROUND_Y - 65, 960, GROUND_Y - 25);
+    ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Soft Green Foreground
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+    ctx.fillStyle = '#86efac';
+    ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 5);
+
+    // Dynamic Weather Particles
+    updateWeatherParticles();
+
+    if (gameState === 'RUNNING') {
+        // Random Weather Change Timer
+        weatherTimer--;
+        if (weatherTimer <= 0) {
+            switchRandomWeather();
+        }
+
+        // 15-Second Survival Celebration Tracker
+        survivalTimer++;
+        if (survivalTimer % 900 === 0) { // Every 15 seconds (900 frames at 60fps)
+            victoryPoseTimer = 110; // Show pose for ~1.8 seconds
+            const secondsSurvived = Math.floor(survivalTimer / 60);
+            victoryText = `✨ 存活 ${secondsSurvived} 秒勝利！ ✨`;
+            sound.playVictory();
+
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(
+                    kirby.x + 20,
+                    kirby.y - 40,
+                    ['#fde047', '#ff85a2', '#38bdf8', '#a855f7'][i % 4],
+                    (Math.random() - 0.5) * 6,
+                    -Math.random() * 4 - 2,
+                    Math.random() * 4 + 2,
+                    35
+                ));
+            }
+        }
+
+        if (victoryPoseTimer > 0) victoryPoseTimer--;
+
+        if (Math.random() < 0.015) clouds.push(new CottonCloud());
+        for (let i = clouds.length - 1; i >= 0; i--) {
+            clouds[i].update();
+            clouds[i].draw();
+            if (clouds[i].x < -80) clouds.splice(i, 1);
+        }
+
+        if (isRainbowPower) {
+            rainbowPowerTimer--;
+            if (rainbowPowerTimer <= 0) isRainbowPower = false;
+        }
+
+        kirby.update();
+
+        if (nextSpawnTimer <= 0) {
+            const rand = Math.random();
+            if (rand < 0.3) {
+                items.push(new StarCollectable(gameSpeed));
+            } else if (rand < 0.42) {
+                items.push(new MaximTomato(gameSpeed));
+            } else if (score > 120 && rand < 0.7) {
+                obstacles.push(new BrontoBurt(gameSpeed));
+            } else if (rand < 0.85) {
+                obstacles.push(new WispyAppleHazard(gameSpeed));
+            } else {
+                obstacles.push(new GordoSpike(gameSpeed));
+            }
+            nextSpawnTimer = Math.floor(Math.random() * 30 + 360 / gameSpeed);
+        }
+        nextSpawnTimer--;
+
+        // Items Collection
+        for (let i = items.length - 1; i >= 0; i--) {
+            items[i].update();
+            items[i].draw();
+
+            if (checkCollision(kirby.getBounds(), items[i].getBounds())) {
+                if (items[i] instanceof MaximTomato) {
+                    sound.playTomato();
+                    rainbowPowerGauge = Math.min(100, rainbowPowerGauge + 45);
+                    score += 50;
+                } else {
+                    sound.playStar();
+                    rainbowPowerGauge = Math.min(100, rainbowPowerGauge + 25);
+                    score += 20;
+                }
+                updatePowerBar();
+                items.splice(i, 1);
+            } else if (items[i].x < -40) {
+                items.splice(i, 1);
+            }
+        }
+
+        // Obstacle Collisions
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i];
+            obs.update();
+            obs.draw();
+
+            if (checkCollision(kirby.getBounds(), obs.getBounds())) {
+                if (isRainbowPower) {
+                    sound.playSmash();
+                    for (let d = 0; d < 12; d++) {
+                        particles.push(new Particle(
+                            obs.x + 20, obs.y + 20,
+                            '#fde047',
+                            (Math.random() - 0.5) * 8,
+                            (Math.random() - 0.5) * 8,
+                            Math.random() * 4 + 2,
+                            25
+                        ));
+                    }
+                    obstacles.splice(i, 1);
+                    score += 40;
+                } else {
+                    gameState = 'GAMEOVER';
+                    sound.playGameOver();
+                    if (score > highScore) {
+                        highScore = Math.floor(score);
+                        localStorage.setItem('kirby_kawaii_hi', highScore);
+                        document.getElementById('hi-score-disp').textContent = String(highScore).padStart(5, '0');
+                    }
+                }
+            } else if (obs.x < -60) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+
+        score += 0.15;
+        document.getElementById('score-disp').textContent = String(Math.floor(score)).padStart(5, '0');
+
+        if (frameCount % 300 === 0 && gameSpeed < 15) {
+            gameSpeed += 0.35;
+        }
+    } else {
+        clouds.forEach(c => c.draw());
+        items.forEach(c => c.draw());
+        obstacles.forEach(o => o.draw());
+    }
+
+    kirby.draw();
+
+    // 15s Victory Pop-up Text Banner
+    if (victoryPoseTimer > 0 && gameState === 'RUNNING') {
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#db2777';
+        ctx.shadowBlur = 12;
+        ctx.fillText(victoryText, CANVAS_WIDTH / 2, 70);
+        ctx.restore();
+    }
+
+    // Game Overlay Text
+    if (gameState === 'START') {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#be185d';
+        ctx.shadowBlur = 10;
+        ctx.fillText('⭐ 按下 [Space] 或 點擊畫面開啟夢幻冒險 ⭐', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
+    } else if (gameState === 'GAMEOVER') {
+        ctx.fillStyle = '#ff6584';
+        ctx.font = '800 26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#831843';
+        ctx.shadowBlur = 12;
+        ctx.fillText('😭 嗚嗚卡比撞到了... GAME OVER 😭', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '600 15px sans-serif';
+        ctx.fillText('按下 [Space] 幫卡比加油，再次開始！', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 15);
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function checkCollision(r1, r2) {
+    return (
+        r1.x < r2.x + r2.width &&
+        r1.x + r1.width > r2.x &&
+        r1.y < r2.y + r2.height &&
+        r1.y + r1.height > r2.y
+    );
+}
+
+function handleStartAction() {
+    sound.init();
+    if (gameState === 'START' || gameState === 'GAMEOVER') {
+        resetGame();
+        gameState = 'RUNNING';
+    } else if (gameState === 'RUNNING') {
+        kirby.jump();
+    }
+}
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        handleStartAction();
+    } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        if (gameState === 'RUNNING') kirby.duck(true);
+    } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyZ') {
+        triggerRainbowPower();
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowDown') kirby.duck(false);
+});
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStartAction(); });
+canvas.addEventListener('click', () => handleStartAction());
+
+document.getElementById('t-jump').addEventListener('touchstart', (e) => { e.preventDefault(); handleStartAction(); });
+document.getElementById('t-duck').addEventListener('touchstart', (e) => { e.preventDefault(); kirby.duck(true); });
+document.getElementById('t-duck').addEventListener('touchend', (e) => { e.preventDefault(); kirby.duck(false); });
+document.getElementById('t-power').addEventListener('touchstart', (e) => { e.preventDefault(); triggerRainbowPower(); });
+
+document.getElementById('btn-realtime').addEventListener('click', () => { isRealTime = true; });
+document.getElementById('btn-sunset').addEventListener('click', () => { isRealTime = false; document.getElementById('time-slider').value = 18; });
+document.getElementById('btn-night').addEventListener('click', () => { isRealTime = false; document.getElementById('time-slider').value = 23; });
+document.getElementById('time-slider').addEventListener('input', () => { isRealTime = false; });
+document.getElementById('btn-sound').addEventListener('click', () => {
+    sound.enabled = !sound.enabled;
+    document.getElementById('btn-sound').textContent = `🔊 音效: ${sound.enabled ? 'ON' : 'OFF'}`;
+});
+
+window.onload = () => {
+    requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>

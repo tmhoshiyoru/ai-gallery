@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水彩繪本動態動畫 - 小紅帽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', 'Noto Serif TC', serif;
+            background: #1a1612;
+            color: #f7f1e5;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .serif-title {
+            font-family: 'Noto Serif TC', serif;
+        }
+
+        /* Vintage Watercolor Card Effect */
+        .paper-card {
+            background: #fdfaf3;
+            color: #36291b;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(180, 140, 90, 0.15);
+            border: 2px solid #e2d5c3;
+        }
+
+        .story-panel {
+            background: rgba(26, 21, 16, 0.88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 213, 195, 0.25);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        .coral-button {
+            background: linear-gradient(135deg, #d9534f 0%, #b52b27 100%);
+            border: 1px solid #f8a5a3;
+            color: #ffffff;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .coral-button:hover {
+            background: linear-gradient(135deg, #e5635f 0%, #c83733 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(217, 83, 79, 0.4);
+        }
+
+        .coral-button:active {
+            transform: translateY(1px);
+        }
+
+        /* Custom Timeline Scrubber */
+        input[type=range] {
+            accent-color: #d9534f;
+        }
+
+        /* Subtitle Card Shadow */
+        .subtitle-paper {
+            background: rgba(253, 250, 243, 0.94);
+            border: 2px solid #d4c3ab;
+            color: #2b1f13;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 md:p-6">
+
+    <!-- Header Controls -->
+    <header class="w-full max-w-5xl flex justify-between items-center px-5 py-3 rounded-2xl story-panel z-20 mb-2">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🧺</span>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold text-amber-200 serif-title tracking-wide">
+                    水彩繪本動畫《小紅帽》
+                </h1>
+                <p id="sceneTitleText" class="text-xs text-amber-100/70">第一幕：村莊小路與叮嚀 (00:00)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btnAudioToggle" class="px-3 py-1.5 rounded-xl bg-stone-800/90 hover:bg-stone-700 text-xs md:text-sm font-medium border border-stone-600 transition flex items-center gap-1.5">
+                <span id="audioIcon">🎵</span> <span id="audioLabel">音樂開</span>
+            </button>
+            <button id="btnFullscreen" class="px-3 py-1.5 rounded-xl bg-stone-800/90 hover:bg-stone-700 text-xs md:text-sm font-medium border border-stone-600 transition">
+                ⛶ 全螢幕
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Animation Stage -->
+    <main class="relative w-full max-w-5xl flex-1 flex flex-col justify-center items-center my-1">
+        <div id="stageContainer" class="relative w-full aspect-[16/9] max-h-[70vh] rounded-2xl overflow-hidden story-panel flex justify-center items-center shadow-2xl border border-amber-900/30">
+            <!-- Watercolor Story Canvas -->
+            <canvas id="storyCanvas" class="w-full h-full object-contain cursor-pointer"></canvas>
+
+            <!-- Subtitle Display Paper Card -->
+            <div class="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-12 md:right-12 p-3 md:p-5 rounded-2xl subtitle-paper text-center pointer-events-none transition-all duration-300">
+                <p id="subtitleText" class="text-sm md:text-xl font-bold serif-title leading-relaxed tracking-wide min-h-[2.5rem] flex items-center justify-center">
+                    準備好了嗎？點擊播放開始欣賞水彩繪本動畫...
+                </p>
+            </div>
+
+            <!-- Start Overlay Button -->
+            <div id="startOverlay" class="absolute inset-0 bg-stone-950/75 backdrop-blur-md flex flex-col justify-center items-center transition-opacity duration-500 z-30">
+                <div class="text-center p-6 max-w-md paper-card rounded-3xl mx-4">
+                    <span class="text-6xl mb-3 block">🍄</span>
+                    <h2 class="text-2xl md:text-3xl font-black serif-title text-red-800 mb-2">水彩繪本動態動畫</h2>
+                    <p class="text-xs md:text-sm text-stone-700 mb-6 font-medium leading-relaxed">
+                        還原經典水彩插畫風格：金黃辮子小紅帽、可愛紅蘑菇與夢幻森林光影。
+                    </p>
+                    <button id="btnBigStart" class="coral-button px-8 py-3.5 rounded-2xl font-bold text-base md:text-lg shadow-xl tracking-wider flex items-center gap-2 mx-auto">
+                        ▶ 開始觀賞動畫 (2 Min)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Video Player Control Bar -->
+    <footer class="w-full max-w-5xl rounded-2xl story-panel p-4 mt-2 flex flex-col gap-3 z-20">
+        <!-- Progress Scrubber -->
+        <div class="flex items-center gap-3 w-full">
+            <span id="currentTimeText" class="text-xs font-mono text-amber-200/80 min-w-[40px]">00:00</span>
+            <input id="timelineScrubber" type="range" min="0" max="120" value="0" step="0.1" class="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer">
+            <span id="totalTimeText" class="text-xs font-mono text-amber-200/80 min-w-[40px]">02:00</span>
+        </div>
+
+        <!-- Action Control Buttons -->
+        <div class="flex flex-wrap justify-between items-center gap-2">
+            <!-- Scene Jump Selectors -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="0">幕一：出發</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="1">幕二：入林</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="2">幕三：遇狼</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="3">幕四：採花</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="4">幕五：小屋</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="5">幕六：拯救</button>
+                <button class="scene-btn text-xs px-2.5 py-1.5 rounded-lg bg-stone-800/90 hover:bg-red-900/50 border border-stone-700 transition whitespace-nowrap" data-scene="6">幕七：團聚</button>
+            </div>
+
+            <!-- Play / Pause Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="btnRewind" class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-xs md:text-sm font-medium border border-stone-600 transition">
+                    ↺ 倒退 5 秒
+                </button>
+                <button id="btnPlayPause" class="coral-button px-5 py-1.5 rounded-xl font-bold text-xs md:text-sm flex items-center gap-1.5">
+                    <span id="playIcon">▶</span> <span id="playLabel">播放</span>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        class StoryAudioSynthesizer {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.musicTimer = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playNote(freq, type = 'sine', duration = 0.5, vol = 0.04, delay = 0) {
+                if (!this.enabled || !this.ctx) return;
+                setTimeout(() => {
+                    try {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = type;
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + duration);
+                    } catch (e) {}
+                }, delay * 1000);
+            }
+
+            playFairyChimes() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    this.playNote(freq, 'sine', 0.8, 0.025, idx * 0.1);
+                });
+            }
+
+            playWarmGuitarChord() {
+                if (!this.enabled || !this.ctx) return;
+                const chord = [261.63, 329.63, 392.00, 523.25];
+                chord.forEach((f, idx) => {
+                    this.playNote(f, 'triangle', 1.2, 0.03, idx * 0.08);
+                });
+            }
+        }
+
+        const audio = new StoryAudioSynthesizer();
+
+        const storyTimeline = [
+            {
+                id: 0,
+                title: "第一幕：村莊小路與叮嚀",
+                startTime: 0,
+                endTime: 18,
+                text: "從前從前，在森林邊緣的小村莊裡，住著一個可愛的小女孩，大家都叫她莉亞。今天，媽媽給了她一件鮮紅色的連帽斗篷與美味甜點...",
+                camStart: { x: 0, y: 0, zoom: 1.0 },
+                camEnd: { x: 20, y: -10, zoom: 1.06 },
+                bgType: "village_start"
+            },
+            {
+                id: 1,
+                title: "第二幕：踏入水彩夢幻森林",
+                startTime: 18,
+                endTime: 36,
+                text: "莉亞點點頭，愉快地踏上了通往森林的小徑。陽光透過樹葉的縫隙灑下金黃色的光束，地面開滿了紅底白點的大蘑菇，鳥兒在枝頭唱著歌。",
+                camStart: { x: -15, y: 0, zoom: 1.0 },
+                camEnd: { x: 15, y: 0, zoom: 1.08 },
+                bgType: "watercolor_forest"
+            },
+            {
+                id: 2,
+                title: "第三幕：與大野狼影牙邂逅",
+                startTime: 36,
+                endTime: 54,
+                text: "走著走著，一個巨大的灰色身影從樹後悄悄走了出來。那是大野狼影牙。影牙用裝作友善的聲音問：「午安呀，小姑娘，妳要帶著花去哪裡呢？」",
+                camStart: { x: 0, y: -5, zoom: 1.0 },
+                camEnd: { x: -10, y: 5, zoom: 1.12 },
+                bgType: "wolf_meeting"
+            },
+            {
+                id: 3,
+                title: "第四幕：採集五彩野花",
+                startTime: 54,
+                endTime: 72,
+                text: "影牙指著森林深處：「那裡的野花更香更美呢！」莉亞被漂亮的白色小花與雛菊吸引，蹲下身採集，而影牙則悄悄朝奶奶的小木屋奔去...",
+                camStart: { x: 15, y: 5, zoom: 1.0 },
+                camEnd: { x: -15, y: -5, zoom: 1.06 },
+                bgType: "picking_flowers"
+            },
+            {
+                id: 4,
+                title: "第五幕：老奶奶的小木屋",
+                startTime: 72,
+                endTime: 90,
+                text: "莉亞捧著鮮花來到瑪莎奶奶的小木屋。大門稍微敞開著，躺在床上的「奶奶」戴著睡帽：「小甜心，快過來讓奶奶抱抱...」",
+                camStart: { x: 0, y: 0, zoom: 1.0 },
+                camEnd: { x: 0, y: -10, zoom: 1.12 },
+                bgType: "grandma_cottage"
+            },
+            {
+                id: 5,
+                title: "第六幕：勇敢獵人挺身而出",
+                startTime: 90,
+                endTime: 108,
+                text: "「奶奶，妳的嘴巴怎麼這麼大？」「這樣才能一口吃掉妳！」影牙掀開被子跳起。千鈞一髮之際，獵人阿德衝進屋內，成功趕走了大野狼！",
+                camStart: { x: -10, y: 5, zoom: 1.12 },
+                camEnd: { x: 10, y: 0, zoom: 1.0 },
+                bgType: "hunter_rescue"
+            },
+            {
+                id: 6,
+                title: "第七幕：溫馨午茶與平靜時光",
+                startTime: 108,
+                endTime: 120,
+                text: "阿德救出了瑪莎奶奶，大家圍坐在溫暖的桌邊分享著香噴噴的麵包與熱茶。莉亞緊抱著奶奶，開心地享受這美好的午茶時光。",
+                camStart: { x: 0, y: -5, zoom: 1.05 },
+                camEnd: { x: 0, y: 0, zoom: 1.0 },
+                bgType: "happy_tea_time"
+            }
+        ];
+
+        const canvas = document.getElementById('storyCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1280;
+        canvas.height = 720;
+
+        let currentTime = 0;
+        let isPlaying = false;
+        let animationFrameId = null;
+        let lastTime = null;
+
+        // Floating watercolor flower petals & sparks
+        let floatingPetals = [];
+        for (let i = 0; i < 45; i++) {
+            floatingPetals.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 6 + 3,
+                speedY: Math.random() * 0.6 + 0.2,
+                speedX: Math.sin(i) * 0.4,
+                rot: Math.random() * Math.PI * 2,
+                color: i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? '#fef08a' : '#f87171')
+            });
+        }
+
+        function drawWatercolorForest(ctx, time) {
+            // Warm Watercolor Paper Sky Background
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#fef9c3'); // Soft sunshine yellow
+            skyGrad.addColorStop(0.4, '#d9f99d'); // Tender leaf green
+            skyGrad.addColorStop(1, '#a3e635'); // Earthy forest green
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Volumetric Sunlight Beams
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                const rx = 150 + i * 200 + Math.sin(time + i) * 15;
+                ctx.moveTo(rx, 0);
+                ctx.lineTo(rx + 140, canvas.height);
+                ctx.lineTo(rx + 60, canvas.height);
+                ctx.lineTo(rx - 40, 0);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Background Distant Watercolor Trees
+            ctx.fillStyle = 'rgba(74, 120, 50, 0.45)';
+            for (let x = -40; x < canvas.width + 80; x += 140) {
+                ctx.beginPath();
+                ctx.arc(x + 50, 320, 110, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Giant Red Amanita Mushrooms (紅底白點毒蠅傘蘑菇)
+            const drawGiantMushroom = (mx, my, scale) => {
+                ctx.save();
+                ctx.translate(mx, my);
+                ctx.scale(scale, scale);
+
+                // Mushroom Stem
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.roundRect(-18, 0, 36, 70, 10);
+                ctx.fill();
+
+                // Cap (Bright Red with White Spots)
+                const capGrad = ctx.createRadialGradient(0, -20, 5, 0, -20, 55);
+                capGrad.addColorStop(0, '#ef4444');
+                capGrad.addColorStop(1, '#991b1b');
+                ctx.fillStyle = capGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, 55, Math.PI, 0);
+                ctx.fill();
+
+                // White Spots
+                ctx.fillStyle = '#ffffff';
+                [[-25, -25, 7], [0, -38, 9], [25, -22, 8], [-10, -12, 6], [18, -10, 5]].forEach(spot => {
+                    ctx.beginPath();
+                    ctx.arc(spot[0], spot[1], spot[2], 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+            };
+
+            drawGiantMushroom(140, 520, 1.2);
+            drawGiantMushroom(220, 550, 0.85);
+            drawGiantMushroom(1120, 510, 1.3);
+
+            // Ground Earth & Grass
+            const groundGrad = ctx.createLinearGradient(0, 480, 0, canvas.height);
+            groundGrad.addColorStop(0, '#65a30d');
+            groundGrad.addColorStop(0.5, '#4d7c0f');
+            groundGrad.addColorStop(1, '#3f6212');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, 520, canvas.width, 200);
+        }
+
+        function drawWatercolorLittleRed(ctx, x, y, scale = 1, isWalking = false, time = 0) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            const legSwing = isWalking ? Math.sin(time * 8) * 8 : 0;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(40, 30, 15, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(0, 130, 45, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legs & Red Shoes
+            ctx.fillStyle = '#991b1b';
+            ctx.beginPath();
+            ctx.ellipse(-12 + legSwing, 125, 8, 5, 0, 0, Math.PI * 2);
+            ctx.ellipse(12 - legSwing, 125, 8, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Scalloped Lace Dress & White Apron (白色蕾絲圍裙)
+            ctx.fillStyle = '#fffbeb';
+            ctx.beginPath();
+            ctx.moveTo(-35, 30);
+            ctx.bezierCurveTo(-50, 80, -45, 115, -40, 120);
+            ctx.lineTo(40, 120);
+            ctx.bezierCurveTo(45, 115, 50, 80, 35, 30);
+            ctx.closePath();
+            ctx.fill();
+
+            // Red Hood & Cape Body (鮮紅連帽斗篷)
+            const capeGrad = ctx.createLinearGradient(-40, 0, 40, 100);
+            capeGrad.addColorStop(0, '#ef4444');
+            capeGrad.addColorStop(0.8, '#dc2626');
+            capeGrad.addColorStop(1, '#991b1b');
+            ctx.fillStyle = capeGrad;
+
+            ctx.beginPath();
+            ctx.moveTo(-28, -5);
+            ctx.bezierCurveTo(-52, 30, -48, 80, -38, 100);
+            ctx.lineTo(38, 100);
+            ctx.bezierCurveTo(48, 80, 52, 30, 28, -5);
+            ctx.closePath();
+            ctx.fill();
+
+            // White Lace Fringe Trim at Cape Bottom
+            ctx.fillStyle = '#ffffff';
+            for (let lx = -36; lx <= 36; lx += 8) {
+                ctx.beginPath();
+                ctx.arc(lx, 100, 4, 0, Math.PI);
+                ctx.fill();
+            }
+
+            // Head & Cute Doll Face
+            ctx.fillStyle = '#fde047'; // Golden Braided Pigtails (金黃雙辮子)
+            // Left Braid
+            ctx.beginPath();
+            ctx.ellipse(-26, 10, 8, 22, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            // Right Braid
+            ctx.beginPath();
+            ctx.ellipse(26, 10, 8, 22, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Soft Face Skin Tone
+            ctx.fillStyle = '#fef3c7';
+            ctx.beginPath();
+            ctx.ellipse(0, -18, 24, 22, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cute Rosy Cheeks
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(-14, -12, 6, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(14, -12, 6, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Big Watercolor Anime Eyes (亮晶晶大眼睛)
+            ctx.fillStyle = '#422006';
+            ctx.beginPath();
+            ctx.ellipse(-10, -20, 5, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(10, -20, 5, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye Highlights
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-8, -22, 2, 0, Math.PI * 2);
+            ctx.arc(12, -22, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hood Top (紅色大兜帽)
+            ctx.fillStyle = capeGrad;
+            ctx.beginPath();
+            ctx.arc(0, -22, 32, Math.PI * 0.85, Math.PI * 2.15);
+            ctx.bezierCurveTo(20, -58, -20, -58, -32, -22);
+            ctx.fill();
+
+            // Basket with White Flowers (手提竹籃與白花)
+            ctx.save();
+            ctx.translate(28, 45);
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.roundRect(-12, -10, 24, 22, 5);
+            ctx.fill();
+
+            // Bouquet of White Flowers
+            ctx.fillStyle = '#ffffff';
+            for (let f = -8; f <= 8; f += 5) {
+                ctx.beginPath();
+                ctx.arc(f, -14, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        function drawWatercolorWolf(ctx, x, y, scale = 1) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            // Wolf Body (Gray Fur)
+            ctx.fillStyle = '#6b7280';
+            ctx.beginPath();
+            ctx.ellipse(0, 20, 48, 30, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Fluffy Tail
+            ctx.beginPath();
+            ctx.ellipse(-50, 25, 25, 12, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wolf Head & Ears
+            ctx.beginPath();
+            ctx.arc(35, -10, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ears
+            ctx.beginPath();
+            ctx.moveTo(25, -28); ctx.lineTo(32, -50); ctx.lineTo(42, -26);
+            ctx.fill();
+
+            // Friendly Eye
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(42, -14, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function renderScene(scene, progress, time) {
+            drawWatercolorForest(ctx, time);
+
+            switch (scene.bgType) {
+                case "village_start":
+                    // Small Village House
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(800, 220, 420, 340);
+                    ctx.fillStyle = '#451a03';
+                    ctx.fillRect(860, 320, 110, 240);
+                    drawWatercolorLittleRed(ctx, 720, 420, 1.3, true, time);
+                    break;
+
+                case "watercolor_forest":
+                    const walkX = 200 + progress * 620;
+                    drawWatercolorLittleRed(ctx, walkX, 420, 1.35, true, time);
+                    break;
+
+                case "wolf_meeting":
+                    drawWatercolorLittleRed(ctx, 380, 420, 1.4, false, time);
+                    drawWatercolorWolf(ctx, 880 - progress * 60, 430, 1.4);
+                    break;
+
+                case "picking_flowers":
+                    // Wildflower Field
+                    for (let i = 0; i < 30; i++) {
+                        ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#fef08a';
+                        ctx.beginPath();
+                        ctx.arc(200 + (i * 32) % 850, 560 + (i * 11) % 90, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    drawWatercolorLittleRed(ctx, 450, 430, 1.35, true, time);
+                    break;
+
+                case "grandma_cottage":
+                case "hunter_rescue":
+                case "happy_tea_time":
+                    // Cozy Cottage Interior
+                    ctx.fillStyle = '#451a03';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Fireplace Warm Glow
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+                    ctx.beginPath();
+                    ctx.arc(250, 450, 220, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Grand Bed
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(700, 320, 450, 220);
+                    ctx.fillStyle = '#dc2626';
+                    ctx.fillRect(740, 360, 390, 170);
+
+                    if (scene.bgType === "grandma_cottage") {
+                        drawWatercolorWolf(ctx, 840, 350, 1.2);
+                        drawWatercolorLittleRed(ctx, 480, 420, 1.35, false, time);
+                    } else if (scene.bgType === "hunter_rescue") {
+                        drawWatercolorWolf(ctx, 880, 380, 1.1);
+                        drawWatercolorLittleRed(ctx, 380, 420, 1.35, false, time);
+                    } else {
+                        // Tea Table
+                        ctx.fillStyle = '#78350f';
+                        ctx.fillRect(450, 460, 380, 120);
+                        drawWatercolorLittleRed(ctx, 480, 400, 1.25, false, time);
+                    }
+                    break;
+            }
+        }
+
+        function renderAnimationFrame(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const delta = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            if (isPlaying) {
+                currentTime += delta;
+                if (currentTime >= 120) {
+                    currentTime = 120;
+                    isPlaying = false;
+                    updatePlayUI();
+                }
+            }
+
+            let scene = storyTimeline.find(s => currentTime >= s.startTime && currentTime <= s.endTime);
+            if (!scene) scene = storyTimeline[storyTimeline.length - 1];
+
+            const sceneProgress = (currentTime - scene.startTime) / (scene.endTime - scene.startTime || 1);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ken Burns Camera Zoom & Pan Effect
+            const camX = scene.camStart.x + (scene.camEnd.x - scene.camStart.x) * sceneProgress;
+            const camY = scene.camStart.y + (scene.camEnd.y - scene.camStart.y) * sceneProgress;
+            const zoom = scene.camStart.zoom + (scene.camEnd.zoom - scene.camStart.zoom) * sceneProgress;
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-canvas.width / 2 + camX, -canvas.height / 2 + camY);
+
+            // Render Core Watercolor Scene Graphics
+            renderScene(scene, sceneProgress, timestamp * 0.001);
+
+            // Floating Water Petals
+            floatingPetals.forEach(p => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                if (p.y > canvas.height) p.y = -10;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+
+            // Sound Effects Trigger
+            if (isPlaying && Math.random() < 0.02) {
+                if (scene.id === 6) {
+                    audio.playWarmGuitarChord();
+                } else {
+                    audio.playFairyChimes();
+                }
+            }
+
+            // Sync User Interface
+            updateUI(scene);
+
+            animationFrameId = requestAnimationFrame(renderAnimationFrame);
+        }
+
+        function updateUI(scene) {
+            document.getElementById('subtitleText').textContent = scene.text;
+            document.getElementById('sceneTitleText').textContent = `${scene.title} (${formatTime(currentTime)})`;
+            document.getElementById('timelineScrubber').value = currentTime;
+            document.getElementById('currentTimeText').textContent = formatTime(currentTime);
+
+            document.querySelectorAll('.scene-btn').forEach((btn, idx) => {
+                if (idx === scene.id) {
+                    btn.classList.add('bg-red-700', 'text-white', 'border-red-400');
+                    btn.classList.remove('bg-stone-800/90');
+                } else {
+                    btn.classList.remove('bg-red-700', 'text-white', 'border-red-400');
+                    btn.classList.add('bg-stone-800/90');
+                }
+            });
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updatePlayUI() {
+            document.getElementById('playIcon').textContent = isPlaying ? '⏸' : '▶';
+            document.getElementById('playLabel').textContent = isPlaying ? '暫停' : '播放';
+        }
+
+        document.getElementById('btnBigStart').addEventListener('click', () => {
+            audio.init();
+            document.getElementById('startOverlay').classList.add('opacity-0', 'pointer-events-none');
+            isPlaying = true;
+            updatePlayUI();
+        });
+
+        document.getElementById('btnPlayPause').addEventListener('click', () => {
+            audio.init();
+            isPlaying = !isPlaying;
+            updatePlayUI();
+        });
+
+        document.getElementById('btnRewind').addEventListener('click', () => {
+            currentTime = Math.max(0, currentTime - 5);
+        });
+
+        document.getElementById('timelineScrubber').addEventListener('input', (e) => {
+            currentTime = parseFloat(e.target.value);
+        });
+
+        document.querySelectorAll('.scene-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sceneId = parseInt(btn.getAttribute('data-scene'));
+                const targetScene = storyTimeline.find(s => s.id === sceneId);
+                if (targetScene) {
+                    currentTime = targetScene.startTime;
+                }
+            });
+        });
+
+        document.getElementById('btnAudioToggle').addEventListener('click', () => {
+            audio.enabled = !audio.enabled;
+            document.getElementById('audioIcon').textContent = audio.enabled ? '🎵' : '🔇';
+            document.getElementById('audioLabel').textContent = audio.enabled ? '音樂開' : '靜音';
+        });
+
+        document.getElementById('btnFullscreen').addEventListener('click', () => {
+            const elem = document.getElementById('stageContainer');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Launch Animation
+        animationFrameId = requestAnimationFrame(renderAnimationFrame);
+    </script>
+</body>
+</html>

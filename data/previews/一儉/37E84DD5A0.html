@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手繪風貪食蛇 - Hand-Drawn Snake</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Patrick Hand 手繪字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Patrick Hand', 'Caveat', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* 仿素描紙張背景質感 */
+        body {
+            background-color: #f7f1e3;
+            background-image: 
+                radial-gradient(#e0d5c1 1px, transparent 0),
+                radial-gradient(#e0d5c1 1px, #f7f1e3 0);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            color: #4a3b32;
+            overflow: hidden;
+        }
+
+        /* 手繪蠟筆風格的不規則邊框 */
+        .sketch-border {
+            border: 4px solid #8d6e63;
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 6px 7px 0px #8d6e6322;
+        }
+
+        /* 蠟筆按鈕效果 */
+        .sketch-btn {
+            background-color: #fffdf5;
+            border: 3.5px solid #8d6e63;
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 3px 4px 0px #8d6e63;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .sketch-btn:hover {
+            transform: scale(1.03) rotate(-1deg);
+            background-color: #fff9c4;
+        }
+
+        .sketch-btn:active {
+            transform: translate(2px, 2px) rotate(0deg);
+            box-shadow: 1px 2px 0px #8d6e63;
+        }
+
+        canvas {
+            background-color: #fbf8ee;
+            image-rendering: auto;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-3">
+
+    <!-- 主遊戲容器 -->
+    <div class="relative flex flex-col items-center w-full max-w-lg bg-[#fbf8ee] sketch-border p-4 sm:p-6 shadow-xl">
+        
+        <!-- 標題與頂部資訊欄 -->
+        <div class="w-full flex justify-between items-center mb-3 text-lg sm:text-2xl font-bold border-b-2 border-dashed border-[#a1887f] pb-2">
+            <!-- 遊戲標題與關卡 display -->
+            <div class="text-xl sm:text-2xl text-[#6d4c41] tracking-wide flex items-center gap-1">
+                ✏️ <span class="text-[#c1121f]">LV.<span id="levelText">1</span></span>
+            </div>
+            
+            <!-- 即時分數、目標分與生命值 -->
+            <div class="flex gap-2 sm:gap-3 text-xs sm:text-base items-center">
+                <!-- 生命值愛心 (間距拉開、字級適中) -->
+                <div id="livesText" class="text-xs sm:text-sm tracking-normal flex gap-1 items-center">
+                    ❤️❤️❤️❤️❤️
+                </div>
+                <div class="bg-[#f2e8cf] px-2 sm:px-3 py-1 rounded-full border border-[#8d6e63]">
+                    SCORE: <span id="scoreText" class="text-[#c1121f] font-black">0</span>/<span id="targetScoreText" class="text-[#669bbc] font-black">50</span>
+                </div>
+                <!-- 頂部手繪風 Pause 與 Restart 按鈕 -->
+                <button id="pauseHeaderBtn" title="暫停遊戲" class="sketch-btn px-2 sm:px-3 py-1 text-xs sm:text-base font-bold text-[#3c2f2f] cursor-pointer active:scale-95 flex items-center gap-1">
+                    ⏸️
+                </button>
+                <button id="restartHeaderBtn" title="重新開始" class="sketch-btn px-2 sm:px-3 py-1 text-xs sm:text-base font-bold text-[#3c2f2f] cursor-pointer active:scale-95 flex items-center gap-1">
+                    🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- 畫布與手機控制區 (單一畫布區塊) -->
+        <div class="relative w-full aspect-square bg-[#faf6ed] sketch-border overflow-hidden">
+            <canvas id="gameCanvas" class="w-full h-full block touch-none"></canvas>
+
+            <!-- 開始/暫停/結束 覆蓋層 -->
+            <div id="overlay" class="absolute inset-0 bg-[#fbf8ee]/90 backdrop-blur-xs flex flex-col items-center justify-center gap-5 p-6 text-center transition-all duration-300">
+                <h1 id="overlayTitle" class="text-4xl sm:text-5xl font-extrabold text-[#3c2f2f] rotate-[-2deg]">
+                    SNAKE GAME
+                </h1>
+                <p id="overlaySub" class="text-lg sm:text-xl text-[#6b5b4e]">
+                    使用方向鍵 [↑ ↓ ← →] 或<br><span class="text-[#c1121f] font-bold">在畫布上滑動螢幕 (Swipe)</span> 控制移動！
+                </p>
+                <!-- 動態按鈕群組區 -->
+                <div id="overlayBtnGroup" class="flex flex-col sm:flex-row gap-3 w-full max-w-xs justify-center items-center">
+                    <button id="startBtn" class="sketch-btn text-[#3c2f2f] text-2xl font-bold px-8 py-3 cursor-pointer w-full">
+                        START GAME
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 行動裝置方向控盤 -->
+        <div class="w-full max-w-[240px] mt-4 grid grid-cols-3 gap-2 sm:hidden">
+            <div></div>
+            <button id="btnUp" class="sketch-btn p-3 text-xl font-bold text-center">▲</button>
+            <div></div>
+            <button id="btnLeft" class="sketch-btn p-3 text-xl font-bold text-center">◄</button>
+            <button id="btnDown" class="sketch-btn p-3 text-xl font-bold text-center">▼</button>
+            <button id="btnRight" class="sketch-btn p-3 text-xl font-bold text-center">►</button>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="mt-3 text-xs sm:text-sm text-[#7f6c5d] text-center hidden sm:block">
+            鍵盤 [↑/W] 上 | [↓/S] 下 | [←/A] 左 | [→/D] 右
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio API 手繪復古音效 ---
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            // 吃蘋果音效 (清脆手繪啵啵聲)
+            playEat() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            // 撞牆/遊戲結束音效
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            // 通關晉級音效 🎉
+            playLevelUp() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [330, 440, 554, 659];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.08 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.12);
+                });
+            }
+
+            // 新增：吃到金蘋果超級獎勵音效 ✨
+            playGoldPowerup() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // High C Major chord
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.06);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.06 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.15);
+                });
+            }
+
+            // 新增：踩到炸彈爆炸音效 💣
+            playExplosion() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // --- 畫布與全域變數 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreText = document.getElementById('scoreText');
+        const targetScoreText = document.getElementById('targetScoreText');
+        const levelText = document.getElementById('levelText');
+        const livesText = document.getElementById('livesText');
+        const highScoreText = document.getElementById('highScoreText');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const overlayBtnGroup = document.getElementById('overlayBtnGroup');
+        const startBtn = document.getElementById('startBtn');
+        const pauseHeaderBtn = document.getElementById('pauseHeaderBtn');
+        const restartHeaderBtn = document.getElementById('restartHeaderBtn');
+
+        // 網格配置 (20 x 20 網格)
+        const GRID_COUNT = 20;
+        let tileSize = 20;
+
+        // 畫布解析度設置 (維持 400x400 虛擬解析度)
+        const CANVAS_SIZE = 400;
+        canvas.width = CANVAS_SIZE;
+        canvas.height = CANVAS_SIZE;
+        tileSize = CANVAS_SIZE / GRID_COUNT;
+
+        // 遊戲狀態與關卡變數
+        let score = 0;
+        let level = 1;
+        let targetScore = 50;
+        let lives = 5; 
+        let highScore = window.__galleryStorage.getItem('sketch_snake_high') || 0;
+        let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let gameLoopTimer = null;
+        let currentSpeed = 140; 
+        let snake = [];
+        let dir = { x: 1, y: 0 }; // 初始向右移動
+        let nextDir = { x: 1, y: 0 }; // 緩衝方向
+
+        // 食物與特別道具狀態
+        let food = { x: 5, y: 5 };
+        let goldenApple = null; // { x, y, spawnTime, expireTime: 30000ms }
+        let bombs = [];         // 改為陣列支援多顆炸彈：[{ x, y, spawnTime, expireDuration: 45000ms }]
+
+        // --- 生命值 UI 更新 ---
+        function updateLivesUI() {
+            let hearts = '';
+            for (let i = 0; i < lives; i++) {
+                hearts += '❤️ ';
+            }
+            if (lives <= 0) {
+                hearts = '💀';
+            }
+            if (livesText) {
+                livesText.textContent = hearts.trim();
+            }
+        }
+
+        if (highScoreText) highScoreText.textContent = highScore;
+        // --- 隨機食物與特別道具位置生成 ---
+        function generateFood() {
+            let valid = false;
+            while (!valid) {
+                const fx = Math.floor(Math.random() * GRID_COUNT);
+                const fy = Math.floor(Math.random() * GRID_COUNT);
+                
+                // 確保食物不會生長在蛇身上或既存道具上
+                const inSnake = snake.some(segment => segment.x === fx && segment.y === fy);
+                const inGold = goldenApple && goldenApple.x === fx && goldenApple.y === fy;
+                const inBomb = bombs.some(b => b.x === fx && b.y === fy);
+
+                if (!inSnake && !inGold && !inBomb) {
+                    food = { x: fx, y: fy };
+                    valid = true;
+                }
+            }
+        }
+
+        // 嘗試觸發生成道具 (金蘋果/多重炸彈)
+        function spawnSpecialItems() {
+            const now = Date.now();
+
+            // 1. 金蘋果：15% 機率觸發 (若畫面上已有則不重覆生成)
+            if (!goldenApple && Math.random() < 0.15) {
+                let pos = getValidRandomPos();
+                if (pos) {
+                    goldenApple = {
+                        x: pos.x,
+                        y: pos.y,
+                        spawnTime: now,
+                        expireDuration: 30000 // 30 秒倒數
+                    };
+                }
+            }
+
+            // 2. 炸彈機率判斷：掉落 3 顆 (5%)、2 顆 (15%)、1 顆 (25%)
+            const rand = Math.random();
+            let bombCountToSpawn = 0;
+
+            if (rand < 0.05) {
+                bombCountToSpawn = 3; // 5% 機率掉 3 顆
+            } else if (rand < 0.20) {
+                bombCountToSpawn = 2; // 15% 機率掉 2 顆 (0.05 + 0.15 = 0.20)
+            } else if (rand < 0.45) {
+                bombCountToSpawn = 1; // 25% 機率掉 1 顆 (0.20 + 0.25 = 0.45)
+            }
+
+            for (let i = 0; i < bombCountToSpawn; i++) {
+                let pos = getValidRandomPos();
+                if (pos) {
+                    bombs.push({
+                        x: pos.x,
+                        y: pos.y,
+                        spawnTime: now,
+                        expireDuration: 25000 // 25 秒倒數過期 (原本為 45 秒)
+                    });
+                }
+            }
+        }
+
+        // 取得無物件衝突的隨機網格座標
+        function getValidRandomPos() {
+            for (let i = 0; i < 50; i++) {
+                const rx = Math.floor(Math.random() * GRID_COUNT);
+                const ry = Math.floor(Math.random() * GRID_COUNT);
+
+                const inSnake = snake.some(s => s.x === rx && s.y === ry);
+                const inFood = food.x === rx && food.y === ry;
+                const inGold = goldenApple && goldenApple.x === rx && goldenApple.y === ry;
+                const inBomb = bombs.some(b => b.x === rx && b.y === ry);
+
+                if (!inSnake && !inFood && !inGold && !inBomb) {
+                    return { x: rx, y: ry };
+                }
+            }
+            return null;
+        }
+
+        // 檢查並處理道具計時與過期
+        function updateItemTimers() {
+            const now = Date.now();
+
+            // 金蘋果 30 秒過期檢查
+            if (goldenApple && (now - goldenApple.spawnTime >= goldenApple.expireDuration)) {
+                goldenApple = null;
+            }
+
+            // 炸彈 25 秒過期檢查 (過濾掉過期的炸彈)
+            bombs = bombs.filter(b => now - b.spawnTime < b.expireDuration);
+        }
+
+        // --- 控制輸入監聽 ---
+        function changeDirection(newX, newY) {
+            // 防止 180 度直接倒退
+            if (newX !== -dir.x || newY !== -dir.y) {
+                nextDir = { x: newX, y: newY };
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            // 鍵盤 P 鍵或 Space 鍵觸發暫停
+            if ((e.key === 'p' || e.key === 'P' || e.key === ' ') && (gameState === 'PLAYING' || gameState === 'PAUSED')) {
+                togglePause();
+                return;
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    changeDirection(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    changeDirection(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    changeDirection(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    changeDirection(1, 0);
+                    break;
+            }
+        });
+
+        // 手機觸控按鈕綁定
+        document.getElementById('btnUp').onclick = () => changeDirection(0, -1);
+        document.getElementById('btnDown').onclick = () => changeDirection(0, 1);
+        document.getElementById('btnLeft').onclick = () => changeDirection(-1, 0);
+        document.getElementById('btnRight').onclick = () => changeDirection(1, 0);
+
+        // --- 手機滑動 (Touch Swipe) 監聽機制 ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const minSwipeDistance = 25; // 觸控滑動最小判斷距離 (px)
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (gameState !== 'PLAYING') return;
+            if (!e.changedTouches || e.changedTouches.length === 0) return;
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            // 當滑動距離大於最小閾值時觸發方向切換
+            if (Math.abs(dx) > minSwipeDistance || Math.abs(dy) > minSwipeDistance) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // 水平滑動 (Horizontal Swipe)
+                    if (dx > 0) {
+                        changeDirection(1, 0);  // 右 (Right)
+                    } else {
+                        changeDirection(-1, 0); // 左 (Left)
+                    }
+                } else {
+                    // 垂直滑動 (Vertical Swipe)
+                    if (dy > 0) {
+                        changeDirection(0, 1);  // 下 (Down)
+                    } else {
+                        changeDirection(0, -1); // 上 (Up)
+                    }
+                }
+            }
+        }, { passive: true });
+
+        // --- 遊戲邏輯更新 ---
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            dir = nextDir;
+            updateItemTimers();
+
+            // 計算新的頭部位置
+            const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+            // 1. 撞牆檢測
+            if (head.x < 0 || head.x >= GRID_COUNT || head.y < 0 || head.y >= GRID_COUNT) {
+                handleHurt(1);
+                return;
+            }
+
+            // 2. 撞擊自身檢測
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    handleHurt(1);
+                    return;
+                }
+            }
+
+            // 3. 觸碰炸彈檢測 💣 (扣兩顆心)
+            const bombIndex = bombs.findIndex(b => head.x === b.x && head.y === b.y);
+            if (bombIndex !== -1) {
+                sound.playExplosion();
+                bombs.splice(bombIndex, 1); // 被踩到的炸彈消失
+                handleHurt(2); // 扣 2 滴血！
+                return;
+            }
+
+            // 將新頭部推入蛇身
+            snake.unshift(head);
+
+            // 4. 吃到金蘋果檢測 🌟 (分數加滿直接通關)
+            if (goldenApple && head.x === goldenApple.x && head.y === goldenApple.y) {
+                goldenApple = null;
+                sound.playGoldPowerup();
+                score = targetScore; // 將分數直接加滿至目標分
+                scoreText.textContent = score;
+
+                levelUp();
+                return;
+            }
+
+            // 5. 吃到普通紅蘋果檢測 🍎
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreText.textContent = score;
+                sound.playEat();
+
+                // 檢查是否達成分數目標通關
+                if (score >= targetScore) {
+                    levelUp();
+                    return;
+                }
+
+                generateFood();
+                spawnSpecialItems(); // 吃到蘋果時有機率觸發特別道具掉落
+            } else {
+                // 沒有吃到蘋果，移除尾巴
+                snake.pop();
+            }
+        }
+
+        // 扣血受傷處理機制 (可傳入 damage 傷害值)
+        function handleHurt(damage = 1) {
+            if (damage === 1) sound.playHit();
+            lives -= damage;
+            updateLivesUI();
+
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                // 扣血但生命值尚未歸零：重置蛇位置繼續當前關卡
+                resetSnakePosition();
+            }
+        }
+
+        // 重置蛇的位置（受傷後原地重生）
+        function resetSnakePosition() {
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            dir = { x: 1, y: 0 };
+            nextDir = { x: 1, y: 0 };
+            goldenApple = null;
+            bombs = [];
+            generateFood();
+        }
+
+        // 關卡晉級
+        function levelUp() {
+            sound.playLevelUp();
+            level++;
+            targetScore = level * 50; // 每關增加 50 分目標
+
+            // 每關開始前，血量自動加 2 顆心 (最高上限 5 顆)
+            lives = Math.min(5, lives + 2);
+            updateLivesUI();
+
+            levelText.textContent = level;
+            targetScoreText.textContent = targetScore;
+
+            // 隨關卡增加遞減循環間隔時間 (難度提升)
+            currentSpeed = Math.max(60, 140 - (level - 1) * 12);
+
+            resetSnakePosition();
+
+            // 重新設置計時器
+            if (gameLoopTimer) clearInterval(gameLoopTimer);
+            gameLoopTimer = setInterval(() => {
+                update();
+                draw();
+            }, currentSpeed);
+        }
+
+        // 繪製手繪風蛇 🐍 (可愛方形顆粒風格)
+        function drawHandDrawnSnake() {
+            ctx.save();
+            ctx.strokeStyle = '#3c2f2f';
+            ctx.lineWidth = 2;
+
+            for (let i = snake.length - 1; i >= 0; i--) {
+                const seg = snake[i];
+                const x = seg.x * tileSize + 1;
+                const y = seg.y * tileSize + 1;
+                const size = tileSize - 2;
+
+                if (i === 0) {
+                    // 可愛方形蛇頭
+                    ctx.fillStyle = '#2d6a4f';
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, size, size, 5); // 微圓角方形
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // 蛇頭可愛雙眼 (根據移動方向微調眼睛位置)
+                    ctx.fillStyle = '#ffffff';
+                    let eyeX1 = x + 4, eyeY1 = y + 4;
+                    let eyeX2 = x + size - 7, eyeY2 = y + 4;
+
+                    if (dir.x === 1) { // 向右
+                        eyeX1 = x + size - 8; eyeY1 = y + 3;
+                        eyeX2 = x + size - 8; eyeY2 = y + size - 7;
+                    } else if (dir.x === -1) { // 向左
+                        eyeX1 = x + 3; eyeY1 = y + 3;
+                        eyeX2 = x + 3; eyeY2 = y + size - 7;
+                    } else if (dir.y === 1) { // 向下
+                        eyeX1 = x + 3; eyeY1 = y + size - 8;
+                        eyeX2 = x + size - 7; eyeY2 = y + size - 8;
+                    }
+
+                    // 眼白
+                    ctx.beginPath();
+                    ctx.arc(eyeX1, eyeY1, 3, 0, Math.PI * 2);
+                    ctx.arc(eyeX2, eyeY2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 眼珠 (黑色小點)
+                    ctx.fillStyle = '#3c2f2f';
+                    ctx.beginPath();
+                    ctx.arc(eyeX1, eyeY1, 1.5, 0, Math.PI * 2);
+                    ctx.arc(eyeX2, eyeY2, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 可愛方形蛇身 (淺綠色系：淺草綠與明亮淺綠交替)
+                    ctx.fillStyle = i % 2 === 0 ? '#95d5b2' : '#b7e4c7';
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, size, size, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+
+        // 繪製手繪風紅蘋果 🍎 (方形可愛風)
+        function drawHandDrawnApple(gx, gy) {
+            const x = gx * tileSize + 2;
+            const y = gy * tileSize + 2;
+            const size = tileSize - 4;
+
+            ctx.save();
+            ctx.fillStyle = '#d90429';
+            ctx.strokeStyle = '#3c2f2f';
+            ctx.lineWidth = 2;
+
+            // 方形蘋果本體
+            ctx.beginPath();
+            ctx.roundRect(x, y + 1, size, size - 1, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // 方形蘋果高光點
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x + 3, y + 3, 4, 4);
+
+            // 葉子
+            ctx.fillStyle = '#52b788';
+            ctx.beginPath();
+            ctx.arc(x + size / 2 + 2, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 繪製手繪風金蘋果 🌟 (方形可愛風)
+        function drawHandDrawnGoldApple(item) {
+            const x = item.x * tileSize + 2;
+            const y = item.y * tileSize + 2;
+            const size = tileSize - 4;
+
+            ctx.save();
+            ctx.fillStyle = '#ffb703';
+            ctx.strokeStyle = '#3c2f2f';
+            ctx.lineWidth = 2;
+
+            ctx.shadowColor = '#fb8500';
+            ctx.shadowBlur = 8;
+
+            ctx.beginPath();
+            ctx.roundRect(x, y + 1, size, size - 1, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x + 3, y + 3, 4, 4);
+
+            // 葉子
+            ctx.fillStyle = '#80b918';
+            ctx.beginPath();
+            ctx.arc(x + size / 2 + 2, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 繪製手繪風炸彈 💣 (方形可愛風)
+        function drawHandDrawnBomb(item) {
+            const x = item.x * tileSize + 2;
+            const y = item.y * tileSize + 2;
+            const size = tileSize - 4;
+
+            ctx.save();
+            ctx.fillStyle = '#2b2d42';
+            ctx.strokeStyle = '#3c2f2f';
+            ctx.lineWidth = 2;
+
+            // 方形炸彈
+            ctx.beginPath();
+            ctx.roundRect(x, y + 2, size, size - 2, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // 引信與火花
+            ctx.strokeStyle = '#d90429';
+            ctx.beginPath();
+            ctx.moveTo(x + size / 2, y + 2);
+            ctx.lineTo(x + size / 2 + 3, y - 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffb703';
+            ctx.fillRect(x + size / 2 + 2, y - 4, 3, 3);
+
+            ctx.restore();
+        }
+
+        // 渲染整體畫面
+        function draw() {
+            // 背景清空 (淡綠柔和調性)
+            ctx.fillStyle = '#f4f7f0';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // 繪製底圖淺色手繪網格線
+            ctx.strokeStyle = '#e1e8d5';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= GRID_COUNT; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * tileSize, 0);
+                ctx.lineTo(i * tileSize, CANVAS_SIZE);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * tileSize);
+                ctx.lineTo(CANVAS_SIZE, i * tileSize);
+                ctx.stroke();
+            }
+
+            // 繪製食物與特別道具
+            drawHandDrawnApple(food.x, food.y);
+            if (goldenApple) drawHandDrawnGoldApple(goldenApple);
+            bombs.forEach(b => drawHandDrawnBomb(b));
+
+            drawHandDrawnSnake();
+        }
+
+        // --- 繪製蠟筆塗鴉風格物件 (Crayon Doodle Style) ---
+
+        // 輔助函式：繪製具蠟筆顆粒質感與不規則筆觸的圓角矩形
+        function drawCrayonBox(x, y, w, h, radius, fillColor, strokeColor) {
+            ctx.save();
+            
+            // 主體著色
+            ctx.fillStyle = fillColor;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
+            ctx.fill();
+
+            // 蠟筆粗顆粒感塗鴉細節
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 6; i++) {
+                const rx = x + Math.random() * (w - 4) + 2;
+                const ry = y + Math.random() * (h - 4) + 2;
+                ctx.fillRect(rx, ry, 2, 2);
+            }
+
+            // 蠟筆邊框：淺咖啡色柔和筆觸
+            ctx.strokeStyle = strokeColor || '#8d6e63';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.roundRect(x + (Math.random() - 0.5) * 1.5, y + (Math.random() - 0.5) * 1.5, w, h, radius);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 1. 繪製蠟筆塗鴉風蛇 🐍 (亮綠色主題)
+        function drawHandDrawnSnake() {
+            for (let i = snake.length - 1; i >= 0; i--) {
+                const seg = snake[i];
+                const x = seg.x * tileSize + 1;
+                const y = seg.y * tileSize + 1;
+                const size = tileSize - 2;
+
+                if (i === 0) {
+                    // 方形蠟筆蛇頭 (鮮豔深亮綠)
+                    drawCrayonBox(x, y, size, size, 6, '#008000', '#705446');
+
+                    // 蛇頭塗鴉雙眼
+                    ctx.save();
+                    ctx.fillStyle = '#ffffff';
+                    let eyeX1 = x + 4, eyeY1 = y + 4;
+                    let eyeX2 = x + size - 7, eyeY2 = y + 4;
+
+                    if (dir.x === 1) { // 向右
+                        eyeX1 = x + size - 8; eyeY1 = y + 3;
+                        eyeX2 = x + size - 8; eyeY2 = y + size - 7;
+                    } else if (dir.x === -1) { // 向左
+                        eyeX1 = x + 3; eyeY1 = y + 3;
+                        eyeX2 = x + 3; eyeY2 = y + size - 7;
+                    } else if (dir.y === 1) { // 向下
+                        eyeX1 = x + 3; eyeY1 = y + size - 8;
+                        eyeX2 = x + size - 7; eyeY2 = y + size - 8;
+                    }
+
+                    // 眼白
+                    ctx.beginPath();
+                    ctx.arc(eyeX1, eyeY1, 3.2, 0, Math.PI * 2);
+                    ctx.arc(eyeX2, eyeY2, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 眼珠 (淺咖啡色小點)
+                    ctx.fillStyle = '#705446';
+                    ctx.beginPath();
+                    ctx.arc(eyeX1, eyeY1, 1.6, 0, Math.PI * 2);
+                    ctx.arc(eyeX2, eyeY2, 1.6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    // 方形蠟筆蛇身 (亮綠色雙色交替塗鴉：鮮亮綠 & 翡翠嫩綠)
+                    const bodyColor = i % 2 === 0 ? '#38b000' : '#70e000';
+                    drawCrayonBox(x, y, size, size, 5, bodyColor, '#705446');
+                }
+            }
+        }
+
+        // 2. 繪製蠟筆塗鴉風紅蘋果 🍎
+        function drawHandDrawnApple(gx, gy) {
+            const x = gx * tileSize + 2;
+            const y = gy * tileSize + 2;
+            const size = tileSize - 4;
+
+            // 蠟筆珊瑚紅蘋果
+            drawCrayonBox(x, y + 1, size, size - 1, 5, '#bc4749', '#705446');
+
+            ctx.save();
+            // 蠟筆黃色/白色亮斑
+            ctx.fillStyle = '#fdf0d5';
+            ctx.beginPath();
+            ctx.arc(x + 5, y + 5, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 蘋果亮綠蠟筆葉子
+            ctx.fillStyle = '#70e000';
+            ctx.strokeStyle = '#705446';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(x + size / 2 + 2, y, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 3. 繪製蠟筆塗鴉風金蘋果 🌟
+        function drawHandDrawnGoldApple(item) {
+            const x = item.x * tileSize + 2;
+            const y = item.y * tileSize + 2;
+            const size = tileSize - 4;
+
+            // 蠟筆蜂蜜黃蘋果
+            drawCrayonBox(x, y + 1, size, size - 1, 5, '#ffb703', '#705446');
+
+            ctx.save();
+            // 高光
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x + 5, y + 5, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 葉子
+            ctx.fillStyle = '#38b000';
+            ctx.strokeStyle = '#705446';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(x + size / 2 + 2, y, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 4. 繪製蠟筆塗鴉風炸彈 💣
+        function drawHandDrawnBomb(item) {
+            const x = item.x * tileSize + 2;
+            const y = item.y * tileSize + 2;
+            const size = tileSize - 4;
+
+            // 蠟筆石墨黑炸彈
+            drawCrayonBox(x, y + 2, size, size - 2, 5, '#2b3a41', '#705446');
+
+            ctx.save();
+            // 引信與火花塗鴉
+            ctx.strokeStyle = '#e76f51';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + size / 2, y + 2);
+            ctx.lineTo(x + size / 2 + 3, y - 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffb703';
+            ctx.fillRect(x + size / 2 + 1, y - 5, 4, 4);
+            ctx.restore();
+        }
+
+        // 渲染整體畫面
+        function draw() {
+            // 背景清空 (溫暖繪圖紙質感)
+            ctx.fillStyle = '#fbf8ee';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // 繪製底圖柔和淺咖啡色網格線
+            ctx.strokeStyle = '#e8dfd8';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= GRID_COUNT; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * tileSize, 0);
+                ctx.lineTo(i * tileSize, CANVAS_SIZE);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * tileSize);
+                ctx.lineTo(CANVAS_SIZE, i * tileSize);
+                ctx.stroke();
+            }
+
+            // 繪製食物與特別道具
+            drawHandDrawnApple(food.x, food.y);
+            if (goldenApple) drawHandDrawnGoldApple(goldenApple);
+            bombs.forEach(b => drawHandDrawnBomb(b));
+
+            drawHandDrawnSnake();
+        }
+
+        // --- 遊戲狀態控制 ---
+        function startGame() {
+            sound.init();
+            score = 0;
+            level = 1;
+            targetScore = 50;
+            lives = 5; // 初始化 5 滴血
+            currentSpeed = 140;
+
+            scoreText.textContent = score;
+            targetScoreText.textContent = targetScore;
+            levelText.textContent = level;
+            updateLivesUI();
+
+            resetSnakePosition();
+            gameState = 'PLAYING';
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+
+            if (gameLoopTimer) clearInterval(gameLoopTimer);
+            gameLoopTimer = setInterval(() => {
+                update();
+                draw();
+            }, currentSpeed);
+        }
+
+        // 開啟/關閉暫停狀態
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                clearInterval(gameLoopTimer);
+
+                overlayTitle.textContent = 'PAUSED';
+                overlayTitle.className = 'text-4xl sm:text-5xl font-extrabold text-[#3c2f2f] rotate-[-1deg]';
+                overlaySub.innerHTML = `遊戲暫停中...<br>目前分數：<span class="text-[#c1121f] font-bold">${score}</span> / 目標：<span class="text-[#669bbc] font-bold">${targetScore}</span>`;
+                
+                overlayBtnGroup.innerHTML = `
+                    <button id="resumeBtn" class="sketch-btn text-[#3c2f2f] text-xl font-bold px-6 py-2 cursor-pointer w-full">RESUME</button>
+                    <button id="restartPauseBtn" class="sketch-btn text-[#3c2f2f] text-xl font-bold px-6 py-2 cursor-pointer w-full">RESTART</button>
+                `;
+
+                document.getElementById('resumeBtn').onclick = () => {
+                    gameState = 'PLAYING';
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                    gameLoopTimer = setInterval(() => {
+                        update();
+                        draw();
+                    }, currentSpeed);
+                };
+                document.getElementById('restartPauseBtn').onclick = startGame;
+
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                gameLoopTimer = setInterval(() => {
+                    update();
+                    draw();
+                }, currentSpeed);
+            }
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            clearInterval(gameLoopTimer);
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('sketch_snake_high', highScore);
+                if (highScoreText) highScoreText.textContent = highScore;
+            }
+
+            overlayTitle.textContent = 'GAME OVER';
+            overlayTitle.className = 'text-4xl sm:text-5xl font-extrabold text-[#c1121f] rotate-[1deg]';
+            overlaySub.innerHTML = `停留關卡：LV.<span class="text-[#c1121f] font-bold text-xl">${level}</span><br>最終得分：<span class="text-[#c1121f] font-bold text-2xl">${score}</span> 分`;
+            
+            overlayBtnGroup.innerHTML = `
+                <button id="startBtn" class="sketch-btn text-[#3c2f2f] text-2xl font-bold px-8 py-3 cursor-pointer w-full">TRY AGAIN</button>
+            `;
+            document.getElementById('startBtn').onclick = startGame;
+
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        // 頂部選單按鈕事件綁定
+        pauseHeaderBtn.addEventListener('click', () => {
+            if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                togglePause();
+            }
+        });
+
+        restartHeaderBtn.addEventListener('click', () => {
+            if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                if (confirm('確定要重新開始遊戲嗎？當前關卡與分數將會重置！')) {
+                    startGame();
+                }
+            } else {
+                startGame();
+            }
+        });
+
+        // 初始化繪製背景
+        window.onload = () => {
+            draw();
+            updateLivesUI();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

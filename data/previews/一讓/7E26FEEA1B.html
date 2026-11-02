@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E8%AE%93/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>物理老師與作業大作戰 - Physics Revenge</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Noto Sans TC', 'Chakra Petch', sans-serif;
+            background: #111827;
+            color: #f3f4f6;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        .chalkboard-bg {
+            background-color: #1b2e21;
+            background-image: 
+                radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 20px 20px, 40px 40px;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .weapon-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .weapon-btn.active {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.25);
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        /* Floating notification effect */
+        .pop-dmg {
+            position: absolute;
+            pointer-events: none;
+            animation: floatDamage 0.9s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            font-weight: 900;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+        @keyframes floatDamage {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.6) rotate(-5deg); }
+            40% { transform: translate(-50%, -80%) scale(1.3) rotate(5deg); }
+            100% { opacity: 0; transform: translate(-50%, -130%) scale(0.9) rotate(0deg); }
+        }
+        .shake-screen {
+            animation: screenShake 0.25s ease-in-out;
+        }
+        @keyframes screenShake {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 6px); }
+            40% { transform: translate(8px, -6px); }
+            60% { transform: translate(-5px, -4px); }
+            80% { transform: translate(5px, 4px); }
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body id="gameBody" class="flex flex-col h-screen w-screen overflow-hidden select-none chalkboard-bg">
+
+    <!-- Top UI HUD Bar -->
+    <header class="absolute top-0 left-0 w-full z-20 p-3 md:p-4 flex justify-between items-center pointer-events-none">
+        <div class="pointer-events-auto flex items-center space-x-3 glass-panel px-4 py-2 rounded-2xl shadow-xl">
+            <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-900 shadow-lg font-black text-xl">
+                <i class="fas fa-atom animate-spin" style="animation-duration: 8s;"></i>
+            </div>
+            <div>
+                <h1 class="text-base md:text-lg font-black tracking-wider text-amber-300">
+                    物理老師與作業大作戰
+                </h1>
+                <p class="text-xs text-slate-300">消滅考卷！無限作業下不停，給物理老師一點「物理震撼」</p>
+            </div>
+        </div>
+
+        <!-- Score & Fever Gauges -->
+        <div class="pointer-events-auto flex items-center gap-3">
+            <!-- Homework Overload Gauge (New) -->
+            <div class="hidden sm:flex flex-col glass-panel px-3 py-1.5 rounded-2xl w-36 md:w-44 border-rose-500/30">
+                <div class="flex justify-between text-xs font-bold text-rose-400 mb-1">
+                    <span><i class="fas fa-file-circle-exclamation mr-1"></i>作業過載</span>
+                    <span id="homeworkCountText" class="text-white">10 / 15</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+                    <div id="homeworkBar" class="bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-600 h-full w-3/12 transition-all duration-200"></div>
+                </div>
+            </div>
+
+            <!-- Fever Meter -->
+            <div class="hidden sm:flex flex-col glass-panel px-3 py-1.5 rounded-2xl w-36 md:w-44">
+                <i class="fas fa-trophy text-amber-400 text-lg"></i>
+                <div class="flex flex-col leading-tight">
+                    <span class="text-[10px] text-slate-400 font-normal">紓壓得分</span>
+                    <span id="scoreText" class="text-white text-base md:text-lg">0</span>
+                </div>
+            </div>
+
+            <!-- Sound Toggle & Reset -->
+            <button id="soundBtn" class="pointer-events-auto glass-panel p-2.5 rounded-2xl text-slate-200 hover:text-white transition hover:bg-slate-800/80">
+                <i id="soundIcon" class="fas fa-volume-up text-lg text-emerald-400"></i>
+            </button>
+            
+            <!-- Upload Custom Photo Button -->
+            <label class="pointer-events-auto glass-panel px-3 py-2.5 rounded-2xl text-slate-200 hover:text-white transition hover:bg-slate-800/80 flex items-center gap-1.5 text-xs font-bold cursor-pointer">
+                <i class="fas fa-camera text-amber-400"></i>
+                <span class="hidden md:inline">更換圖片</span>
+                <input type="file" id="photoUploadInput" accept="image/*" class="hidden">
+            </label>
+
+            <button id="resetStackBtn" class="pointer-events-auto glass-panel px-3 py-2.5 rounded-2xl text-slate-200 hover:text-white transition hover:bg-slate-800/80 flex items-center gap-1.5 text-xs font-bold">
+                <i class="fas fa-rotate-right text-amber-400"></i>
+                <span class="hidden md:inline">重置作業堆</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas Game Area -->
+    <main class="relative flex-1 w-full h-full overflow-hidden">
+        <canvas id="gameCanvas" class="w-full h-full absolute inset-0 cursor-crosshair"></canvas>
+
+        <!-- Blackboard Chalk Overlay Text / Formulas -->
+        <div class="absolute top-20 left-6 pointer-events-none opacity-20 text-emerald-200 font-mono text-xs md:text-sm leading-relaxed hidden sm:block">
+            <p>F = m · a</p>
+            <p>E = m · c²</p>
+            <p>v = u + a·t</p>
+            <p>p = m · v</p>
+            <p>W = F · d · cos(θ)</p>
+        </div>
+        <div class="absolute top-20 right-6 pointer-events-none opacity-20 text-emerald-200 font-mono text-xs md:text-sm leading-relaxed text-right hidden sm:block">
+            <p>100分 -> 0分！</p>
+            <p>期末物理暴亡考卷</p>
+            <p>動量不守恆警告！</p>
+            <p>摩擦力 f = μN</p>
+        </div>
+    </main>
+
+    <!-- Bottom Weapon Selection Bar -->
+    <nav class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 glass-panel p-2 rounded-3xl flex items-center space-x-1 md:space-x-2 max-w-[96vw] overflow-x-auto shadow-2xl">
+        <button onclick="selectWeapon('apple')" id="wpn-apple" class="weapon-btn active px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 text-xs md:text-sm font-black text-slate-200 border border-slate-700">
+            <span class="text-xl">🍎</span>
+            <div class="text-left leading-none">
+                <p class="font-bold">牛頓蘋果</p>
+                <p class="text-[9px] text-amber-300/80 font-normal">重力震波</p>
+            </div>
+        </button>
+
+        <button onclick="selectWeapon('chalk')" id="wpn-chalk" class="weapon-btn px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 text-xs md:text-sm font-black text-slate-200 border border-slate-700">
+            <span class="text-xl">✏️</span>
+            <div class="text-left leading-none">
+                <p class="font-bold">粉筆機關槍</p>
+                <p class="text-[9px] text-amber-300/80 font-normal">極速掃射</p>
+            </div>
+        </button>
+
+        <button onclick="selectWeapon('plane')" id="wpn-plane" class="weapon-btn px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 text-xs md:text-sm font-black text-slate-200 border border-slate-700">
+            <span class="text-xl">✈️</span>
+            <div class="text-left leading-none">
+                <p class="font-bold">紙飛機飛彈</p>
+                <p class="text-[9px] text-amber-300/80 font-normal">貫穿破甲</p>
+            </div>
+        </button>
+
+        <button onclick="selectWeapon('tesla')" id="wpn-tesla" class="weapon-btn px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 text-xs md:text-sm font-black text-slate-200 border border-slate-700">
+            <span class="text-xl">⚡</span>
+            <div class="text-left leading-none">
+                <p class="font-bold">特斯拉閃電</p>
+                <p class="text-[9px] text-amber-300/80 font-normal">高壓灰飛</p>
+            </div>
+        </button>
+
+        <button onclick="selectWeapon('magnet')" id="wpn-magnet" class="weapon-btn px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 text-xs md:text-sm font-black text-slate-200 border border-slate-700">
+            <span class="text-xl">🧲</span>
+            <div class="text-left leading-none">
+                <p class="font-bold">磁力黑洞</p>
+                <p class="text-[9px] text-amber-300/80 font-normal">強吸引爆破</p>
+            </div>
+        </button>
+    </nav>
+
+    <!-- Start Game Modal Overlay -->
+    <div id="startModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl text-center border border-amber-500/40 shadow-2xl">
+            <div class="relative w-28 h-28 mx-auto mb-3 group cursor-pointer">
+                <div class="w-full h-full rounded-2xl bg-amber-500/20 border-2 border-amber-500/60 shadow-xl overflow-hidden flex items-center justify-center relative">
+                    <img id="modalTeacherPreview" src="" alt="Teacher Preview" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-amber-300 text-xs font-bold gap-1 p-1">
+                        <i class="fas fa-camera text-xl"></i>
+                        <span>點擊換圖</span>
+                    </div>
+                </div>
+                <label for="startPhotoUploadInput" class="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-lg hover:scale-110 transition cursor-pointer">
+                    <i class="fas fa-camera text-sm"></i>
+                </label>
+                <input type="file" id="startPhotoUploadInput" accept="image/*" class="hidden">
+            </div>
+            
+            <h2 class="text-2xl md:text-3xl font-black text-amber-300 mb-1">物理老師與作業大作戰</h2>
+            <p class="text-xs text-amber-400/90 font-medium mb-4"><i class="fas fa-image mr-1"></i>已載入預設照片，可以直接開始遊戲！</p>
+
+            <div class="bg-slate-900/80 rounded-2xl p-4 mb-5 text-left space-y-2 border border-slate-800 text-xs md:text-sm">
+                <div class="text-amber-400 font-bold mb-1"><i class="fas fa-gamepad mr-2"></i>遊戲說明：</div>
+                <p class="text-slate-300">🍎 點擊畫面投擲武器消滅作業考卷。</p>
+                <p class="text-slate-300">⚡ 善用 5 種武器（蘋果、粉筆、紙飛機、電擊、黑洞）。</p>
+                <p class="text-slate-300">⚠️ 千萬別讓作業堆積超過 <span class="text-rose-400 font-bold">15 份</span>，否則學分直接「當掉」！</p>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <label for="startPhotoUploadInput" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs border border-amber-500/30 transition cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fas fa-upload"></i>更換照片 (選填)
+                </label>
+                <button onclick="startGame()" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-slate-950 font-black text-lg shadow-xl hover:brightness-110 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fas fa-play text-xl"></i>開始遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal Overlay -->
+    <div id="gameOverModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl text-center border border-rose-500/40 shadow-2xl animate-bounce-in">
+            <div class="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/50 text-rose-400 text-4xl animate-pulse">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            
+            <h2 class="text-2xl md:text-3xl font-black text-rose-400 mb-1">物理學分「當掉」！</h2>
+            <p class="text-xs md:text-sm text-slate-300 mb-6">作業堆積過多！物理老師已被考卷淹沒，本學期學分確定沒救了！</p>
+
+            <div class="bg-slate-900/80 rounded-2xl p-4 mb-6 text-left space-y-3 border border-slate-800">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400"><i class="fas fa-trophy text-amber-400 mr-2"></i>最終紓壓得分</span>
+                    <span id="finalScore" class="font-extrabold text-amber-300 text-lg">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400"><i class="fas fa-fire text-rose-400 mr-2"></i>毀滅考卷數量</span>
+                    <span id="destroyedCount" class="font-extrabold text-white text-base">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm pt-2 border-t border-slate-800">
+                    <span class="text-slate-400"><i class="fas fa-award text-purple-400 mr-2"></i>物理等級評價</span>
+                    <span id="evalRank" class="font-bold text-emerald-400">補考預備軍</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-black text-base shadow-lg hover:brightness-110 active:scale-95 transition">
+                <i class="fas fa-rotate-right mr-2"></i>重新修課（再試一次）
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Synthesizer using Web Audio API for rich retro game SFX
+        class RetroSound {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playHitSound(freq = 220, type = 'sine', duration = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + duration);
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            playExplosion() {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const bufferSize = this.ctx.sampleRate * 0.25;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.25);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start();
+                } catch(e) {}
+            }
+
+            playZap() {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(150, this.ctx.currentTime + 0.12);
+
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch(e) {}
+            }
+
+            playChalkFire() {
+                this.playHitSound(600 + Math.random() * 300, 'square', 0.05);
+            }
+        }
+
+        const audio = new RetroSound();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreText = document.getElementById('scoreText');
+        const feverBar = document.getElementById('feverBar');
+        const feverText = document.getElementById('feverText');
+
+        // Full Teacher Photo Image & SVG Data Replica of IMG_9668.jpeg
+        const teacherHeadImg = new Image();
+        const teacherPhotoSVG = `data:image/svg+xml;utf8,` + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+          <rect width="300" height="300" fill="#d8dcd6"/>
+          <g fill="#475569" opacity="0.35" font-family="'Noto Sans TC', sans-serif" font-size="22" font-weight="bold">
+            <text x="210" y="35">彈</text>
+            <text x="250" y="65">地</text>
+            <text x="205" y="95">地</text>
+            <text x="250" y="125">國</text>
+            <text x="205" y="155">擺</text>
+            <text x="250" y="185">彈</text>
+            <text x="205" y="215">靜</text>
+            <text x="250" y="245">理</text>
+            <text x="25" y="45">招</text>
+            <text x="75" y="35">考</text>
+            <text x="125" y="28">質</text>
+            <text x="165" y="38">量</text>
+          </g>
+          <path d="M 20,300 L 20,250 Q 80,225 150,225 Q 220,225 280,250 L 280,300 Z" fill="#f8fafc"/>
+          <path d="M 105,228 L 150,265 L 195,228 L 170,225 L 150,240 L 130,225 Z" fill="#cbd5e1"/>
+          <path d="M 115,215 Q 150,230 185,215 L 185,180 L 115,180 Z" fill="#d4a389"/>
+          <ellipse cx="150" cy="125" rx="72" ry="80" fill="#d4a389"/>
+          <ellipse cx="80" cy="135" rx="11" ry="17" fill="#c29177"/>
+          <path d="M 68,130 Q 60,65 110,32 Q 160,20 215,40 Q 235,75 228,135 Q 212,75 178,45 Q 128,40 78,85 Z" fill="#1c1917"/>
+          <rect x="68" y="72" width="164" height="114" fill="#363638" rx="4"/>
+          <text x="150" y="146" font-family="'Noto Sans TC', sans-serif" font-size="52" font-weight="900" text-anchor="middle" fill="#ffffff" stroke="#000000" stroke-width="6" paint-order="stroke fill">帥哥</text>
+        </svg>`);
+        teacherHeadImg.onload = () => {
+            const modalPreview = document.getElementById('modalTeacherPreview');
+            if (modalPreview) modalPreview.src = teacherHeadImg.src;
+        };
+        teacherHeadImg.onerror = () => {
+            teacherHeadImg.onerror = null;
+            teacherHeadImg.src = teacherPhotoSVG;
+        };
+        teacherHeadImg.src = 'IMG_9668.jpeg';
+
+        let score = 0;
+        let fever = 0;
+        let isFeverMode = false;
+        let isGameOver = false;
+        let isGameStarted = false;
+        let destroyedPaperCount = 0;
+        const MAX_HOMEWORK = 15; // 當作業數達到 15 份時當掉！
+
+        let currentWeapon = 'apple';
+        let paperSpawnTimer = 0;
+        let paperCounter = 21;
+
+        // Physics Teacher Object
+        const teacher = {
+            x: 0,
+            y: 0,
+            baseX: 0,
+            baseY: 0,
+            vx: 0,
+            vy: 0,
+            width: 110,
+            height: 180,
+            recoilAngle: 0,
+            vAngle: 0,
+            hurtTimer: 0,
+            expression: 'normal', // normal, shocked, dizzy
+            speech: '',
+            speechTimer: 0
+        };
+
+        const TEACHER_SPEECHES = [
+            "這不符合能量守恆！",
+            "動量守恆定律啊！",
+            "這題考卷不採計！",
+            "萬有引力太強啦！",
+            "零分！通通零分！",
+            "摩擦力...摩擦力呢！？",
+            "作業要交啊啊啊！"
+        ];
+
+        // Homework Stacks & Papers
+        let homeworkBlocks = [];
+        let particles = [];
+        let projectiles = [];
+
+        function addScore(pts) {
+            score += pts;
+            if (scoreText) scoreText.textContent = score;
+            fever += pts * 0.05;
+            if (feverBar) feverBar.style.width = `${Math.min(100, fever)}%`;
+            if (feverText) feverText.textContent = `${Math.min(100, Math.floor(fever))}%`;
+            if (fever >= 100 && !isFeverMode) {
+                activateFeverMode();
+            }
+        }
+
+        function hurtTeacher(dmg = 10, speech = null) {
+            teacher.hurtTimer = 20;
+            teacher.expression = 'shocked';
+            teacher.recoilAngle = (Math.random() - 0.5) * 0.4;
+            teacher.vx += (Math.random() - 0.5) * 15;
+            teacher.vy -= Math.random() * 10;
+
+            addScore(dmg * 10);
+            triggerScreenShake();
+
+            if (speech) {
+                teacher.speech = speech;
+                teacher.speechTimer = 60;
+            } else if (Math.random() < 0.4) {
+                teacher.speech = TEACHER_SPEECHES[Math.floor(Math.random() * TEACHER_SPEECHES.length)];
+                teacher.speechTimer = 60;
+            }
+        }
+
+        function initLayout() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Teacher Position (Centered on screen)
+            teacher.baseX = canvas.width * 0.5;
+            teacher.baseY = canvas.height * 0.52;
+            teacher.x = teacher.baseX;
+            teacher.y = teacher.baseY;
+
+            // Build Stacks of Physics Homework Papers around Teacher
+            initHomeworkStacks();
+        }
+
+        function initHomeworkStacks() {
+            homeworkBlocks = [];
+            paperCounter = 1;
+            const stackWidth = 70;
+            const stackHeight = 35;
+            const groundY = canvas.height * 0.72;
+
+            // Left Stack of Papers (2 rows x 2 cols = 4)
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 2; col++) {
+                    homeworkBlocks.push({
+                        x: teacher.baseX - 220 + col * (stackWidth + 6),
+                        y: groundY - row * (stackHeight + 4),
+                        vx: 0,
+                        vy: 0,
+                        w: stackWidth,
+                        h: stackHeight,
+                        rot: 0,
+                        vRot: 0,
+                        hp: 3,
+                        title: `物理作業 #${paperCounter++}`,
+                        color: row % 2 === 0 ? '#fef08a' : '#ffffff'
+                    });
+                }
+            }
+
+            // Right Stack of Papers (2 rows x 2 cols = 4)
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 2; col++) {
+                    homeworkBlocks.push({
+                        x: teacher.baseX + 110 + col * (stackWidth + 6),
+                        y: groundY - row * (stackHeight + 4),
+                        vx: 0,
+                        vy: 0,
+                        w: stackWidth,
+                        h: stackHeight,
+                        rot: 0,
+                        vRot: 0,
+                        hp: 3,
+                        title: `期末考卷 #${paperCounter++}`,
+                        color: row % 2 === 0 ? '#fef08a' : '#ffffff'
+                    });
+                }
+            }
+        }
+
+        function startGame() {
+            audio.init();
+            isGameStarted = true;
+            isGameOver = false;
+            score = 0;
+            fever = 0;
+            destroyedPaperCount = 0;
+            if (scoreText) scoreText.textContent = '0';
+            if (feverBar) feverBar.style.width = '0%';
+            if (feverText) feverText.textContent = '0%';
+
+            document.getElementById('startModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.add('hidden');
+
+            initHomeworkStacks();
+        }
+
+        function spawnHomeworkPaper() {
+            if (!isGameStarted || isGameOver) return;
+            
+            // Allow papers up to MAX_HOMEWORK limit
+            if (homeworkBlocks.length >= MAX_HOMEWORK) return;
+
+            const stackWidth = 65 + Math.random() * 10;
+            const stackHeight = 32;
+            const margin = 80;
+            const spawnX = margin + Math.random() * (canvas.width - margin * 2);
+
+            const titles = ['物理作業', '期末考卷', '小考考卷', '補考通知', '物理講義'];
+            const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+
+            homeworkBlocks.push({
+                x: spawnX,
+                y: -50,
+                vx: (Math.random() - 0.5) * 6,
+                vy: Math.random() * 5 + 4, // 加快初速下落
+                w: stackWidth,
+                h: stackHeight,
+                rot: (Math.random() - 0.5) * 0.4,
+                vRot: (Math.random() - 0.5) * 0.08,
+                hp: Math.floor(Math.random() * 2) + 2,
+                title: `${randomTitle} #${paperCounter++}`,
+                color: Math.random() > 0.4 ? '#fef08a' : (Math.random() > 0.5 ? '#e0f2fe' : '#ffffff')
+            });
+        }
+
+        function triggerGameOver() {
+            if (isGameOver) return;
+            isGameOver = true;
+            audio.playExplosion();
+
+            // Evaluate rank
+            let rank = '物理重修生 😭';
+            if (score > 15000) rank = '動量守恆大師 🎓';
+            else if (score > 8000) rank = '考卷毀滅專家 💥';
+            else if (score > 3000) rank = '補考生存者 ⚡';
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('destroyedCount').textContent = `${destroyedPaperCount} 份`;
+            document.getElementById('evalRank').textContent = rank;
+
+            document.getElementById('gameOverModal').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function selectWeapon(type) {
+            if (!isGameStarted || isGameOver) return;
+            currentWeapon = type;
+            document.querySelectorAll('.weapon-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`wpn-${type}`).classList.add('active');
+        }
+
+        function triggerAttack(targetX, targetY) {
+            if (!isGameStarted || isGameOver) return;
+            audio.init();
+
+            // Spawn Projectile based on current weapon
+            if (currentWeapon === 'apple') {
+                audio.playHitSound(300, 'sine', 0.15);
+                projectiles.push({
+                    type: 'apple',
+                    x: targetX + (Math.random() - 0.5) * 20,
+                    y: -40,
+                    targetX: targetX,
+                    targetY: targetY,
+                    vx: (targetX - (targetX + (Math.random() - 0.5) * 20)) * 0.1,
+                    vy: 18,
+                    radius: 22,
+                    damage: 25
+                });
+            } else if (currentWeapon === 'chalk') {
+                audio.playChalkFire();
+                // Burst of 3 chalk bullets
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        projectiles.push({
+                            type: 'chalk',
+                            x: targetX + (Math.random() - 0.5) * 60,
+                            y: -20,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: 24 + Math.random() * 6,
+                            radius: 8,
+                            damage: 8,
+                            color: ['#f472b6', '#38bdf8', '#facc15'][i]
+                        });
+                    }, i * 50);
+                }
+            } else if (currentWeapon === 'plane') {
+                audio.playHitSound(500, 'triangle', 0.2);
+                projectiles.push({
+                    type: 'plane',
+                    x: targetX < canvas.width / 2 ? -50 : canvas.width + 50,
+                    y: targetY - 100,
+                    vx: targetX < canvas.width / 2 ? 16 : -16,
+                    vy: 4,
+                    targetX: targetX,
+                    targetY: targetY,
+                    radius: 20,
+                    damage: 30,
+                    rot: targetX < canvas.width / 2 ? 0.2 : -0.2
+                });
+            } else if (currentWeapon === 'tesla') {
+                audio.playZap();
+                // Shockwave Zap instantly at target
+                createZapEffect(targetX, targetY);
+                applyDamageRadius(targetX, targetY, 110, 35);
+            } else if (currentWeapon === 'magnet') {
+                audio.playExplosion();
+                createMagnetHole(targetX, targetY);
+            }
+        }
+
+        function createZapEffect(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 40,
+                    y: y + (Math.random() - 0.5) * 40,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1,
+                    decay: 0.05,
+                    color: '#38bdf8',
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function createMagnetHole(x, y) {
+            // Pull all homework blocks & teacher toward black hole
+            homeworkBlocks.forEach(b => {
+                const dx = x - b.x;
+                const dy = y - b.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                b.vx += (dx / dist) * 18;
+                b.vy += (dy / dist) * 18;
+            });
+
+            // Trigger teacher shock
+            const tDx = x - teacher.x;
+            const tDy = y - teacher.y;
+            const tDist = Math.hypot(tDx, tDy);
+            if (tDist < 200) {
+                teacher.vx += (tDx / tDist) * 12;
+                teacher.vy += (tDy / tDist) * 12;
+                hurtTeacher(40, "強磁力拉扯！");
+            }
+
+            setTimeout(() => {
+                audio.playExplosion();
+                applyDamageRadius(x, y, 180, 50);
+                triggerScreenShake();
+            }, 300);
+        }
+
+        function applyDamageRadius(x, y, radius, damage) {
+            // Check Teacher hit (放大受擊判定範圍)
+            const tDist = Math.hypot(x - teacher.x, y - (teacher.y - 40));
+            if (tDist < radius + 85) {
+                hurtTeacher(damage, "F=ma 衝擊！");
+            }
+
+            // Check Homework Blocks hit
+            for (let idx = homeworkBlocks.length - 1; idx >= 0; idx--) {
+                const b = homeworkBlocks[idx];
+                const dist = Math.hypot(x - b.x, y - b.y);
+                if (dist < radius + b.w / 2) {
+                    b.hp -= Math.ceil(damage / 10);
+                    b.vx += (b.x - x) * 0.15;
+                    b.vy += (b.y - y) * 0.15 - 4;
+                    b.vRot += (Math.random() - 0.5) * 0.3;
+
+                    addScore(50);
+                    spawnPaperScraps(b.x, b.y);
+
+                    if (b.hp <= 0) {
+                        spawnPaperConfetti(b.x, b.y);
+                        homeworkBlocks.splice(idx, 1);
+                        destroyedPaperCount++;
+                        addScore(150);
+                        createFloatingText(b.x, b.y, "作業銷毀！", "#facc15");
+                    }
+                }
+            }
+        }
+
+        function activateFeverMode() {
+            isFeverMode = true;
+            if (feverText) feverText.textContent = "狂暴中！";
+            if (feverBar) feverBar.classList.add('animate-pulse');
+            createFloatingText(canvas.width / 2, canvas.height * 0.3, "零重力狂暴模式啟動！", "#fbbf24");
+
+            // Lift everything into the air
+            homeworkBlocks.forEach(b => {
+                b.vy = -12 - Math.random() * 8;
+                b.vx = (Math.random() - 0.5) * 10;
+            });
+            teacher.vy = -10;
+
+            let count = 0;
+            const feverInterval = setInterval(() => {
+                count++;
+                triggerAttack(
+                    teacher.x + (Math.random() - 0.5) * 300,
+                    teacher.y + (Math.random() - 0.5) * 200
+                );
+                if (count > 25) {
+                    clearInterval(feverInterval);
+                    isFeverMode = false;
+                    fever = 0;
+                    if (feverBar) {
+                        feverBar.style.width = '0%';
+                        feverBar.classList.remove('animate-pulse');
+                    }
+                    if (feverText) feverText.textContent = '0%';
+                }
+            }, 120);
+        }
+
+        function createFloatingText(x, y, text, color = '#ffffff') {
+            const el = document.createElement('div');
+            el.className = 'pop-dmg text-sm md:text-base';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.style.color = color;
+            el.textContent = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+
+        function triggerScreenShake() {
+            document.body.classList.add('shake-screen');
+            setTimeout(() => document.body.classList.remove('shake-screen'), 250);
+        }
+
+        function spawnPaperScraps(x, y) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8 - 3,
+                    rot: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 0.2,
+                    life: 1,
+                    decay: 0.03,
+                    color: '#fef08a',
+                    size: Math.random() * 8 + 4
+                });
+            }
+        }
+
+        function spawnPaperConfetti(x, y) {
+            const colors = ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#ffffff'];
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12 - 5,
+                    rot: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 0.3,
+                    life: 1,
+                    decay: 0.02,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 10 + 6
+                });
+            }
+        }
+
+        function updatePhysics() {
+            if (!isGameStarted || isGameOver) return;
+
+            // Update UI Homework Overload Gauge
+            const hwCount = homeworkBlocks.length;
+            const hwBar = document.getElementById('homeworkBar');
+            const hwText = document.getElementById('homeworkCountText');
+            if (hwBar && hwText) {
+                hwText.textContent = `${hwCount} / ${MAX_HOMEWORK}`;
+                const pct = Math.min(100, (hwCount / MAX_HOMEWORK) * 100);
+                hwBar.style.width = `${pct}%`;
+            }
+
+            // Check Game Over Condition: Homework over limit
+            if (hwCount >= MAX_HOMEWORK) {
+                triggerGameOver();
+                return;
+            }
+
+            paperSpawnTimer++;
+            // 極速生成作業考卷 (大幅縮短生成間隔時間)
+            const spawnInterval = isFeverMode ? 10 : (homeworkBlocks.length < 8 ? 15 : 25);
+            if (paperSpawnTimer >= spawnInterval) {
+                paperSpawnTimer = 0;
+                spawnHomeworkPaper();
+            }
+
+            // Teacher Physics (Spring back to base)
+            const k = 0.05; // Spring stiffness
+            const damp = 0.85;
+
+            const ax = (teacher.baseX - teacher.x) * k;
+            const ay = (teacher.baseY - teacher.y) * k;
+
+            teacher.vx = (teacher.vx + ax) * damp;
+            teacher.vy = (teacher.vy + ay) * damp;
+            teacher.x += teacher.vx;
+            teacher.y += teacher.vy;
+
+            teacher.vAngle = (teacher.vAngle - teacher.recoilAngle * 0.1) * 0.88;
+            teacher.recoilAngle += teacher.vAngle;
+
+            if (teacher.hurtTimer > 0) {
+                teacher.hurtTimer--;
+                if (teacher.hurtTimer === 0) teacher.expression = 'normal';
+            }
+            if (teacher.speechTimer > 0) teacher.speechTimer--;
+
+            // Homework Blocks Gravity & Physics
+            const gravity = isFeverMode ? 0.05 : 0.45;
+            const groundY = canvas.height * 0.76;
+
+            homeworkBlocks.forEach(b => {
+                b.vy += gravity;
+                b.x += b.vx;
+                b.y += b.vy;
+                b.rot += b.vRot;
+
+                b.vx *= 0.95;
+                b.vy *= 0.95;
+                b.vRot *= 0.92;
+
+                // Ground Collision
+                if (b.y + b.h / 2 > groundY) {
+                    b.y = groundY - b.h / 2;
+                    b.vy *= -0.3;
+                }
+            });
+
+            // Projectiles Movement & Collision
+            projectiles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Check collision with Teacher (放大受擊判定範圍)
+                const distT = Math.hypot(p.x - teacher.x, p.y - (teacher.y - 40));
+                if (distT < p.radius + 70) {
+                    hurtTeacher(p.damage);
+                    audio.playHitSound(180, 'square', 0.1);
+                    spawnPaperScraps(p.x, p.y);
+                    projectiles.splice(idx, 1);
+                    return;
+                }
+
+                // Check collision with Homework
+                homeworkBlocks.forEach(b => {
+                    const distB = Math.hypot(p.x - b.x, p.y - b.y);
+                    if (distB < p.radius + b.w / 2) {
+                        applyDamageRadius(p.x, p.y, p.radius + 20, p.damage);
+                        projectiles.splice(idx, 1);
+                    }
+                });
+
+                // Remove out of bounds
+                if (p.y > canvas.height + 50 || p.x < -100 || p.x > canvas.width + 100) {
+                    projectiles.splice(idx, 1);
+                }
+            });
+
+            // Particle Updates
+            particles.forEach((pt, idx) => {
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.rot += pt.vRot;
+                pt.life -= pt.decay;
+                if (pt.life <= 0) particles.splice(idx, 1);
+            });
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Ground Line / Teacher Lab Desk
+            const groundY = canvas.height * 0.76;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([12, 8]);
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw Physics Teacher (Full Photo Image)
+            ctx.save();
+            ctx.translate(teacher.x, teacher.y);
+            ctx.rotate(teacher.recoilAngle);
+            ctx.scale(1.4, 1.4);
+
+            // Draw Full Photo Card for Physics Teacher
+            if (teacherHeadImg.complete && teacherHeadImg.naturalWidth !== 0) {
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetY = 8;
+
+                // Photo Frame Border
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.roundRect(-72, -152, 144, 154, 12);
+                ctx.fill();
+
+                // Draw Loaded Photo Image
+                ctx.beginPath();
+                ctx.roundRect(-66, -146, 132, 132, 8);
+                ctx.clip();
+                ctx.drawImage(teacherHeadImg, -66, -146, 132, 132);
+                ctx.restore();
+
+                // Photo Caption Banner
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.roundRect(-60, -12, 120, 22, 6);
+                ctx.fill();
+                ctx.fillStyle = '#facc15';
+                ctx.font = '900 12px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(teacher.expression === 'dizzy' ? '物理帥哥😵' : '物理帥哥', 0, -1);
+            }
+
+            // Floating Speech Bubble
+            if (teacher.speechTimer > 0) {
+                ctx.save();
+                ctx.translate(0, -170);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.roundRect(-90, -20, 180, 40, 12);
+                ctx.fill();
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(teacher.speech, 0, 0);
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            // Draw Homework Blocks (Stacks of Papers)
+            homeworkBlocks.forEach(b => {
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(b.rot);
+
+                ctx.fillStyle = b.color;
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.roundRect(-b.w / 2, -b.h / 2, b.w, b.h, 6);
+                ctx.fill();
+
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Homework Text
+                ctx.fillStyle = '#334155';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(b.title, 0, 4);
+
+                ctx.restore();
+            });
+
+            // Draw Projectiles
+            projectiles.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                if (p.type === 'apple') {
+                    ctx.font = '32px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🍎', 0, 0);
+                } else if (p.type === 'chalk') {
+                    ctx.fillStyle = p.color || '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'plane') {
+                    ctx.font = '36px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('✈️', 0, 0);
+                }
+                ctx.restore();
+            });
+
+            // Draw Particles
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.translate(pt.x, pt.y);
+                ctx.rotate(pt.rot);
+                ctx.globalAlpha = pt.life;
+                ctx.fillStyle = pt.color;
+                ctx.fillRect(-pt.size / 2, -pt.size / 2, pt.size, pt.size);
+                ctx.restore();
+            });
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function initEvents() {
+            window.addEventListener('resize', initLayout);
+
+            // Canvas Click / Tap Event
+            canvas.addEventListener('pointerdown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                triggerAttack(clickX, clickY);
+            });
+
+            // Handle Custom Photo Uploads (From header or start modal)
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        teacherHeadImg.src = evt.target.result;
+                        const modalPreview = document.getElementById('modalTeacherPreview');
+                        if (modalPreview) modalPreview.src = evt.target.result;
+                        createFloatingText(canvas.width / 2, canvas.height * 0.35, "照片上傳成功！", "#4ade80");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const photoUploadInput = document.getElementById('photoUploadInput');
+            if (photoUploadInput) photoUploadInput.addEventListener('change', handlePhotoUpload);
+
+            const startPhotoUploadInput = document.getElementById('startPhotoUploadInput');
+            if (startPhotoUploadInput) startPhotoUploadInput.addEventListener('change', handlePhotoUpload);
+
+            // Click preview image in start modal to select photo
+            const modalPreview = document.getElementById('modalTeacherPreview');
+            if (modalPreview) {
+                modalPreview.src = teacherHeadImg.src;
+                modalPreview.parentElement.addEventListener('click', () => {
+                    const startInput = document.getElementById('startPhotoUploadInput');
+                    if (startInput) startInput.click();
+                });
+            }
+
+            // Sound Toggle Button
+            const soundBtn = document.getElementById('soundBtn');
+            const soundIcon = document.getElementById('soundIcon');
+            soundBtn.addEventListener('click', () => {
+                audio.enabled = !audio.enabled;
+                soundIcon.className = audio.enabled ? "fas fa-volume-up text-lg text-emerald-400" : "fas fa-volume-mute text-lg text-rose-400";
+            });
+
+            // Reset Stack Button
+            document.getElementById('resetStackBtn').addEventListener('click', () => {
+                initHomeworkStacks();
+                createFloatingText(canvas.width / 2, canvas.height * 0.4, "物理作業重新發放！", "#38bdf8");
+            });
+        }
+
+        window.onload = () => {
+            initLayout();
+            initEvents();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

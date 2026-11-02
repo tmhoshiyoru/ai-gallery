@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英文單字翻牌配對遊戲</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .info-bar {
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      color: #555;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* 遊戲網格結構 */
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 120px);
+      gap: 15px;
+      perspective: 1000px;
+    }
+
+    /* 卡牌容器與 3D 翻牌效果 */
+    .card {
+      width: 120px;
+      height: 120px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s;
+      cursor: pointer;
+    }
+
+    .card.flipped, .card.matched {
+      transform: rotateY(180deg);
+    }
+
+    /* 卡牌正面與背面通用樣式 */
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 10px;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* 卡牌背面（蓋住時朝上） */
+    .card-back {
+      background: linear-gradient(135deg, #6e8efb, #a777e3);
+      color: white;
+      font-size: 2rem;
+    }
+
+    /* 卡牌正面（文字內容） */
+    .card-front {
+      background-color: #ffffff;
+      color: #333;
+      transform: rotateY(180deg);
+      border: 2px solid #6e8efb;
+    }
+
+    /* 配對成功樣式 */
+    .card.matched .card-front {
+      background-color: #e8f5e9;
+      border-color: #4CAF50;
+      color: #2e7d32;
+    }
+  </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body>
+
+  <h1>英文單字配對遊戲</h1>
+  
+  <div class="info-bar">
+    <div>嘗試次數：<span id="moves">0</span></div>
+    <button onclick="resetGame()">重新開始</button>
+  </div>
+
+  <div class="game-board" id="board"></div>
+
+  <script>
+    // 1. 單字資料庫 (英文與中文對應)
+    const wordPairs = [
+      { id: 1, en: "Apple", zh: "蘋果" },
+      { id: 2, en: "Cat", zh: "貓咪" },
+      { id: 3, en: "Dog", zh: "狗狗" },
+      { id: 4, en: "Book", zh: "書本" },
+      { id: 5, en: "Sun", zh: "太陽" },
+      { id: 6, en: "Water", zh: "水" }
+    ];
+
+    let cardsData = [];
+    let flippedCards = [];
+    let lockBoard = false;
+    let moves = 0;
+    let matchedPairs = 0;
+
+    // 2. 初始化遊戲狀態與卡牌洗牌
+    function initCards() {
+      cardsData = [];
+      wordPairs.forEach(pair => {
+        // 將每個單字拆成「英文卡」與「中文卡」，兩者帶有相同的 matchId
+        cardsData.push({ text: pair.en, matchId: pair.id });
+        cardsData.push({ text: pair.zh, matchId: pair.id });
+      });
+
+      // 洗牌演算法 (Fisher-Yates Shuffle)
+      for (let i = cardsData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cardsData[i], cardsData[j]] = [cardsData[j], cardsData[i]];
+      }
+    }
+
+    // 3. 渲染卡牌至畫面上
+    function renderBoard() {
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+
+      cardsData.forEach((item, index) => {
+        const cardElement = document.createElement("div");
+        cardElement.classList.add("card");
+        cardElement.dataset.index = index;
+        cardElement.dataset.matchId = item.matchId;
+
+        cardElement.innerHTML = `
+          <div class="card-face card-back">?</div>
+          <div class="card-face card-front">${item.text}</div>
+        `;
+
+        cardElement.addEventListener("click", handleCardClick);
+        board.appendChild(cardElement);
+      });
+    }
+
+    // 4. 處理卡牌點擊事件
+    function handleCardClick(e) {
+      const clickedCard = e.currentTarget;
+
+      // 防止點擊已翻開、已配對或鎖定狀態的卡牌
+      if (lockBoard || clickedCard.classList.contains("flipped") || clickedCard.classList.contains("matched")) {
+        return;
+      }
+
+      // 翻開卡牌
+      clickedCard.classList.add("flipped");
+      flippedCards.push(clickedCard);
+
+      // 當翻開兩張卡牌時進行檢查
+      if (flippedCards.length === 2) {
+        updateMoves();
+        checkMatch();
+      }
+    }
+
+    // 5. 檢查兩張卡牌是否配對成功
+    function checkMatch() {
+      const [card1, card2] = flippedCards;
+      const isMatch = card1.dataset.matchId === card2.dataset.matchId;
+
+      if (isMatch) {
+        // 配對成功：保持翻開狀態
+        card1.classList.add("matched");
+        card2.classList.add("matched");
+        resetTurn();
+        matchedPairs++;
+
+        if (matchedPairs === wordPairs.length) {
+          setTimeout(() => alert(`恭喜通關！總共嘗試了 ${moves} 次。`), 500);
+        }
+      } else {
+        // 配對失敗：鎖定棋盤，1秒後蓋回卡牌
+        lockBoard = true;
+        setTimeout(() => {
+          card1.classList.remove("flipped");
+          card2.classList.remove("flipped");
+          resetTurn();
+        }, 1000);
+      }
+    }
+
+    // 更新嘗試次數
+    function updateMoves() {
+      moves++;
+      document.getElementById("moves").textContent = moves;
+    }
+
+    // 重置單回合翻牌變數
+    function resetTurn() {
+      flippedCards = [];
+      lockBoard = false;
+    }
+
+    // 6. 重置整局遊戲
+    function resetGame() {
+      moves = 0;
+      matchedPairs = 0;
+      document.getElementById("moves").textContent = moves;
+      resetTurn();
+      initCards();
+      renderBoard();
+    }
+
+    // 啟動遊戲
+    resetGame();
+  </script>
+
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

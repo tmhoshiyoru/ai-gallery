@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>粉紅怪獸打磚塊 - Cute Monster Breakout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Fredoka', 'Quicksand', sans-serif;
+            background: radial-gradient(circle at center, #fce7f3 0%, #fbcfe8 60%, #f472b6 100%);
+            color: #831843;
+            user-select: none;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Cute Soft Pastel Glassmorphism Style */
+        .cute-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(14px);
+            border: 2px solid rgba(244, 114, 182, 0.4);
+            box-shadow: 0 8px 32px rgba(244, 114, 182, 0.2), inset 0 0 12px rgba(255, 255, 255, 0.8);
+        }
+
+        .cute-btn {
+            background: linear-gradient(135deg, #f472b6 0%, #fb7185 100%);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .cute-btn:hover {
+            transform: scale(1.04) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 114, 182, 0.6);
+        }
+
+        .cute-btn:active {
+            transform: scale(0.96) translateY(1px);
+        }
+
+        /* Canvas Outer Border & Atmosphere Glow */
+        #gameCanvas {
+            background: rgba(255, 241, 242, 0.95);
+            box-shadow: 0 0 35px rgba(244, 114, 182, 0.3), inset 0 0 20px rgba(251, 207, 232, 0.5);
+            border: 3px solid rgba(244, 114, 182, 0.5);
+            border-radius: 20px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5">
+
+    <!-- Top Bar HUD Header -->
+    <header class="w-full max-w-4xl flex flex-wrap items-center justify-between py-2.5 px-4 sm:px-6 cute-card rounded-2xl mb-2 gap-2">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl animate-bounce">👾</span>
+            <h1 class="text-lg sm:text-xl font-bold tracking-wide text-pink-600">
+                MONSTER BREAKOUT
+            </h1>
+        </div>
+
+        <!-- HUD Info: Lives, Score, High Score, Restart & Mute -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Health Hearts -->
+            <div class="bg-white/90 px-3 py-1 rounded-xl border border-pink-300 flex items-center gap-1 shadow-sm">
+                <span class="text-xs text-pink-500 font-bold mr-1 hidden sm:inline">HP:</span>
+                <span id="livesText" class="text-pink-500 text-sm tracking-widest">💖💖💖</span>
+            </div>
+
+            <!-- Score -->
+            <div class="bg-white/90 px-3 py-1 rounded-xl border border-pink-300 text-center min-w-[65px] shadow-sm">
+                <span class="block text-[9px] text-pink-400 font-bold uppercase tracking-wider">Score</span>
+                <span id="scoreText" class="text-pink-600 font-bold text-sm sm:text-base">0000</span>
+            </div>
+
+            <!-- Best High Score -->
+            <div class="bg-white/90 px-3 py-1 rounded-xl border border-purple-300 text-center min-w-[65px] shadow-sm">
+                <span class="block text-[9px] text-purple-400 font-bold uppercase tracking-wider">Best</span>
+                <span id="highScoreText" class="text-purple-600 font-bold text-sm sm:text-base">0000</span>
+            </div>
+
+            <!-- Restart Button in Header -->
+            <button id="headerRestartBtn" class="px-3 py-1.5 rounded-xl bg-pink-100 hover:bg-pink-200 border border-pink-300 text-pink-600 text-xs font-bold transition flex items-center gap-1 active:scale-95 shadow-sm" title="重新開始">
+                <span>🔄</span> <span class="hidden sm:inline">重來</span>
+            </button>
+
+            <!-- Mute Audio Toggle -->
+            <button id="muteBtn" class="p-2 rounded-xl bg-white/90 hover:bg-pink-50 border border-pink-300 text-pink-500 transition shadow-sm" title="靜音切換">
+                <svg id="soundIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M17.586 6.414a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Area -->
+    <main class="relative w-full max-w-4xl flex-1 flex items-center justify-center my-auto">
+        <canvas id="gameCanvas" class="w-full max-w-4xl h-auto aspect-[4/3] object-contain cursor-none"></canvas>
+
+        <!-- Overlay Menu / Game Over / Victory Modal -->
+        <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center cute-card rounded-2xl p-6 text-center transition-all duration-300 z-10">
+            <div id="overlayContent" class="max-w-md w-full flex flex-col items-center">
+                <div class="text-6xl mb-3 animate-bounce" id="overlayEmoji">👾</div>
+                <h2 id="overlayTitle" class="text-3xl sm:text-4xl font-bold mb-1 text-pink-600 tracking-wide">
+                    粉紅怪獸打磚塊
+                </h2>
+                <p id="overlaySubtitle" class="text-pink-700/80 text-sm sm:text-base mb-6 font-medium">
+                    控制可愛粉紅怪獸發射火球，摧毀所有甜點磚塊吧！
+                </p>
+
+                <!-- Final Stats Panel -->
+                <div id="finalStats" class="hidden w-full bg-white/90 p-4 rounded-xl mb-6 flex justify-around text-center border border-pink-300 shadow-sm">
+                    <div>
+                        <div class="text-xs text-pink-500 font-bold">最終得分</div>
+                        <div id="finalScore" class="text-2xl font-bold text-pink-600">0</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-purple-500 font-bold">擊碎磚塊</div>
+                        <div id="finalBricks" class="text-2xl font-bold text-purple-600">0</div>
+                    </div>
+                </div>
+
+                <!-- Main Action Button -->
+                <button id="startBtn" class="cute-btn w-full py-3.5 px-8 rounded-2xl font-bold text-lg text-white tracking-wider uppercase mb-3 shadow-md">
+                    開始遊戲 🚀
+                </button>
+
+                <!-- Secondary Restart Button -->
+                <button id="modalRestartBtn" class="hidden w-full py-2.5 px-6 rounded-xl bg-pink-100 hover:bg-pink-200 border border-pink-300 font-bold text-sm text-pink-700 transition mb-4">
+                    🔄 重新開始 (Restart)
+                </button>
+
+                <!-- Control Guide -->
+                <div class="text-xs text-pink-700 space-y-1 font-medium bg-white/80 px-4 py-2.5 rounded-xl border border-pink-200 shadow-sm">
+                    <p>🎮 鍵盤：使用 <span class="text-pink-600 font-bold">← / →</span> 或 <span class="text-pink-600 font-bold">A / D</span> 移動怪獸</p>
+                    <p>🖱️ 滑鼠 / 觸控：左右滑動或點擊螢幕拖曳</p>
+                    <p>⏸️ 暫停：按 <span class="text-pink-600 font-bold">P</span> 或 <span class="text-pink-600 font-bold">ESC</span> 鍵</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Touch Footer -->
+    <footer class="w-full max-w-4xl py-2 px-4 flex justify-between items-center text-xs text-pink-700 font-medium">
+        <span>FPS: <span id="fpsCounter" class="text-pink-600 font-bold">60</span></span>
+        <div class="flex gap-2 sm:hidden">
+            <button id="touchLeft" class="px-5 py-2 bg-white/90 active:bg-pink-100 border border-pink-300 rounded-xl text-pink-600 font-bold shadow-sm">
+                ◀ 向左
+            </button>
+            <button id="touchRight" class="px-5 py-2 bg-white/90 active:bg-pink-100 border border-pink-300 rounded-xl text-pink-600 font-bold shadow-sm">
+                向右 ▶
+            </button>
+        </div>
+        <span>CUTE ENGINE v3.0 🔥</span>
+    </footer>
+
+    <script>
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+
+        // Ultra Light & Soft Macaron Pastel Palette
+        const PALETTE = {
+            bg: '#fff1f2',
+            monsterBody: '#f472b6',      // Bright Soft Pink Monster
+            monsterCheeks: '#fb7185',    // Soft Rosy Blush
+            monsterEars: '#f0abfc',      // Soft Pastel Lavender Ears
+            fireballInner: '#ffffff',    // Flame core
+            fireballMid: '#fde047',      // Soft pastel yellow flame
+            fireballOuter: '#fb923c',    // Soft pastel orange flame
+            brickRows: [
+                { color: '#fbcfe8', stroke: '#ffffff', shadow: 'rgba(244, 114, 182, 0.25)' }, // Row 0: Airy Macaron Pink (極淺草莓馬卡龍)
+                { color: '#fecdd3', stroke: '#ffffff', shadow: 'rgba(251, 113, 133, 0.25)' }, // Row 1: Soft Pastel Rose (極淺玫瑰馬卡龍)
+                { color: '#e9d5ff', stroke: '#ffffff', shadow: 'rgba(192, 132, 252, 0.25)' }  // Row 2: Gentle Lavender Pink (極淺香草紫粉)
+            ]
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const overlayEmoji = document.getElementById('overlayEmoji');
+        const startBtn = document.getElementById('startBtn');
+        const modalRestartBtn = document.getElementById('modalRestartBtn');
+        const headerRestartBtn = document.getElementById('headerRestartBtn');
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const livesText = document.getElementById('livesText');
+        const finalStats = document.getElementById('finalStats');
+        const finalScore = document.getElementById('finalScore');
+        const finalBricks = document.getElementById('finalBricks');
+        const muteBtn = document.getElementById('muteBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const fpsCounter = document.getElementById('fpsCounter');
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        class CuteAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.1, volume = 0.15) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+
+            playPaddleHit() {
+                this.playTone(440, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(659.25, 'sine', 0.08, 0.12), 40);
+            }
+
+            playBrickBreak(rowIndex) {
+                const pitch = [783.99, 659.25, 523.25][rowIndex % 3] || 523.25;
+                this.playTone(pitch, 'triangle', 0.12, 0.18);
+            }
+
+            playWallHit() {
+                this.playTone(329.63, 'sine', 0.06, 0.08);
+            }
+
+            playLoseLife() {
+                if (this.muted || !this.ctx) return;
+                [350, 280, 200].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sawtooth', 0.15, 0.15), i * 90);
+                });
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                [260, 220, 180, 140].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sawtooth', 0.22, 0.18), i * 120);
+                });
+            }
+
+            playWin() {
+                if (this.muted || !this.ctx) return;
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'triangle', 0.18, 0.18), i * 90);
+                });
+            }
+        }
+
+        const audio = new CuteAudioEngine();
+
+        class CuteStarfield {
+            constructor(count = 65) {
+                this.stars = [];
+                for (let i = 0; i < count; i++) {
+                    this.stars.push({
+                        x: Math.random() * CANVAS_WIDTH,
+                        y: Math.random() * CANVAS_HEIGHT,
+                        size: Math.random() * 2.5 + 1.0,
+                        alpha: Math.random(),
+                        speed: Math.random() * 0.025 + 0.008,
+                        phase: Math.random() * Math.PI * 2,
+                        isCross: Math.random() > 0.7
+                    });
+                }
+            }
+
+            draw() {
+                ctx.save();
+                this.stars.forEach(s => {
+                    s.phase += s.speed;
+                    const alpha = 0.3 + (Math.sin(s.phase) + 1) * 0.35;
+                    ctx.fillStyle = `rgba(244, 114, 182, ${alpha})`;
+                    
+                    if (s.isCross) {
+                        // Draw twinkling star cross
+                        ctx.strokeStyle = `rgba(244, 114, 182, ${alpha})`;
+                        ctx.lineWidth = 1.2;
+                        ctx.beginPath();
+                        ctx.moveTo(s.x - s.size * 2, s.y);
+                        ctx.lineTo(s.x + s.size * 2, s.y);
+                        ctx.moveTo(s.x, s.y - s.size * 2);
+                        ctx.lineTo(s.x, s.y + s.size * 2);
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                ctx.restore();
+            }
+        }
+
+        class PinkMonsterPaddle {
+            constructor() {
+                this.width = 115;
+                this.height = 26;
+                this.x = (CANVAS_WIDTH - this.width) / 2;
+                this.y = CANVAS_HEIGHT - 42;
+                this.speed = 9.5;
+                this.dx = 0;
+                this.eyeBlinkTimer = 0;
+            }
+
+            draw(ballX) {
+                ctx.save();
+                const x = this.x;
+                const y = this.y;
+                const w = this.width;
+                const h = this.height;
+
+                // Monster Shadow
+                ctx.fillStyle = 'rgba(244, 114, 182, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(x + w / 2, y + h + 2, w * 0.45, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cute Ears / Horns
+                ctx.fillStyle = PALETTE.monsterEars;
+                ctx.beginPath();
+                ctx.arc(x + 18, y + 2, 9, 0, Math.PI * 2);
+                ctx.arc(x + w - 18, y + 2, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Main Monster Body (Soft Pill Shape)
+                ctx.fillStyle = PALETTE.monsterBody;
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, 14);
+                ctx.fill();
+
+                // Inner Highlight Glow
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Rosy Cheeks
+                ctx.fillStyle = PALETTE.monsterCheeks;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.ellipse(x + 22, y + h / 2 + 3, 6, 4, 0, 0, Math.PI * 2);
+                ctx.ellipse(x + w - 22, y + h / 2 + 3, 6, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+
+                // Eyes (Follow ball slightly)
+                const eyeOffsetX = Math.max(-4, Math.min(4, (ballX - (x + w / 2)) * 0.02));
+                this.eyeBlinkTimer += 0.05;
+                const isBlinking = Math.sin(this.eyeBlinkTimer) > 0.96;
+
+                ctx.fillStyle = '#831843'; // Soft dark maroon pupil instead of dark navy
+                if (isBlinking) {
+                    ctx.fillRect(x + w * 0.38 - 4, y + h * 0.45, 8, 2);
+                    ctx.fillRect(x + w * 0.62 - 4, y + h * 0.45, 8, 2);
+                } else {
+                    // Left Pupil
+                    ctx.beginPath();
+                    ctx.arc(x + w * 0.38 + eyeOffsetX, y + h * 0.45, 5, 0, Math.PI * 2);
+                    ctx.arc(x + w * 0.62 + eyeOffsetX, y + h * 0.45, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Pupil Shiny White Highlights
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x + w * 0.38 + eyeOffsetX - 1.5, y + h * 0.45 - 1.5, 2, 0, Math.PI * 2);
+                    ctx.arc(x + w * 0.62 + eyeOffsetX - 1.5, y + h * 0.45 - 1.5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Cute Smile Mouth
+                ctx.strokeStyle = '#831843';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x + w / 2, y + h * 0.55, 5, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.dx;
+                if (this.x < 10) this.x = 10;
+                if (this.x + this.width > CANVAS_WIDTH - 10) this.x = CANVAS_WIDTH - 10 - this.width;
+            }
+        }
+
+        class GlowingFireball {
+            constructor() {
+                this.radius = 9;
+                this.reset();
+            }
+
+            reset() {
+                this.x = CANVAS_WIDTH / 2;
+                this.y = CANVAS_HEIGHT - 65;
+                this.speed = 6.8;
+                const angle = (Math.random() * Math.PI / 3) - (Math.PI / 6) - (Math.PI / 2);
+                this.vx = this.speed * Math.cos(angle);
+                this.vy = this.speed * Math.sin(angle);
+            }
+
+            draw() {
+                ctx.save();
+
+                // Outer Glowing Aura
+                ctx.shadowBlur = 18;
+                ctx.shadowColor = '#f97316';
+
+                // Radial Gradient Flame Core
+                const grad = ctx.createRadialGradient(this.x, this.y, 1, this.x, this.y, this.radius * 1.3);
+                grad.addColorStop(0, PALETTE.fireballInner);
+                grad.addColorStop(0.4, PALETTE.fireballMid);
+                grad.addColorStop(0.85, PALETTE.fireballOuter);
+                grad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 1.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Left/Right Bounce
+                if (this.x - this.radius <= 10) {
+                    this.x = 10 + this.radius;
+                    this.vx *= -1;
+                    audio.playWallHit();
+                } else if (this.x + this.radius >= CANVAS_WIDTH - 10) {
+                    this.x = CANVAS_WIDTH - 10 - this.radius;
+                    this.vx *= -1;
+                    audio.playWallHit();
+                }
+
+                // Top Bounce
+                if (this.y - this.radius <= 10) {
+                    this.y = 10 + this.radius;
+                    this.vy *= -1;
+                    audio.playWallHit();
+                }
+            }
+        }
+
+        class PastelBrick {
+            constructor(x, y, width, height, rowIndex) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.rowIndex = rowIndex;
+                this.alive = true;
+                const rowConfig = PALETTE.brickRows[rowIndex];
+                this.color = rowConfig.color;
+                this.stroke = rowConfig.stroke;
+                this.shadow = rowConfig.shadow;
+            }
+
+            draw() {
+                if (!this.alive) return;
+                ctx.save();
+                
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = this.shadow;
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 6);
+                ctx.fill();
+
+                // Soft Cute Inner Border Accent
+                ctx.strokeStyle = this.stroke;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        class FlameParticle {
+            constructor(x, y) {
+                this.x = x + (Math.random() - 0.5) * 6;
+                this.y = y + (Math.random() - 0.5) * 6;
+                this.radius = Math.random() * 4 + 2;
+                const speed = Math.random() * 2 + 0.5;
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.alpha = 1.0;
+                this.color = Math.random() > 0.5 ? '#f472b6' : '#fde047';
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.035;
+            }
+        }
+
+        class CuteMonsterBreakout {
+            constructor() {
+                this.state = 'MENU';
+                this.score = 0;
+                this.lives = 3;
+                this.highScore = parseInt(window.__galleryStorage.getItem('monster_breakout_high_score')) || 0;
+                this.bricksBroken = 0;
+
+                this.starfield = new CuteStarfield();
+                this.paddle = new PinkMonsterPaddle();
+                this.ball = new GlowingFireball();
+                this.bricks = [];
+                this.particles = [];
+
+                this.keys = { left: false, right: false };
+                this.lastFrameTime = performance.now();
+                this.fps = 60;
+
+                this.initBricks();
+                this.updateHUD();
+            }
+
+            initBricks() {
+                this.bricks = [];
+                const rows = 3;
+                const cols = 9;
+                const padding = 12;
+                const offsetTop = 70;
+                const offsetLeft = 25;
+
+                const totalPaddingX = padding * (cols - 1);
+                const availableWidth = CANVAS_WIDTH - (offsetLeft * 2) - totalPaddingX;
+                const brickWidth = availableWidth / cols;
+                const brickHeight = 26;
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const brickX = offsetLeft + c * (brickWidth + padding);
+                        const brickY = offsetTop + r * (brickHeight + padding);
+                        this.bricks.push(new PastelBrick(brickX, brickY, brickWidth, brickHeight, r));
+                    }
+                }
+            }
+
+            start() {
+                audio.init();
+                this.score = 0;
+                this.lives = 3;
+                this.bricksBroken = 0;
+                this.updateHUD();
+                this.initBricks();
+                this.paddle = new PinkMonsterPaddle();
+                this.ball.reset();
+                this.particles = [];
+                this.state = 'PLAYING';
+                overlay.classList.add('hidden');
+                modalRestartBtn.classList.add('hidden');
+            }
+
+            restart() {
+                this.start();
+            }
+
+            pause() {
+                if (this.state === 'PLAYING') {
+                    this.state = 'PAUSED';
+                    overlayEmoji.textContent = '⏸️';
+                    overlayTitle.textContent = '遊戲暫停';
+                    overlaySubtitle.textContent = '怪獸正在休息中，準備好後隨時繼續！';
+                    startBtn.textContent = '繼續任務 ✨';
+                    modalRestartBtn.classList.remove('hidden');
+                    finalStats.classList.add('hidden');
+                    overlay.classList.remove('hidden');
+                } else if (this.state === 'PAUSED') {
+                    this.state = 'PLAYING';
+                    overlay.classList.add('hidden');
+                }
+            }
+
+            loseLife() {
+                this.lives--;
+                this.updateHUD();
+                audio.playLoseLife();
+
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    // Reset Ball & Paddle smoothly
+                    this.paddle.x = (CANVAS_WIDTH - this.paddle.width) / 2;
+                    this.ball.reset();
+                }
+            }
+
+            gameOver() {
+                this.state = 'GAMEOVER';
+                audio.playGameOver();
+
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    window.__galleryStorage.setItem('monster_breakout_high_score', this.highScore);
+                    this.updateHUD();
+                }
+
+                overlayEmoji.textContent = '😿';
+                overlayTitle.textContent = 'GAME OVER';
+                overlaySubtitle.textContent = '血量耗盡！粉紅怪獸體力不支，再試一次吧！';
+
+                finalScore.textContent = this.score;
+                finalBricks.textContent = this.bricksBroken;
+                finalStats.classList.remove('hidden');
+
+                startBtn.textContent = '重新挑戰 🚀';
+                modalRestartBtn.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            }
+
+            win() {
+                this.state = 'WIN';
+                audio.playWin();
+
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    window.__galleryStorage.setItem('monster_breakout_high_score', this.highScore);
+                    this.updateHUD();
+                }
+
+                overlayEmoji.textContent = '🎉';
+                overlayTitle.textContent = 'VICTORY!';
+                overlaySubtitle.textContent = '太棒了！你擊碎了所有磚塊，幫助怪獸完成任務！';
+
+                finalScore.textContent = this.score;
+                finalBricks.textContent = this.bricksBroken;
+                finalStats.classList.remove('hidden');
+
+                startBtn.textContent = '再玩一次 🌌';
+                modalRestartBtn.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            }
+
+            spawnFlameTrail(x, y) {
+                for (let i = 0; i < 2; i++) {
+                    this.particles.push(new FlameParticle(x, y));
+                }
+            }
+
+            updateHUD() {
+                scoreText.textContent = String(this.score).padStart(4, '0');
+                highScoreText.textContent = String(this.highScore).padStart(4, '0');
+                
+                // Display heart icons for 3 lives
+                let hearts = '';
+                for (let i = 0; i < 3; i++) {
+                    hearts += i < this.lives ? '💖' : '🖤';
+                }
+                livesText.textContent = hearts;
+            }
+
+            handleCollisions() {
+                const ball = this.ball;
+                const paddle = this.paddle;
+
+                // 1. Paddle Collision
+                if (
+                    ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x >= paddle.x &&
+                    ball.x <= paddle.x + paddle.width &&
+                    ball.vy > 0
+                ) {
+                    const hitX = ball.x - (paddle.x + paddle.width / 2);
+                    const normalizedHit = hitX / (paddle.width / 2);
+                    const maxAngle = Math.PI / 3;
+                    const bounceAngle = normalizedHit * maxAngle;
+
+                    const speed = Math.hypot(ball.vx, ball.vy);
+                    ball.vx = speed * Math.sin(bounceAngle);
+                    ball.vy = -Math.abs(speed * Math.cos(bounceAngle));
+                    ball.y = paddle.y - ball.radius;
+
+                    audio.playPaddleHit();
+                }
+
+                // 2. Brick Collisions
+                let remainingBricks = 0;
+
+                for (let b of this.bricks) {
+                    if (!b.alive) continue;
+                    remainingBricks++;
+
+                    const closestX = Math.max(b.x, Math.min(ball.x, b.x + b.width));
+                    const closestY = Math.max(b.y, Math.min(ball.y, b.y + b.height));
+
+                    const distanceX = ball.x - closestX;
+                    const distanceY = ball.y - closestY;
+                    const distanceSq = (distanceX * distanceX) + (distanceY * distanceY);
+
+                    if (distanceSq < ball.radius * ball.radius) {
+                        b.alive = false;
+                        remainingBricks--;
+                        this.score += 10;
+                        this.bricksBroken++;
+                        this.updateHUD();
+
+                        audio.playBrickBreak(b.rowIndex);
+                        this.spawnFlameTrail(closestX, closestY);
+
+                        const prevX = ball.x - ball.vx;
+                        if (prevX < b.x || prevX > b.x + b.width) {
+                            ball.vx *= -1;
+                        } else {
+                            ball.vy *= -1;
+                        }
+
+                        if (this.bricksBroken % 5 === 0 && ball.speed < 10.5) {
+                            ball.speed += 0.25;
+                        }
+
+                        break;
+                    }
+                }
+
+                // 3. Victory Check
+                if (remainingBricks === 0 && this.state === 'PLAYING') {
+                    this.win();
+                }
+
+                // 4. Ball Dropped Below Screen (Lose Life)
+                if (ball.y - ball.radius > CANVAS_HEIGHT) {
+                    this.loseLife();
+                }
+            }
+
+            update() {
+                if (this.state !== 'PLAYING') return;
+
+                this.paddle.dx = 0;
+                if (this.keys.left) this.paddle.dx = -this.paddle.speed;
+                if (this.keys.right) this.paddle.dx = this.paddle.speed;
+
+                this.paddle.update();
+                this.ball.update();
+                this.spawnFlameTrail(this.ball.x, this.ball.y);
+
+                this.handleCollisions();
+
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.update();
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+
+            draw() {
+                ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Draw Background Stars
+                this.starfield.draw();
+
+                // Draw Game Objects
+                this.bricks.forEach(b => b.draw());
+                this.particles.forEach(p => p.draw());
+                this.paddle.draw(this.ball.x);
+                this.ball.draw();
+            }
+
+            loop(now) {
+                const dt = now - this.lastFrameTime;
+                this.lastFrameTime = now;
+                if (dt > 0) {
+                    this.fps = Math.round(1000 / dt);
+                    fpsCounter.textContent = this.fps;
+                }
+
+                this.update();
+                this.draw();
+
+                requestAnimationFrame((t) => this.loop(t));
+            }
+        }
+
+        const game = new CuteMonsterBreakout();
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                game.keys.left = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                game.keys.right = true;
+            } else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                game.pause();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                game.keys.left = false;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                game.keys.right = false;
+            }
+        });
+
+        // Pointer / Touch Paddling
+        function updatePaddlePositionFromPointer(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasMouseX = (clientX - rect.left) * scaleX;
+            game.paddle.x = canvasMouseX - game.paddle.width / 2;
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (game.state === 'PLAYING') {
+                updatePaddlePositionFromPointer(e.clientX);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (game.state === 'PLAYING' && e.touches.length > 0) {
+                e.preventDefault();
+                updatePaddlePositionFromPointer(e.touches[0].clientX);
+            }
+        }, { passive: false });
+
+        // Touch Control Buttons for Mobile
+        const touchLeft = document.getElementById('touchLeft');
+        const touchRight = document.getElementById('touchRight');
+
+        touchLeft.addEventListener('touchstart', (e) => { e.preventDefault(); game.keys.left = true; });
+        touchLeft.addEventListener('touchend', (e) => { e.preventDefault(); game.keys.left = false; });
+        touchRight.addEventListener('touchstart', (e) => { e.preventDefault(); game.keys.right = true; });
+        touchRight.addEventListener('touchend', (e) => { e.preventDefault(); game.keys.right = false; });
+
+        // Button Click Handlers
+        startBtn.addEventListener('click', () => {
+            if (game.state === 'PAUSED') {
+                game.pause();
+            } else {
+                game.start();
+            }
+        });
+
+        modalRestartBtn.addEventListener('click', () => game.restart());
+        headerRestartBtn.addEventListener('click', () => game.restart());
+
+        muteBtn.addEventListener('click', () => {
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                soundIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke="currentColor"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" stroke="currentColor"/>`;
+                muteBtn.classList.add('text-rose-400');
+            } else {
+                soundIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M17.586 6.414a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>`;
+                muteBtn.classList.remove('text-rose-400');
+            }
+        });
+
+        window.onload = () => {
+            requestAnimationFrame((timestamp) => game.loop(timestamp));
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

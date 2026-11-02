@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Pixel Snake - 懷舊像素貪食蛇</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #8b956d; /* 經典 GameBoy / 懷舊掌機底色 */
+            color: #0f380f;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .vt323 {
+            font-family: 'VT323', monospace;
+        }
+
+        /* 像素風格外框與主卡片 */
+        .pixel-card {
+            background: #9bbc0f;
+            border: 6px solid #0f380f;
+            box-shadow: 8px 8px 0px #306230;
+            border-radius: 12px;
+        }
+
+        /* 遊戲畫面容器 */
+        .canvas-container {
+            border: 4px solid #0f380f;
+            position: relative;
+            background-color: #8bac0f;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: inset 3px 3px 0px rgba(15, 56, 15, 0.2);
+        }
+
+        /* 復古像素按鈕 */
+        .pixel-btn {
+            background: #306230;
+            color: #9bbc0f;
+            border: 3px solid #0f380f;
+            box-shadow: 4px 4px 0px #0f380f;
+            transition: all 0.08s ease;
+        }
+        .pixel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #0f380f;
+        }
+
+        .control-btn {
+            background: #8bac0f;
+            border: 3px solid #0f380f;
+            box-shadow: 3px 3px 0px #306230;
+            color: #0f380f;
+        }
+        .control-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #306230;
+            background: #9bbc0f;
+        }
+
+        /* 閃爍動畫 */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
+        }
+        .blink {
+            animation: blink 0.8s infinite;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <div class="w-full max-w-lg pixel-card p-4 sm:p-6 flex flex-col items-center relative my-auto">
+        
+        <!-- Game Console Header Title -->
+        <div class="text-center mb-3 w-full">
+            <h1 class="text-xl sm:text-2xl text-[#0f380f] tracking-wider mb-1 font-bold">
+                PIXEL <span class="text-[#306230]">SNAKE</span>
+            </h1>
+            <p class="text-[9px] sm:text-[10px] text-[#306230] tracking-widest">8-BIT CLASSIC EDITION</p>
+        </div>
+
+        <!-- Header Controls & Scores -->
+        <div class="w-full flex justify-between items-center bg-[#8bac0f] p-2.5 rounded border-2 border-[#0f380f] mb-3 text-xs">
+            <!-- Audio Toggle Button -->
+            <button id="soundToggleBtn" class="flex items-center gap-1 text-[#0f380f] hover:text-[#306230] transition font-bold">
+                <i data-lucide="volume-2" id="soundIcon" class="w-4 h-4"></i>
+                <span class="text-[9px] hidden sm:inline" id="soundStatus">SOUND: ON</span>
+            </button>
+
+            <!-- Score Display Section (右上角顯示當前與最高分) -->
+            <div class="flex gap-4 text-right">
+                <div>
+                    <div class="text-[8px] text-[#306230] font-bold">HIGH SCORE</div>
+                    <div id="highScoreText" class="text-[#0f380f] text-xs sm:text-sm font-bold">0000</div>
+                </div>
+                <div>
+                    <div class="text-[8px] text-[#306230] font-bold">SCORE</div>
+                    <div id="scoreText" class="text-[#0f380f] text-xs sm:text-sm font-bold">0000</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Game Screen -->
+        <div class="canvas-container w-full flex justify-center items-center">
+            <canvas id="gameCanvas" width="400" height="400" class="max-w-full h-auto block"></canvas>
+            
+            <!-- Overlay: Start / Game Over Screen -->
+            <div id="overlay" class="absolute inset-0 bg-[#8bac0f]/90 flex flex-col justify-center items-center z-30 p-4 text-center">
+                <h2 id="overlayTitle" class="text-xl sm:text-2xl text-[#0f380f] mb-3 font-bold">PRESS START</h2>
+                <p id="overlaySubtitle" class="text-[10px] sm:text-xs text-[#306230] mb-6 leading-relaxed font-bold">
+                    使用 [方向鍵] 或 [WASD]<br>吃紅蘋果長大獲得高分！
+                </p>
+                <button id="startBtn" class="pixel-btn px-5 py-2.5 rounded text-xs tracking-wider cursor-pointer font-bold">
+                    START GAME
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls Section -->
+        <div class="mt-4 w-full flex flex-col items-center gap-2">
+            <div class="text-[9px] text-[#306230] mb-0.5 sm:hidden font-bold">TOUCH CONTROLS</div>
+            <div class="grid grid-cols-3 gap-2 w-44 sm:w-52">
+                <div></div>
+                <button id="btnUp" class="control-btn p-2.5 rounded flex justify-center items-center active:scale-95">
+                    <i data-lucide="chevron-up" class="w-6 h-6"></i>
+                </button>
+                <div></div>
+                <button id="btnLeft" class="control-btn p-2.5 rounded flex justify-center items-center active:scale-95">
+                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                </button>
+                <button id="btnDown" class="control-btn p-2.5 rounded flex justify-center items-center active:scale-95">
+                    <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                </button>
+                <button id="btnRight" class="control-btn p-2.5 rounded flex justify-center items-center active:scale-95">
+                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-3 text-[8px] text-[#306230] text-center tracking-widest font-bold">
+            GAME BOY STYLE • RETRO ARCADE
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Canvas & Context Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Element References
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const soundStatus = document.getElementById('soundStatus');
+
+        // Game Configuration Constants
+        const GRID_SIZE = 20; // 20x20 Grid
+        const TILE_COUNT = canvas.width / GRID_SIZE; // 20 tiles
+        const INITIAL_GAME_SPEED = 150; // 開局較慢速度 (ms)
+        const MIN_GAME_SPEED = 50; // 極限速度 (ms)
+        const SPEED_INCREASE_PER_APPLE = 2.5; // 每吃一顆蘋果減少的毫秒數
+
+        // Game State Variables
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let dx = GRID_SIZE;
+        let dy = 0;
+        let nextDx = GRID_SIZE;
+        let nextDy = 0;
+        let score = 0;
+        let applesEaten = 0;
+        let currentSpeed = INITIAL_GAME_SPEED;
+        let highScore = parseInt(window.__galleryStorage.getItem('pixel_snake_highscore')) || 0;
+        let gameInterval = null;
+        let isRunning = false;
+        let soundEnabled = true;
+        let particles = [];
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'eat') {
+                    // Crisp 8-bit pickup sound
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.setValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'die') {
+                    // Retro Game Over Buzz
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(50, now + 0.35);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'start') {
+                    // Chime
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                }
+            } catch (e) {
+                console.log("Audio play error:", e);
+            }
+        }
+
+        function formatScore(num) {
+            return num.toString().padStart(4, '0');
+        }
+
+        function updateScoreDisplay() {
+            scoreText.textContent = formatScore(score);
+            highScoreText.textContent = formatScore(highScore);
+        }
+
+        updateScoreDisplay();
+
+        function createFoodParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x + GRID_SIZE / 2,
+                    y: y + GRID_SIZE / 2,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    size: Math.random() * 3 + 2,
+                    color: Math.random() > 0.5 ? '#d01010' : '#0f380f',
+                    alpha: 1
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.08;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                // Draw square pixel particles
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                ctx.restore();
+            }
+        }
+
+        function resetGame() {
+            snake = [
+                { x: 5 * GRID_SIZE, y: 10 * GRID_SIZE },
+                { x: 4 * GRID_SIZE, y: 10 * GRID_SIZE },
+                { x: 3 * GRID_SIZE, y: 10 * GRID_SIZE }
+            ];
+            dx = GRID_SIZE;
+            dy = 0;
+            nextDx = GRID_SIZE;
+            nextDy = 0;
+            score = 0;
+            applesEaten = 0;
+            currentSpeed = INITIAL_GAME_SPEED;
+            particles = [];
+            updateScoreDisplay();
+            spawnFood();
+        }
+
+        function spawnFood() {
+            let validPosition = false;
+            // 前 5 顆蘋果避開最外圍邊緣 (索引從 1 到 TILE_COUNT - 2)
+            const margin = applesEaten < 5 ? 1 : 0;
+            const minIndex = margin;
+            const maxIndex = TILE_COUNT - margin;
+
+            while (!validPosition) {
+                const fx = (Math.floor(Math.random() * (maxIndex - minIndex)) + minIndex) * GRID_SIZE;
+                const fy = (Math.floor(Math.random() * (maxIndex - minIndex)) + minIndex) * GRID_SIZE;
+
+                // Make sure apple doesn't spawn on top of snake body
+                const onSnake = snake.some(segment => segment.x === fx && segment.y === fy);
+                if (!onSnake) {
+                    food = { x: fx, y: fy };
+                    validPosition = true;
+                }
+            }
+        }
+
+        function gameLoop() {
+            dx = nextDx;
+            dy = nextDy;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // 1. Collision check with WALLS
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                handleGameOver();
+                return;
+            }
+
+            // 2. Collision check with SELF BODY
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    handleGameOver();
+                    return;
+                }
+            }
+
+            // Move snake forward
+            snake.unshift(head);
+
+            // 3. Eating Apple Check
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                applesEaten++;
+
+                if (score > highScore) {
+                    highScore = score;
+                    window.__galleryStorage.setItem('pixel_snake_highscore', highScore);
+                }
+                updateScoreDisplay();
+                playSound('eat');
+                createFoodParticles(food.x, food.y);
+                spawnFood();
+
+                // 隨吃蘋果數動態調整速度 (漸進加快)
+                currentSpeed = Math.max(MIN_GAME_SPEED, INITIAL_GAME_SPEED - (applesEaten * SPEED_INCREASE_PER_APPLE));
+                if (gameInterval) clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, currentSpeed);
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function draw() {
+            // Background - GameBoy Screen Olive-Green Tint
+            ctx.fillStyle = '#8bac0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Pixel Grid Background Lines
+            ctx.strokeStyle = '#809e0f';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw Red Pixel Apple (Food)
+            ctx.save();
+            ctx.fillStyle = '#d01010'; // Red Apple
+            ctx.fillRect(food.x + 3, food.y + 4, GRID_SIZE - 6, GRID_SIZE - 6);
+            
+            // Apple stem / leaf
+            ctx.fillStyle = '#0f380f';
+            ctx.fillRect(food.x + 9, food.y + 1, 3, 3);
+            ctx.restore();
+
+            // Draw Particles
+            updateAndDrawParticles();
+
+            // Draw Pixel Snake
+            snake.forEach((segment, index) => {
+                ctx.save();
+                if (index === 0) {
+                    // Head - Dark Green (#0f380f)
+                    ctx.fillStyle = '#0f380f';
+                    ctx.fillRect(segment.x + 1, segment.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+
+                    // Snake Pixel Eyes (Yellow/Cream dots)
+                    ctx.fillStyle = '#9bbc0f';
+                    if (dx > 0) { // Right
+                        ctx.fillRect(segment.x + 13, segment.y + 4, 3, 3);
+                        ctx.fillRect(segment.x + 13, segment.y + 13, 3, 3);
+                    } else if (dx < 0) { // Left
+                        ctx.fillRect(segment.x + 4, segment.y + 4, 3, 3);
+                        ctx.fillRect(segment.x + 4, segment.y + 13, 3, 3);
+                    } else if (dy < 0) { // Up
+                        ctx.fillRect(segment.x + 4, segment.y + 4, 3, 3);
+                        ctx.fillRect(segment.x + 13, segment.y + 4, 3, 3);
+                    } else { // Down
+                        ctx.fillRect(segment.x + 4, segment.y + 13, 3, 3);
+                        ctx.fillRect(segment.x + 13, segment.y + 13, 3, 3);
+                    }
+                } else {
+                    // Snake Body Segment
+                    ctx.fillStyle = index % 2 === 0 ? '#306230' : '#224a22';
+                    ctx.fillRect(segment.x + 2, segment.y + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+                    // Inner pixel detail
+                    ctx.fillStyle = '#0f380f';
+                    ctx.fillRect(segment.x + 5, segment.y + 5, GRID_SIZE - 10, GRID_SIZE - 10);
+                }
+                ctx.restore();
+            });
+        }
+
+        function startGame() {
+            initAudio();
+            playSound('start');
+            resetGame();
+            overlay.classList.add('hidden');
+            isRunning = true;
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, currentSpeed);
+        }
+
+        function handleGameOver() {
+            playSound('die');
+            clearInterval(gameInterval);
+            isRunning = false;
+
+            overlayTitle.textContent = "GAME OVER";
+            overlayTitle.className = "text-xl sm:text-2xl text-[#d01010] mb-3 font-bold blink";
+            overlaySubtitle.innerHTML = `得分: <span class="text-[#0f380f] font-bold">${score}</span><br>最高得分: <span class="text-[#0f380f] font-bold">${highScore}</span>`;
+            startBtn.textContent = "PLAY AGAIN";
+            overlay.classList.remove('hidden');
+        }
+
+        function changeDirection(dir) {
+            if (!isRunning) return;
+
+            switch (dir) {
+                case 'UP':
+                    if (dy === 0) { nextDx = 0; nextDy = -GRID_SIZE; }
+                    break;
+                case 'DOWN':
+                    if (dy === 0) { nextDx = 0; nextDy = GRID_SIZE; }
+                    break;
+                case 'LEFT':
+                    if (dx === 0) { nextDx = -GRID_SIZE; nextDy = 0; }
+                    break;
+                case 'RIGHT':
+                    if (dx === 0) { nextDx = GRID_SIZE; nextDy = 0; }
+                    break;
+            }
+        }
+
+        // Keyboard Event Listeners
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (!isRunning && (e.code === 'Space' || e.code === 'Enter')) {
+                startGame();
+                return;
+            }
+
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    changeDirection('UP');
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    changeDirection('DOWN');
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    changeDirection('LEFT');
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    changeDirection('RIGHT');
+                    break;
+            }
+        });
+
+        // Touch Control Buttons
+        document.getElementById('btnUp').addEventListener('click', () => changeDirection('UP'));
+        document.getElementById('btnDown').addEventListener('click', () => changeDirection('DOWN'));
+        document.getElementById('btnLeft').addEventListener('click', () => changeDirection('LEFT'));
+        document.getElementById('btnRight').addEventListener('click', () => changeDirection('RIGHT'));
+
+        // Start Button Click
+        startBtn.addEventListener('click', startGame);
+
+        // Sound Toggle Click
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                soundIcon.setAttribute('data-lucide', 'volume-2');
+                soundStatus.textContent = "SOUND: ON";
+            } else {
+                soundIcon.setAttribute('data-lucide', 'volume-x');
+                soundStatus.textContent = "SOUND: OFF";
+            }
+            lucide.createIcons();
+        });
+
+        // Touch Swipe Controls
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!isRunning) return;
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+            
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > 20) {
+                    changeDirection(diffX > 0 ? 'RIGHT' : 'LEFT');
+                }
+            } else {
+                if (Math.abs(diffY) > 20) {
+                    changeDirection(diffY > 0 ? 'DOWN' : 'UP');
+                }
+            }
+        }, { passive: true });
+
+        // Initial Canvas Render
+        draw();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

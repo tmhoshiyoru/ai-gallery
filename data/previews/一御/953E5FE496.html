@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素莫蘭迪太空打磚塊 Pixel Morandi Space Breakout</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Pixel Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Silkscreen', 'Press Start 2P', 'Noto Sans TC', monospace;
+            background-color: #faf6ed;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(217, 119, 6, 0.06) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(120, 144, 131, 0.08) 0px, transparent 50%);
+            touch-action: none;
+            user-select: none;
+            image-rendering: pixelated;
+        }
+
+        .pixel-border {
+            border: 4px solid #475569;
+            box-shadow: 4px 4px 0px #1e293b;
+        }
+
+        .pixel-btn {
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            box-shadow: 0 4px 0 #1e293b;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1e293b;
+        }
+
+        #gameCanvas {
+            border-radius: 0.5rem;
+            background: #fdfbf7;
+            image-rendering: pixelated;
+        }
+
+        /* Retro HUD styling */
+        .hud-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid #334155;
+            box-shadow: 3px 3px 0px #64748b;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-between p-3 sm:p-5 text-slate-800">
+
+    <!-- Top Header & HUD -->
+    <header class="w-full max-w-3xl flex flex-col items-center justify-between gap-3 mb-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-700 text-amber-100 flex items-center justify-center font-black text-lg pixel-border">
+                <i class="fa-solid fa-shuttle-space"></i>
+            </div>
+            <div class="text-center sm:text-left">
+                <h1 class="text-xl sm:text-2xl font-black tracking-wider text-amber-900 uppercase">
+                    PIXEL MORANDI BREAKOUT
+                </h1>
+                <p class="text-[10px] text-amber-800/70 font-bold tracking-widest uppercase">8-BIT SPACE ARCADE</p>
+            </div>
+        </div>
+
+        <!-- Scoreboard Panel with Lives and Active Buff Indicators -->
+        <div class="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 hud-card p-2.5 rounded-xl text-center">
+            <!-- Lives Display -->
+            <div class="flex flex-col items-center justify-center border-r border-slate-200/80">
+                <span class="text-[9px] font-bold tracking-wider text-slate-500 uppercase">LIVES</span>
+                <div id="livesContainer" class="flex items-center justify-center gap-1 text-rose-500 text-xs h-6">
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+            </div>
+
+            <!-- Score -->
+            <div class="flex flex-col items-center justify-center sm:border-r border-slate-200/80">
+                <span class="text-[9px] font-bold tracking-wider text-slate-500 uppercase">SCORE</span>
+                <span id="scoreText" class="text-lg font-bold text-amber-800">0</span>
+            </div>
+
+            <!-- High Score -->
+            <div class="flex flex-col items-center justify-center border-r border-slate-200/80">
+                <span class="text-[9px] font-bold tracking-wider text-slate-500 uppercase">HI-SCORE</span>
+                <span id="highScoreText" class="text-lg font-bold text-slate-600">0</span>
+            </div>
+
+            <!-- Bricks Left -->
+            <div class="flex flex-col items-center justify-center">
+                <span class="text-[9px] font-bold tracking-wider text-slate-500 uppercase">BRICKS</span>
+                <span id="bricksLeftText" class="text-lg font-bold text-emerald-700">100</span>
+            </div>
+        </div>
+
+        <!-- Active Buffs Status Bar -->
+        <div id="activeBuffsBar" class="w-full flex items-center justify-center gap-2 min-h-[26px]">
+            <!-- Dynamic active power-up badges inserted here -->
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative w-full max-w-3xl flex-1 flex items-center justify-center my-auto">
+        <div class="relative w-full aspect-[4/3] max-h-[66vh] rounded-xl overflow-hidden bg-white pixel-border">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+            <!-- Overlay: Start / Pause / Game Over / Win -->
+            <div id="gameOverlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+                <div class="bg-amber-50 p-6 sm:p-8 rounded-2xl pixel-border max-w-md w-full transform transition-all">
+                    <div id="overlayIcon" class="w-14 h-14 mx-auto mb-3 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center text-2xl border-2 border-amber-900">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <h2 id="overlayTitle" class="text-2xl font-black text-slate-800 mb-2 uppercase">READY PLAYER ONE</h2>
+                    <p id="overlaySub" class="text-slate-600 text-xs mb-5 leading-relaxed">點擊下方按鈕或按下 <span class="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded font-bold">SPACE</span> 開始遊戲</p>
+                    
+                    <button id="startBtn" class="pixel-btn w-full py-3 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2 border-2 border-slate-900">
+                        <i class="fa-solid fa-play"></i> START GAME
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Controls Footer -->
+    <footer class="w-full max-w-3xl mt-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-600 text-[11px] font-bold">
+        <div class="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-lg border-2 border-slate-300">
+            <span>[← / A]</span>
+            <span>[→ / D]</span> 移動
+            <span class="mx-1 text-slate-300">|</span>
+            支援 <i class="fa-solid fa-mouse-pointer text-amber-700"></i> 滑鼠 / 觸控
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" class="px-3 py-1.5 rounded-lg bg-white/80 border-2 border-slate-300 hover:bg-white text-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-volume-high text-amber-700" id="soundIcon"></i> SOUND: ON
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // Web Audio API Synthesizer for Pixel Arcade Sound Effects
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playTone(freq, type = 'square', duration = 0.08, gainVal = 0.1) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            paddleHit() { this.playTone(320, 'square', 0.06, 0.12); }
+            wallHit() { this.playTone(220, 'square', 0.04, 0.08); }
+            loseLife() { 
+                this.playTone(180, 'sawtooth', 0.2, 0.15); 
+                setTimeout(() => this.playTone(120, 'sawtooth', 0.25, 0.15), 100);
+            }
+            brickHit(row) { 
+                const freq = 340 + (10 - row) * 35;
+                this.playTone(freq, 'square', 0.06, 0.1); 
+            }
+            powerUpPickup() {
+                if (this.muted || !this.ctx) return;
+                this.playTone(523, 'triangle', 0.06, 0.15);
+                setTimeout(() => this.playTone(659, 'triangle', 0.06, 0.15), 60);
+                setTimeout(() => this.playTone(784, 'triangle', 0.08, 0.15), 120);
+                setTimeout(() => this.playTone(1046, 'square', 0.1, 0.15), 180);
+            }
+            laserShoot() {
+                this.playTone(880, 'sawtooth', 0.04, 0.08);
+            }
+            healSound() {
+                this.playTone(440, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(880, 'sine', 0.12, 0.15), 80);
+            }
+            gameOver() { 
+                if (this.muted || !this.ctx) return;
+                this.playTone(220, 'sawtooth', 0.2, 0.2);
+                setTimeout(() => this.playTone(165, 'sawtooth', 0.2, 0.2), 150);
+                setTimeout(() => this.playTone(130, 'sawtooth', 0.4, 0.2), 300);
+            }
+            win() {
+                if (this.muted || !this.ctx) return;
+                const notes = [440, 554, 659, 880, 1108];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'square', 0.12, 0.12), idx * 80);
+                });
+            }
+        }
+
+        // Canvas Setup & Virtual Logical Resolution
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sound = new SoundSystem();
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // Brick Constants (10 Morandi Rows)
+        const BRICK_ROWS = 10;
+        const BRICK_COLS = 10;
+        const BRICK_PADDING = 8;
+        const BRICK_OFFSET_TOP = 50;
+        const BRICK_OFFSET_LEFT = 35;
+        const BRICK_WIDTH = (CANVAS_WIDTH - (BRICK_OFFSET_LEFT * 2) - (BRICK_PADDING * (BRICK_COLS - 1))) / BRICK_COLS;
+        const BRICK_HEIGHT = 18;
+
+        const ROW_COLORS = [
+            '#a37a74', // Terracotta Rose
+            '#c59b87', // Soft Cinnamon
+            '#d8b193', // Warm Sand
+            '#a89f91', // Muted Taupe
+            '#8fa189', // Sage Green
+            '#789083', // Eucalyptus
+            '#7e9aa9', // Muted Denim Blue
+            '#8b90a0', // Slate Indigo
+            '#a393a3', // Dusty Lilac
+            '#bfa5a9'  // Muted Blush
+        ];
+
+        // 5 Power-Up Types Definitions
+        const POWERUP_TYPES = [
+            { id: 'WIDE', label: '[+] WIDE', color: '#10b981', name: '機翼加長 6s', duration: 6000 },
+            { id: 'SLOW', label: '[~] SLOW', color: '#06b6d4', name: '時空減速 6s', duration: 6000 },
+            { id: 'LIFE', label: '[♥] LIFE', color: '#e11d48', name: '生命 +1', duration: 0 },
+            { id: 'PIERCE', label: '[⚡] PIERCE', color: '#a855f7', name: '貫穿砲彈 5s', duration: 5000 },
+            { id: 'LASER', label: '[▲] LASER', color: '#f59e0b', name: '雙重激光 6s', duration: 6000 }
+        ];
+
+        // Game State Engine Variables
+        let gameState = 'MENU';
+        let score = 0;
+        let lives = 3;
+        let highScore = window.__galleryStorage.getItem('breakout_pixel_hi_score') || 0;
+        let bricksLeft = BRICK_ROWS * BRICK_COLS;
+
+        // Controls
+        const keys = { left: false, right: false };
+
+        // Spaceship Paddle Object
+        const paddle = {
+            baseWidth: 120,
+            width: 120,
+            height: 22,
+            x: (CANVAS_WIDTH - 120) / 2,
+            y: CANVAS_HEIGHT - 40,
+            speed: 9.5
+        };
+
+        // Ball Object
+        const ball = {
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT - 60,
+            radius: 8,
+            baseSpeed: 7.48, // 提高 10% 基礎速度 (由 6.8 提升至 7.48)
+            speedMultiplier: 1.0,
+            dx: 0,
+            dy: 0,
+            trail: [],
+            isPenetrating: false
+        };
+
+        // Active Buff Timers System
+        const activeBuffs = {
+            WIDE: 0,
+            SLOW: 0,
+            PIERCE: 0,
+            LASER: 0
+        };
+
+        let lastLaserShot = 0;
+
+        // Entities Arrays
+        let bricks = [];
+        let particles = [];
+        let shockwaves = [];
+        let powerUps = [];
+        let lasers = [];
+        let floatingTexts = [];
+
+        function initBricks() {
+            bricks = [];
+            bricksLeft = BRICK_ROWS * BRICK_COLS;
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    bricks[r][c] = {
+                        x: BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING),
+                        y: BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING),
+                        status: 1,
+                        color: ROW_COLORS[r],
+                        row: r
+                    };
+                }
+            }
+            updateHUD();
+        }
+
+        function createExplosion(x, y, color) {
+            // 爆破火花粒子 (包含磚塊色與高亮白光)
+            const count = 18;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+                const speed = 2.5 + Math.random() * 5.5;
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    size: 2 + Math.random() * 4,
+                    color: i % 2 === 0 ? color : '#ffffff',
+                    alpha: 1,
+                    decay: 0.03 + Math.random() * 0.03
+                });
+            }
+
+            // 新增擊中能量衝擊波光環
+            shockwaves.push({
+                x: x,
+                y: y,
+                radius: 4,
+                maxRadius: 32,
+                color: color,
+                alpha: 0.9,
+                lineWidth: 3
+            });
+        }
+
+        function resetBallAndPaddle() {
+            paddle.width = paddle.baseWidth;
+            paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+            ball.x = CANVAS_WIDTH / 2;
+            ball.y = CANVAS_HEIGHT - 60;
+            
+            // Clear Buffs
+            Object.keys(activeBuffs).forEach(k => activeBuffs[k] = 0);
+            ball.speedMultiplier = 1.0;
+            ball.isPenetrating = false;
+
+            powerUps = [];
+            lasers = [];
+            floatingTexts = [];
+            shockwaves = [];
+            
+            const angle = -Math.PI / 2 + (Math.random() * 0.6 - 0.3);
+            const currentSpeed = ball.baseSpeed;
+            ball.dx = currentSpeed * Math.sin(angle);
+            ball.dy = -Math.abs(currentSpeed * Math.cos(angle));
+            ball.trail = [];
+            updateBuffsUI();
+        }
+
+        function triggerPowerUp(pType) {
+            sound.powerUpPickup();
+
+            if (pType.id === 'LIFE') {
+                if (lives < 5) lives++;
+                sound.healSound();
+                addFloatingText('+1 LIFE!', paddle.x + paddle.width / 2, paddle.y - 15, '#f43f5e');
+                updateHUD();
+                return;
+            }
+
+            // Set duration timer for active buff
+            activeBuffs[pType.id] = Date.now() + pType.duration;
+            addFloatingText(pType.name, paddle.x + paddle.width / 2, paddle.y - 15, pType.color);
+
+            updateBuffStates();
+        }
+
+        function updateBuffStates() {
+            const now = Date.now();
+
+            // WIDE
+            if (activeBuffs.WIDE > now) {
+                paddle.width = 180;
+            } else {
+                paddle.width = paddle.baseWidth;
+            }
+
+            // SLOW
+            if (activeBuffs.SLOW > now) {
+                ball.speedMultiplier = 0.65;
+            } else {
+                ball.speedMultiplier = 1.0;
+            }
+
+            // PIERCE
+            ball.isPenetrating = (activeBuffs.PIERCE > now);
+
+            updateBuffsUI();
+        }
+
+        function addFloatingText(text, x, y, color) {
+            floatingTexts.push({
+                text: text,
+                x: Math.min(Math.max(x, 100), CANVAS_WIDTH - 100),
+                y: y,
+                color: color || '#10b981',
+                alpha: 1,
+                dy: -0.8
+            });
+        }
+
+        function updatePhysics() {
+            if (gameState !== 'PLAYING') return;
+
+            updateBuffStates();
+
+            // Paddle Movement
+            if (keys.left && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+            if (keys.right && paddle.x < CANVAS_WIDTH - paddle.width) {
+                paddle.x += paddle.speed;
+            }
+
+            // Automatic Twin Lasers firing when LASER buff active
+            const now = Date.now();
+            if (activeBuffs.LASER > now && now - lastLaserShot > 260) {
+                lasers.push({ x: paddle.x + 12, y: paddle.y, dy: -12 });
+                lasers.push({ x: paddle.x + paddle.width - 12, y: paddle.y, dy: -12 });
+                sound.laserShoot();
+                lastLaserShot = now;
+            }
+
+            // Update Lasers Position & Collision
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const l = lasers[i];
+                l.y += l.dy;
+
+                // Collision check with bricks
+                let laserHit = false;
+                for (let r = 0; r < BRICK_ROWS && !laserHit; r++) {
+                    for (let c = 0; c < BRICK_COLS && !laserHit; c++) {
+                        const b = bricks[r][c];
+                        if (b.status === 1) {
+                            if (l.x >= b.x && l.x <= b.x + BRICK_WIDTH && l.y >= b.y && l.y <= b.y + BRICK_HEIGHT) {
+                                b.status = 0;
+                                score += 10;
+                                bricksLeft--;
+                                laserHit = true;
+                                sound.brickHit(r);
+                                createExplosion(b.x + BRICK_WIDTH / 2, b.y + BRICK_HEIGHT / 2, b.color);
+                                updateHUD();
+
+                                if (bricksLeft === 0) {
+                                    triggerWin();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (laserHit || l.y < 0) {
+                    lasers.splice(i, 1);
+                }
+            }
+
+            // Ball Trail
+            ball.trail.push({ x: ball.x, y: ball.y });
+            if (ball.trail.length > 6) ball.trail.shift();
+
+            // Move Ball considering SLOW modifier
+            const effectiveDx = ball.dx * ball.speedMultiplier;
+            const effectiveDy = ball.dy * ball.speedMultiplier;
+            ball.x += effectiveDx;
+            ball.y += effectiveDy;
+
+            // Ball Wall Collisions
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.dx = Math.abs(ball.dx);
+                sound.wallHit();
+            } else if (ball.x + ball.radius > CANVAS_WIDTH) {
+                ball.x = CANVAS_WIDTH - ball.radius;
+                ball.dx = -Math.abs(ball.dx);
+                sound.wallHit();
+            }
+
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.dy = Math.abs(ball.dy);
+                sound.wallHit();
+            }
+
+            // Ball Drop (Lose Life)
+            if (ball.y + ball.radius > CANVAS_HEIGHT) {
+                lives--;
+                sound.loseLife();
+                updateHUD();
+
+                if (lives <= 0) {
+                    triggerGameOver();
+                    return;
+                } else {
+                    resetBallAndPaddle();
+                }
+            }
+
+            // Ball Paddle Collision
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x + ball.radius >= paddle.x &&
+                ball.x - ball.radius <= paddle.x + paddle.width &&
+                ball.dy > 0
+            ) {
+                sound.paddleHit();
+                const hitX = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const maxAngle = Math.PI / 3;
+                const bounceAngle = hitX * maxAngle;
+
+                const currentSpeed = ball.baseSpeed;
+                ball.dx = currentSpeed * Math.sin(bounceAngle);
+                ball.dy = -currentSpeed * Math.cos(bounceAngle);
+                ball.y = paddle.y - ball.radius;
+            }
+
+            // Ball Brick Collision
+            let collided = false;
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        const closestX = Math.max(b.x, Math.min(ball.x, b.x + BRICK_WIDTH));
+                        const closestY = Math.max(b.y, Math.min(ball.y, b.y + BRICK_HEIGHT));
+
+                        const distX = ball.x - closestX;
+                        const distY = ball.y - closestY;
+                        const distance = Math.sqrt((distX * distX) + (distY * distY));
+
+                        if (distance < ball.radius) {
+                            b.status = 0;
+                            score += 10;
+                            bricksLeft--;
+                            sound.brickHit(r);
+                            createExplosion(b.x + BRICK_WIDTH / 2, b.y + BRICK_HEIGHT / 2, b.color);
+
+                            // 20% total chance to drop 1 of 5 powerups
+                            if (Math.random() < 0.20) {
+                                const pType = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+                                powerUps.push({
+                                    x: b.x + BRICK_WIDTH / 2,
+                                    y: b.y + BRICK_HEIGHT / 2,
+                                    width: 70,
+                                    height: 20,
+                                    dy: 2.2,
+                                    type: pType
+                                });
+                            }
+
+                            // Normal Ball bounce if NOT penetrating
+                            if (!ball.isPenetrating && !collided) {
+                                const prevX = ball.x - effectiveDx;
+                                const prevY = ball.y - effectiveDy;
+
+                                if (prevX < b.x || prevX > b.x + BRICK_WIDTH) {
+                                    ball.dx = -ball.dx;
+                                } else {
+                                    ball.dy = -ball.dy;
+                                }
+                                collided = true;
+                            }
+
+                            updateHUD();
+
+                            if (bricksLeft === 0) {
+                                triggerWin();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            updateParticles();
+            updateShockwaves();
+            updatePowerUps();
+            updateFloatingTexts();
+        }
+
+        function updatePowerUps() {
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const p = powerUps[i];
+                p.y += p.dy;
+
+                // Paddle Catch Item
+                if (
+                    p.y + p.height / 2 >= paddle.y &&
+                    p.y - p.height / 2 <= paddle.y + paddle.height &&
+                    p.x + p.width / 2 >= paddle.x &&
+                    p.x - p.width / 2 <= paddle.x + paddle.width
+                ) {
+                    triggerPowerUp(p.type);
+                    powerUps.splice(i, 1);
+                    continue;
+                }
+
+                if (p.y > CANVAS_HEIGHT + 20) {
+                    powerUps.splice(i, 1);
+                }
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function updateShockwaves() {
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += 2.2;
+                sw.alpha -= 0.05;
+                if (sw.alpha <= 0 || sw.radius >= sw.maxRadius) {
+                    shockwaves.splice(i, 1);
+                }
+            }
+        }
+
+        function updateFloatingTexts() {
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.dy;
+                ft.alpha -= 0.015;
+                if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = '#faf6ed';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Pixel grid dots
+            ctx.fillStyle = 'rgba(217, 119, 6, 0.05)';
+            for (let x = 0; x < CANVAS_WIDTH; x += 20) {
+                for (let y = 0; y < CANVAS_HEIGHT; y += 20) {
+                    ctx.fillRect(x, y, 2, 2);
+                }
+            }
+        }
+
+        function drawBricks() {
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        
+                        // Solid Morandi Fill
+                        ctx.fillStyle = b.color;
+                        ctx.fillRect(b.x, b.y, BRICK_WIDTH, BRICK_HEIGHT);
+
+                        // Pixel Bevel Highlight & Shadow
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.fillRect(b.x, b.y, BRICK_WIDTH, 3);
+                        ctx.fillRect(b.x, b.y, 3, BRICK_HEIGHT);
+
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                        ctx.fillRect(b.x, b.y + BRICK_HEIGHT - 3, BRICK_WIDTH, 3);
+                        ctx.fillRect(b.x + BRICK_WIDTH - 3, b.y, 3, BRICK_HEIGHT);
+
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function drawPaddle() {
+            ctx.save();
+            const x = paddle.x;
+            const y = paddle.y;
+            const w = paddle.width;
+            const h = paddle.height;
+
+            // Engine Flame
+            const now = Date.now();
+            const flameH = (now % 200 < 100) ? 6 : 10;
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(x + w / 2 - 12, y + h, 24, flameH);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(x + w / 2 - 6, y + h, 12, flameH + 3);
+
+            // Hull Main Body
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(x, y + h * 0.4, w, h * 0.6);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(x + w * 0.15, y + h * 0.15, w * 0.7, h * 0.4);
+
+            // Wing Cannons / Tips
+            ctx.fillStyle = (activeBuffs.LASER > now) ? '#f59e0b' : '#0284c7';
+            ctx.fillRect(x + 2, y + 2, 8, h);
+            ctx.fillRect(x + w - 10, y + 2, 8, h);
+
+            // Cockpit Dome
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(x + w / 2 - 10, y + 2, 20, 8);
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fillRect(x + w / 2 - 6, y + 4, 6, 4);
+
+            // Aura Stroke if WIDE active
+            if (activeBuffs.WIDE > now) {
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x - 2, y - 2, w + 4, h + 6);
+            }
+
+            ctx.restore();
+        }
+
+        function drawBall() {
+            ctx.save();
+
+            // Glowing Ball Trail (Circular)
+            for (let i = 0; i < ball.trail.length; i++) {
+                const pt = ball.trail[i];
+                const alpha = ((i + 1) / ball.trail.length) * 0.45;
+                const trailRadius = ball.radius * (0.35 + ((i + 1) / ball.trail.length) * 0.65);
+                
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = ball.isPenetrating ? '#c084fc' : (ball.speedMultiplier < 1.0 ? '#22d3ee' : '#38bdf8');
+                
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, trailRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.globalAlpha = 1.0;
+
+            // Determine Glow & Palette colors based on active powerup status
+            let primaryColor = '#0284c7';
+            let glowColor = '#38bdf8';
+            let innerColor = '#bae6fd';
+
+            if (ball.isPenetrating) {
+                primaryColor = '#9333ea';
+                glowColor = '#c084fc';
+                innerColor = '#f3e8ff';
+            } else if (ball.speedMultiplier < 1.0) {
+                primaryColor = '#0891b2';
+                glowColor = '#22d3ee';
+                innerColor = '#cffaff';
+            }
+
+            // High Radiant Outer Glow
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 20;
+
+            // Smooth Radial Gradient Glowing Sphere
+            const radGrad = ctx.createRadialGradient(
+                ball.x - ball.radius * 0.3,
+                ball.y - ball.radius * 0.3,
+                1,
+                ball.x,
+                ball.y,
+                ball.radius + 3
+            );
+            radGrad.addColorStop(0, '#ffffff');
+            radGrad.addColorStop(0.3, innerColor);
+            radGrad.addColorStop(0.75, primaryColor);
+            radGrad.addColorStop(1, glowColor);
+
+            ctx.fillStyle = radGrad;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bright Center Energy Core Highlight
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x - ball.radius * 0.25, ball.y - ball.radius * 0.25, ball.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawPowerUps() {
+            powerUps.forEach(p => {
+                ctx.save();
+                const w = p.width;
+                const h = p.height;
+                const x = p.x - w / 2;
+                const y = p.y - h / 2;
+
+                // Pixel Capsule
+                ctx.fillStyle = p.type.color;
+                ctx.fillRect(x, y, w, h);
+
+                // Bevel
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.fillRect(x, y, w, 2);
+                ctx.fillRect(x, y, 2, h);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '700 9px "Silkscreen", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.type.label, p.x, p.y + 1);
+
+                ctx.restore();
+            });
+        }
+
+        function drawLasers() {
+            lasers.forEach(l => {
+                ctx.save();
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(l.x - 2, l.y, 4, 12);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(l.x - 1, l.y + 2, 2, 8);
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                ctx.restore();
+            });
+        }
+
+        function drawShockwaves() {
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, sw.alpha);
+                ctx.strokeStyle = sw.color;
+                ctx.lineWidth = sw.lineWidth;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
+
+        function drawFloatingTexts() {
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = '700 11px "Silkscreen", "Noto Sans TC", sans-serif';
+                ctx.fillStyle = ft.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            drawBackground();
+            drawBricks();
+            drawPaddle();
+            drawBall();
+            drawLasers();
+            drawPowerUps();
+            drawShockwaves();
+            drawParticles();
+            drawFloatingTexts();
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('bricksLeftText').innerText = bricksLeft;
+            document.getElementById('highScoreText').innerText = highScore;
+
+            const livesContainer = document.getElementById('livesContainer');
+            let heartsHtml = '';
+            for (let i = 0; i < Math.max(3, lives); i++) {
+                if (i < lives) {
+                    heartsHtml += '<i class="fa-solid fa-heart text-rose-500 text-xs"></i>';
+                } else {
+                    heartsHtml += '<i class="fa-regular fa-heart text-slate-300 text-xs"></i>';
+                }
+            }
+            livesContainer.innerHTML = heartsHtml;
+        }
+
+        function updateBuffsUI() {
+            const buffsBar = document.getElementById('activeBuffsBar');
+            const now = Date.now();
+            let html = '';
+
+            POWERUP_TYPES.forEach(p => {
+                if (p.duration > 0 && activeBuffs[p.id] > now) {
+                    const remainSec = Math.ceil((activeBuffs[p.id] - now) / 1000);
+                    html += `
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold text-white border border-slate-900 shadow-xs flex items-center gap-1" style="background-color: ${p.color}">
+                            ${p.label} ${remainSec}s
+                        </span>
+                    `;
+                }
+            });
+
+            buffsBar.innerHTML = html;
+        }
+
+        // Game Flow State Controllers
+        function startGame() {
+            sound.init();
+            score = 0;
+            lives = 3;
+            initBricks();
+            resetBallAndPaddle();
+            gameState = 'PLAYING';
+            hideOverlay();
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            sound.gameOver();
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_pixel_hi_score', highScore);
+            }
+            updateHUD();
+            showOverlay({
+                icon: '<i class="fa-solid fa-heart-crack text-rose-500"></i>',
+                title: 'GAME OVER',
+                sub: `生命值耗盡！得分：<span class="font-bold text-amber-800 text-sm">${score}</span>`,
+                btnText: 'TRY AGAIN'
+            });
+        }
+
+        function triggerWin() {
+            gameState = 'WIN';
+            sound.win();
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_pixel_hi_score', highScore);
+            }
+            updateHUD();
+            showOverlay({
+                icon: '<i class="fa-solid fa-trophy text-amber-600"></i>',
+                title: 'STAGE CLEAR!',
+                sub: `太厲害了！清除所有磚塊！得分：<span class="font-bold text-emerald-700 text-sm">${score}</span>`,
+                btnText: 'PLAY AGAIN'
+            });
+        }
+
+        const overlay = document.getElementById('gameOverlay');
+        const overlayIcon = document.getElementById('overlayIcon');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const startBtn = document.getElementById('startBtn');
+
+        function showOverlay({ icon, title, sub, btnText }) {
+            overlayIcon.innerHTML = icon;
+            overlayTitle.innerText = title;
+            overlaySub.innerHTML = sub;
+            startBtn.innerHTML = `<i class="fa-solid fa-rotate-right text-xs"></i> ${btnText}`;
+            overlay.classList.remove('pointer-events-none', 'opacity-0');
+            overlay.classList.add('opacity-100');
+        }
+
+        function hideOverlay() {
+            overlay.classList.add('pointer-events-none', 'opacity-0');
+            overlay.classList.remove('opacity-100');
+        }
+
+        // Key Inputs
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                if (gameState !== 'PLAYING') startGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        // Pointer Handling
+        function handlePointerMove(clientX) {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = (clientX - rect.left) * scaleX;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, canvasX - paddle.width / 2));
+        }
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX));
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX);
+        }, { passive: true });
+
+        startBtn.addEventListener('click', () => startGame());
+
+        // Audio Mute Toggle
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        soundToggleBtn.addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            if (sound.muted) {
+                soundIcon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                soundToggleBtn.innerHTML = `<i class="fa-solid fa-volume-xmark text-slate-400" id="soundIcon"></i> SOUND: OFF`;
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-high text-amber-700';
+                soundToggleBtn.innerHTML = `<i class="fa-solid fa-volume-high text-amber-700" id="soundIcon"></i> SOUND: ON`;
+            }
+        });
+
+        window.onload = function () {
+            initBricks();
+            resetBallAndPaddle();
+            render();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

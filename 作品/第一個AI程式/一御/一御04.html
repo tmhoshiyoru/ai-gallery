@@ -1,0 +1,716 @@
+<!-- ... existing code ... -->
+    <title>TETRIS BRICK BREAKER</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Press Start 2P & Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #0b0e14;
+            color: #e2e8f0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Tetris Card & Retro Arcade Border */
+        .tetris-card {
+            background: #0f1420;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .tetris-btn {
+            font-family: 'Press Start 2P', monospace;
+            transition: all 0.15s ease;
+            background: #2563eb;
+            border: 3px solid #60a5fa;
+            box-shadow: 4px 4px 0px #1e3a8a;
+            text-shadow: 2px 2px 0px #000;
+        }
+        .tetris-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #1e3a8a;
+            background: #3b82f6;
+        }
+        .tetris-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #1e3a8a;
+        }
+
+        .text-glow-yellow {
+            text-shadow: 0 0 8px rgba(250, 204, 21, 0.7);
+        }
+        .text-glow-cyan {
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center relative overflow-hidden select-none bg-[#0b0e14]">
+
+    <!-- Retro Arcade HUD -->
+    <header class="w-full max-w-4xl px-6 py-3.5 flex justify-between items-center z-10 border-b-2 border-blue-900/60 bg-[#080b12] shadow-xl">
+        <div class="flex items-center gap-3">
+            <span class="w-3.5 h-3.5 bg-yellow-400 animate-pulse shadow-[0_0_8px_#facc15]"></span>
+            <h1 class="font-pixel text-xs sm:text-sm tracking-wider uppercase text-cyan-300 flex items-center gap-2">
+                TETRIS <span class="text-yellow-400">BREAKER</span>
+            </h1>
+        </div>
+        
+        <!-- Status Stats: High Score, Score, Lives -->
+        <div class="flex items-center gap-5 sm:gap-8">
+            <!-- High Score Display -->
+            <div class="text-right">
+                <span class="font-pixel text-[8px] text-amber-400/90 uppercase tracking-widest block font-semibold flex items-center gap-1 justify-end">
+                    HIGH
+                </span>
+                <span id="highScoreText" class="font-pixel text-xs sm:text-sm text-amber-300 text-glow-yellow">0000</span>
+            </div>
+
+            <!-- Current Score -->
+            <div class="text-right">
+                <span class="font-pixel text-[8px] text-cyan-400/90 uppercase tracking-widest block font-semibold">Score</span>
+                <span id="scoreText" class="font-pixel text-sm sm:text-base text-cyan-300 text-glow-cyan">0000</span>
+            </div>
+
+            <!-- Lives -->
+            <div class="text-right">
+                <span class="font-pixel text-[8px] text-rose-400 uppercase tracking-widest block font-semibold">BLOCKS</span>
+                <div id="livesContainer" class="flex gap-1.5 text-rose-400 text-xs mt-1">
+                    <i class="fa-solid fa-cube"></i>
+                    <i class="fa-solid fa-cube"></i>
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+            </div>
+
+            <!-- Sound Toggle -->
+            <button id="soundToggleBtn" class="text-cyan-400 hover:text-white text-base transition p-1" title="Sound Toggle">
+                <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full max-w-4xl my-auto flex items-center justify-center p-3 sm:p-4">
+        <div id="canvasContainer" class="relative w-full aspect-[4/3] max-h-[74vh] tetris-card rounded-lg overflow-hidden flex items-center justify-center">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+
+            <!-- Start Screen Overlay -->
+            <div id="startOverlay" class="absolute inset-0 bg-[#080b12]/90 backdrop-blur-sm flex flex-col justify-center items-center p-6 text-center z-20">
+                <div class="w-16 h-16 rounded-lg bg-blue-600/30 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 mb-4 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+                    <i class="fa-solid fa-cubes text-3xl text-yellow-400 animate-bounce"></i>
+                </div>
+                <h2 class="font-pixel text-xl sm:text-2xl text-yellow-400 mb-4 text-glow-yellow leading-relaxed">
+                    TETRIS BRICK BREAKER
+                </h2>
+                <p class="text-slate-300 max-w-md text-xs sm:text-sm mb-6 leading-relaxed font-sans">
+                    經典 <span class="text-cyan-300 font-bold">俄羅斯方塊風格</span> 磚塊挑戰！<br>
+                    掉球後 <span class="text-yellow-300 font-bold">滑塊保留原位</span>，擊碎所有 Tetrimino 方塊磚！
+                </p>
+
+                <div class="bg-slate-900/80 border border-blue-500/40 rounded-lg px-4 py-2.5 mb-7 text-xs text-cyan-300/90 flex gap-4 font-pixel text-[10px]">
+                    <span><i class="fa-solid fa-keyboard mr-1"></i> [←] [→] / [A] [D]</span>
+                    <span><i class="fa-solid fa-hand-pointer mr-1"></i> 滑鼠 / 觸控</span>
+                </div>
+
+                <button id="startBtn" class="tetris-btn text-white text-xs px-8 py-3.5 rounded">
+                    START GAME
+                </button>
+            </div>
+
+            <!-- Game Over / Victory Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-[#080b12]/95 backdrop-blur-sm flex flex-col justify-center items-center p-6 text-center z-20">
+                <div id="statusTag" class="font-pixel text-[10px] text-cyan-400 mb-3 uppercase tracking-widest">GAME OVER</div>
+                <h2 id="gameOverTitle" class="font-pixel text-2xl text-rose-500 mb-4">
+                    GAME OVER
+                </h2>
+                <p id="gameOverSub" class="text-slate-200 text-sm mb-2 font-sans">
+                    最終得分：<span id="finalScore" class="text-yellow-300 font-bold text-lg font-pixel">0</span>
+                </p>
+                <p id="highScoreNotice" class="font-pixel text-amber-300 text-xs mb-8 hidden flex items-center gap-2">
+                    <i class="fa-solid fa-crown text-amber-400"></i> NEW HIGH SCORE!
+                </p>
+                <button id="restartBtn" class="tetris-btn text-white text-xs px-8 py-3.5 rounded">
+                    PLAY AGAIN
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Controls Bar -->
+    <footer class="w-full max-w-4xl px-6 py-2.5 text-center text-xs text-slate-400 flex justify-between items-center border-t border-blue-900/40 bg-[#080b12]">
+        <div class="font-pixel text-[9px] text-slate-400">CONTROLS: ARROW KEYS / TOUCH DRAG</div>
+        <div class="text-cyan-400 font-pixel text-[9px] flex items-center gap-1.5">
+            <i class="fa-solid fa-gamepad"></i> TETRIS RETRO EDITION
+        </div>
+    </footer>
+
+    <script>
+        class TetrisSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            // Retro 8-bit Square / Triangle Wave Tone Generator
+            playChiptune(freq, type = 'square', duration = 0.08, vol = 0.08) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) { console.error(e); }
+            }
+
+            playPaddleHit() {
+                this.playChiptune(240, 'square', 0.08, 0.1);
+                setTimeout(() => this.playChiptune(360, 'square', 0.06, 0.08), 20);
+            }
+
+            playWallHit() {
+                this.playChiptune(180, 'triangle', 0.05, 0.08);
+            }
+
+            playBrickHit(combo = 0) {
+                const pitch = 350 + (combo % 8) * 60;
+                this.playChiptune(pitch, 'square', 0.09, 0.12);
+            }
+
+            playLifeLost() {
+                if (!this.enabled || !this.ctx) return;
+                this.playChiptune(160, 'sawtooth', 0.15, 0.12);
+                setTimeout(() => this.playChiptune(100, 'sawtooth', 0.22, 0.12), 100);
+            }
+
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [220, 196, 174, 146];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playChiptune(freq, 'sawtooth', 0.2, 0.12), idx * 120);
+                });
+            }
+
+            playVictory() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playChiptune(freq, 'square', 0.18, 0.12), idx * 80);
+                });
+            }
+        }
+
+        const sound = new TetrisSoundEngine();
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI References
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const livesContainer = document.getElementById('livesContainer');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const finalScore = document.getElementById('finalScore');
+        const highScoreNotice = document.getElementById('highScoreNotice');
+        const statusTag = document.getElementById('statusTag');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+
+        // Fixed Resolution
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // Game State
+        let isPlaying = false;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('tetris_brick_high_score') || '0', 10);
+        let lives = 3;
+        let combo = 0;
+        let animationFrameId = null;
+
+        highScoreText.innerText = highScore.toString().padStart(4, '0');
+
+        const keys = { left: false, right: false };
+
+        // Tetris Paddle Config
+        const paddle = {
+            width: 120,
+            height: 20,
+            x: (CANVAS_WIDTH - 120) / 2,
+            y: CANVAS_HEIGHT - 38,
+            speed: 9
+        };
+
+        // Tetris Pixel Ball Config
+        const ball = {
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT - 60,
+            radius: 10,
+            speed: 6.8,
+            dx: 4.8,
+            dy: -4.8
+        };
+
+        // 8 Rows of Tetris Bricks
+        const BRICK_ROWS = 8;
+        const BRICK_COLS = 10;
+        const BRICK_PADDING = 6;
+        const BRICK_OFFSET_TOP = 42;
+        const BRICK_OFFSET_LEFT = 35;
+        const BRICK_WIDTH = (CANVAS_WIDTH - (BRICK_OFFSET_LEFT * 2) - (BRICK_PADDING * (BRICK_COLS - 1))) / BRICK_COLS;
+        const BRICK_HEIGHT = 18;
+
+        // Classic 3D Bevel Tetris Color Palette (I, O, T, S, Z, J, L)
+        const TETRIS_ROW_COLORS = [
+            { main: '#00f0f0', light: '#b3ffff', dark: '#008b8b' }, // I-Piece Cyan
+            { main: '#f0f000', light: '#ffffb3', dark: '#8b8b00' }, // O-Piece Yellow
+            { main: '#a000f0', light: '#e6b3ff', dark: '#5c008b' }, // T-Piece Purple
+            { main: '#00f000', light: '#b3ffb3', dark: '#008b00' }, // S-Piece Green
+            { main: '#f00000', light: '#ffb3b3', dark: '#8b0000' }, // Z-Piece Red
+            { main: '#0000f0', light: '#b3b3ff', dark: '#00008b' }, // J-Piece Blue
+            { main: '#f0a000', light: '#ffe6b3', dark: '#8b5c00' }, // L-Piece Orange
+            { main: '#f000a0', light: '#ffb3e6', dark: '#8b005c' }  // Magenta Piece
+        ];
+
+        let bricks = [];
+        let particles = [];
+
+        // Render Classic 3D Bevel Tetris Block
+        function drawTetrisBlock(x, y, width, height, colorObj) {
+            ctx.fillStyle = colorObj.main;
+            ctx.fillRect(x, y, width, height);
+
+            const border = 3;
+            // Top & Left Highlight Bevel
+            ctx.fillStyle = colorObj.light;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + width, y);
+            ctx.lineTo(x + width - border, y + border);
+            ctx.lineTo(x + border, y + border);
+            ctx.lineTo(x + border, y + height - border);
+            ctx.lineTo(x, y + height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bottom & Right Shadow Bevel
+            ctx.fillStyle = colorObj.dark;
+            ctx.beginPath();
+            ctx.moveTo(x + width, y);
+            ctx.lineTo(x + width, y + height);
+            ctx.lineTo(x, y + height);
+            ctx.lineTo(x + border, y + height - border);
+            ctx.lineTo(x + width - border, y + height - border);
+            ctx.lineTo(x + width - border, y + border);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Draw Tetris Matrix Grid Backdrop
+        function drawTetrisGrid() {
+            ctx.fillStyle = '#0a0d17';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            ctx.strokeStyle = 'rgba(30, 58, 138, 0.25)';
+            ctx.lineWidth = 1;
+            const gridSize = 24;
+
+            for (let x = 0; x < CANVAS_WIDTH; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+
+            for (let y = 0; y < CANVAS_HEIGHT; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CANVAS_WIDTH, y);
+                ctx.stroke();
+            }
+        }
+
+        // Draw Paddle as connected Tetris blocks
+        function drawTetrisPaddle(x, y, w, h) {
+            const blockCount = 5;
+            const blockW = w / blockCount;
+            const paddleColor = { main: '#00f0f0', light: '#b3ffff', dark: '#008b8b' }; // Cyan I-Block
+
+            for (let i = 0; i < blockCount; i++) {
+                drawTetrisBlock(x + i * blockW, y, blockW, h, paddleColor);
+            }
+        }
+
+        // Draw Ball as a Retro Tetris Pixel Block
+        function drawTetrisBall(x, y, radius) {
+            const size = radius * 2;
+            const ballColor = { main: '#f0f000', light: '#ffffb3', dark: '#8b8b00' }; // Yellow O-Block
+            drawTetrisBlock(x - radius, y - radius, size, size, ballColor);
+        }
+
+        function createParticles(x, y, colorObj) {
+            const count = 10;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 4 + 3,
+                    colorObj: colorObj,
+                    alpha: 1.0,
+                    decay: Math.random() * 0.04 + 0.02
+                });
+            }
+        }
+
+        function updateAndRenderParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                drawTetrisBlock(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size, p.colorObj);
+                ctx.restore();
+            }
+        }
+
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const brickX = BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING);
+                    const brickY = BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING);
+                    bricks[r][c] = {
+                        x: brickX,
+                        y: brickY,
+                        status: 1,
+                        colorObj: TETRIS_ROW_COLORS[r % TETRIS_ROW_COLORS.length]
+                    };
+                }
+            }
+        }
+
+        function updateLivesDisplay() {
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const block = document.createElement('i');
+                if (i < lives) {
+                    block.className = 'fa-solid fa-cube text-rose-400 scale-100 transition-transform';
+                } else {
+                    block.className = 'fa-solid fa-cube text-slate-800';
+                }
+                livesContainer.appendChild(block);
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+            } else if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            } else if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isPlaying) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+            if (clientX !== null) {
+                const canvasTouchX = (clientX - rect.left) * scaleX;
+                paddle.x = canvasTouchX - paddle.width / 2;
+                if (paddle.x < 0) paddle.x = 0;
+                if (paddle.x + paddle.width > CANVAS_WIDTH) paddle.x = CANVAS_WIDTH - paddle.width;
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+
+        function checkHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('tetris_brick_high_score', highScore.toString());
+                highScoreText.innerText = highScore.toString().padStart(4, '0');
+                return true;
+            }
+            return false;
+        }
+
+        function collisionDetection() {
+            let activeBricksCount = 0;
+
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        activeBricksCount++;
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + BRICK_WIDTH &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + BRICK_HEIGHT
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            combo++;
+                            score += 10;
+                            scoreText.innerText = score.toString().padStart(4, '0');
+
+                            checkHighScore();
+                            createParticles(b.x + BRICK_WIDTH / 2, b.y + BRICK_HEIGHT / 2, b.colorObj);
+                            sound.playBrickHit(combo);
+
+                            if (Math.abs(ball.dy) < 10) {
+                                ball.dy *= 1.008;
+                                ball.dx *= 1.008;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (activeBricksCount === 0) {
+                gameWin();
+            }
+        }
+
+        // Reset Ball while KEEPING Paddle position where it currently is!
+        function resetBallAndPaddle() {
+            // NOTE: paddle.x is NOT reset to center! It remains in its current position.
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.radius - 6;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * (4.2 + Math.random() * 1.5);
+            ball.dy = -5.8;
+            combo = 0;
+        }
+
+        function update() {
+            if (!isPlaying) return;
+
+            if (keys.right) {
+                paddle.x += paddle.speed;
+            } else if (keys.left) {
+                paddle.x -= paddle.speed;
+            }
+
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > CANVAS_WIDTH) paddle.x = CANVAS_WIDTH - paddle.width;
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall Collisions
+            if (ball.x + ball.radius > CANVAS_WIDTH || ball.x - ball.radius < 0) {
+                ball.dx = -ball.dx;
+                sound.playWallHit();
+            }
+
+            if (ball.y - ball.radius < 0) {
+                ball.dy = -ball.dy;
+                sound.playWallHit();
+            }
+
+            // Paddle Hit
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width
+            ) {
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+                
+                ball.dx = hitPoint * (currentSpeed * 0.82);
+                ball.dy = -Math.sqrt(Math.max(12, currentSpeed * currentSpeed - ball.dx * ball.dx));
+                
+                combo = 0;
+                sound.playPaddleHit();
+                createParticles(ball.x, paddle.y, { main: '#00f0f0', light: '#ffffff', dark: '#008b8b' });
+            }
+
+            // Ball Out of Bounds -> Lose 1 Life & Keep Paddle Position
+            if (ball.y + ball.radius > CANVAS_HEIGHT) {
+                lives--;
+                updateLivesDisplay();
+
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    sound.playLifeLost();
+                    resetBallAndPaddle(); // Keeps paddle.x unchanged!
+                }
+                return;
+            }
+
+            collisionDetection();
+        }
+
+        function draw() {
+            // Draw Retro Tetris Grid Background
+            drawTetrisGrid();
+
+            // Draw Bricks
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        drawTetrisBlock(b.x, b.y, BRICK_WIDTH, BRICK_HEIGHT, b.colorObj);
+                    }
+                }
+            }
+
+            // Draw Tetris Paddle
+            drawTetrisPaddle(paddle.x, paddle.y, paddle.width, paddle.height);
+
+            // Draw Tetris Pixel Ball
+            drawTetrisBall(ball.x, ball.y, ball.radius);
+
+            // Particles
+            updateAndRenderParticles();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if (isPlaying) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            lives = 3;
+            combo = 0;
+            scoreText.innerText = '0000';
+            updateLivesDisplay();
+
+            paddle.x = (CANVAS_WIDTH - paddle.width) / 2; // Center paddle on game initial start only
+            resetBallAndPaddle();
+            initBricks();
+            particles = [];
+
+            isPlaying = true;
+            startOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            highScoreNotice.classList.add('hidden');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            sound.playGameOver();
+
+            const isNewHigh = checkHighScore();
+
+            statusTag.innerText = "GAME OVER";
+            gameOverTitle.innerText = "GAME OVER";
+            finalScore.innerText = score;
+
+            if (isNewHigh) {
+                highScoreNotice.classList.remove('hidden');
+            } else {
+                highScoreNotice.classList.add('hidden');
+            }
+
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        function gameWin() {
+            isPlaying = false;
+            sound.playVictory();
+
+            const isNewHigh = checkHighScore();
+
+            statusTag.innerText = "STAGE CLEAR";
+            gameOverTitle.innerText = "VICTORY!";
+            finalScore.innerText = score;
+
+            if (isNewHigh) {
+                highScoreNotice.classList.remove('hidden');
+            } else {
+                highScoreNotice.classList.add('hidden');
+            }
+
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        soundToggleBtn.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            if (sound.enabled) {
+                soundIcon.className = 'fa-solid fa-volume-high text-cyan-400';
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-xmark text-slate-500';
+            }
+        });
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        initBricks();
+        updateLivesDisplay();
+        draw();
+    </script>
+</body>
+</html>

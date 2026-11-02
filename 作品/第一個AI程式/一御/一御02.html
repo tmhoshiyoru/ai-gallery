@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sweet Brick Breaker - 夢幻馬卡龍打磚塊</title>
+    <!-- Tailwind CSS for UI Overlay -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Cute Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Mochiy Pop One', cursive, sans-serif;
+            background: linear-gradient(135deg, #ffd1dc 0%, #ffe4e1 50%, #e0f7fa 100%);
+            color: #5d4037;
+            overflow: hidden;
+        }
+
+        /* Cute Soft Glow Effects */
+        .cute-shadow {
+            box-shadow: 0 8px 25px rgba(255, 182, 193, 0.5);
+        }
+
+        .btn-cute {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 0 shadow-color, 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .btn-cute:hover {
+            transform: translateY(-3px) scale(1.03);
+        }
+        .btn-cute:active {
+            transform: translateY(3px) scale(0.97);
+            box-shadow: 0 2px 0 shadow-color;
+        }
+
+        /* Floating background elements */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.65);
+            border-radius: 50px;
+            animation: float 18s infinite linear;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0% { transform: translateX(-150px); }
+            100% { transform: translateX(100vw); }
+        }
+
+        #game-container {
+            box-shadow: 0 12px 35px rgba(236, 140, 169, 0.35), 0 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4 relative">
+
+    <div class="cloud w-32 h-10 top-12 -left-32" style="animation-delay: 0s;"></div>
+    <div class="cloud w-48 h-14 top-36 -left-48" style="animation-delay: 6s;"></div>
+    <div class="cloud w-28 h-8 top-3/4 -left-28" style="animation-delay: 11s;"></div>
+
+    <header class="w-full max-w-2xl flex items-center justify-between px-5 py-3 bg-white/80 backdrop-blur-md rounded-3xl border-4 border-pink-200 shadow-lg my-2 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 bg-pink-100 rounded-2xl flex items-center justify-center border-2 border-pink-300 text-pink-500 text-xl shadow-inner">
+                <i class="fa-solid fa-candy-cane animate-bounce"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-pink-500 tracking-wide drop-shadow-sm">
+                    甜蜜打磚塊 🍬
+                </h1>
+                <p class="text-xs text-pink-400 font-semibold">Sweet Candy Breaker</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-5">
+            <!-- Hearts / Lives Display -->
+            <div class="text-center bg-red-50 px-3 py-1 rounded-2xl border border-red-200">
+                <span class="block text-[10px] text-red-400 font-bold uppercase tracking-wider">生命 Lives</span>
+                <div id="lives-display" class="flex items-center justify-center space-x-1 text-pink-500 text-sm h-6">
+                    <i class="fa-solid fa-heart text-pink-500 animate-pulse"></i>
+                    <i class="fa-solid fa-heart text-pink-500 animate-pulse"></i>
+                    <i class="fa-solid fa-heart text-pink-500 animate-pulse"></i>
+                </div>
+            </div>
+
+            <div class="text-center bg-pink-50 px-3 py-1 rounded-2xl border border-pink-200">
+                <span class="block text-[10px] text-pink-400 font-bold uppercase tracking-wider">得分 Score</span>
+                <span id="score-display" class="text-xl font-black text-pink-500">0000</span>
+            </div>
+            <div class="text-center bg-purple-50 px-3 py-1 rounded-2xl border border-purple-200">
+                <span class="block text-[10px] text-purple-400 font-bold uppercase tracking-wider">最高分 High</span>
+                <span id="highscore-display" class="text-xl font-black text-purple-500">0000</span>
+            </div>
+
+            <!-- Active Power-up Timer Display -->
+            <div id="powerup-status" class="hidden text-center bg-amber-50 px-3 py-1 rounded-2xl border border-amber-300 animate-pulse">
+                <span class="block text-[10px] text-amber-500 font-bold uppercase tracking-wider">魔法變長 ✨</span>
+                <span id="powerup-timer" class="text-xs font-black text-amber-600">5.0s</span>
+            </div>
+
+            <!-- In-game Restart Button -->
+            <button id="in-game-restart-btn" title="重新開始" class="btn-cute bg-amber-300 hover:bg-amber-400 text-amber-800 font-bold p-2.5 rounded-2xl border-2 border-amber-200 flex items-center justify-center shadow-sm text-sm active:scale-95 transition-all">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="relative flex-1 flex items-center justify-center w-full my-auto z-10">
+        <div id="game-container" class="relative rounded-3xl overflow-hidden border-4 border-white bg-gradient-to-b from-sky-100 via-pink-50 to-amber-50 max-w-full">
+            <!-- Game Canvas -->
+            <canvas id="gameCanvas" class="block cursor-none"></canvas>
+
+            <!-- Start Overlay Screen -->
+            <div id="start-screen" class="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-20 h-20 mb-3 rounded-full bg-pink-100 border-4 border-pink-300 flex items-center justify-center text-4xl text-pink-400 shadow-md animate-pulse">
+                    🐱
+                </div>
+                <h2 class="text-3xl md:text-4xl font-black text-pink-500 mb-2 drop-shadow-sm">
+                    夢幻糖果打磚塊
+                </h2>
+                <p class="text-slate-500 text-sm max-w-xs mb-6 font-medium">
+                    發射可愛小貓球球，敲碎所有繽紛糖果磚塊吧！喵~ 🐾
+                </p>
+                <button id="start-btn" class="btn-cute bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 px-8 rounded-full text-lg border-2 border-pink-200 shadow-pink-200 flex items-center gap-2">
+                    <i class="fa-solid fa-heart"></i> 開始遊戲
+                </button>
+            </div>
+
+            <!-- Game Over Overlay Screen -->
+            <div id="gameover-screen" class="absolute inset-0 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+                <div class="w-20 h-20 mb-3 rounded-full bg-purple-100 border-4 border-purple-300 flex items-center justify-center text-4xl shadow-md">
+                    😿
+                </div>
+                <h2 class="text-3xl font-black text-purple-500 mb-1">
+                    球球掉落了！
+                </h2>
+                <p class="text-slate-400 text-sm mb-4 font-medium">沒關係，再接再厲唷！💪</p>
+                
+                <div class="bg-purple-50/80 rounded-2xl p-4 border-2 border-purple-200 w-64 mb-6 space-y-2">
+                    <div class="flex justify-between text-sm font-bold">
+                        <span class="text-slate-400">本次得分</span>
+                        <span id="final-score" class="text-pink-500 text-lg">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-bold">
+                        <span class="text-slate-400">最高紀錄</span>
+                        <span id="final-highscore" class="text-purple-500 text-lg">0</span>
+                    </div>
+                </div>
+
+                <button id="restart-btn" class="btn-cute bg-purple-400 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-full text-lg border-2 border-purple-200 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 再玩一次
+                </button>
+            </div>
+
+            <!-- Victory Screen Overlay -->
+            <div id="victory-screen" class="absolute inset-0 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+                <div class="w-20 h-20 mb-3 rounded-full bg-yellow-100 border-4 border-yellow-300 flex items-center justify-center text-4xl shadow-md animate-bounce">
+                    👑
+                </div>
+                <h2 class="text-3xl font-black text-amber-500 mb-1">
+                    完美通關！
+                </h2>
+                <p class="text-slate-500 text-sm mb-6 font-medium">太厲害了！你搜集了所有的糖果！✨</p>
+                <button id="next-btn" class="btn-cute bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-8 rounded-full text-lg border-2 border-yellow-200 flex items-center gap-2">
+                    <i class="fa-solid fa-star"></i> 下一關卡
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full max-w-2xl flex items-center justify-between px-4 py-2 mt-2 gap-4 z-10">
+        <div class="text-xs text-pink-400 font-bold hidden sm:block">
+            <i class="fa-solid fa-gamepad mr-1"></i> 操作方式：鍵盤 <span class="bg-white/80 px-2 py-0.5 rounded-lg border border-pink-200">← / →</span> 或 <span class="bg-white/80 px-2 py-0.5 rounded-lg border border-pink-200">A / D</span> 移動滑塊
+        </div>
+
+        <!-- Mobile Touch Buttons -->
+        <div class="flex w-full sm:hidden justify-between gap-4">
+            <button id="touch-left" class="flex-1 bg-white/90 active:bg-pink-300 text-pink-400 active:text-white py-3 rounded-2xl border-2 border-pink-200 text-center text-2xl active:scale-95 transition-all shadow-md">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button id="touch-right" class="flex-1 bg-white/90 active:bg-pink-300 text-pink-400 active:text-white py-3 rounded-2xl border-2 border-pink-200 text-center text-2xl active:scale-95 transition-all shadow-md">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * Cute & Chime Synthesizer using Web Audio API
+         */
+        class CuteSoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playChime(freq = 523.25, type = 'sine', duration = 0.12) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+
+            playBrickHit(colorIndex) {
+                // Happy Marimba Scale: C5, E5, G5, A5, C6
+                const freqs = [523.25, 659.25, 783.99, 880.00, 1046.50];
+                this.playChime(freqs[colorIndex % freqs.length], 'sine', 0.15);
+            }
+
+            playPaddleHit() {
+                this.playChime(392.00, 'triangle', 0.08); // G4 bounce sound
+            }
+
+            playWallHit() {
+                this.playChime(329.63, 'sine', 0.06);
+            }
+
+            playLifeLost() {
+                if (!this.ctx) return;
+                this.playChime(220, 'sawtooth', 0.2);
+            }
+
+            playGameOver() {
+                if (!this.ctx) return;
+                const notes = [400, 350, 300, 250];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playChime(freq, 'triangle', 0.15), idx * 100);
+                });
+            }
+
+            playVictory() {
+                if (!this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playChime(freq, 'sine', 0.18), idx * 90);
+                });
+            }
+
+            playPowerup() {
+                if (!this.ctx) return;
+                // Happy rising chime
+                const notes = [587.33, 739.99, 880.00, 1174.66];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playChime(freq, 'triangle', 0.12), idx * 60);
+                });
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sound = new CuteSoundFX();
+
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const victoryScreen = document.getElementById('victory-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const highscoreDisplay = document.getElementById('highscore-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalHighscoreDisplay = document.getElementById('final-highscore');
+        const powerupStatus = document.getElementById('powerup-status');
+        const powerupTimerDisplay = document.getElementById('powerup-timer');
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 500;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        let brickConfig = {
+            rows: 3,
+            cols: 8,
+            padding: 12,
+            offsetTop: 60,
+            offsetLeft: 35,
+            height: 28,
+            colors: [
+                { main: '#ffb7b2', border: '#ff9aa2', face: '🍩' }, // Soft Pink
+                { main: '#e2f0cb', border: '#b5ead7', face: '🍬' }, // Pastel Green
+                { main: '#c7ceea', border: '#b2b5e0', face: '🧁' }  // Pastel Lavender
+            ]
+        };
+        brickConfig.width = (CANVAS_WIDTH - (brickConfig.offsetLeft * 2) - (brickConfig.padding * (brickConfig.cols - 1))) / brickConfig.cols;
+
+        const BASE_PADDLE_WIDTH = 120;
+        const EXPANDED_PADDLE_WIDTH = 180;
+        
+        let paddle = {
+            width: BASE_PADDLE_WIDTH,
+            height: 18,
+            x: (CANVAS_WIDTH - BASE_PADDLE_WIDTH) / 2,
+            y: CANVAS_HEIGHT - 35,
+            speed: 8,
+            color: '#f6d55c',
+            isExpanded: false,
+            powerupTimer: null,
+            powerupEndTime: 0
+        };
+
+        let ball = {
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT - 55,
+            radius: 12,
+            speed: 5.5,
+            dx: 4,
+            dy: -4,
+            color: '#ffffff'
+        };
+
+        let bricks = [];
+        let particles = [];
+        let powerups = [];
+
+        // Game state variables
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('cute_breaker_highscore')) || 0;
+        let lives = 3;
+        let isRunning = false;
+        let animationId = null;
+
+        // Display initial high score
+        highscoreDisplay.textContent = String(highScore).padStart(4, '0');
+
+        function updateLivesUI() {
+            livesDisplay.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('i');
+                heart.className = 'fa-solid fa-heart transition-all duration-300';
+                if (i < lives) {
+                    heart.className += ' text-pink-500 animate-pulse';
+                } else {
+                    heart.className += ' text-slate-300 opacity-40 scale-75';
+                }
+                livesDisplay.appendChild(heart);
+            }
+        }
+
+        // Cute Power-up Candy Class
+        class PowerUp {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 30;
+                this.speed = 2.2;
+                this.icon = '🎁';
+                this.angle = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                // Slight floating wobble effect
+                this.angle += 0.05;
+                const wobble = Math.sin(this.angle) * 3;
+                
+                // Draw soft glow circle
+                ctx.beginPath();
+                ctx.arc(0, wobble, 16, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 230, 150, 0.9)';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ffb3ba';
+                ctx.stroke();
+
+                // Draw gift emoji
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.icon, 0, wobble + 1);
+                ctx.restore();
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+        }
+
+        // Cute Heart & Star Particle Class
+        class CuteParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 8 + 4;
+                this.dx = (Math.random() - 0.5) * 6;
+                this.dy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.025 + 0.015;
+                this.shape = Math.random() > 0.5 ? 'star' : 'circle';
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                
+                if (this.shape === 'star') {
+                    ctx.font = `${this.size * 1.5}px sans-serif`;
+                    ctx.fillText('✨', this.x, this.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.alpha -= this.decay;
+            }
+        }
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new CuteParticle(x, y, color));
+            }
+        }
+
+        function activatePaddleExpand() {
+            sound.playPowerup();
+            
+            // Adjust paddle position to expand from center gracefully
+            const oldWidth = paddle.width;
+            paddle.width = EXPANDED_PADDLE_WIDTH;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, paddle.x - (EXPANDED_PADDLE_WIDTH - oldWidth) / 2));
+            paddle.isExpanded = true;
+            
+            paddle.powerupEndTime = Date.now() + 5000;
+            powerupStatus.classList.remove('hidden');
+
+            // Sparkles on paddle
+            createParticles(paddle.x + paddle.width / 2, paddle.y, '#ffd1dc', 25);
+
+            if (paddle.powerupTimer) {
+                clearInterval(paddle.powerupTimer);
+            }
+
+            paddle.powerupTimer = setInterval(() => {
+                const remaining = Math.max(0, (paddle.powerupEndTime - Date.now()) / 1000);
+                powerupTimerDisplay.textContent = remaining.toFixed(1) + 's';
+
+                if (remaining <= 0) {
+                    clearInterval(paddle.powerupTimer);
+                    paddle.powerupTimer = null;
+                    paddle.isExpanded = false;
+                    paddle.width = BASE_PADDLE_WIDTH;
+                    powerupStatus.classList.add('hidden');
+                }
+            }, 100);
+        }
+
+        function initBricks() {
+            bricks = [];
+            for (let r = 0; r < brickConfig.rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const brickX = brickConfig.offsetLeft + c * (brickConfig.width + brickConfig.padding);
+                    const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: brickX,
+                        y: brickY,
+                        status: 1,
+                        color: brickConfig.colors[r % brickConfig.colors.length]
+                    };
+                }
+            }
+        }
+
+        let rightPressed = false;
+        let leftPressed = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = false;
+        });
+
+        const touchLeftBtn = document.getElementById('touch-left');
+        const touchRightBtn = document.getElementById('touch-right');
+
+        const bindTouch = (btn, dir) => {
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); if (dir === 'left') leftPressed = true; else rightPressed = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); if (dir === 'left') leftPressed = false; else rightPressed = false; });
+            btn.addEventListener('mousedown', () => { if (dir === 'left') leftPressed = true; else rightPressed = true; });
+            btn.addEventListener('mouseup', () => { if (dir === 'left') leftPressed = false; else rightPressed = false; });
+        };
+        bindTouch(touchLeftBtn, 'left');
+        bindTouch(touchRightBtn, 'right');
+
+        // Mouse Drag Controls
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, mouseX - paddle.width / 2));
+        });
+
+        // Touch Drag Controls
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const touchX = (e.touches[0].clientX - rect.left) * scaleX;
+                paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, touchX - paddle.width / 2));
+            }
+        });
+
+        function drawPaddle() {
+            ctx.save();
+            // Cookie Paddle (Glow if expanded by powerup)
+            if (paddle.isExpanded) {
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 15;
+            }
+
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 10);
+            ctx.fillStyle = paddle.isExpanded ? '#ffe169' : '#f6d55c';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = paddle.isExpanded ? '#ff9248' : '#ed553b';
+            ctx.stroke();
+
+            // Decorative Cookie Dots
+            ctx.fillStyle = paddle.isExpanded ? '#ff9248' : '#ed553b';
+            for (let i = 15; i < paddle.width; i += 20) {
+                ctx.beginPath();
+                ctx.arc(paddle.x + i, paddle.y + paddle.height / 2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawBall() {
+            ctx.save();
+            // Cute Kitty Head Ball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#ff9aa2';
+            ctx.stroke();
+
+            // Kitty Ears
+            ctx.fillStyle = '#ff9aa2';
+            // Left Ear
+            ctx.beginPath();
+            ctx.moveTo(ball.x - 9, ball.y - 7);
+            ctx.lineTo(ball.x - 14, ball.y - 16);
+            ctx.lineTo(ball.x - 3, ball.y - 11);
+            ctx.fill();
+            // Right Ear
+            ctx.beginPath();
+            ctx.moveTo(ball.x + 9, ball.y - 7);
+            ctx.lineTo(ball.x + 14, ball.y - 16);
+            ctx.lineTo(ball.x + 3, ball.y - 11);
+            ctx.fill();
+
+            // Cute Eyes (blinking/happy dots)
+            ctx.fillStyle = '#5d4037';
+            ctx.beginPath();
+            ctx.arc(ball.x - 4, ball.y - 2, 1.5, 0, Math.PI * 2);
+            ctx.arc(ball.x + 4, ball.y - 2, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rosy Cheeks
+            ctx.fillStyle = '#ffb7b2';
+            ctx.beginPath();
+            ctx.arc(ball.x - 6, ball.y + 2, 2, 0, Math.PI * 2);
+            ctx.arc(ball.x + 6, ball.y + 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawBricks() {
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, brickConfig.width, brickConfig.height, 12);
+                        
+                        ctx.fillStyle = b.color.main;
+                        ctx.fill();
+                        
+                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
+
+                        // Cute Emoji/Face on Brick
+                        ctx.font = '14px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(b.color.face, b.x + brickConfig.width / 2, b.y + brickConfig.height / 2 + 1);
+
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function collisionDetection() {
+            let activeBricks = 0;
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        activeBricks++;
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + brickConfig.width &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + brickConfig.height
+                        ) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            score += 10;
+                            scoreDisplay.textContent = String(score).padStart(4, '0');
+                            sound.playBrickHit(r);
+
+                            if (Math.random() < 0.20) {
+                                powerups.push(new PowerUp(b.x + brickConfig.width / 2, b.y + brickConfig.height / 2));
+                            }
+
+                            // Create Cute Sparkles & Heart Explosions
+                            createParticles(
+                                b.x + brickConfig.width / 2,
+                                b.y + brickConfig.height / 2,
+                                b.color.main,
+                                12
+                            );
+
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem('cute_breaker_highscore', highScore);
+                                highscoreDisplay.textContent = String(highScore).padStart(4, '0');
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (activeBricks === 0 && isRunning) {
+                gameVictory();
+            }
+        }
+
+        function updatePowerups() {
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.update();
+
+                // Collision check with paddle
+                if (
+                    p.y + 15 >= paddle.y &&
+                    p.y - 15 <= paddle.y + paddle.height &&
+                    p.x + 15 >= paddle.x &&
+                    p.x - 15 <= paddle.x + paddle.width
+                ) {
+                    activatePaddleExpand();
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                // Remove if falls below screen
+                if (p.y - 15 > CANVAS_HEIGHT) {
+                    powerups.splice(i, 1);
+                }
+            }
+        }
+
+        function update() {
+            if (!isRunning) return;
+
+            // Move Paddle
+            if (rightPressed && paddle.x < CANVAS_WIDTH - paddle.width) {
+                paddle.x += paddle.speed;
+            } else if (leftPressed && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+
+            // Move Ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall Collisions
+            if (ball.x + ball.radius > CANVAS_WIDTH || ball.x - ball.radius < 0) {
+                ball.dx = -ball.dx;
+                sound.playWallHit();
+            }
+
+            if (ball.y - ball.radius < 0) {
+                ball.dy = -ball.dy;
+                sound.playWallHit();
+            }
+
+            // Paddle Collision with Angle Adjustments
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width
+            ) {
+                sound.playPaddleHit();
+                
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const maxAngle = Math.PI / 3;
+                const angle = hitPoint * maxAngle;
+
+                const currentSpeed = Math.hypot(ball.dx, ball.dy);
+                ball.dx = currentSpeed * Math.sin(angle);
+                ball.dy = -currentSpeed * Math.cos(angle);
+                ball.y = paddle.y - ball.radius;
+            }
+
+            // Bottom Boundary (Deduct Life or Game Over)
+            if (ball.y + ball.radius > CANVAS_HEIGHT) {
+                lives--;
+                updateLivesUI();
+                
+                if (lives > 0) {
+                    sound.playLifeLost();
+                    // Create burst effects on lost point
+                    createParticles(ball.x, CANVAS_HEIGHT - 10, '#ffb7b2', 15);
+                    resetBallAndPaddle();
+                } else {
+                    gameOver();
+                    return;
+                }
+            }
+
+            collisionDetection();
+            updatePowerups();
+
+            // Particles Update
+            particles.forEach((p, idx) => {
+                p.update();
+                if (p.alpha <= 0) particles.splice(idx, 1);
+            });
+        }
+
+        function draw() {
+            // Soft Clear Canvas
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            drawBricks();
+            drawPaddle();
+            drawBall();
+
+            powerups.forEach((p) => p.draw());
+            particles.forEach((p) => p.draw());
+
+            update();
+
+            if (isRunning) {
+                animationId = requestAnimationFrame(draw);
+            }
+        }
+
+        function resetBallAndPaddle() {
+            paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+            ball.x = CANVAS_WIDTH / 2;
+            ball.y = CANVAS_HEIGHT - 55;
+            ball.speed = 5.5;
+            
+            const angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
+            ball.dx = ball.speed * Math.sin(angle);
+            ball.dy = -ball.speed * Math.cos(angle);
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            lives = 3;
+            scoreDisplay.textContent = '0000';
+            updateLivesUI();
+            particles = [];
+            powerups = [];
+
+            // Reset paddle powerup state
+            if (paddle.powerupTimer) {
+                clearInterval(paddle.powerupTimer);
+                paddle.powerupTimer = null;
+            }
+            paddle.isExpanded = false;
+            paddle.width = BASE_PADDLE_WIDTH;
+            powerupStatus.classList.add('hidden');
+
+            initBricks();
+            resetBallAndPaddle();
+            
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            
+            isRunning = true;
+            if (animationId) cancelAnimationFrame(animationId);
+            draw();
+        }
+
+        function gameOver() {
+            isRunning = false;
+            sound.playGameOver();
+            finalScoreDisplay.textContent = score;
+            finalHighscoreDisplay.textContent = highScore;
+            gameoverScreen.classList.remove('hidden');
+        }
+
+        function gameVictory() {
+            isRunning = false;
+            sound.playVictory();
+            victoryScreen.classList.remove('hidden');
+        }
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+        document.getElementById('next-btn').addEventListener('click', startGame);
+        document.getElementById('in-game-restart-btn').addEventListener('click', () => {
+            if (confirm('確定要重新開始遊戲嗎？當前進度將會重置唷！')) {
+                startGame();
+            }
+        });
+
+        // Initial Paint
+        updateLivesUI();
+        initBricks();
+        drawBricks();
+        drawPaddle();
+    </script>
+</body>
+</html>

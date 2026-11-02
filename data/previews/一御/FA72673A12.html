@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%BE%A1/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Tennis - 雙人霓虹網球對戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Orbitron', 'Noto Sans TC', sans-serif;
+            background: #060913;
+            color: #e2e8f0;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* 霓虹發光特效 */
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+        .neon-text-pink {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4);
+        }
+        .neon-text-yellow {
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.4);
+        }
+        .neon-border {
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3), inset 0 0 15px rgba(14, 165, 233, 0.15);
+        }
+
+        /* Canvas 畫布外框發光 */
+        #gameCanvas {
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.25), 0 0 4px rgba(255, 255, 255, 0.4);
+            background: radial-gradient(circle at center, #0f172a 0%, #050811 100%);
+        }
+
+        /* 科技感按鈕 */
+        .tech-btn {
+            background: linear-gradient(135deg, #0284c7 0%, #d97706 100%);
+            transition: all 0.2s ease-in-out;
+        }
+        .tech-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.7);
+        }
+        .tech-btn:active {
+            transform: translateY(1px);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-6 overflow-x-hidden">
+
+    <!-- 頂部標題與分數欄 -->
+    <header class="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-center my-2 gap-4 px-6 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur neon-border">
+        <div class="flex items-center gap-3">
+            <div class="w-4 h-4 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_12px_#facc15]"></div>
+            <h1 class="text-2xl sm:text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-300 to-pink-500 neon-text-cyan">
+                CYBER TENNIS
+            </h1>
+        </div>
+
+        <!-- 雙人分數比對 -->
+        <div class="flex items-center gap-6 sm:gap-8 text-sm font-bold tracking-widest">
+            <div class="text-center">
+                <span class="block text-xs text-cyan-400 uppercase">P1 (LEFT)</span>
+                <span id="scoreP1" class="text-3xl text-cyan-400 neon-text-cyan">0</span>
+            </div>
+
+            <!-- 計時器與球數顯示 -->
+            <div class="flex flex-col items-center">
+                <span class="text-[10px] text-yellow-400 font-mono tracking-widest uppercase">TIME LEFT</span>
+                <div id="gameTimer" class="text-2xl sm:text-3xl font-black text-yellow-400 neon-text-yellow font-mono">03:00</div>
+                <span id="ballCountDisplay" class="text-[11px] text-slate-400 mt-0.5">球數: 1</span>
+            </div>
+
+            <div class="text-center">
+                <span class="block text-xs text-pink-400 uppercase">P2 (RIGHT)</span>
+                <span id="scoreP2" class="text-3xl text-pink-500 neon-text-pink">0</span>
+            </div>
+
+            <!-- 音效開關 -->
+            <button id="soundToggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700" title="開關音效">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- 遊戲主要畫布與 Overlay -->
+    <main class="relative w-full max-w-4xl flex justify-center items-center my-auto">
+        <canvas id="gameCanvas" width="850" height="520" class="w-full h-auto max-h-[70vh] rounded-2xl border border-cyan-500/30 touch-none"></canvas>
+
+        <!-- 開始 / 重新開始 overlay -->
+        <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+            <h2 id="overlayTitle" class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-300 to-pink-500 mb-3 neon-text-cyan">
+                CYBER TENNIS
+            </h2>
+
+            <!-- 結束時顯示的比數資訊 -->
+            <div id="overlayScore" class="text-2xl sm:text-3xl font-bold mb-4 hidden text-slate-100 font-mono tracking-wider bg-slate-900/80 px-6 py-2 rounded-xl border border-slate-700/60 shadow-lg">
+                <span class="text-cyan-400">P1</span> <span id="finalP1" class="text-cyan-400 neon-text-cyan mx-1">0</span>
+                <span class="text-yellow-400 mx-2 font-sans font-normal">:</span>
+                <span id="finalP2" class="text-pink-400 neon-text-pink mx-1">0</span> <span class="text-pink-400">P2</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mb-8 text-xs sm:text-sm text-slate-300">
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-cyan-500/30">
+                    <span class="text-cyan-400 font-bold block mb-1">左側玩家 P1</span>
+                    <span class="px-2 py-1 bg-slate-800 text-cyan-300 rounded border border-slate-700 font-mono">W</span> 向上 | 
+                    <span class="px-2 py-1 bg-slate-800 text-cyan-300 rounded border border-slate-700 font-mono">S</span> 向下
+                </div>
+                <div class="p-3 bg-slate-900/80 rounded-xl border border-pink-500/30">
+                    <span class="text-pink-400 font-bold block mb-1">右側玩家 P2</span>
+                    <span class="px-2 py-1 bg-slate-800 text-pink-300 rounded border border-slate-700 font-mono">O</span> 向上 | 
+                    <span class="px-2 py-1 bg-slate-800 text-pink-300 rounded border border-slate-700 font-mono">L</span> 向下
+                </div>
+            </div>
+
+            <div class="text-xs text-yellow-400/90 mb-6 font-mono bg-yellow-950/40 px-4 py-2 rounded-lg border border-yellow-500/30">
+                ⏱️ 3分鐘限時賽 | ⚡ 每30秒球數翻倍 (x2, x4, x8...) | ⚠️ 2.5分鐘時滑塊縮小至0.8倍
+            </div>
+
+            <button id="startBtn" class="tech-btn px-8 py-3.5 rounded-xl text-lg font-black text-white shadow-lg tracking-widest cursor-pointer uppercase">
+                開始對戰 (START)
+            </button>
+        </div>
+
+        <!-- 暫停 Overlay -->
+        <div id="pauseOverlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <h2 class="text-3xl sm:text-5xl font-black text-yellow-400 mb-4 neon-text-yellow animate-pulse">
+                ⏸️ 遊戲暫停 (PAUSED)
+            </h2>
+            <p class="text-sm sm:text-base text-slate-200 mb-2">
+                按 <span class="px-2.5 py-1 bg-slate-800 text-yellow-300 rounded border border-yellow-500/50 font-mono font-bold">[ Space 空白鍵 ]</span> 繼續比賽
+            </p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-2">
+                按 <span class="px-2.5 py-1 bg-slate-800 text-red-400 rounded border border-red-500/50 font-mono font-bold">[ Enter 回車鍵 ]</span> 提前終止並以當前比分結算獲勝者
+            </p>
+        </div>
+    </main>
+
+    <!-- 頁尾控制提示 -->
+    <footer class="w-full max-w-4xl mt-3 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center px-4 gap-2">
+        <span>控制說明：P1 [W/S] | P2 [O/L] | [Space] 暫停 | 暫停中 [Enter] 終止結算</span>
+        <span>賽制：3 分鐘限時高分賽</span>
+    </footer>
+
+    <script>
+        // ==========================================
+        // 音效系統 (Web Audio API)
+        // ==========================================
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playPaddleHit() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playWallHit() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playScoreSound() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.25, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.15);
+                });
+            }
+
+            playMatchWin() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.3, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.3);
+                });
+            }
+        }
+
+        // ==========================================
+        // 主變數與狀態
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sfx = new SoundFX();
+
+        const scoreP1Display = document.getElementById('scoreP1');
+        scoreP2Display = document.getElementById('scoreP2');
+        const gameTimerDisplay = document.getElementById('gameTimer');
+        const ballCountDisplay = document.getElementById('ballCountDisplay');
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayScore = document.getElementById('overlayScore');
+        const finalP1 = document.getElementById('finalP1');
+        const finalP2 = document.getElementById('finalP2');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const startBtn = document.getElementById('startBtn');
+        const soundToggle = document.getElementById('soundToggle');
+
+        const MATCH_DURATION = 180; // 3 分鐘 (180秒)
+        const BASE_PADDLE_HEIGHT = 100;
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
+        let p1Score = 0;
+        let p2Score = 0;
+        let remainingTime = MATCH_DURATION;
+        let timerInterval = null;
+        let doubledMilestones = new Set();
+        let paddleShrunk = false;
+        let targetBallCount = 1; // 當前階段目標維持球數
+
+        // 中央大標題提示動畫
+        let bannerText = '';
+        let bannerOpacity = 0;
+
+        // 左側滑塊 (P1)
+        const paddleP1 = {
+            width: 14,
+            height: BASE_PADDLE_HEIGHT,
+            x: 30,
+            y: (canvas.height - BASE_PADDLE_HEIGHT) / 2,
+            speed: 8,
+            color: '#38bdf8'
+        };
+
+        // 右側滑塊 (P2)
+        const paddleP2 = {
+            width: 14,
+            height: BASE_PADDLE_HEIGHT,
+            x: canvas.width - 44,
+            y: (canvas.height - BASE_PADDLE_HEIGHT) / 2,
+            speed: 8,
+            color: '#ec4899'
+        };
+
+        // 網球陣列 (支援多球機制)
+        let balls = [];
+
+        function createBall(x = canvas.width / 2, y = canvas.height / 2, direction = (Math.random() > 0.5 ? 1 : -1)) {
+            const speed = 7;
+            const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
+            return {
+                x: x,
+                y: y,
+                radius: 11,
+                speed: speed,
+                dx: speed * Math.cos(angle) * direction,
+                dy: speed * Math.sin(angle),
+                rotation: Math.random() * Math.PI * 2,
+                trail: []
+            };
+        }
+
+        // 按鍵監聽狀態
+        const keys = {
+            w: false,
+            s: false,
+            o: false,
+            l: false
+        };
+
+        // ==========================================
+        // 鍵盤與觸控控制
+        // ==========================================
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+
+            // 按空白鍵 切換暫停 / 繼續
+            if (e.code === 'Space' || key === ' ') {
+                e.preventDefault();
+                if (gameState === 'PLAYING') {
+                    gameState = 'PAUSED';
+                    pauseOverlay.classList.remove('hidden');
+                } else if (gameState === 'PAUSED') {
+                    gameState = 'PLAYING';
+                    pauseOverlay.classList.add('hidden');
+                }
+            }
+
+            // 在暫停狀態下按 Enter 鍵終止比賽並進行結算
+            if (e.key === 'Enter' || e.code === 'Enter') {
+                if (gameState === 'PAUSED') {
+                    if (timerInterval) clearInterval(timerInterval);
+                    finishMatch();
+                }
+            }
+
+            if (key === 'w') keys.w = true;
+            if (key === 's') keys.s = true;
+            if (key === 'o') keys.o = true;
+            if (key === 'l') keys.l = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'w') keys.w = false;
+            if (key === 's') keys.s = false;
+            if (key === 'o') keys.o = false;
+            if (key === 'l') keys.l = false;
+        });
+
+        // 觸控/滑鼠直接拖曳控制
+        function handlePointer(clientX, clientY) {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+
+            // 判斷觸控在左半部或右半部
+            if (canvasX < canvas.width / 2) {
+                paddleP1.y = canvasY - paddleP1.height / 2;
+                clampPaddles();
+            } else {
+                paddleP2.y = canvasY - paddleP2.height / 2;
+                clampPaddles();
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (e.buttons === 1) handlePointer(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                handlePointer(e.touches[i].clientX, e.touches[i].clientY);
+            }
+        }, { passive: true });
+
+        soundToggle.addEventListener('click', () => {
+            sfx.init();
+            sfx.enabled = !sfx.enabled;
+            soundToggle.textContent = sfx.enabled ? '🔊' : '🔇';
+        });
+
+        startBtn.addEventListener('click', () => {
+            sfx.init();
+            resetGame();
+            gameState = 'PLAYING';
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            startTimer();
+        });
+
+        function clampPaddles() {
+            if (paddleP1.y < 0) paddleP1.y = 0;
+            if (paddleP1.y + paddleP1.height > canvas.height) paddleP1.y = canvas.height - paddleP1.height;
+            if (paddleP2.y < 0) paddleP2.y = 0;
+            if (paddleP2.y + paddleP2.height > canvas.height) paddleP2.y = canvas.height - paddleP2.height;
+        }
+
+        function triggerBanner(text) {
+            bannerText = text;
+            bannerOpacity = 1.0;
+        }
+
+        // ==========================================
+        // 計時器與事件 (30秒翻倍 & 2.5分縮小)
+        // ==========================================
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameState !== 'PLAYING') return;
+
+                remainingTime--;
+                updateTimerDisplay();
+
+                const elapsedSeconds = MATCH_DURATION - remainingTime;
+
+                // 1. 每半分鐘 (30, 60, 90, 120, 150秒) 球數翻倍
+                if (elapsedSeconds > 0 && elapsedSeconds % 30 === 0 && !doubledMilestones.has(elapsedSeconds)) {
+                    doubledMilestones.add(elapsedSeconds);
+                    doubleBalls();
+                }
+
+                // 2. 進行到 2 分 30 秒 (即 150 秒 elapsed / 剩餘 30 秒) 時，滑塊縮小為 0.8 倍
+                if (elapsedSeconds >= 150 && !paddleShrunk) {
+                    paddleShrunk = true;
+                    paddleP1.height = BASE_PADDLE_HEIGHT * 0.8;
+                    paddleP2.height = BASE_PADDLE_HEIGHT * 0.8;
+                    triggerBanner('⚠️ 滑塊縮小至 0.8x！');
+                    sfx.playScoreSound();
+                }
+
+                // 3. 時間結束
+                if (remainingTime <= 0) {
+                    clearInterval(timerInterval);
+                    finishMatch();
+                }
+            }, 1000);
+        }
+
+        function doubleBalls() {
+            targetBallCount *= 2;
+            const currentLen = balls.length;
+
+            if (currentLen === 0) {
+                while (balls.length < targetBallCount) {
+                    balls.push(createBall());
+                }
+            } else {
+                for (let i = 0; i < currentLen; i++) {
+                    const b = balls[i];
+                    // 複製一顆並稍微偏轉角度
+                    const angleOffset = (Math.random() * 0.5 - 0.25) * Math.PI;
+                    const newSpeed = b.speed;
+                    const currAngle = Math.atan2(b.dy, b.dx);
+                    const newAngle = currAngle + angleOffset;
+
+                    balls.push({
+                        x: b.x,
+                        y: b.y,
+                        radius: b.radius,
+                        speed: newSpeed,
+                        dx: newSpeed * Math.cos(newAngle),
+                        dy: newSpeed * Math.sin(newAngle),
+                        rotation: Math.random() * Math.PI * 2,
+                        trail: []
+                    });
+                }
+            }
+
+            sfx.playScoreSound();
+            triggerBanner(`🔥 球數翻倍！維持 ${targetBallCount} 顆球`);
+            updateHUD();
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(remainingTime / 60);
+            const secs = remainingTime % 60;
+            gameTimerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function finishMatch() {
+            gameState = 'GAMEOVER';
+            if (pauseOverlay) pauseOverlay.classList.add('hidden');
+            sfx.playMatchWin();
+
+            let winnerText = '';
+            if (p1Score > p2Score) {
+                winnerText = '🎉 P1 (左側玩家) 獲勝！';
+            } else if (p2Score > p1Score) {
+                winnerText = '🎉 P2 (右側玩家) 獲勝！';
+            } else {
+                winnerText = '🤝 勢均力敵！雙方平手！';
+            }
+
+            // 更新獲勝提示標題與最終比分顯示
+            overlayTitle.textContent = winnerText;
+            finalP1.textContent = p1Score;
+            finalP2.textContent = p2Score;
+            overlayScore.classList.remove('hidden');
+
+            startBtn.textContent = '再次對戰 (REPLAY)';
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function resetGame() {
+            p1Score = 0;
+            p2Score = 0;
+            remainingTime = MATCH_DURATION;
+            doubledMilestones.clear();
+            paddleShrunk = false;
+            targetBallCount = 1;
+
+            if (pauseOverlay) pauseOverlay.classList.add('hidden');
+            if (overlayScore) overlayScore.classList.add('hidden');
+
+            paddleP1.height = BASE_PADDLE_HEIGHT;
+            paddleP2.height = BASE_PADDLE_HEIGHT;
+            paddleP1.y = (canvas.height - paddleP1.height) / 2;
+            paddleP2.y = (canvas.height - paddleP2.height) / 2;
+
+            balls = [createBall()];
+
+            updateTimerDisplay();
+            updateHUD();
+        }
+
+        function updateHUD() {
+            scoreP1Display.textContent = p1Score;
+            scoreP2Display.textContent = p2Score;
+            ballCountDisplay.textContent = `球數: ${balls.length}`;
+        }
+
+        function updatePhysics() {
+            // 1. 控制滑塊位移
+            if (keys.w) paddleP1.y -= paddleP1.speed;
+            if (keys.s) paddleP1.y += paddleP1.speed;
+            if (keys.o) paddleP2.y -= paddleP2.speed;
+            if (keys.l) paddleP2.y += paddleP2.speed;
+
+            clampPaddles();
+
+            // 淡出中央提示 Banner
+            if (bannerOpacity > 0) {
+                bannerOpacity -= 0.015;
+            }
+
+            // 2. 遍歷所有球體進行物理更新 (倒序處理以利安全刪除)
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const b = balls[i];
+
+                b.trail.push({ x: b.x, y: b.y });
+                if (b.trail.length > 7) b.trail.shift();
+
+                b.x += b.dx;
+                b.y += b.dy;
+                b.rotation += 0.08;
+
+                // 上下邊界反彈
+                if (b.y - b.radius <= 0) {
+                    b.y = b.radius;
+                    b.dy = -b.dy;
+                    sfx.playWallHit();
+                } else if (b.y + b.radius >= canvas.height) {
+                    b.y = canvas.height - b.radius;
+                    b.dy = -b.dy;
+                    sfx.playWallHit();
+                }
+
+                // 左側滑塊 P1 碰撞
+                if (
+                    b.x - b.radius <= paddleP1.x + paddleP1.width &&
+                    b.x + b.radius >= paddleP1.x &&
+                    b.y >= paddleP1.y &&
+                    b.y <= paddleP1.y + paddleP1.height
+                ) {
+                    sfx.playPaddleHit();
+                    b.x = paddleP1.x + paddleP1.width + b.radius;
+
+                    const hitPoint = (b.y - (paddleP1.y + paddleP1.height / 2)) / (paddleP1.height / 2);
+                    const bounceAngle = hitPoint * (Math.PI / 3.5);
+
+                    b.speed = Math.min(b.speed + 0.3, 16);
+                    b.dx = b.speed * Math.cos(bounceAngle);
+                    b.dy = b.speed * Math.sin(bounceAngle);
+                }
+
+                // 右側滑塊 P2 碰撞
+                if (
+                    b.x + b.radius >= paddleP2.x &&
+                    b.x - b.radius <= paddleP2.x + paddleP2.width &&
+                    b.y >= paddleP2.y &&
+                    b.y <= paddleP2.y + paddleP2.height
+                ) {
+                    sfx.playPaddleHit();
+                    b.x = paddleP2.x - b.radius;
+
+                    const hitPoint = (b.y - (paddleP2.y + paddleP2.height / 2)) / (paddleP2.height / 2);
+                    const bounceAngle = hitPoint * (Math.PI / 3.5);
+
+                    b.speed = Math.min(b.speed + 0.3, 16);
+                    b.dx = -b.speed * Math.cos(bounceAngle);
+                    b.dy = b.speed * Math.sin(bounceAngle);
+                }
+
+                // 得分判定 (球越界)
+                if (b.x + b.radius < 0) {
+                    // P2 得分
+                    p2Score++;
+                    sfx.playScoreSound();
+                    balls.splice(i, 1);
+                    updateHUD();
+                } else if (b.x - b.radius > canvas.width) {
+                    // P1 得分
+                    p1Score++;
+                    sfx.playScoreSound();
+                    balls.splice(i, 1);
+                    updateHUD();
+                }
+            }
+
+            // 保持球數隨時為 targetBallCount (若有球出界，自動於中央補滿)
+            while (balls.length < targetBallCount) {
+                balls.push(createBall());
+                updateHUD();
+            }
+        }
+
+        // ==========================================
+        // 繪製視覺 (Tennis Ball & Field)
+        // ==========================================
+        function drawTennisBall(x, y, radius, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            // 1. 網球基底 - 熒光黃綠色 (#ccff00 / #a3e635)
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#d9f99d';
+            ctx.shadowColor = '#84cc16';
+            ctx.shadowBlur = 15;
+            ctx.fill();
+
+            // 2. 網球高光漸層
+            const gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, 1, 0, 0, radius);
+            gradient.addColorStop(0, '#facc15');
+            gradient.addColorStop(0.7, '#84cc16');
+            gradient.addColorStop(1, '#4d7c0f');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3. 網球白色縫線條 (Arcs)
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = radius * 0.22;
+            ctx.lineCap = 'round';
+            ctx.shadowBlur = 0;
+
+            // 左弧線
+            ctx.beginPath();
+            ctx.arc(-radius * 0.75, 0, radius * 0.75, -Math.PI * 0.35, Math.PI * 0.35);
+            ctx.stroke();
+
+            // 右弧線
+            ctx.beginPath();
+            ctx.arc(radius * 0.75, 0, radius * 0.75, Math.PI * 0.65, Math.PI * 1.35);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            // 背景清空 (帶拖影)
+            ctx.fillStyle = 'rgba(6, 9, 19, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 繪製中央分隔線與球場邊線
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            ctx.lineWidth = 2;
+
+            // 球場外框內襯線
+            ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+
+            // 中央虛線 (網球網格)
+            ctx.beginPath();
+            ctx.setLineDash([10, 10]);
+            ctx.moveTo(canvas.width / 2, 15);
+            ctx.lineTo(canvas.width / 2, canvas.height - 15);
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+            ctx.stroke();
+            ctx.setLineDash([]); // 重置虛線
+
+            // 2. 繪製左滑塊 P1
+            ctx.save();
+            ctx.fillStyle = paddleP1.color;
+            ctx.shadowColor = paddleP1.color;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.roundRect(paddleP1.x, paddleP1.y, paddleP1.width, paddleP1.height, 6);
+            ctx.fill();
+            ctx.restore();
+
+            // 3. 繪製右滑塊 P2
+            ctx.save();
+            ctx.fillStyle = paddleP2.color;
+            ctx.shadowColor = paddleP2.color;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.roundRect(paddleP2.x, paddleP2.y, paddleP2.width, paddleP2.height, 6);
+            ctx.fill();
+            ctx.restore();
+
+            // 4. 繪製所有網球與軌跡
+            for (let b of balls) {
+                for (let i = 0; i < b.trail.length; i++) {
+                    const pos = b.trail[i];
+                    const alpha = (i + 1) / b.trail.length * 0.35;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, b.radius * ((i + 1) / b.trail.length), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(202, 240, 100, ${alpha})`;
+                    ctx.fill();
+                }
+                drawTennisBall(b.x, b.y, b.radius, b.rotation);
+            }
+
+            // 5. 繪製動態事件 Banner 提示
+            if (bannerOpacity > 0 && bannerText) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(bannerOpacity, 1.0);
+                ctx.font = '900 24px Orbitron, sans-serif';
+                ctx.fillStyle = '#facc15';
+                ctx.shadowColor = '#eab308';
+                ctx.shadowBlur = 15;
+                ctx.textAlign = 'center';
+                ctx.fillText(bannerText, canvas.width / 2, 80);
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 動畫循環 (Game Loop)
+        // ==========================================
+        function gameLoop() {
+            if (gameState === 'PLAYING') {
+                updatePhysics();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 啟動繪製循環
+        gameLoop();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

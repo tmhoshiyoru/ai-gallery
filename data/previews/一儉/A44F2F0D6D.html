@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Y2K STAR BRICK BREAKER - 千禧風打磚塊</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Y2K 復古像素字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'VT323', monospace !important;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0f8f1 0%, #d4f3e6 50%, #ffffff 100%);
+            color: #2d5a49;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        /* Y2K 千禧水果/果凍感質感邊框 */
+        .y2k-cabinet {
+            box-shadow: 
+                0 20px 40px rgba(168, 230, 207, 0.45),
+                inset 0 2px 4px rgba(255, 255, 255, 0.9),
+                inset 0 -4px 10px rgba(135, 209, 183, 0.3);
+            border: 4px solid #ffffff;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+
+        /* Y2K 漸層軟甜按鈕 */
+        .btn-y2k {
+            background: linear-gradient(180deg, #ffffff 0%, #b8f2e1 100%);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 12px rgba(168, 230, 207, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.8);
+            color: #2c6e59;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-y2k:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 6px 16px rgba(168, 230, 207, 0.7);
+        }
+        .btn-y2k:active {
+            transform: translateY(1px) scale(0.97);
+        }
+
+        .btn-secondary-y2k {
+            background: #ffffff;
+            border: 2px solid #b8f2e1;
+            color: #3b8266;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s ease;
+        }
+        .btn-secondary-y2k:hover {
+            background: #f0fdf8;
+            border-color: #72d6b3;
+        }
+
+        canvas {
+            background-color: #f4faf7;
+            border: 3px solid #ffffff;
+            box-shadow: inset 0 2px 10px rgba(168, 230, 207, 0.25), 0 8px 20px rgba(168, 230, 207, 0.15);
+            border-radius: 18px;
+        }
+
+        /* 千禧果凍飾品貼紙風格 */
+        .y2k-badge {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(168, 230, 207, 0.3);
+            border-radius: 16px;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 text-xl">
+
+    <!-- 主遊戲外框 -->
+    <div class="y2k-cabinet w-full max-w-lg p-4 sm:p-5 flex flex-col items-center relative my-auto">
+        
+        <!-- 頂部標題與控制按鈕 -->
+        <div class="w-full flex justify-between items-center mb-2 z-10 px-1">
+            <div class="flex items-center gap-1.5">
+                <span class="text-2xl">✧</span>
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-wider text-emerald-800 uppercase">Y2K STAR BREAKER</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="headerRestartBtn" class="btn-secondary-y2k text-base px-3 py-1 rounded-full flex items-center gap-1">
+                    ↻ RESTART
+                </button>
+                <button id="soundToggle" class="btn-secondary-y2k text-base px-3 py-1 rounded-full">
+                    🔊 SOUND: ON
+                </button>
+            </div>
+        </div>
+
+        <!-- 頂部計分板與生命值 -->
+        <div class="w-full flex justify-between items-center mb-3 y2k-badge px-4 py-2 z-10">
+            <div class="flex flex-col">
+                <span class="text-sm text-emerald-700 tracking-wider uppercase">SCORE</span>
+                <span id="scoreText" class="text-3xl sm:text-4xl leading-none text-emerald-800">00000</span>
+            </div>
+            
+            <!-- 生命值顯示區域 (深咖啡色標題與星星圖示) -->
+            <div class="flex flex-col items-center">
+                <span class="text-sm tracking-wider uppercase" style="color: #5C3D2E;">LIVES</span>
+                <div id="livesContainer" class="flex gap-1 text-lg mt-0.5" style="color: #5C3D2E;">
+                    <span>★</span>
+                    <span>★</span>
+                    <span>★</span>
+                </div>
+            </div>
+
+            <!-- 最高分數 (High Score) 紀錄顯示區域 -->
+            <div class="flex flex-col items-end">
+                <span class="text-sm text-teal-700 tracking-wider uppercase">BEST SCORE</span>
+                <span id="highScoreText" class="text-3xl sm:text-4xl leading-none text-teal-700">00000</span>
+            </div>
+        </div>
+
+        <!-- 遊戲畫布與浮層 Overlay -->
+        <div class="relative w-full aspect-[4/5] flex justify-center items-center z-10">
+            <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+            <!-- Game Over 浮層 -->
+            <div id="gameOverScreen" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center hidden rounded-2xl p-6 text-center z-30 border-4 border-emerald-200 backdrop-blur-md">
+                <div class="text-4xl mb-1">✧ 💫 ✧</div>
+                <h2 class="text-4xl text-emerald-900 mb-2 tracking-wider">GAME OVER</h2>
+                <p id="finalScore" class="text-2xl text-emerald-700 mb-1">FINAL SCORE: 0</p>
+                <p id="newHighScoreNotice" class="text-xl mb-6 hidden animate-bounce" style="color: #5C3D2E;">★ NEW HIGH SCORE! ★</p>
+                <button id="restartBtn" class="btn-y2k text-emerald-800 text-xl px-8 py-2.5 rounded-full tracking-wider uppercase">
+                    PLAY AGAIN ✧
+                </button>
+            </div>
+
+            <!-- 開始遊戲 浮層 -->
+            <div id="startScreen" class="absolute inset-0 bg-white/90 flex flex-col items-center justify-center rounded-2xl p-6 text-center z-30 backdrop-blur-md">
+                <div class="text-5xl mb-3 animate-spin" style="animation-duration: 8s;">✦</div>
+                <div class="mb-6 space-y-1">
+                    <p class="text-2xl text-emerald-900 tracking-wide">USE <span style="color: #5C3D2E;">LEFT / RIGHT</span> ARROWS</p>
+                    <p class="text-lg text-emerald-700">OR MOUSE / SWIPE TO MOVE PADDLE</p>
+                </div>
+                <button id="startBtn" class="btn-y2k text-emerald-800 text-xl px-8 py-2.5 rounded-full tracking-wider uppercase">
+                    START GAME ✧
+                </button>
+            </div>
+        </div>
+
+        <!-- 底部行動裝置控制按鈕 -->
+        <div class="w-full mt-3 grid grid-cols-2 gap-3 z-10 sm:hidden">
+            <button id="btnLeft" class="btn-secondary-y2k py-2 rounded-2xl text-2xl flex justify-center items-center shadow-sm">
+                ◀
+            </button>
+            <button id="btnRight" class="btn-secondary-y2k py-2 rounded-2xl text-2xl flex justify-center items-center shadow-sm">
+                ▶
+            </button>
+        </div>
+
+        <!-- 頁尾提示 -->
+        <div class="mt-3 text-base text-emerald-800 text-center z-10 tracking-wider">
+            CONTROLS: <span class="text-emerald-900">← / → ARROWS</span>, <span class="text-emerald-900">A / D</span> OR <span class="text-emerald-900">MOUSE</span>
+        </div>
+    </div>
+
+    <script>
+        class Y2KSoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playBrickHit(pitchMultiplier = 1) {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                const baseFreq = 523.25 * pitchMultiplier;
+                osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playPaddleHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(500, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playWallHit() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playLoseLife() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(220, this.ctx.currentTime + 0.2);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.4);
+
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+        }
+
+        const sounds = new Y2KSoundEffects();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const BASE_WIDTH = 400;
+        const BASE_HEIGHT = 500;
+        let scale = 1;
+
+        let score = 0;
+        let lives = 3;
+        let highScore = parseInt(window.__galleryStorage.getItem('y2k_brick_highscore')) || 0;
+        let gameRunning = false;
+        let animationFrameId = null;
+
+        const keys = { left: false, right: false };
+        let particles = [];
+
+        // 放大 Y2K 星星小球 (半徑由 8 加大至 13)
+        const ball = {
+            x: BASE_WIDTH / 2,
+            y: BASE_HEIGHT - 45,
+            radius: 13,          // 大號星星的外接圓半徑
+            dx: 3.2,
+            dy: -3.2,
+            speed: 4.5,
+            rotation: 0,
+            trail: []
+        };
+
+        const paddle = {
+            width: 78,
+            height: 14,
+            x: (BASE_WIDTH - 78) / 2,
+            y: BASE_HEIGHT - 25,
+            speed: 7
+        };
+
+        // 深咖啡色與馬卡龍相間的磚塊色彩配置
+        const brickConfig = {
+            rowCount: 3,
+            columnCount: 6,
+            padding: 10,
+            offsetTop: 50,
+            offsetLeft: 15,
+            height: 18,
+            colors: [
+                { top: '#b8f2e1', bottom: '#88d8b0', border: '#ffffff' }, // 淺薄荷綠
+                { top: '#a8e6cf', bottom: '#72d6b3', border: '#ffffff' }, // 薄荷綠
+                { top: '#88d8b0', bottom: '#56c596', border: '#ffffff' }  // 深薄荷綠
+            ]
+        };
+
+        let bricks = [];
+
+        const scoreText = document.getElementById('scoreText');
+        const highScoreText = document.getElementById('highScoreText');
+        const livesContainer = document.getElementById('livesContainer');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreText = document.getElementById('finalScore');
+        const newHighScoreNotice = document.getElementById('newHighScoreNotice');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const headerRestartBtn = document.getElementById('headerRestartBtn');
+        const soundToggle = document.getElementById('soundToggle');
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            scale = rect.width / BASE_WIDTH;
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function initBricks() {
+            bricks = [];
+            const availableWidth = BASE_WIDTH - (brickConfig.offsetLeft * 2);
+            const totalPadding = brickConfig.padding * (brickConfig.columnCount - 1);
+            const brickWidth = (availableWidth - totalPadding) / brickConfig.columnCount;
+
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const brickX = brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding);
+                    const brickY = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: brickX,
+                        y: brickY,
+                        width: brickWidth,
+                        height: brickConfig.height,
+                        status: 1,
+                        color: brickConfig.colors[r % brickConfig.colors.length]
+                    };
+                }
+            }
+        }
+
+        function resetBallAndPaddle() {
+            paddle.x = (BASE_WIDTH - paddle.width) / 2;
+            ball.x = BASE_WIDTH / 2;
+            ball.y = paddle.y - 20;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * 3.2;
+            ball.dy = -3.5;
+            ball.rotation = 0;
+            ball.trail = [];
+        }
+
+        function updateScoreBoard() {
+            scoreText.textContent = String(score).padStart(5, '0');
+            highScoreText.textContent = String(highScore).padStart(5, '0');
+            
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const star = document.createElement('span');
+                if (i < lives) {
+                    star.className = 'transition-transform duration-300 scale-100';
+                    star.textContent = '★';
+                } else {
+                    star.className = 'opacity-20 scale-75 transition-transform duration-300';
+                    star.textContent = '★';
+                }
+                livesContainer.appendChild(star);
+            }
+        }
+
+        updateScoreBoard();
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 12; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 5 + 2,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.04 + 0.02
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // 繪製更大更精緻的五角星
+        function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius, fillStyle) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            const step = Math.PI / spikes;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fillStyle = fillStyle;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function startGame() {
+            sounds.init();
+            score = 0;
+            lives = 3;
+            particles = [];
+            updateScoreBoard();
+            initBricks();
+            resetBallAndPaddle();
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            newHighScoreNotice.classList.add('hidden');
+
+            gameRunning = true;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function update() {
+            if (keys.left && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+            if (keys.right && paddle.x + paddle.width < BASE_WIDTH) {
+                paddle.x += paddle.speed;
+            }
+
+            ball.rotation += 0.08;
+            ball.trail.push({ x: ball.x, y: ball.y, rotation: ball.rotation });
+            if (ball.trail.length > 7) ball.trail.shift();
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.dx = -ball.dx;
+                sounds.playWallHit();
+            } else if (ball.x + ball.radius > BASE_WIDTH) {
+                ball.x = BASE_WIDTH - ball.radius;
+                ball.dx = -ball.dx;
+                sounds.playWallHit();
+            }
+
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.dy = -ball.dy;
+                sounds.playWallHit();
+            }
+
+            if (ball.y + ball.radius > BASE_HEIGHT) {
+                lives--;
+                updateScoreBoard();
+
+                if (lives <= 0) {
+                    gameOver();
+                    return;
+                } else {
+                    sounds.playLoseLife();
+                    createExplosion(ball.x, BASE_HEIGHT - 10, '#5C3D2E');
+                    resetBallAndPaddle();
+                }
+            }
+
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width
+            ) {
+                sounds.playPaddleHit();
+                
+                const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                const maxAngle = Math.PI / 3;
+                const bounceAngle = hitPoint * maxAngle;
+
+                ball.dx = ball.speed * Math.sin(bounceAngle);
+                ball.dy = -ball.speed * Math.cos(bounceAngle);
+                ball.y = paddle.y - ball.radius;
+            }
+
+            let allCleared = true;
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        allCleared = false;
+
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + b.width &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + b.height
+                        ) {
+                            b.status = 0;
+                            score += 10;
+
+                            // 每擊中一個磚塊，稍微提升小星星速度 (上限為 10)
+                            if (ball.speed < 10) {
+                                ball.speed += 0.08;
+                            }
+
+                            if (score > highScore) {
+                                highScore = score;
+                                window.__galleryStorage.setItem('y2k_brick_highscore', highScore);
+                            }
+                            updateScoreBoard();
+
+                            sounds.playBrickHit(1 + (brickConfig.rowCount - r) * 0.15);
+                            createExplosion(b.x + b.width / 2, b.y + b.height / 2, b.color.top);
+
+                            ball.dy = -ball.dy;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (allCleared) {
+                // 清空該關卡所有磚塊後，小星星基礎速度大幅提升
+                ball.speed += 0.8;
+                initBricks();
+                resetBallAndPaddle();
+            }
+
+            updateParticles();
+        }
+
+        function draw() {
+            ctx.save();
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = '#f4faf7';
+            ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+
+            ctx.strokeStyle = 'rgba(168, 230, 207, 0.2)';
+            ctx.lineWidth = 1;
+            const gridSize = 20;
+            for (let x = 0; x < BASE_WIDTH; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, BASE_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y < BASE_HEIGHT; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(BASE_WIDTH, y);
+                ctx.stroke();
+            }
+
+            for (let r = 0; r < brickConfig.rowCount; r++) {
+                for (let c = 0; c < brickConfig.columnCount; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        
+                        const grad = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.height);
+                        grad.addColorStop(0, b.color.top);
+                        grad.addColorStop(1, b.color.bottom);
+                        
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.width, b.height, 6);
+                        ctx.fill();
+
+                        // 移除上方磚塊的描邊
+                        ctx.restore();
+                    }
+                }
+            }
+
+            ctx.save();
+            const paddleGrad = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.height);
+            paddleGrad.addColorStop(0, '#ffffff');
+            paddleGrad.addColorStop(1, '#a8e6cf');
+
+            ctx.fillStyle = paddleGrad;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fill();
+
+            // 移除底部滑塊 (Paddle) 的描邊
+            ctx.restore();
+
+            // 繪製放大版星星的亮麗星光殘影
+            for (let i = 0; i < ball.trail.length; i++) {
+                const pos = ball.trail[i];
+                const alpha = (i + 1) / ball.trail.length * 0.45;
+                const size = ball.radius * ((i + 1) / ball.trail.length);
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                drawStar(ctx, pos.x, pos.y, 5, size, size / 2, '#8C6D58');
+                ctx.restore();
+            }
+
+            // 繪製主要大號 Y2K 大星星 (深咖啡色漸層風)
+            ctx.save();
+            ctx.translate(ball.x, ball.y);
+            ctx.rotate(ball.rotation);
+            drawStar(ctx, 0, 0, 5, ball.radius, ball.radius / 2, '#5C3D2E');
+            ctx.restore();
+
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            sounds.playGameOver();
+
+            finalScoreText.textContent = `FINAL SCORE: ${score}`;
+            if (score > 0 && score >= highScore) {
+                newHighScoreNotice.classList.remove('hidden');
+            }
+
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = true;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                keys.left = false;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                keys.right = false;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / (rect.width / BASE_WIDTH);
+            paddle.x = mouseX - paddle.width / 2;
+
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > BASE_WIDTH) paddle.x = BASE_WIDTH - paddle.width;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!gameRunning || e.touches.length === 0) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touchX = (e.touches[0].clientX - rect.left) / (rect.width / BASE_WIDTH);
+            paddle.x = touchX - paddle.width / 2;
+
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > BASE_WIDTH) paddle.x = BASE_WIDTH - paddle.width;
+        }, { passive: false });
+
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+
+        const bindBtnEvents = (btn, keyProp) => {
+            const start = (e) => { e.preventDefault(); keys[keyProp] = true; };
+            const end = (e) => { e.preventDefault(); keys[keyProp] = false; };
+            btn.addEventListener('touchstart', start);
+            btn.addEventListener('touchend', end);
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+            btn.addEventListener('mouseleave', end);
+        };
+
+        bindBtnEvents(btnLeft, 'left');
+        bindBtnEvents(btnRight, 'right');
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        headerRestartBtn.addEventListener('click', startGame);
+
+        soundToggle.addEventListener('click', () => {
+            sounds.muted = !sounds.muted;
+            soundToggle.textContent = sounds.muted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON';
+            soundToggle.classList.toggle('text-gray-400', sounds.muted);
+            soundToggle.classList.toggle('text-emerald-800', !sounds.muted);
+        });
+
+        initBricks();
+        draw();
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

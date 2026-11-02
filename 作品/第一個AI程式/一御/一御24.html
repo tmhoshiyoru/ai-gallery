@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>冰火草神殿三人冒險 - Elemental Temple</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glow-fire {
+            box-shadow: 0 0 15px rgba(255, 77, 0, 0.6), inset 0 0 10px rgba(255, 120, 0, 0.3);
+            border: 2px solid #ff4d00;
+        }
+
+        .glow-water {
+            box-shadow: 0 0 15px rgba(0, 183, 255, 0.6), inset 0 0 10px rgba(0, 220, 255, 0.3);
+            border: 2px solid #00b7ff;
+        }
+
+        .glow-grass {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.6), inset 0 0 10px rgba(34, 197, 94, 0.3);
+            border: 2px solid #22c55e;
+        }
+
+        .temple-card {
+            background: linear-gradient(145deg, rgba(18, 24, 38, 0.95), rgba(10, 14, 23, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .btn-touch {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            touch-action: none;
+        }
+        .btn-touch:active {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-between p-2 sm:p-4 select-none">
+
+    <header class="w-full max-w-5xl flex items-center justify-between p-3 rounded-2xl temple-card shadow-2xl border border-slate-800 z-10">
+        <!-- F小姐 Stats -->
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center glow-fire">
+                <i class="fa-solid fa-fire text-white text-sm sm:text-base animate-pulse"></i>
+            </div>
+            <div>
+                <div class="text-[10px] text-orange-400 font-bold uppercase tracking-wider">F小姐 (WASD)</div>
+                <div class="text-xs sm:text-base font-bold font-orbitron text-white flex items-center gap-1">
+                    <i class="fa-solid fa-gem text-red-500 text-xs"></i>
+                    <span id="redGemsText">0 / 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- G草精 Stats -->
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-grass">
+                <i class="fa-solid fa-leaf text-white text-sm sm:text-base animate-pulse"></i>
+            </div>
+            <div>
+                <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">G草精 (J/I/L)</div>
+                <div class="text-xs sm:text-base font-bold font-orbitron text-white flex items-center gap-1">
+                    <i class="fa-solid fa-gem text-emerald-400 text-xs"></i>
+                    <span id="greenGemsText">0 / 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level & Timer Title -->
+        <div class="text-center hidden md:block">
+            <h1 class="text-base sm:text-xl font-black font-orbitron tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-emerald-300 to-cyan-400">
+                ELEMENTAL TEMPLE
+            </h1>
+            <div class="flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
+                <span id="levelTitle" class="text-amber-300">Level 1: 三人同行</span>
+                <span>•</span>
+                <span class="font-mono text-slate-300 flex items-center gap-1">
+                    <i class="fa-solid fa-stopwatch text-slate-400"></i>
+                    <span id="timerText">00:00</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- W先生 Stats -->
+        <div class="flex items-center space-x-2 text-right">
+            <div>
+                <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">W先生 (↑/←/→)</div>
+                <div class="text-xs sm:text-base font-bold font-orbitron text-white flex items-center justify-end gap-1">
+                    <span id="blueGemsText">0 / 0</span>
+                    <i class="fa-solid fa-gem text-cyan-400 text-xs"></i>
+                </div>
+            </div>
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center glow-water">
+                <i class="fa-solid fa-droplet text-white text-sm sm:text-base animate-pulse"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative w-full max-w-5xl flex-1 my-2 flex items-center justify-center overflow-hidden">
+        <div class="relative w-full h-full max-h-[620px] aspect-[16/10] bg-slate-950 rounded-2xl border-2 border-slate-800/80 shadow-2xl overflow-hidden flex items-center justify-center">
+            
+            <canvas id="gameCanvas" width="960" height="600" class="w-full h-full object-contain"></canvas>
+
+            <!-- Start Menu Modal -->
+            <div id="startModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center glow-fire animate-bounce">
+                        <i class="fa-solid fa-fire text-white text-2xl"></i>
+                    </div>
+                    <span class="text-2xl font-bold text-slate-500">+</span>
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center glow-grass animate-bounce" style="animation-delay: 0.1s">
+                        <i class="fa-solid fa-leaf text-white text-2xl"></i>
+                    </div>
+                    <span class="text-2xl font-bold text-slate-500">+</span>
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center glow-water animate-bounce" style="animation-delay: 0.2s">
+                        <i class="fa-solid fa-droplet text-white text-2xl"></i>
+                    </div>
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-emerald-300 to-cyan-400 mb-2">
+                    冰火草神殿三人冒險
+                </h2>
+                <p class="text-slate-300 max-w-lg text-xs sm:text-sm mb-6 leading-relaxed">
+                    三人團隊解謎冒險！<br>
+                    <span class="text-orange-400 font-bold">F小姐 (WASD)</span> 免疫火岩池<br>
+                    <span class="text-emerald-400 font-bold">G草精 (J/I/L)</span> 免疫毒液池（小幫手工具人）<br>
+                    <span class="text-cyan-400 font-bold">W先生 (方向鍵)</span> 免疫湖水池<br>
+                    <span class="text-amber-300 font-bold">流暢登頂與機關協作</span> 輕鬆體驗解謎樂趣！
+                </p>
+
+                <button id="startBtn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-orange-500 via-emerald-500 to-cyan-500 hover:opacity-90 text-white font-bold text-lg shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-play mr-2"></i> 開始冒險
+                </button>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div id="gameOverModal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-16 h-16 rounded-2xl bg-red-500/20 border border-red-500 flex items-center justify-center mb-4 text-red-500 animate-pulse">
+                    <i class="fa-solid fa-skull-crossbones text-3xl"></i>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-bold font-orbitron text-red-500 mb-2">
+                    挑戰失敗
+                </h2>
+                <p id="deathReasonText" class="text-slate-300 text-sm mb-6">
+                    陷入陷阱！
+                </p>
+                <button id="restartBtn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-bold text-lg shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> 重新開始
+                </button>
+            </div>
+
+            <!-- Victory Modal -->
+            <div id="victoryModal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500 flex items-center justify-center mb-4 text-emerald-400 animate-bounce">
+                    <i class="fa-solid fa-trophy text-3xl"></i>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-emerald-400 mb-2">
+                    順利通關！
+                </h2>
+                <div class="flex items-center gap-6 my-4 text-sm text-slate-300">
+                    <div>通關時間：<span id="victoryTime" class="font-mono font-bold text-amber-300">00:00</span></div>
+                    <div>寶石收集：<span id="victoryGems" class="font-mono font-bold text-cyan-300">0 / 0</span></div>
+                </div>
+                <button id="nextLevelBtn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-lg shadow-lg transition-all transform hover:scale-105 active:scale-95">
+                    <i class="fa-solid fa-forward mr-2"></i> 下一關
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="w-full max-w-5xl flex flex-col sm:flex-row items-center justify-between p-2 sm:p-3 rounded-2xl temple-card border border-slate-800 text-xs text-slate-400 gap-2">
+        <!-- Touch Controls Row for Mobile -->
+        <div class="flex items-center gap-3 sm:hidden overflow-x-auto max-w-full pb-1">
+            <div class="flex items-center gap-1">
+                <span class="text-orange-400 font-bold">🔥</span>
+                <button id="btnFireLeft" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">A</button>
+                <button id="btnFireJump" class="w-8 h-8 rounded btn-touch text-orange-400 font-bold text-xs">W</button>
+                <button id="btnFireRight" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">D</button>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-emerald-400 font-bold">🍃</span>
+                <button id="btnGrassLeft" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">J</button>
+                <button id="btnGrassJump" class="w-8 h-8 rounded btn-touch text-emerald-400 font-bold text-xs">I</button>
+                <button id="btnGrassRight" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">L</button>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-cyan-400 font-bold">💧</span>
+                <button id="btnWaterLeft" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">←</button>
+                <button id="btnWaterJump" class="w-8 h-8 rounded btn-touch text-cyan-400 font-bold text-xs">↑</button>
+                <button id="btnWaterRight" class="w-8 h-8 rounded btn-touch text-white font-bold text-xs">→</button>
+            </div>
+        </div>
+
+        <!-- Desktop Control Tips -->
+        <div class="hidden sm:flex items-center space-x-3 text-[11px]">
+            <span class="flex items-center gap-1"><span class="bg-slate-800 text-orange-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono font-bold">W A D</span> F小姐</span>
+            <span class="flex items-center gap-1"><span class="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono font-bold">I J L</span> G草精</span>
+            <span class="flex items-center gap-1"><span class="bg-slate-800 text-cyan-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono font-bold">↑ ← →</span> W先生</span>
+            <span class="flex items-center gap-1"><span class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700 font-mono font-bold">R</span> 重來</span>
+            <span class="flex items-center gap-1"><span class="bg-amber-900/80 text-amber-300 px-1.5 py-0.5 rounded border border-amber-600 font-mono font-bold">T</span> 偷懶通關</span>
+        </div>
+
+        <!-- Audio Toggle & Pass Button -->
+        <div class="flex items-center gap-2">
+            <button id="autoPassBtn" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-white font-bold border border-amber-400 flex items-center gap-1.5 transition-all transform active:scale-95 shadow-md">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-200 animate-pulse"></i>
+                <span>一鍵通關</span>
+            </button>
+            <button id="soundToggle" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-colors">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-amber-400"></i>
+                <span id="soundText">音效 ON</span>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const GAME_WIDTH = 960;
+        const GAME_HEIGHT = 600;
+
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, duration, type = 'sine', gainVal = 0.1) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            playJump(type) {
+                const pitch = type === 'fire' ? 440 : (type === 'grass' ? 520 : 587.33);
+                this.playTone(pitch, 0.15, 'square', 0.08);
+            }
+            playGem() {
+                this.playTone(880, 0.1, 'triangle', 0.12);
+                setTimeout(() => this.playTone(1320, 0.15, 'triangle', 0.1), 80);
+            }
+            playSwitch() {
+                this.playTone(320, 0.1, 'sawtooth', 0.12);
+            }
+            playDeath() {
+                this.playTone(150, 0.4, 'sawtooth', 0.2);
+            }
+            playVictory() {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 0.2, 'triangle', 0.12), i * 120);
+                });
+            }
+        }
+
+        const audio = new SoundSystem();
+
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            i: false, j: false, k: false, l: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key;
+            if (k === 'w' || k === 'W') keys.w = true;
+            if (k === 'a' || k === 'A') keys.a = true;
+            if (k === 's' || k === 'S') keys.s = true;
+            if (k === 'd' || k === 'D') keys.d = true;
+
+            if (k === 'i' || k === 'I') keys.i = true;
+            if (k === 'j' || k === 'J') keys.j = true;
+            if (k === 'k' || k === 'K') keys.k = true;
+            if (k === 'l' || k === 'L') keys.l = true;
+
+            if (k === 'ArrowUp') keys.ArrowUp = true;
+            if (k === 'ArrowLeft') keys.ArrowLeft = true;
+            if (k === 'ArrowDown') keys.ArrowDown = true;
+            if (k === 'ArrowRight') keys.ArrowRight = true;
+
+            if ((k === 'r' || k === 'R') && gameState === 'PLAYING') {
+                restartLevel();
+            }
+
+            if ((k === 't' || k === 'T') && gameState === 'PLAYING') {
+                autoPassLevel();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key;
+            if (k === 'w' || k === 'W') keys.w = false;
+            if (k === 'a' || k === 'A') keys.a = false;
+            if (k === 's' || k === 'S') keys.s = false;
+            if (k === 'd' || k === 'D') keys.d = false;
+
+            if (k === 'i' || k === 'I') keys.i = false;
+            if (k === 'j' || k === 'J') keys.j = false;
+            if (k === 'k' || k === 'K') keys.k = false;
+            if (k === 'l' || k === 'L') keys.l = false;
+
+            if (k === 'ArrowUp') keys.ArrowUp = false;
+            if (k === 'ArrowLeft') keys.ArrowLeft = false;
+            if (k === 'ArrowDown') keys.ArrowDown = false;
+            if (k === 'ArrowRight') keys.ArrowRight = false;
+        });
+
+        function bindTouchBtn(btnId, keyName) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            const start = (e) => { e.preventDefault(); keys[keyName] = true; audio.init(); };
+            const end = (e) => { e.preventDefault(); keys[keyName] = false; };
+            btn.addEventListener('touchstart', start);
+            btn.addEventListener('touchend', end);
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+            btn.addEventListener('mouseleave', end);
+        }
+
+        bindTouchBtn('btnFireLeft', 'a');
+        bindTouchBtn('btnFireJump', 'w');
+        bindTouchBtn('btnFireRight', 'd');
+
+        bindTouchBtn('btnGrassLeft', 'j');
+        bindTouchBtn('btnGrassJump', 'i');
+        bindTouchBtn('btnGrassRight', 'l');
+
+        bindTouchBtn('btnWaterLeft', 'ArrowLeft');
+        bindTouchBtn('btnWaterJump', 'ArrowUp');
+        bindTouchBtn('btnWaterRight', 'ArrowRight');
+
+        class Character {
+            constructor(type, x, y) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.prevX = x;
+                this.prevY = y;
+                this.width = 24;
+                this.height = 36;
+                this.vx = 0;
+                this.vy = 0;
+                this.speed = 4.8;
+                this.jumpForce = -10.5;
+                this.grounded = false;
+                this.ridingElevator = null;
+                this.ridingPlayer = null;
+                this.atDoor = false;
+            }
+
+            update(platforms, elevators, crates, otherPlayers) {
+                this.prevX = this.x;
+                this.prevY = this.y;
+
+                if (this.type === 'fire') {
+                    if (keys.a) this.vx = -this.speed;
+                    else if (keys.d) this.vx = this.speed;
+                    else this.vx = 0;
+
+                    if (keys.w && this.grounded) {
+                        this.vy = this.jumpForce;
+                        this.grounded = false;
+                        this.ridingElevator = null;
+                        this.ridingPlayer = null;
+                        audio.playJump('fire');
+                    }
+                } else if (this.type === 'grass') {
+                    if (keys.j) this.vx = -this.speed;
+                    else if (keys.l) this.vx = this.speed;
+                    else this.vx = 0;
+
+                    if (keys.i && this.grounded) {
+                        this.vy = this.jumpForce;
+                        this.grounded = false;
+                        this.ridingElevator = null;
+                        this.ridingPlayer = null;
+                        audio.playJump('grass');
+                    }
+                } else {
+                    if (keys.ArrowLeft) this.vx = -this.speed;
+                    else if (keys.ArrowRight) this.vx = this.speed;
+                    else this.vx = 0;
+
+                    if (keys.ArrowUp && this.grounded) {
+                        this.vy = this.jumpForce;
+                        this.grounded = false;
+                        this.ridingElevator = null;
+                        this.ridingPlayer = null;
+                        audio.playJump('water');
+                    }
+                }
+
+                if (this.ridingPlayer) {
+                    this.x += (this.ridingPlayer.x - this.ridingPlayer.prevX);
+                    this.y += (this.ridingPlayer.y - this.ridingPlayer.prevY);
+                }
+
+                this.vy += 0.45;
+
+                this.x += this.vx;
+                this.collideX([...platforms, ...elevators], crates);
+
+                if (this.ridingElevator) {
+                    this.y += this.ridingElevator.vy;
+                }
+
+                this.y += this.vy;
+                this.grounded = false;
+                this.ridingElevator = null;
+                this.ridingPlayer = null;
+
+                this.collideY([...platforms, ...elevators], crates, elevators, otherPlayers);
+
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > GAME_WIDTH) this.x = GAME_WIDTH - this.width;
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.vy = 0;
+                }
+                if (this.y + this.height > GAME_HEIGHT) {
+                    this.y = GAME_HEIGHT - this.height;
+                    this.vy = 0;
+                    this.grounded = true;
+                }
+            }
+
+            collideX(solids, crates) {
+                for (let s of solids) {
+                    if (this.checkOverlap(s)) {
+                        if (this.vx > 0) this.x = s.x - this.width;
+                        else if (this.vx < 0) this.x = s.x + s.w;
+                    }
+                }
+                for (let c of crates) {
+                    if (this.checkOverlap(c)) {
+                        if (this.vx > 0) {
+                            this.x = c.x - this.width;
+                            c.push(1.8, solids);
+                        } else if (this.vx < 0) {
+                            this.x = c.x + c.w;
+                            c.push(-1.8, solids);
+                        }
+                    }
+                }
+            }
+
+            collideY(solids, crates, elevators, otherPlayers) {
+                const combined = [...solids, ...crates];
+                for (let s of combined) {
+                    if (this.checkOverlap(s)) {
+                        if (this.vy >= 0 && (this.y + this.height - this.vy) <= s.y + 12) {
+                            this.y = s.y - this.height;
+                            this.vy = 0;
+                            this.grounded = true;
+
+                            if (elevators.includes(s)) {
+                                this.ridingElevator = s;
+                            }
+                        } else if (this.vy < 0) {
+                            this.y = s.y + s.h;
+                            this.vy = 0;
+                        }
+                    }
+                }
+
+                for (let otherPlayer of otherPlayers) {
+                    if (otherPlayer !== this && this.checkOverlap(otherPlayer)) {
+                        if (this.vy >= 0 && (this.y + this.height - this.vy) <= otherPlayer.y + 12) {
+                            this.y = otherPlayer.y - this.height;
+                            this.vy = 0;
+                            this.grounded = true;
+                            this.ridingPlayer = otherPlayer;
+                        } else if (this.vy < 0 && this.y < otherPlayer.y) {
+                            otherPlayer.y = this.y - otherPlayer.height;
+                            otherPlayer.vy = Math.min(otherPlayer.vy, this.vy);
+                            otherPlayer.grounded = true;
+                            otherPlayer.ridingPlayer = this;
+                        }
+                    }
+                }
+            }
+
+            checkOverlap(rect) {
+                const rw = rect.w || rect.width;
+                const rh = rect.h || rect.height;
+                return this.x < rect.x + rw &&
+                       this.x + this.width > rect.x &&
+                       this.y < rect.y + rh &&
+                       this.y + this.height > rect.y;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(this.x + this.width / 2, this.y + this.height, 10, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                let mainColor = '#ff4500';
+                let lightColor = '#ffaa00';
+                if (this.type === 'water') {
+                    mainColor = '#00bfff';
+                    lightColor = '#a0f0ff';
+                } else if (this.type === 'grass') {
+                    mainColor = '#22c55e';
+                    lightColor = '#86efac';
+                }
+
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = 12;
+
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y + 8, this.width, this.height - 8, 8);
+                ctx.fill();
+
+                ctx.fillStyle = lightColor;
+                ctx.beginPath();
+                if (this.type === 'fire') {
+                    ctx.moveTo(this.x, this.y + 10);
+                    ctx.quadraticCurveTo(this.x + 6, this.y - 6, this.x + 12, this.y + 4);
+                    ctx.quadraticCurveTo(this.x + 18, this.y - 8, this.x + this.width, this.y + 10);
+                } else if (this.type === 'grass') {
+                    ctx.moveTo(this.x + 4, this.y + 8);
+                    ctx.quadraticCurveTo(this.x + 12, this.y - 10, this.x + 20, this.y + 8);
+                } else {
+                    ctx.moveTo(this.x + 2, this.y + 10);
+                    ctx.quadraticCurveTo(this.x + this.width / 2, this.y - 8, this.x + this.width - 2, this.y + 10);
+                }
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(this.x + (this.vx < 0 ? 3 : 13), this.y + 14, 4, 6);
+                ctx.fillRect(this.x + (this.vx < 0 ? 9 : 17), this.y + 14, 4, 6);
+                ctx.fillStyle = '#111111';
+                ctx.fillRect(this.x + (this.vx < 0 ? 3 : 15), this.y + 16, 2, 3);
+                ctx.fillRect(this.x + (this.vx < 0 ? 9 : 19), this.y + 16, 2, 3);
+
+                ctx.restore();
+            }
+        }
+
+        class PushCrate {
+            constructor(x, y, w = 36, h = 36) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.vy = 0;
+            }
+
+            push(amount, solids) {
+                this.x += amount;
+                for (let p of solids) {
+                    if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) {
+                        if (amount > 0) this.x = p.x - this.w;
+                        else this.x = p.x + p.w;
+                    }
+                }
+            }
+
+            update(solids) {
+                this.vy += 0.4;
+                this.y += this.vy;
+                for (let p of solids) {
+                    if (this.x < p.x + p.w && this.x + this.w > p.x && this.y < p.y + p.h && this.y + this.h > p.y) {
+                        if (this.vy > 0) {
+                            this.y = p.y - this.h;
+                            this.vy = 0;
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.strokeStyle = '#3a1e05';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
+                ctx.beginPath();
+                ctx.moveTo(this.x + 4, this.y + 4); ctx.lineTo(this.x + this.w - 4, this.y + this.h - 4);
+                ctx.moveTo(this.x + this.w - 4, this.y + 4); ctx.lineTo(this.x + 4, this.y + this.h - 4);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class PressureButton {
+            constructor(x, y, w = 40, targetId = null, color = '#eab308', isToggle = false) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = 8;
+                this.pressed = false;
+                this.targetId = targetId;
+                this.color = color;
+                this.isToggle = isToggle;
+                this.wasTouched = false;
+            }
+
+            update(players, crates) {
+                const check = (rect) => {
+                    const rw = rect.w || rect.width;
+                    return rect.x < this.x + this.w && rect.x + rw > this.x &&
+                           rect.y + (rect.h || rect.height) >= this.y - 4 && rect.y + (rect.h || rect.height) <= this.y + 10;
+                };
+
+                const isTouched = players.some(p => check(p)) || crates.some(c => check(c));
+
+                if (this.isToggle) {
+                    if (isTouched && !this.wasTouched) {
+                        this.pressed = !this.pressed;
+                        audio.playSwitch();
+                    }
+                    this.wasTouched = isTouched;
+                } else {
+                    if (!this.pressed && isTouched) audio.playSwitch();
+                    this.pressed = isTouched;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(this.x - 2, this.y + 4, this.w + 4, 4);
+
+                ctx.fillStyle = this.pressed ? '#22c55e' : this.color;
+                ctx.fillRect(this.x, this.pressed ? this.y + 4 : this.y, this.w, this.pressed ? 4 : 6);
+
+                if (this.isToggle) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(this.x + this.w / 2 - 2, this.y - 4, 4, 6);
+                }
+                ctx.restore();
+            }
+        }
+
+        class ElevatorPlatform {
+            constructor(id, x, y, w, h, targetY, color = '#38bdf8', midY = null) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.startY = y;
+                this.targetY = targetY;
+                this.midY = midY;
+                this.w = w;
+                this.h = h;
+                this.vy = 0;
+                this.speed = 2.5;
+                this.color = color;
+            }
+
+            update(buttons) {
+                let activeButtons = buttons.filter(b => b.targetId === this.id && b.pressed);
+                let destY = this.startY;
+
+                if (this.midY !== null) {
+                    if (activeButtons.length === 1) {
+                        destY = this.midY;
+                    } else if (activeButtons.length >= 2) {
+                        destY = this.targetY;
+                    }
+                } else {
+                    if (activeButtons.length >= 1) {
+                        destY = this.targetY;
+                    }
+                }
+
+                const diff = destY - this.y;
+                if (Math.abs(diff) > 1.0) {
+                    this.vy = Math.sign(diff) * this.speed;
+                } else {
+                    this.vy = 0;
+                    this.y = destY;
+                }
+
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = '#475569';
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x + 4, this.y + 3, this.w - 8, 3);
+                ctx.restore();
+            }
+        }
+
+        const LEVELS = [
+            // LEVEL 1: 三人同行
+            {
+                name: "Level 1: 三人同行初旅",
+                fireSpawn: { x: 40, y: 500 },
+                grassSpawn: { x: 80, y: 500 },
+                waterSpawn: { x: 120, y: 500 },
+                fireDoor: { x: 835, y: 110 },
+                waterDoor: { x: 885, y: 110 },
+                platforms: [
+                    { x: 0, y: 560, w: 960, h: 40 },
+                    { x: 0, y: 0, w: 20, h: 600 },
+                    { x: 940, y: 0, w: 20, h: 600 },
+                    { x: 0, y: 0, w: 960, h: 20 },
+                    { x: 180, y: 480, w: 120, h: 20 },
+                    { x: 340, y: 410, w: 140, h: 20 },
+                    { x: 520, y: 340, w: 140, h: 20 },
+                    { x: 220, y: 260, w: 200, h: 20 },
+                    { x: 20, y: 190, w: 160, h: 20 },
+                    { x: 680, y: 270, w: 260, h: 20 },
+                    { x: 800, y: 170, w: 140, h: 20 }
+                ],
+                liquids: [
+                    { x: 200, y: 550, w: 100, h: 10, type: 'fire' },
+                    { x: 380, y: 550, w: 100, h: 10, type: 'acid' },
+                    { x: 560, y: 550, w: 100, h: 10, type: 'water' },
+                    { x: 380, y: 250, w: 90, h: 10, type: 'acid' }
+                ],
+                gems: [
+                    { x: 250, y: 510, type: 'red' },
+                    { x: 430, y: 510, type: 'green' },
+                    { x: 610, y: 510, type: 'blue' },
+                    { x: 280, y: 220, type: 'red' },
+                    { x: 100, y: 150, type: 'green' },
+                    { x: 750, y: 230, type: 'blue' }
+                ],
+                buttons: [],
+                elevators: [],
+                crates: []
+            },
+
+            // LEVEL 2: 神殿機關
+            {
+                name: "Level 2: 元素機關與三層停靠電梯",
+                fireSpawn: { x: 40, y: 500 },
+                grassSpawn: { x: 80, y: 500 },
+                waterSpawn: { x: 120, y: 500 },
+                fireDoor: { x: 810, y: 110 },
+                waterDoor: { x: 865, y: 110 },
+                platforms: [
+                    { x: 0, y: 560, w: 960, h: 40 },
+                    { x: 0, y: 0, w: 20, h: 600 },
+                    { x: 940, y: 0, w: 20, h: 600 },
+                    { x: 0, y: 0, w: 960, h: 20 },
+                    { x: 160, y: 490, w: 120, h: 20 },
+                    { x: 20, y: 400, w: 320, h: 20 },
+                    { x: 440, y: 400, w: 500, h: 20 },
+                    { x: 220, y: 280, w: 100, h: 20 },
+                    { x: 20, y: 170, w: 320, h: 20 },
+                    { x: 440, y: 170, w: 500, h: 20 }
+                ],
+                liquids: [
+                    { x: 220, y: 550, w: 90, h: 10, type: 'water' },
+                    { x: 420, y: 550, w: 90, h: 10, type: 'acid' },
+                    { x: 620, y: 550, w: 90, h: 10, type: 'fire' },
+                    { x: 600, y: 390, w: 100, h: 10, type: 'acid' }
+                ],
+                gems: [
+                    { x: 265, y: 510, type: 'blue' },
+                    { x: 465, y: 510, type: 'green' },
+                    { x: 665, y: 510, type: 'red' },
+                    { x: 100, y: 350, type: 'blue' },
+                    { x: 800, y: 350, type: 'red' },
+                    { x: 270, y: 240, type: 'green' }
+                ],
+                buttons: [
+                    { x: 200, y: 482, w: 40, targetId: 'mainElevator', color: '#00bfff', isToggle: true },
+                    { x: 260, y: 392, w: 40, targetId: 'mainElevator', color: '#ff4500', isToggle: true }
+                ],
+                elevators: [
+                    { id: 'mainElevator', x: 340, y: 540, w: 100, h: 20, targetY: 170, color: '#38bdf8', midY: 400 }
+                ],
+                crates: []
+            },
+
+            // LEVEL 3: 全新設計 - 三人協同與重木箱神殿
+            {
+                name: "Level 3: 三人協同與重木箱神殿",
+                fireSpawn: { x: 40, y: 500 },
+                grassSpawn: { x: 80, y: 500 },
+                waterSpawn: { x: 120, y: 500 },
+                fireDoor: { x: 820, y: 120 },
+                waterDoor: { x: 875, y: 120 },
+                platforms: [
+                    // 外圍邊界 (Outer Walls & Base Floor 1)
+                    { x: 0, y: 560, w: 960, h: 40 },
+                    { x: 0, y: 0, w: 20, h: 600 },
+                    { x: 940, y: 0, w: 20, h: 600 },
+                    { x: 0, y: 0, w: 960, h: 20 },
+
+                    // --- 1樓到2樓的平緩階梯 (Easy Staircase to Floor 2) ---
+                    { x: 180, y: 480, w: 120, h: 20 }, // Step 1
+                    { x: 20, y: 380, w: 320, h: 20 },  // Floor 2 Left Zone (y=380)
+
+                    // --- 2樓中央橋樑區 (Floor 2 Main Section) ---
+                    { x: 440, y: 380, w: 500, h: 20 }, // Floor 2 Right Zone
+
+                    // --- 2樓到3樓的階梯 (Clear Stairs to Floor 3) ---
+                    { x: 20, y: 280, w: 120, h: 20 },  // Intermediate Stair 1
+                    { x: 160, y: 220, w: 120, h: 20 }, // Intermediate Stair 2
+
+                    // --- 3樓出口頂層平台 (Floor 3 Top Exit Platform, y=180) ---
+                    { x: 320, y: 180, w: 620, h: 20 }
+                ],
+                liquids: [
+                    // 1樓元素池：考驗各角色能力
+                    { x: 200, y: 550, w: 100, h: 10, type: 'fire' },  // 火池 (F小姐專屬)
+                    { x: 350, y: 550, w: 120, h: 10, type: 'acid' },  // 毒池 (G草精專屬)
+                    { x: 520, y: 550, w: 120, h: 10, type: 'water' }, // 水池 (W先生專屬)
+                    // 2樓陷阱池
+                    { x: 500, y: 370, w: 100, h: 10, type: 'fire' }
+                ],
+                gems: [
+                    { x: 250, y: 510, type: 'red' },
+                    { x: 410, y: 510, type: 'green' },
+                    { x: 580, y: 510, type: 'blue' },
+                    { x: 100, y: 340, type: 'red' },
+                    { x: 600, y: 330, type: 'green' },
+                    { x: 500, y: 140, type: 'blue' }
+                ],
+                buttons: [
+                    // 二樓按鈕：壓住後啟動三樓直達電梯
+                    { x: 680, y: 372, w: 50, targetId: 'l3Elevator', color: '#38bdf8', isToggle: false }
+                ],
+                elevators: [
+                    // 中央升降梯：一樓至三樓
+                    { id: 'l3Elevator', x: 340, y: 540, w: 90, h: 20, targetY: 180, color: '#38bdf8', midY: 380 }
+                ],
+                crates: [
+                    // 二樓木箱：推動並壓在 680px 處的按鈕上
+                    { x: 470, y: 340, w: 36, h: 36 }
+                ]
+            }
+        ];
+
+        let fireboy, watergirl, grassguy;
+        let gameState = 'START';
+        let currentLevelIdx = 0;
+        let activeLevel = null;
+        let levelPlatforms = [];
+        let levelLiquids = [];
+        let levelGems = [];
+        let levelButtons = [];
+        let levelElevators = [];
+        let levelCrates = [];
+        let redGemsTotal = 0, redGemsCollected = 0;
+        let greenGemsTotal = 0, greenGemsCollected = 0;
+        let blueGemsTotal = 0, blueGemsCollected = 0;
+        let levelTimer = 0;
+        let timerInterval = null;
+
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            activeLevel = LEVELS[idx];
+
+            document.getElementById('levelTitle').innerText = activeLevel.name;
+
+            fireboy = new Character('fire', activeLevel.fireSpawn.x, activeLevel.fireSpawn.y);
+            grassguy = new Character('grass', activeLevel.grassSpawn.x, activeLevel.grassSpawn.y);
+            watergirl = new Character('water', activeLevel.waterSpawn.x, activeLevel.waterSpawn.y);
+
+            levelPlatforms = [...activeLevel.platforms];
+            levelLiquids = [...activeLevel.liquids];
+            levelGems = activeLevel.gems.map(g => ({ ...g, collected: false }));
+            levelButtons = activeLevel.buttons.map(b => new PressureButton(b.x, b.y, b.w, b.targetId, b.color, b.isToggle));
+            levelElevators = activeLevel.elevators.map(e => new ElevatorPlatform(e.id, e.x, e.y, e.w, e.h, e.targetY, e.color, e.midY));
+            levelCrates = activeLevel.crates.map(c => new PushCrate(c.x, c.y, c.w, c.h));
+
+            redGemsTotal = levelGems.filter(g => g.type === 'red').length;
+            greenGemsTotal = levelGems.filter(g => g.type === 'green').length;
+            blueGemsTotal = levelGems.filter(g => g.type === 'blue').length;
+            redGemsCollected = 0;
+            greenGemsCollected = 0;
+            blueGemsCollected = 0;
+
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('redGemsText').innerText = `${redGemsCollected} / ${redGemsTotal}`;
+            document.getElementById('greenGemsText').innerText = `${greenGemsCollected} / ${greenGemsTotal}`;
+            document.getElementById('blueGemsText').innerText = `${blueGemsCollected} / ${blueGemsTotal}`;
+        }
+
+        function startTimer() {
+            levelTimer = 0;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                levelTimer++;
+                const mins = String(Math.floor(levelTimer / 60)).padStart(2, '0');
+                const secs = String(levelTimer % 60).padStart(2, '0');
+                document.getElementById('timerText').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function startGame() {
+            audio.init();
+            loadLevel(currentLevelIdx);
+            gameState = 'PLAYING';
+            startTimer();
+
+            document.getElementById('startModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+        }
+
+        function selectLevel(idx) {
+            currentLevelIdx = idx;
+            startGame();
+        }
+
+        function restartLevel() {
+            startGame();
+        }
+
+        function autoPassLevel() {
+            if (gameState !== 'PLAYING' || !activeLevel) return;
+
+            levelGems.forEach(g => {
+                if (!g.collected) {
+                    g.collected = true;
+                    if (g.type === 'red') redGemsCollected++;
+                    else if (g.type === 'green') greenGemsCollected++;
+                    else blueGemsCollected++;
+                }
+            });
+            updateHUD();
+
+            fireboy.x = activeLevel.fireDoor.x + 6;
+            fireboy.y = activeLevel.fireDoor.y + 14;
+            fireboy.vx = 0; fireboy.vy = 0;
+
+            watergirl.x = activeLevel.waterDoor.x + 6;
+            watergirl.y = activeLevel.waterDoor.y + 14;
+            watergirl.vx = 0; watergirl.vy = 0;
+
+            audio.playGem();
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            clearInterval(timerInterval);
+            audio.playDeath();
+
+            document.getElementById('deathReasonText').innerText = reason;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+        }
+
+        function triggerVictory() {
+            gameState = 'VICTORY';
+            clearInterval(timerInterval);
+            audio.playVictory();
+
+            const mins = String(Math.floor(levelTimer / 60)).padStart(2, '0');
+            const secs = String(levelTimer % 60).padStart(2, '0');
+            document.getElementById('victoryTime').innerText = `${mins}:${secs}`;
+            document.getElementById('victoryGems').innerText = `${redGemsCollected + greenGemsCollected + blueGemsCollected} / ${redGemsTotal + greenGemsTotal + blueGemsTotal}`;
+
+            document.getElementById('victoryModal').classList.remove('hidden');
+        }
+
+        function updatePhysics() {
+            if (gameState !== 'PLAYING') return;
+
+            levelCrates.forEach(c => c.update(levelPlatforms));
+
+            const players = [fireboy, grassguy, watergirl];
+
+            levelButtons.forEach(btn => btn.update(players, levelCrates));
+            levelElevators.forEach(elev => elev.update(levelButtons));
+
+            fireboy.update(levelPlatforms, levelElevators, levelCrates, [grassguy, watergirl]);
+            grassguy.update(levelPlatforms, levelElevators, levelCrates, [fireboy, watergirl]);
+            watergirl.update(levelPlatforms, levelElevators, levelCrates, [fireboy, grassguy]);
+
+            for (let liq of levelLiquids) {
+                players.forEach(p => {
+                    if (p.x + p.width > liq.x && p.x < liq.x + liq.w &&
+                        p.y + p.height > liq.y && p.y < liq.y + liq.h) {
+                        
+                        if (liq.type === 'acid' && p.type !== 'grass') {
+                            triggerGameOver(p.type === 'fire' ? 'F小姐陷落劇毒綠池！' : 'W先生陷落劇毒綠池！');
+                        } else if (liq.type === 'fire' && p.type !== 'fire') {
+                            triggerGameOver(p.type === 'grass' ? 'G草精於火岩池中被燒毀！' : 'W先生蒸發於火岩池！');
+                        } else if (liq.type === 'water' && p.type !== 'water') {
+                            triggerGameOver(p.type === 'fire' ? 'F小姐熄滅於湖水池！' : 'G草精於湖水池中溺水！');
+                        }
+                    }
+                });
+            }
+
+            levelGems.forEach(g => {
+                if (!g.collected) {
+                    players.forEach(p => {
+                        if ((g.type === 'red' && p.type === 'fire') ||
+                            (g.type === 'green' && p.type === 'grass') ||
+                            (g.type === 'blue' && p.type === 'water')) {
+                            if (p.x + p.width > g.x - 10 && p.x < g.x + 10 &&
+                                p.y + p.height > g.y - 10 && p.y < g.y + 10) {
+                                g.collected = true;
+                                if (g.type === 'red') redGemsCollected++;
+                                else if (g.type === 'green') greenGemsCollected++;
+                                else blueGemsCollected++;
+                                audio.playGem();
+                                updateHUD();
+                            }
+                        }
+                    });
+                }
+            });
+
+            const checkAtDoor = (p, door) => {
+                if (!door) return false;
+                return p.x + p.width > door.x && p.x < door.x + 36 &&
+                       p.y + p.height > door.y && p.y < door.y + 50;
+            };
+
+            fireboy.atDoor = checkAtDoor(fireboy, activeLevel.fireDoor);
+            watergirl.atDoor = checkAtDoor(watergirl, activeLevel.waterDoor);
+
+            if (fireboy.atDoor && watergirl.atDoor) {
+                triggerVictory();
+            }
+        }
+
+        function render() {
+            ctx.fillStyle = '#0a0e17';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < GAME_WIDTH; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, GAME_HEIGHT); ctx.stroke();
+            }
+            for (let y = 0; y < GAME_HEIGHT; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(GAME_WIDTH, y); ctx.stroke();
+            }
+
+            if (!activeLevel) return;
+
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            levelPlatforms.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.strokeRect(p.x, p.y, p.w, p.h);
+            });
+
+            levelElevators.forEach(e => e.draw());
+
+            levelLiquids.forEach(l => {
+                ctx.save();
+                if (l.type === 'fire') {
+                    ctx.fillStyle = '#ff3300';
+                    ctx.shadowColor = '#ff5500';
+                } else if (l.type === 'water') {
+                    ctx.fillStyle = '#00aaff';
+                    ctx.shadowColor = '#00d9ff';
+                } else {
+                    ctx.fillStyle = '#10b981';
+                    ctx.shadowColor = '#34d399';
+                }
+                ctx.shadowBlur = 10;
+                ctx.fillRect(l.x, l.y, l.w, l.h);
+                ctx.restore();
+            });
+
+            levelButtons.forEach(b => b.draw());
+
+            levelCrates.forEach(c => c.draw());
+
+            const drawDoor = (door, type, isEntered) => {
+                if (!door) return;
+                ctx.save();
+                let mainColor = '#ff4500';
+                let icon = '🔥';
+                if (type === 'water') {
+                    mainColor = '#00bfff';
+                    icon = '💧';
+                }
+
+                ctx.fillStyle = isEntered ? mainColor : '#1e293b';
+                ctx.strokeStyle = mainColor;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = mainColor;
+                ctx.shadowBlur = isEntered ? 15 : 5;
+
+                ctx.beginPath();
+                ctx.roundRect(door.x, door.y, 38, 52, [18, 18, 0, 0]);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px FontAwesome';
+                ctx.textAlign = 'center';
+                ctx.fillText(icon, door.x + 19, door.y + 32);
+                ctx.restore();
+            };
+
+            drawDoor(activeLevel.fireDoor, 'fire', fireboy.atDoor);
+            drawDoor(activeLevel.waterDoor, 'water', watergirl.atDoor);
+
+            levelGems.forEach(g => {
+                if (!g.collected) {
+                    ctx.save();
+                    let color = '#ef4444';
+                    let glow = '#f87171';
+                    if (g.type === 'blue') {
+                        color = '#38bdf8'; glow = '#7dd3fc';
+                    } else if (g.type === 'green') {
+                        color = '#22c55e'; glow = '#86efac';
+                    }
+
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = glow;
+                    ctx.shadowBlur = 10;
+
+                    ctx.beginPath();
+                    ctx.moveTo(g.x, g.y - 8);
+                    ctx.lineTo(g.x + 8, g.y);
+                    ctx.lineTo(g.x, g.y + 8);
+                    ctx.lineTo(g.x - 8, g.y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            fireboy.draw();
+            grassguy.draw();
+            watergirl.draw();
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) startBtn.addEventListener('click', startGame);
+
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) restartBtn.addEventListener('click', restartLevel);
+
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                const nextIdx = (currentLevelIdx + 1) % LEVELS.length;
+                selectLevel(nextIdx);
+            });
+        }
+
+        const autoPassBtn = document.getElementById('autoPassBtn');
+        if (autoPassBtn) {
+            autoPassBtn.addEventListener('click', autoPassLevel);
+        }
+
+        const soundToggleBtn = document.getElementById('soundToggle');
+        if (soundToggleBtn) {
+            soundToggleBtn.addEventListener('click', () => {
+                audio.enabled = !audio.enabled;
+                const icon = document.getElementById('soundIcon');
+                const text = document.getElementById('soundText');
+                if (audio.enabled) {
+                    if (icon) icon.className = 'fa-solid fa-volume-high text-amber-400';
+                    if (text) text.innerText = '音效 ON';
+                } else {
+                    if (icon) icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+                    if (text) text.innerText = '音效 OFF';
+                }
+            });
+        }
+
+        window.onload = () => {
+            loadLevel(0);
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

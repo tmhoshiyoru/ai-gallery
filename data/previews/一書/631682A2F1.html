@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>萌萌小農場 3D - 可愛互動農場之旅</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN for 3D graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'farm-pink': '#FFB7B2',
+                        'farm-pig': '#FFC0CB',
+                        'farm-yellow': '#FFE156',
+                        'farm-green': '#A8E6CF',
+                        'farm-soil': '#795548',
+                        'farm-wet': '#4E342E'
+                    },
+                    fontFamily: {
+                        sans: ['"Comic Sans MS"', '"Chalkboard SE"', '"Fredoka"', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Fredoka', 'Comic Sans MS', sans-serif;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Floating UI Overlay */
+        .ui-overlay {
+            position: absolute;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .interactive-element {
+            pointer-events: auto;
+        }
+
+        /* Floating particles */
+        .particle-pop {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUpFade 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            font-weight: 800;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            z-index: 100;
+        }
+
+        @keyframes floatUpFade {
+            0% { opacity: 1; transform: translateY(0) scale(0.8); }
+            50% { opacity: 1; transform: translateY(-35px) scale(1.2); }
+            100% { opacity: 0; transform: translateY(-70px) scale(0.9); }
+        }
+
+        /* Bounce effect for buttons */
+        .bounce-active:active {
+            transform: scale(0.92);
+        }
+
+        /* Joystick styles for touch */
+        #joystick-base {
+            width: 110px;
+            height: 110px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(4px);
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            display: flex;
+            align-items: center;
+            justify-center: center;
+            touch-action: none;
+        }
+
+        #joystick-stick {
+            width: 46px;
+            height: 46px;
+            background: #FFB7B2;
+            border: 2px solid #FFF;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            position: absolute;
+            transition: transform 0.05s ease-out;
+        }
+
+        /* Modal styling */
+        .custom-modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 4px solid #FFE156;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-sky-200">
+
+    <!-- 3D CANVAS CONTAINER -->
+    <div id="canvas-container"></div>
+
+    <!-- UI OVERLAY LAYER -->
+    <div class="ui-overlay inset-0 flex flex-col justify-between p-3 sm:p-4">
+        
+        <!-- TOP HEADER: Player Level, Currency, Audio toggle -->
+        <header class="flex items-center justify-between w-full max-w-4xl mx-auto gap-2">
+            
+            <!-- Player Avatar & XP -->
+            <div class="interactive-element bg-white/90 backdrop-blur-md rounded-2xl p-2 px-3 border-2 border-yellow-300 shadow-lg flex items-center gap-3">
+                <div class="relative cursor-pointer" onclick="openProfileModal()">
+                    <div class="w-11 h-11 rounded-xl bg-amber-300 flex items-center justify-center text-2xl shadow-inner">
+                        🧑‍🌾
+                    </div>
+                    <span id="player-level" class="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full border border-white">
+                        Lv.1
+                    </span>
+                </div>
+                <div>
+                    <div class="font-extrabold text-amber-900 text-xs sm:text-sm flex items-center gap-1">
+                        <span>萌萌小農夫</span>
+                        <span id="weather-badge" class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full border border-amber-200">☀️ 晴朗</span>
+                    </div>
+                    <!-- XP Bar -->
+                    <div class="w-24 sm:w-36 bg-gray-200 h-3 rounded-full overflow-hidden border border-amber-200 mt-1 relative">
+                        <div id="xp-bar-fill" class="bg-gradient-to-r from-green-400 to-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+                        <span id="xp-text" class="absolute inset-0 text-[8px] font-black text-center text-gray-700 flex items-center justify-center">0/50 XP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Currencies -->
+            <div class="flex items-center gap-2">
+                <div class="interactive-element bg-white/90 backdrop-blur-md border-2 border-amber-300 px-3 py-1.5 rounded-2xl shadow-md flex items-center gap-1.5">
+                    <span class="text-base">💰</span>
+                    <span id="gold-count" class="font-black text-amber-900 text-xs sm:text-sm">120</span>
+                </div>
+
+                <div class="interactive-element bg-white/90 backdrop-blur-md border-2 border-pink-300 px-3 py-1.5 rounded-2xl shadow-md flex items-center gap-1.5">
+                    <span class="text-base">💖</span>
+                    <span id="hearts-count" class="font-black text-pink-700 text-xs sm:text-sm">5</span>
+                </div>
+
+                <button id="btn-sound" onclick="toggleSound()" class="interactive-element p-2 bg-white/90 hover:bg-amber-50 rounded-2xl border-2 border-amber-300 text-base shadow-md bounce-active">
+                    🔊
+                </button>
+            </div>
+        </header>
+
+        <!-- CENTER PROMPT / INTERACTION DIRECTIVE -->
+        <div id="action-prompt-container" class="self-center mb-auto mt-4 transition-all duration-300 transform scale-0 opacity-0 pointer-events-none">
+            <div id="action-prompt-box" class="interactive-element bg-white/95 backdrop-blur-md border-4 border-yellow-400 px-5 py-2.5 rounded-3xl shadow-2xl flex items-center gap-3">
+                <span id="action-prompt-icon" class="text-3xl animate-bounce">🌱</span>
+                <div>
+                    <div id="action-prompt-title" class="font-black text-amber-900 text-sm sm:text-base">肥沃農田</div>
+                    <div id="action-prompt-desc" class="text-xs text-amber-800 font-bold">按 [ Space ] 或 點擊按鈕播種</div>
+                </div>
+                <button id="action-trigger-btn" onclick="triggerCurrentAction()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-black px-4 py-2 rounded-2xl shadow-md text-xs border-2 border-white bounce-active">
+                    執行動作
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM CONTROLS & SEED SELECTOR -->
+        <footer class="w-full max-w-4xl mx-auto flex flex-col gap-2">
+            
+            <!-- Seed / Tool Selector Bar -->
+            <div id="seed-bar" class="interactive-element bg-white/90 backdrop-blur-md rounded-2xl p-2 border-2 border-amber-200 shadow-lg flex items-center justify-between gap-2 overflow-x-auto">
+                <div class="flex items-center gap-1.5 min-w-max">
+                    <span class="text-xs font-black text-amber-900 px-1">🌱 種子選擇:</span>
+                    <div id="seed-buttons-container" class="flex gap-1.5">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1 border-l pl-2 border-amber-200 min-w-max">
+                    <button onclick="switchTabModal('inventory')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-3 py-1.5 rounded-xl text-xs shadow bounce-active flex items-center gap-1">
+                        🎒 儲藏室
+                    </button>
+                    <button onclick="switchTabModal('shop')" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-black px-3 py-1.5 rounded-xl text-xs shadow bounce-active flex items-center gap-1">
+                        🏪 集市
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTROLS CONTAINER (MOBILE JOYSTICK + KEYBOARD HINTS) -->
+            <div class="flex items-end justify-between w-full pointer-events-none">
+                <!-- Mobile Joystick -->
+                <div id="joystick-base" class="interactive-element sm:hidden">
+                    <div id="joystick-stick"></div>
+                </div>
+
+                <!-- Keyboard Controls Help Info (Desktop) -->
+                <div class="hidden sm:flex interactive-element bg-black/50 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl backdrop-blur">
+                    🎮 操作說明：鍵盤 [W][A][S][D] 或 [方向鍵] 移動角色 | [空白鍵] 或 靠近點擊進行互動
+                </div>
+
+                <!-- Quick Action Trigger Button for Mobile -->
+                <button id="mobile-action-btn" onclick="triggerCurrentAction()" class="interactive-element sm:hidden w-16 h-16 bg-gradient-to-tr from-amber-400 to-yellow-300 border-4 border-white text-3xl rounded-full shadow-2xl flex items-center justify-center bounce-active">
+                    ✨
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL POPUPS (INVENTORY / SHOP / NOTIFICATIONS) -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="custom-modal rounded-3xl p-5 max-w-lg w-full max-h-[85vh] flex flex-col justify-between shadow-2xl relative animate-pop">
+            
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute -top-3 -right-3 bg-red-400 hover:bg-red-500 text-white font-black w-9 h-9 rounded-full border-2 border-white shadow-lg text-lg flex items-center justify-center">
+                ✕
+            </button>
+
+            <!-- Modal Title -->
+            <div class="flex items-center gap-2 mb-3 border-b border-amber-200 pb-2">
+                <span id="modal-icon" class="text-3xl">🎒</span>
+                <h2 id="modal-title" class="font-black text-lg text-amber-900">農場儲藏室</h2>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div id="modal-body" class="overflow-y-auto flex-grow pr-1 my-2 min-h-[200px]">
+                <!-- Dynamic Content rendered via JS -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-amber-200 flex justify-end">
+                <button onclick="closeModal()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-black px-5 py-2 rounded-2xl shadow border-2 border-white bounce-active text-xs">
+                    確定 / 關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div id="toast-container" class="fixed top-16 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // -------------------------------------------------------------
+        // CROP DEFINITIONS & UNLOCK SYSTEM
+        // Starter seeds: Tomato (番茄) and Cucumber (小黃瓜)
+        // -------------------------------------------------------------
+        const CROPS = {
+            tomato: { id: 'tomato', name: '鮮紅番茄', icon: '🍅', cost: 10, time: 8, sell: 24, xp: 6, reqLv: 1, desc: '圓潤多汁的紅番茄，初學者農夫的好幫手。' },
+            cucumber: { id: 'cucumber', name: '清爽小黃瓜', icon: '🥒', cost: 15, time: 12, sell: 38, xp: 10, reqLv: 1, desc: '脆嫩清爽的小黃瓜，成長相當迅速。' },
+            strawberry: { id: 'strawberry', name: '香甜草莓', icon: '🍓', cost: 35, time: 20, sell: 95, xp: 22, reqLv: 2, desc: '粉紅嬌嫩的草莓，深受萌寵們喜愛。' },
+            corn: { id: 'corn', name: '金黃甜玉米', icon: '🌽', cost: 70, time: 35, sell: 210, xp: 45, reqLv: 3, desc: '飽滿金黃的玉米粒，能給母雞補充精力！' },
+            pumpkin: { id: 'pumpkin', name: '萬聖金南瓜', icon: '🎃', cost: 150, time: 60, sell: 480, xp: 95, reqLv: 4, desc: '沉甸甸的金黃大南瓜，價格相當高昂。' },
+            starfruit: { id: 'starfruit', name: '夢幻星星果', icon: '🌟', cost: 320, time: 90, sell: 1100, xp: 220, reqLv: 5, desc: '閃耀著夢幻星光的傳說果實！' }
+        };
+
+        // GAME STATE
+        let gameState = {
+            level: 1,
+            xp: 0,
+            xpToNext: 50,
+            gold: 120,
+            hearts: 5,
+            selectedSeed: 'tomato',
+            inventory: {},
+            lastEggTime: Date.now() - 3550000, // Nearly ready on first load for good demo testing
+            pigLove: 1,
+            weather: 'sunny'
+        };
+
+        // -------------------------------------------------------------
+        // OFFLINE WEB AUDIO SYNTHESIZER
+        // -------------------------------------------------------------
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+            }
+            playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.1) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            playPlant() { this.playTone(350, 'sine', 0.1); setTimeout(() => this.playTone(520, 'sine', 0.12), 60); }
+            playWater() { this.playTone(600, 'triangle', 0.15); setTimeout(() => this.playTone(800, 'triangle', 0.2), 80); }
+            playHarvest() {
+                [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => this.playTone(f, 'sine', 0.15), i * 50));
+            }
+            playPigOink() {
+                this.playTone(220, 'sawtooth', 0.1, 0.15);
+                setTimeout(() => this.playTone(180, 'sawtooth', 0.15, 0.15), 80);
+            }
+            playHenCluck() {
+                this.playTone(450, 'square', 0.08, 0.1);
+                setTimeout(() => this.playTone(600, 'square', 0.12, 0.1), 70);
+            }
+            playCoin() {
+                this.playTone(987, 'sine', 0.08);
+                setTimeout(() => this.playTone(1318, 'sine', 0.2), 60);
+            }
+            playLevelUp() {
+                [440, 554, 659, 880, 1108].forEach((f, i) => setTimeout(() => this.playTone(f, 'triangle', 0.22), i * 70));
+            }
+        }
+        const sound = new SoundEngine();
+
+        function toggleSound() {
+            sound.enabled = !sound.enabled;
+            document.getElementById('btn-sound').innerText = sound.enabled ? '🔊' : '🔇';
+            showToast(sound.enabled ? '音效已開啟 🎵' : '靜音模式 🔇');
+        }
+
+        // -------------------------------------------------------------
+        // THREE.JS 3D SCENE SETUP
+        // -------------------------------------------------------------
+        let scene, camera, renderer;
+        let playerMesh, playerBodyGroup;
+        let plots3D = []; // 3D Plot Object references
+        let pigMeshGroup, henMeshGroup, egg3DMesh;
+        let clock = new THREE.Clock();
+
+        // Interactive Zones
+        let interactiveTarget = null; // { type: 'plot'|'pig'|'hen'|'egg', data: ... }
+
+        // Player Movement Controls
+        let keysPressed = {};
+        let joystickVector = { x: 0, y: 0 };
+        const PLAYER_SPEED = 7.5;
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xA0E0FF); // Light cute sky blue
+            scene.fog = new THREE.FogExp2(0xA0E0FF, 0.015);
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 16, 20);
+            camera.lookAt(0, 0, 0);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // 4. Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 100;
+            dirLight.shadow.camera.left = -25;
+            dirLight.shadow.camera.right = 25;
+            dirLight.shadow.camera.top = 25;
+            dirLight.shadow.camera.bottom = -25;
+            scene.add(dirLight);
+
+            // 5. Build World Models
+            build3DWorld();
+
+            // Resize event
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // -------------------------------------------------------------
+        // BUILD 3D FARM WORLD PROCEDURAL MESHES
+        // -------------------------------------------------------------
+        function build3DWorld() {
+            // A. Grass Ground
+            const groundGeo = new THREE.PlaneGeometry(60, 60);
+            const groundMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Pathways / Dirt Trail
+            const pathGeo = new THREE.PlaneGeometry(8, 40);
+            const pathMat = new THREE.MeshLambertMaterial({ color: 0xD7CCC8 });
+            const path = new THREE.Mesh(pathGeo, pathMat);
+            path.rotation.x = -Math.PI / 2;
+            path.position.set(0, 0.01, 0);
+            path.receiveShadow = true;
+            scene.add(path);
+
+            // B. FARM CROPS PLOTS GRID (4x2 Grid on left side)
+            const gridRows = 2;
+            const gridCols = 4;
+            let plotIdx = 0;
+
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    const posX = -14 + c * 3.8;
+                    const posZ = -6 + r * 4.5;
+
+                    // Plot Base (Soil Frame)
+                    const soilGroup = new THREE.Group();
+                    soilGroup.position.set(posX, 0.05, posZ);
+
+                    const frameGeo = new THREE.BoxGeometry(3, 0.3, 3.5);
+                    const frameMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+                    const frame = new THREE.Mesh(frameGeo, frameMat);
+                    frame.castShadow = true;
+                    frame.receiveShadow = true;
+                    soilGroup.add(frame);
+
+                    // Soil Surface (Dry Brown default)
+                    const soilGeo = new THREE.PlaneGeometry(2.7, 3.2);
+                    const soilMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+                    const soilMesh = new THREE.Mesh(soilGeo, soilMat);
+                    soilMesh.rotation.x = -Math.PI / 2;
+                    soilMesh.position.y = 0.16;
+                    soilGroup.add(soilMesh);
+
+                    // Crop Visual Holder
+                    const cropHolder = new THREE.Group();
+                    cropHolder.position.y = 0.2;
+                    soilGroup.add(cropHolder);
+
+                    scene.add(soilGroup);
+
+                    plots3D.push({
+                        id: plotIdx++,
+                        x: posX,
+                        z: posZ,
+                        group: soilGroup,
+                        soilMat: soilMat,
+                        cropHolder: cropHolder,
+                        crop: null,
+                        progress: 0,
+                        isWet: false
+                    });
+                }
+            }
+
+            // C. PINK PIGLET ROOM (粉紅小豬城堡 & 泥巴池)
+            buildPinkPigRoom();
+
+            // D. CHICKEN COOP & HEN PEN (母雞咕咕房)
+            buildChickenCoop();
+
+            // E. PLAYER CHARACTER
+            buildPlayerCharacter();
+
+            // F. DECORATIONS (Fence, Trees, Windmill)
+            buildDecorations();
+        }
+
+        function buildPinkPigRoom() {
+            const pigRoomGroup = new THREE.Group();
+            pigRoomGroup.position.set(12, 0, -8);
+
+            // Pink Room Base Floor
+            const floorGeo = new THREE.BoxGeometry(10, 0.2, 10);
+            const floorMat = new THREE.MeshLambertMaterial({ color: 0xFFD1DC }); // Cute Pastel Pink
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.y = 0.1;
+            floor.receiveShadow = true;
+            pigRoomGroup.add(floor);
+
+            // Pink Fence Walls
+            const wallMat = new THREE.MeshLambertMaterial({ color: 0xFFB7B2 });
+            const backWallGeo = new THREE.BoxGeometry(10, 2.5, 0.4);
+            const backWall = new THREE.Mesh(backWallGeo, wallMat);
+            backWall.position.set(0, 1.25, -4.8);
+            pigRoomGroup.add(backWall);
+
+            // Mud Pool inside Pig Room
+            const mudGeo = new THREE.CylinderGeometry(2.5, 2.5, 0.1, 16);
+            const mudMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+            const mud = new THREE.Mesh(mudGeo, mudMat);
+            mud.position.set(-1.8, 0.21, 1);
+            pigRoomGroup.add(mud);
+
+            // Cute Sign
+            const signGeo = new THREE.BoxGeometry(3, 1, 0.2);
+            const signMat = new THREE.MeshLambertMaterial({ color: 0xFF80AB });
+            const sign = new THREE.Mesh(signGeo, signMat);
+            sign.position.set(0, 3, -4.7);
+            pigRoomGroup.add(sign);
+
+            // Piglet 3D Mesh ("粉粉" Squishy Baby Pig)
+            pigMeshGroup = new THREE.Group();
+
+            // Body
+            const pigBodyGeo = new THREE.BoxGeometry(1.4, 1.1, 1.6);
+            const pigMat = new THREE.MeshLambertMaterial({ color: 0xFFC0CB });
+            const pigBody = new THREE.Mesh(pigBodyGeo, pigMat);
+            pigBody.position.y = 0.8;
+            pigBody.castShadow = true;
+            pigMeshGroup.add(pigBody);
+
+            // Snout
+            const snoutGeo = new THREE.BoxGeometry(0.5, 0.4, 0.3);
+            const snoutMat = new THREE.MeshLambertMaterial({ color: 0xFF80AB });
+            const snout = new THREE.Mesh(snoutGeo, snoutMat);
+            snout.position.set(0, 0.8, 0.9);
+            pigMeshGroup.add(snout);
+
+            // Ears
+            const earGeo = new THREE.BoxGeometry(0.3, 0.4, 0.2);
+            const earLeft = new THREE.Mesh(earGeo, snoutMat);
+            earLeft.position.set(-0.5, 1.4, 0.5);
+            const earRight = earLeft.clone();
+            earRight.position.x = 0.5;
+            pigMeshGroup.add(earLeft);
+            pigMeshGroup.add(earRight);
+
+            pigMeshGroup.position.set(-1.5, 0, 0.8);
+            pigRoomGroup.add(pigMeshGroup);
+
+            scene.add(pigRoomGroup);
+        }
+
+        function buildChickenCoop() {
+            const coopGroup = new THREE.Group();
+            coopGroup.position.set(12, 0, 6);
+
+            // Wooden Base
+            const baseGeo = new THREE.BoxGeometry(9, 0.2, 8);
+            const baseMat = new THREE.MeshLambertMaterial({ color: 0xA1887F });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.1;
+            coopGroup.add(base);
+
+            // Chicken House
+            const houseGeo = new THREE.BoxGeometry(4.5, 3.5, 4.5);
+            const houseMat = new THREE.MeshLambertMaterial({ color: 0xD7CCC8 });
+            const house = new THREE.Mesh(houseGeo, houseMat);
+            house.position.set(-1.8, 1.85, -1);
+            house.castShadow = true;
+            coopGroup.add(house);
+
+            // Roof (Red)
+            const roofGeo = new THREE.ConeGeometry(3.8, 2, 4);
+            const roofMat = new THREE.MeshLambertMaterial({ color: 0xE53935 });
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.set(-1.8, 4.5, -1);
+            roof.rotation.y = Math.PI / 4;
+            coopGroup.add(roof);
+
+            // Hen 3D Mesh
+            henMeshGroup = new THREE.Group();
+            const henBodyGeo = new THREE.SphereGeometry(0.7, 12, 12);
+            const henMat = new THREE.MeshLambertMaterial({ color: 0xFFFAF0 });
+            const henBody = new THREE.Mesh(henBodyGeo, henMat);
+            henBody.position.y = 0.7;
+            henMeshGroup.add(henBody);
+
+            // Red Comb
+            const combGeo = new THREE.BoxGeometry(0.15, 0.3, 0.4);
+            const combMat = new THREE.MeshLambertMaterial({ color: 0xFF1744 });
+            const comb = new THREE.Mesh(combGeo, combMat);
+            comb.position.set(0, 1.4, 0.1);
+            henMeshGroup.add(comb);
+
+            // Beak
+            const beakGeo = new THREE.ConeGeometry(0.15, 0.3, 4);
+            const beakMat = new THREE.MeshLambertMaterial({ color: 0xFFB300 });
+            const beak = new THREE.Mesh(beakGeo, beakMat);
+            beak.rotation.x = Math.PI / 2;
+            beak.position.set(0, 0.8, 0.75);
+            henMeshGroup.add(beak);
+
+            henMeshGroup.position.set(1.8, 0.2, 1.5);
+            coopGroup.add(henMeshGroup);
+
+            // Golden Egg Mesh (Hidden or Visible depending on egg status)
+            const eggGeo = new THREE.SphereGeometry(0.35, 12, 12);
+            eggGeo.scale(1, 1.3, 1); // Egg shape
+            const eggMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, roughness: 0.3, metalness: 0.5 });
+            egg3DMesh = new THREE.Mesh(eggGeo, eggMat);
+            egg3DMesh.position.set(1.8, 0.4, 0.4);
+            egg3DMesh.castShadow = true;
+            coopGroup.add(egg3DMesh);
+
+            scene.add(coopGroup);
+        }
+
+        function buildPlayerCharacter() {
+            playerGroup = new THREE.Group();
+
+            // Body (Overalls)
+            const bodyGeo = new THREE.CylinderGeometry(0.45, 0.4, 1.1, 12);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x29B6F6 }); // Cute Blue Overalls
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.95;
+            body.castShadow = true;
+            playerGroup.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const headMat = new THREE.MeshLambertMaterial({ color: 0xFFCC80 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.8;
+            head.castShadow = true;
+            playerGroup.add(head);
+
+            // Straw Hat
+            const hatBrimGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.08, 16);
+            const hatMat = new THREE.MeshLambertMaterial({ color: 0xFFE082 });
+            const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
+            hatBrim.position.y = 2.15;
+            playerGroup.add(hatBrim);
+
+            const hatTopGeo = new THREE.CylinderGeometry(0.55, 0.6, 0.5, 16);
+            const hatTop = new THREE.Mesh(hatTopGeo, hatMat);
+            hatTop.position.y = 2.4;
+            playerGroup.add(hatTop);
+
+            playerGroup.position.set(0, 0, 6);
+            scene.add(playerGroup);
+        }
+
+        function buildDecorations() {
+            // Windmill background
+            const windmillGroup = new THREE.Group();
+            windmillGroup.position.set(-18, 0, -18);
+
+            const towerGeo = new THREE.CylinderGeometry(1.5, 2.5, 8, 8);
+            const towerMat = new THREE.MeshLambertMaterial({ color: 0xE0E0E0 });
+            const tower = new THREE.Mesh(towerGeo, towerMat);
+            tower.position.y = 4;
+            windmillGroup.add(tower);
+
+            scene.add(windmillGroup);
+        }
+
+        // -------------------------------------------------------------
+        // DYNAMIC 3D CROP MESH GENERATOR
+        // -------------------------------------------------------------
+        function updatePlot3DMesh(plot) {
+            // Clear existing crop 3D objects
+            while(plot.cropHolder.children.length > 0) {
+                plot.cropHolder.remove(plot.cropHolder.children[0]);
+            }
+
+            // Update Soil Color (Wet vs Dry)
+            if (plot.isWet) {
+                plot.soilMat.color.setHex(0x3E2723); // Dark wet mud
+            } else {
+                plot.soilMat.color.setHex(0x8D6E63); // Dry brown
+            }
+
+            if (!plot.crop) return;
+
+            const cropInfo = CROPS[plot.crop];
+            const progressPct = Math.min(1, plot.progress / cropInfo.time);
+
+            // Stage 1: Small Green Sprout
+            if (progressPct < 0.4) {
+                const sproutGeo = new THREE.ConeGeometry(0.2, 0.5, 5);
+                const sproutMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
+                const sprout = new THREE.Mesh(sproutGeo, sproutMat);
+                sprout.position.y = 0.25;
+                plot.cropHolder.add(sprout);
+            }
+            // Stage 2: Medium Growing Vine
+            else if (progressPct < 0.95) {
+                const plantGeo = new THREE.DodecahedronGeometry(0.5);
+                const plantMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+                const plant = new THREE.Mesh(plantGeo, plantMat);
+                plant.position.y = 0.5;
+                plot.cropHolder.add(plant);
+            }
+            // Stage 3: Fully Grown Harvestable Fruit / Crop
+            else {
+                const cropGroup = new THREE.Group();
+
+                // Base Bush
+                const bushGeo = new THREE.DodecahedronGeometry(0.6);
+                const bushMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+                const bush = new THREE.Mesh(bushGeo, bushMat);
+                bush.position.y = 0.6;
+                cropGroup.add(bush);
+
+                // Fruit 3D Mesh according to type
+                let fruitGeo, fruitMat;
+                if (plot.crop === 'tomato') {
+                    fruitGeo = new THREE.SphereGeometry(0.35, 8, 8);
+                    fruitMat = new THREE.MeshLambertMaterial({ color: 0xE53935 });
+                } else if (plot.crop === 'cucumber') {
+                    fruitGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 8);
+                    fruitMat = new THREE.MeshLambertMaterial({ color: 0x1B5E20 });
+                } else if (plot.crop === 'strawberry') {
+                    fruitGeo = new THREE.ConeGeometry(0.3, 0.5, 6);
+                    fruitMat = new THREE.MeshLambertMaterial({ color: 0xFF1744 });
+                } else if (plot.crop === 'corn') {
+                    fruitGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.9, 8);
+                    fruitMat = new THREE.MeshLambertMaterial({ color: 0xFFD600 });
+                } else if (plot.crop === 'starfruit') {
+                    fruitGeo = new THREE.OctahedronGeometry(0.4);
+                    fruitMat = new THREE.MeshStandardMaterial({ color: 0xFFEA00, emissive: 0x555500 });
+                } else {
+                    fruitGeo = new THREE.SphereGeometry(0.4, 8, 8);
+                    fruitMat = new THREE.MeshLambertMaterial({ color: 0xFF6F00 });
+                }
+
+                const fruit = new THREE.Mesh(fruitGeo, fruitMat);
+                fruit.position.set(0, 0.9, 0.2);
+                cropGroup.add(fruit);
+
+                plot.cropHolder.add(cropGroup);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // INPUT & JOYSTICK CONTROLS
+        // -------------------------------------------------------------
+        function setupInputListeners() {
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.key.toLowerCase()] = true;
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    triggerCurrentAction();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keysPressed[e.key.toLowerCase()] = false;
+            });
+
+            // Touch Joystick setup
+            const joyBase = document.getElementById('joystick-base');
+            const joyStick = document.getElementById('joystick-stick');
+            let joyActive = false;
+            let joyTouchId = null;
+
+            joyBase.addEventListener('touchstart', (e) => {
+                joyActive = true;
+                joyTouchId = e.changedTouches[0].identifier;
+                updateJoystick(e.changedTouches[0]);
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!joyActive) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joyTouchId) {
+                        updateJoystick(e.changedTouches[i]);
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            const endJoy = (e) => {
+                if (!joyActive) return;
+                joyActive = false;
+                joystickVector = { x: 0, y: 0 };
+                joyStick.style.transform = `translate(0px, 0px)`;
+            };
+
+            window.addEventListener('touchend', endJoy);
+            window.addEventListener('touchcancel', endJoy);
+
+            function updateJoystick(touch) {
+                const rect = joyBase.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                let dx = touch.clientX - centerX;
+                let dy = touch.clientY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxDist = 38;
+
+                if (distance > maxDist) {
+                    dx = (dx / distance) * maxDist;
+                    dy = (dy / distance) * maxDist;
+                }
+
+                joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+                joystickVector = { x: dx / maxDist, y: dy / maxDist };
+            }
+        }
+
+        // -------------------------------------------------------------
+        // GAME LOOP & PROXIMITY DETECTION
+        // -------------------------------------------------------------
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // 1. Move Player Character
+            let moveX = 0;
+            let moveZ = 0;
+
+            if (keysPressed['w'] || keysPressed['arrowup']) moveZ -= 1;
+            if (keysPressed['s'] || keysPressed['arrowdown']) moveZ += 1;
+            if (keysPressed['a'] || keysPressed['arrowleft']) moveX -= 1;
+            if (keysPressed['d'] || keysPressed['arrowright']) moveX += 1;
+
+            if (joystickVector.x !== 0 || joystickVector.y !== 0) {
+                moveX = joystickVector.x;
+                moveZ = joystickVector.y;
+            }
+
+            if (moveX !== 0 || moveZ !== 0) {
+                const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                const normX = moveX / len;
+                const normZ = moveZ / len;
+
+                playerGroup.position.x += normX * PLAYER_SPEED * delta;
+                playerGroup.position.z += normZ * PLAYER_SPEED * delta;
+
+                // Clamp within farm bounds
+                playerGroup.position.x = Math.max(-25, Math.min(25, playerGroup.position.x));
+                playerGroup.position.z = Math.max(-25, Math.min(25, playerGroup.position.z));
+
+                // Rotate player facing direction
+                const angle = Math.atan2(normX, normZ);
+                playerGroup.rotation.y = angle;
+
+                // Cute walking bounce
+                playerGroup.position.y = Math.abs(Math.sin(time * 12)) * 0.25;
+            } else {
+                playerGroup.position.y = 0;
+            }
+
+            // 2. Camera smooth follow
+            camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerGroup.position.x, 0.08);
+            camera.position.z = THREE.MathUtils.lerp(camera.position.z, playerGroup.position.z + 14, 0.08);
+
+            // 3. Pig and Hen Idle Animations
+            if (pigMeshGroup) {
+                pigMeshGroup.position.y = Math.abs(Math.sin(time * 3)) * 0.15;
+            }
+            if (henMeshGroup) {
+                henMeshGroup.rotation.y = Math.sin(time * 2) * 0.3;
+            }
+
+            // 4. Update Crops Growth Timers
+            plots3D.forEach(plot => {
+                if (plot.crop) {
+                    const cropInfo = CROPS[plot.crop];
+                    if (plot.progress < cropInfo.time) {
+                        let speed = 1;
+                        if (plot.isWet) speed += 0.5;
+                        plot.progress += delta * speed;
+                        if (plot.progress > cropInfo.time) plot.progress = cropInfo.time;
+                        updatePlot3DMesh(plot);
+                    }
+                }
+            });
+
+            // 5. Update Chicken Egg Laying Cooldown (1 Egg per 1 Hour = 3600s)
+            checkEggStatus();
+
+            // 6. Proximity Check
+            checkProximity();
+
+            renderer.render(scene, camera);
+        }
+
+        function checkEggStatus() {
+            const now = Date.now();
+            const elapsed = (now - gameState.lastEggTime) / 1000;
+            const cooldown = 3600; // 1 hour in seconds
+
+            if (elapsed >= cooldown) {
+                egg3DMesh.visible = true;
+            } else {
+                egg3DMesh.visible = false;
+            }
+        }
+
+        function checkProximity() {
+            const px = playerGroup.position.x;
+            const pz = playerGroup.position.z;
+
+            let closest = null;
+            let minDistance = 3.2;
+
+            // A. Check Plots
+            plots3D.forEach(plot => {
+                const dist = Math.hypot(px - plot.x, pz - plot.z);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closest = { type: 'plot', data: plot };
+                }
+            });
+
+            // B. Check Pink Piglet Room (Center at X:12, Z:-8)
+            const pigDist = Math.hypot(px - 10.5, pz - (-7.2));
+            if (pigDist < 4.0 && pigDist < minDistance) {
+                minDistance = pigDist;
+                closest = { type: 'pig' };
+            }
+
+            // C. Check Chicken Coop (Center at X:12, Z:6)
+            const chickenDist = Math.hypot(px - 12, pz - 6);
+            if (chickenDist < 4.0 && chickenDist < minDistance) {
+                minDistance = chickenDist;
+                closest = { type: 'hen' };
+            }
+
+            interactiveTarget = closest;
+            updateActionPromptUI();
+        }
+
+        function updateActionPromptUI() {
+            const container = document.getElementById('action-prompt-container');
+            const icon = document.getElementById('action-prompt-icon');
+            const title = document.getElementById('action-prompt-title');
+            const desc = document.getElementById('action-prompt-desc');
+            const btn = document.getElementById('action-trigger-btn');
+
+            if (!interactiveTarget) {
+                container.classList.add('scale-0', 'opacity-0');
+                return;
+            }
+
+            container.classList.remove('scale-0', 'opacity-0');
+
+            if (interactiveTarget.type === 'plot') {
+                const plot = interactiveTarget.data;
+                if (!plot.crop) {
+                    const seed = CROPS[gameState.selectedSeed];
+                    icon.innerText = seed.icon;
+                    title.innerText = `肥沃農田 #${plot.id + 1}`;
+                    desc.innerText = `播種【${seed.name}】(花費 ${seed.cost}💰)`;
+                    btn.innerText = '🌱 播種';
+                } else {
+                    const cropInfo = CROPS[plot.crop];
+                    const isReady = plot.progress >= cropInfo.time;
+                    if (isReady) {
+                        icon.innerText = cropInfo.icon;
+                        title.innerText = `${cropInfo.name} 已成熟！`;
+                        desc.innerText = '快採收獲得豐厚金幣與經驗！';
+                        btn.innerText = '✋ 採收作物';
+                    } else if (!plot.isWet) {
+                        icon.innerText = '💧';
+                        title.innerText = `${cropInfo.name} (生長中)`;
+                        desc.innerText = '土壤乾涸，澆水可使生長加速 50%！';
+                        btn.innerText = '💧 澆水補水';
+                    } else {
+                        icon.innerText = '⏳';
+                        title.innerText = `${cropInfo.name} 茁壯成長中`;
+                        desc.innerText = `剩餘時間: ${Math.ceil(cropInfo.time - plot.progress)} 秒`;
+                        btn.innerText = '🌱 巡視農田';
+                    }
+                }
+            } 
+            else if (interactiveTarget.type === 'pig') {
+                icon.innerText = '🐷';
+                title.innerText = '粉粉 Q 彈小豬房';
+                desc.innerText = '輕撫粉紅小北鼻，提升親密度與心心！';
+                btn.innerText = '💖 撫摸粉紅小豬';
+            } 
+            else if (interactiveTarget.type === 'hen') {
+                const now = Date.now();
+                const elapsed = (now - gameState.lastEggTime) / 1000;
+                const cooldown = 3600;
+
+                if (elapsed >= cooldown) {
+                    icon.innerText = '🥚';
+                    title.innerText = '咕咕母雞產蛋囉！';
+                    desc.innerText = '產出了一顆閃耀的【頂級黃金母雞蛋】！';
+                    btn.innerText = '✨ 採收母雞蛋';
+                } else {
+                    const remain = Math.ceil(cooldown - elapsed);
+                    const mins = Math.floor(remain / 60);
+                    const secs = remain % 60;
+                    icon.innerText = '🐔';
+                    title.innerText = '咕咕雞舍 (1小時1顆蛋)';
+                    desc.innerText = `下一顆母雞蛋倒數: ${mins}分${secs}秒`;
+                    btn.innerText = '🐣 餵食小雞';
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // INTERACTION HANDLERS
+        // -------------------------------------------------------------
+        function triggerCurrentAction() {
+            sound.init();
+            if (!interactiveTarget) return;
+
+            if (interactiveTarget.type === 'plot') {
+                const plot = interactiveTarget.data;
+                
+                // 1. Plant Seed
+                if (!plot.crop) {
+                    const seed = CROPS[gameState.selectedSeed];
+                    if (gameState.level < seed.reqLv) {
+                        showToast(`等級不足！需要 Lv.${seed.reqLv} 解鎖 ${seed.name}`);
+                        return;
+                    }
+                    if (gameState.gold < seed.cost) {
+                        showToast('金幣不足，無法購買種子！');
+                        return;
+                    }
+
+                    gameState.gold -= seed.cost;
+                    plot.crop = seed.id;
+                    plot.progress = 0;
+                    sound.playPlant();
+                    showParticle(`- ${seed.cost}💰`, 'text-amber-600');
+                    updatePlot3DMesh(plot);
+                    renderHeader();
+                }
+                // 2. Harvest Ready Crop
+                else if (plot.progress >= CROPS[plot.crop].time) {
+                    const cropInfo = CROPS[plot.crop];
+                    sound.playHarvest();
+
+                    addToInventory(cropInfo.id, 1);
+                    addXP(cropInfo.xp);
+                    showParticle(`+1 ${cropInfo.icon}`, 'text-emerald-600');
+
+                    plot.crop = null;
+                    plot.progress = 0;
+                    plot.isWet = false;
+                    updatePlot3DMesh(plot);
+                }
+                // 3. Water Plot
+                else if (!plot.isWet) {
+                    plot.isWet = true;
+                    sound.playWater();
+                    showParticle('💧 滋潤！', 'text-blue-500');
+                    updatePlot3DMesh(plot);
+                }
+            }
+            else if (interactiveTarget.type === 'pig') {
+                sound.playPigOink();
+                gameState.hearts += 1;
+                gameState.pigLove += 1;
+
+                // Squishy bounce animation
+                if (pigMeshGroup) {
+                    pigMeshGroup.scale.set(1.4, 0.7, 1.4);
+                    setTimeout(() => pigMeshGroup.scale.set(1, 1, 1), 200);
+                }
+
+                showParticle('💖 哼哼~ 愛心+1', 'text-pink-500');
+                renderHeader();
+            }
+            else if (interactiveTarget.type === 'hen') {
+                const now = Date.now();
+                const elapsed = (now - gameState.lastEggTime) / 1000;
+
+                if (elapsed >= 3600) {
+                    sound.playHarvest();
+                    gameState.lastEggTime = Date.now();
+                    addToInventory('egg', 1);
+                    addXP(30);
+
+                    showParticle('🥚 獲得黃金母雞蛋！', 'text-amber-500');
+                    showParticle('+30 XP', 'text-blue-500');
+                    renderHeader();
+                } else {
+                    sound.playHenCluck();
+                    showParticle('咕咕~ 🐣', 'text-yellow-600');
+                }
+            }
+
+            updateActionPromptUI();
+        }
+
+        // -------------------------------------------------------------
+        // UI RENDERING & GAME MANAGEMENT
+        // -------------------------------------------------------------
+        function renderHeader() {
+            document.getElementById('player-level').innerText = `Lv.${gameState.level}`;
+            document.getElementById('gold-count').innerText = gameState.gold.toLocaleString();
+            document.getElementById('hearts-count').innerText = gameState.hearts;
+
+            const pct = Math.min(100, Math.floor((gameState.xp / gameState.xpToNext) * 100));
+            document.getElementById('xp-bar-fill').style.width = `${pct}%`;
+            document.getElementById('xp-text').innerText = `${gameState.xp}/${gameState.xpToNext} XP`;
+
+            renderSeedButtons();
+        }
+
+        function renderSeedButtons() {
+            const container = document.getElementById('seed-buttons-container');
+            container.innerHTML = '';
+
+            Object.values(CROPS).forEach(crop => {
+                const isSelected = gameState.selectedSeed === crop.id;
+                const isLocked = gameState.level < crop.reqLv;
+
+                const btn = document.createElement('button');
+                btn.onclick = () => {
+                    if (isLocked) {
+                        showToast(`🔒 需要等級 Lv.${crop.reqLv} 才能解鎖 ${crop.name}！`);
+                        return;
+                    }
+                    gameState.selectedSeed = crop.id;
+                    renderSeedButtons();
+                    updateActionPromptUI();
+                };
+
+                btn.className = `px-2.5 py-1 rounded-xl text-xs font-black transition flex items-center gap-1 border-2 bounce-active ${
+                    isSelected 
+                        ? 'bg-amber-400 text-amber-950 border-amber-500 shadow-md scale-105' 
+                        : isLocked 
+                            ? 'bg-gray-100 text-gray-400 border-gray-200' 
+                            : 'bg-white text-amber-900 border-amber-200 hover:bg-amber-50'
+                }`;
+
+                btn.innerHTML = `
+                    <span>${crop.icon}</span>
+                    <span>${crop.name}</span>
+                    <span class="text-[10px] opacity-75">(${crop.cost}💰)</span>
+                    ${isLocked ? `<span class="text-[9px] bg-gray-200 px-1 rounded">Lv.${crop.reqLv}</span>` : ''}
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function addToInventory(itemKey, count = 1) {
+            gameState.inventory[itemKey] = (gameState.inventory[itemKey] || 0) + count;
+        }
+
+        function addXP(amount) {
+            gameState.xp += amount;
+            if (gameState.xp >= gameState.xpToNext) {
+                gameState.xp -= gameState.xpToNext;
+                gameState.level += 1;
+                gameState.xpToNext = Math.floor(gameState.xpToNext * 1.5);
+                gameState.gold += gameState.level * 80;
+
+                sound.playLevelUp();
+                openModal('🎉 恭喜農場升級！', `升到了 Lv.${gameState.level}！獲得金幣 +${gameState.level * 80}💰，並解鎖更多全新種子！`, '🌟');
+            }
+            renderHeader();
+        }
+
+        function switchTabModal(type) {
+            const body = document.getElementById('modal-body');
+            const title = document.getElementById('modal-title');
+            const icon = document.getElementById('modal-icon');
+
+            if (type === 'inventory') {
+                icon.innerText = '🎒';
+                title.innerText = '農場儲藏室';
+
+                const keys = Object.keys(gameState.inventory);
+                if (keys.length === 0) {
+                    body.innerHTML = `<div class="text-center py-10 text-gray-400 text-xs font-bold">儲藏室空空如也，快去採收作物與母雞蛋吧！🌾</div>`;
+                } else {
+                    let html = `<div class="grid grid-cols-2 gap-2">`;
+                    keys.forEach(k => {
+                        const count = gameState.inventory[k];
+                        let name = k;
+                        let iconChar = '📦';
+                        let sellPrice = 15;
+
+                        if (CROPS[k]) {
+                            name = CROPS[k].name;
+                            iconChar = CROPS[k].icon;
+                            sellPrice = CROPS[k].sell;
+                        } else if (k === 'egg') {
+                            name = '頂級黃金母雞蛋';
+                            iconChar = '🥚';
+                            sellPrice = 180;
+                        }
+
+                        html += `
+                            <div class="bg-white p-3 rounded-2xl border-2 border-amber-100 flex flex-col justify-between items-center text-center shadow-sm">
+                                <div class="text-3xl mb-1">${iconChar}</div>
+                                <div class="font-black text-xs text-amber-900">${name}</div>
+                                <div class="text-[10px] text-gray-500 mb-2">擁有: x${count} | 單價:${sellPrice}💰</div>
+                                <button onclick="sellItem('${k}', ${count}, ${sellPrice})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs py-1 rounded-xl shadow bounce-active">
+                                    全售 (${count * sellPrice}💰)
+                                </button>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                    body.innerHTML = html;
+                }
+            } else if (type === 'shop') {
+                icon.innerText = '🏪';
+                title.innerText = '農場種子與集市';
+                let html = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">`;
+                Object.values(CROPS).forEach(crop => {
+                    const isLocked = gameState.level < crop.reqLv;
+                    html += `
+                        <div class="bg-white p-3 rounded-2xl border-2 border-amber-100 shadow-sm flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-3xl bg-amber-50 p-1.5 rounded-xl">${crop.icon}</span>
+                                <div>
+                                    <div class="font-black text-xs text-amber-900">${crop.name}</div>
+                                    <div class="text-[10px] text-gray-500">${crop.desc}</div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-black text-amber-900">${crop.cost}💰</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                body.innerHTML = html;
+            }
+
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function sellItem(itemKey, count, unitPrice) {
+            const total = count * unitPrice;
+            delete gameState.inventory[itemKey];
+            gameState.gold += total;
+            sound.playCoin();
+            showToast(`💰 成功售出產物，獲得 +${total} 金幣！`);
+            renderHeader();
+            switchTabModal('inventory');
+        }
+
+        function openModal(title, msg, iconChar = '🎉') {
+            document.getElementById('modal-icon').innerText = iconChar;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerHTML = `<p class="text-gray-700 text-sm font-bold leading-relaxed py-4">${msg}</p>`;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        function showParticle(text, colorClass = 'text-amber-600') {
+            const el = document.createElement('div');
+            el.className = `particle-pop ${colorClass} text-sm sm:text-base`;
+            el.innerText = text;
+            el.style.left = `${window.innerWidth / 2 - 30}px`;
+            el.style.top = `${window.innerHeight / 2 - 40}px`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "bg-amber-900/90 text-amber-100 text-xs font-black px-4 py-2.5 rounded-2xl shadow-xl backdrop-blur-md animate-pop border border-amber-700/50";
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.4s ease';
+                setTimeout(() => toast.remove(), 400);
+            }, 2500);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // -------------------------------------------------------------
+        // WINDOW ONLOAD INITIALIZATION
+        // -------------------------------------------------------------
+        window.onload = function() {
+            init3D();
+            setupInputListeners();
+            renderHeader();
+            animateLoop();
+
+            // Auto Save locally every 10 seconds
+            setInterval(() => {
+                try {
+                    window.__galleryStorage.setItem('moe_farm_3d_save', JSON.stringify(gameState));
+                } catch(e) {}
+            }, 10000);
+
+            // Load save game
+            try {
+                const saved = window.__galleryStorage.getItem('moe_farm_3d_save');
+                if (saved) {
+                    gameState = { ...gameState, ...JSON.parse(saved) };
+                    renderHeader();
+                }
+            } catch(e) {}
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

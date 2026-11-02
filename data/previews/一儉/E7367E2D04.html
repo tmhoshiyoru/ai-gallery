@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D 叢林小動物大冒險 (3D Jungle Animal Runner)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@500;800;900&display=swap');
+        
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #2d5a27;
+            font-family: 'Fredoka One', 'Noto Sans TC', cursive, sans-serif;
+            color: #333;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 6px 0 #047857;
+            transition: all 0.15s ease;
+        }
+
+        .btn-green:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #047857;
+        }
+
+        .text-stroke {
+            -webkit-text-stroke: 2px #2d3748;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="select-none">
+
+    <div id="game-container">
+        <!-- Canvas Container -->
+        <div id="canvas-wrapper" class="w-full h-full"></div>
+
+        <!-- In-Game HUD UI -->
+        <div id="hud-ui" class="absolute inset-0 pointer-events-none p-4 sm:p-6 flex flex-col justify-between hidden">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-start">
+                <!-- Score and Character Name -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                        <span id="animal-avatar-icon" class="text-3xl">🐼</span>
+                        <span id="animal-name-tag" class="text-lg font-black text-emerald-950 bg-emerald-100/90 px-4 py-1.5 rounded-full border-2 border-emerald-500 shadow-md">探險熊貓</span>
+                    </div>
+                    <div id="hud-score" class="text-4xl sm:text-5xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)] tracking-wider">0</div>
+                </div>
+
+                <!-- Shield Bar / Counter -->
+                <div class="flex flex-col items-end gap-1">
+                    <div class="bg-white/95 backdrop-blur-sm border-2 border-amber-400 rounded-2xl p-2 px-4 shadow-lg flex items-center gap-2">
+                        <i class="fas fa-lemon text-amber-500 text-2xl animate-pulse"></i>
+                        <span id="hud-fruits" class="text-2xl font-black text-amber-900">0</span>
+                    </div>
+                    <div id="shield-indicator" class="text-sm font-black text-emerald-700 bg-emerald-100 border-2 border-emerald-500 rounded-full px-3 py-1 shadow-md hidden animate-bounce">
+                        <i class="fas fa-shield-cat mr-1"></i>叢林護罩已開啟！
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Touch Controls overlay -->
+            <div id="mobile-controls" class="pointer-events-auto grid grid-cols-3 gap-3 max-w-md mx-auto w-full mb-2 sm:hidden opacity-90">
+                <button id="btn-left" class="bg-white/85 border-2 border-emerald-600 text-emerald-900 py-4 rounded-2xl active:bg-emerald-200 text-2xl shadow-lg font-extrabold"><i class="fas fa-arrow-left"></i></button>
+                <div class="grid grid-rows-2 gap-2">
+                    <button id="btn-jump" class="bg-emerald-500 border-2 border-emerald-700 text-white py-2 rounded-xl active:bg-emerald-600 text-xl shadow-lg"><i class="fas fa-arrow-up"></i></button>
+                    <button id="btn-slide" class="bg-amber-500 border-2 border-amber-700 text-white py-2 rounded-xl active:bg-amber-600 text-xl shadow-lg"><i class="fas fa-arrow-down"></i></button>
+                </div>
+                <button id="btn-right" class="bg-white/85 border-2 border-emerald-600 text-emerald-900 py-4 rounded-2xl active:bg-emerald-200 text-2xl shadow-lg font-extrabold"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Start / Main Menu Screen -->
+        <div id="menu-screen" class="absolute inset-0 bg-emerald-950/50 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="max-w-md w-full bg-emerald-50/95 border-4 border-emerald-600 rounded-3xl p-6 shadow-2xl flex flex-col items-center">
+                <div class="text-6xl mb-2 animate-bounce">🌴🐾</div>
+                <h1 class="text-3xl sm:text-4xl font-black text-emerald-950 mb-1 tracking-wide">
+                    叢林小動物大冒險
+                </h1>
+                <p class="text-emerald-700 text-sm font-extrabold mb-6">避開神秘沼澤，穿梭熱帶雨林！</p>
+
+                <!-- High Score Card -->
+                <div class="w-full bg-emerald-100 border-2 border-emerald-300 rounded-2xl p-4 mb-6 flex justify-around shadow-inner">
+                    <div>
+                        <div class="text-xs font-bold text-emerald-800">最高得分紀錄</div>
+                        <div id="menu-highscore" class="text-3xl font-black text-emerald-600">0</div>
+                    </div>
+                    <div class="border-r-2 border-emerald-300"></div>
+                    <div>
+                        <div class="text-xs font-bold text-emerald-800">熱帶水果</div>
+                        <div id="menu-fruits" class="text-3xl font-black text-amber-500">0</div>
+                    </div>
+                </div>
+
+                <!-- Play Button -->
+                <button id="start-btn" class="w-full py-4 rounded-2xl text-2xl font-black text-white btn-green tracking-wider mb-6 cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fas fa-play"></i> 進入叢林探險！
+                </button>
+
+                <!-- Controls Guide -->
+                <div class="bg-emerald-100/80 border border-emerald-300 rounded-xl p-3 w-full text-xs text-emerald-950 space-y-1.5 text-left font-bold">
+                    <div class="font-black text-emerald-900 text-center text-sm mb-1"><i class="fas fa-compass mr-1"></i> 探險操作指南</div>
+                    <div class="flex justify-between"><span>左移 / 右移:</span> <span class="text-emerald-700">A / D 或 ⬅️ / ➡️</span></div>
+                    <div class="flex justify-between"><span>跳過泥濘沼澤/樹幹:</span> <span class="text-emerald-700">W 或 ⬆️ 或 空白鍵</span></div>
+                    <div class="flex justify-between"><span>低姿態穿過藤蔓拱門:</span> <span class="text-emerald-700">S 或 ⬇️</span></div>
+                    <div class="flex justify-between"><span>採集 5 水果:</span> <span class="text-amber-600">啟用護罩保護！</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="absolute inset-0 bg-emerald-950/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden">
+            <div class="max-w-md w-full bg-white border-4 border-amber-500 rounded-3xl p-6 shadow-2xl flex flex-col items-center">
+                <div class="text-5xl mb-2">🌿😵</div>
+                <h2 class="text-3xl font-black text-amber-600 mb-1">陷進沼澤惹！</h2>
+                <p class="text-gray-500 text-sm font-bold mb-4">休息一下，下一隻小夥伴準備好了！</p>
+
+                <!-- Final Score Box -->
+                <div class="w-full bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-6 space-y-2">
+                    <div class="text-xs font-bold text-gray-500">本次探險得分</div>
+                    <div id="go-score" class="text-5xl font-black text-emerald-600">0</div>
+                    <div id="new-high-tag" class="text-sm font-black text-amber-500 hidden">🎉 刷新最高分數紀錄！</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <button id="restart-btn" class="w-full py-4 rounded-2xl text-xl font-black text-white btn-green tracking-wider cursor-pointer">
+                    <i class="fas fa-rotate-right mr-1"></i> 換隻萌萌小動物重新出發！
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sound FX Generator using Web Audio API
+        class SoundFX {
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            playFruit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(1174.66, this.ctx.currentTime + 0.15); // D6
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.22);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.22);
+            }
+            playSplash() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.35);
+            }
+            playShield() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(880, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        // Game Constants & Variables
+        const LANES = [-3.2, 0, 3.2];
+        let currentLane = 1;
+        
+        let scene, camera, renderer;
+        let playerGroup, currentAnimalMesh = null;
+        let obstacles = [];
+        let collectibles = [];
+        let particleSystems = [];
+        let jungleDecorations = [];
+        let swampBubbles = [];
+
+        // Enhanced Cute & Harmless Animal Character Definitions
+        const ANIMAL_TYPES = [
+            { id: 'panda', name: '圓圓熊貓', icon: '🐼', mainColor: 0xffffff, accentColor: 0x222222, earColor: 0x1a1a1a, cheekColor: 0xffb6c1 },
+            { id: 'tiger', name: '萌萌小虎', icon: '🐯', mainColor: 0xff9800, accentColor: 0x3e2723, earColor: 0xffb74d, cheekColor: 0xff8a80 },
+            { id: 'monkey', name: '淘氣小猴', icon: '🐒', mainColor: 0x8d6e63, accentColor: 0xd7ccc8, earColor: 0x6d4c41, cheekColor: 0xff8a80 },
+            { id: 'elephant', name: '嘟嘟小象', icon: '🐘', mainColor: 0x90a4ae, accentColor: 0xcfd8dc, earColor: 0x78909c, cheekColor: 0xf8bbd0 },
+            { id: 'bunny', name: '飛躍粉兔', icon: '🐰', mainColor: 0xfff0f5, accentColor: 0xffb6c1, earColor: 0xff69b4, cheekColor: 0xff1493 }
+        ];
+        let currentAnimalConfig = ANIMAL_TYPES[0];
+
+        // Game Speed & Physics
+        let isPlaying = false;
+        let score = 0;
+        let highScore = window.__galleryStorage.getItem('jungle_runner_hi') || 0;
+        let collectedFruits = 0;
+        let gameSpeed = 0.22;
+        const maxSpeed = 0.52;
+        
+        let playerY = 0;
+        let jumpVelocity = 0;
+        const gravity = -0.016;
+        let isJumping = false;
+        let isSliding = false;
+        let slideTimer = 0;
+        let hasShield = false;
+
+        let distanceTraveled = 0;
+        let nextObstacleDistance = 25;
+
+        function initEngine() {
+            const container = document.getElementById('canvas-wrapper');
+
+            // 1. Scene setup (Bright Tropical Sunlight & Fog)
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x73d2f6); // Sunny bright jungle sky
+            scene.fog = new THREE.FogExp2(0xa1e7d8, 0.007);
+
+            // 2. Camera setup
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 260);
+            camera.position.set(0, 4.3, 8.8);
+            camera.rotation.x = -0.22;
+
+            // 3. Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // 4. Bright Tropical Lighting
+            const ambientLight = new THREE.AmbientLight(0xfff8e7, 0.95);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfffae6, 1.25);
+            sunLight.position.set(25, 45, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+
+            // Hemisphere light for vibrant tropical foliage color boost
+            const hemiLight = new THREE.HemisphereLight(0x80e87a, 0x3d522b, 0.6);
+            scene.add(hemiLight);
+
+            // 5. Build Environment: Ancient Jungle Path & Foliage
+            createJungleTrack();
+            createJungleEnvironment();
+            
+            // 6. Create Player Holder
+            playerGroup = new THREE.Group();
+            scene.add(playerGroup);
+
+            // Responsive Resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Set Initial UI High Scores
+            document.getElementById('menu-highscore').innerText = Math.floor(highScore);
+        }
+
+        function createJungleTrack() {
+            // Main Ancient Stone & Moss Jungle Trail
+            const trackGeo = new THREE.PlaneGeometry(12, 300);
+            const trackMat = new THREE.MeshStandardMaterial({
+                color: 0x4d7c38,
+                roughness: 0.85,
+            });
+            const track = new THREE.Mesh(trackGeo, trackMat);
+            track.rotation.x = -Math.PI / 2;
+            track.position.z = -100;
+            track.receiveShadow = true;
+            scene.add(track);
+
+            // Pathway Lane Dividers (Wooden Ancient Planks)
+            for (let i = 0; i < 4; i++) {
+                const lineGeo = new THREE.BoxGeometry(0.15, 0.05, 300);
+                const lineMat = new THREE.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.9 });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.position.set(-4.8 + i * 3.2, 0.03, -100);
+                scene.add(line);
+            }
+        }
+
+        function createJungleEnvironment() {
+            // Distant Jungle Canopy Mountains
+            const mountainGeo = new THREE.ConeGeometry(30, 50, 6);
+            const mountainMat = new THREE.MeshStandardMaterial({ color: 0x225c2e, roughness: 0.9 });
+
+            for (let i = 0; i < 20; i++) {
+                const mountain = new THREE.Mesh(mountainGeo, mountainMat);
+                const isLeft = Math.random() > 0.5;
+                const x = isLeft ? -40 - Math.random() * 35 : 40 + Math.random() * 35;
+                const z = -Math.random() * 250;
+                mountain.position.set(x, 20, z);
+                scene.add(mountain);
+            }
+
+            // High Quality Palm Trees, Tropical Plants & Ruins
+            for (let i = 0; i < 70; i++) {
+                const isLeft = Math.random() > 0.5;
+                const x = isLeft ? -7.5 - Math.random() * 16 : 7.5 + Math.random() * 16;
+                const z = -Math.random() * 260;
+
+                if (Math.random() > 0.3) {
+                    // Palm / Jungle Tree
+                    const treeGroup = new THREE.Group();
+                    const trunkGeo = new THREE.CylinderGeometry(0.4, 0.7, 4.5, 8);
+                    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d24, roughness: 0.9 });
+                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.y = 2.25;
+
+                    // Palm Leaves Canopy
+                    const leavesGroup = new THREE.Group();
+                    const leafGeo = new THREE.SphereGeometry(2.2, 8, 8);
+                    leafGeo.scale(1.2, 0.4, 1.2);
+                    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2bb148, roughness: 0.6 });
+                    
+                    for (let l = 0; l < 4; l++) {
+                        const leaf = new THREE.Mesh(leafGeo, leafMat);
+                        leaf.rotation.y = (l * Math.PI) / 2;
+                        leaf.position.y = 4.2;
+                        leavesGroup.add(leaf);
+                    }
+
+                    treeGroup.add(trunk, leavesGroup);
+                    treeGroup.position.set(x, 0, z);
+                    scene.add(treeGroup);
+                    jungleDecorations.push(treeGroup);
+                } else {
+                    // Tropical Bush / Flower
+                    const bushGroup = new THREE.Group();
+                    const bushGeo = new THREE.DodecahedronGeometry(1.2 + Math.random() * 0.6);
+                    const bushMat = new THREE.MeshStandardMaterial({ color: 0x1b8a38, roughness: 0.7 });
+                    const bush = new THREE.Mesh(bushGeo, bushMat);
+                    bush.position.set(0, 0.8, 0);
+
+                    // Add Bright Flowers
+                    const flowerGeo = new THREE.SphereGeometry(0.25, 6, 6);
+                    const flowerMat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xff4081 : 0xffeb3b });
+                    const flower = new THREE.Mesh(flowerGeo, flowerMat);
+                    flower.position.set(0.3, 1.3, 0.3);
+                    bushGroup.add(bush, flower);
+
+                    bushGroup.position.set(x, 0, z);
+                    scene.add(bushGroup);
+                    jungleDecorations.push(bushGroup);
+                }
+            }
+        }
+
+        function buildAnimalModel(config) {
+            if (currentAnimalMesh) playerGroup.remove(currentAnimalMesh);
+
+            const animalGroup = new THREE.Group();
+
+            // Common Materials
+            const mainMat = new THREE.MeshStandardMaterial({ color: config.mainColor, roughness: 0.5 });
+            const accentMat = new THREE.MeshStandardMaterial({ color: config.accentColor, roughness: 0.5 });
+            const cheekMat = new THREE.MeshBasicMaterial({ color: config.cheekColor });
+            const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+
+            // 1. Cute Round Body
+            const bodyGeo = new THREE.SphereGeometry(0.65, 16, 16);
+            bodyGeo.scale(1, 0.95, 1.1);
+            const body = new THREE.Mesh(bodyGeo, mainMat);
+            body.position.y = 0.65;
+            body.castShadow = true;
+            animalGroup.add(body);
+
+            // Belly Patch
+            const bellyGeo = new THREE.SphereGeometry(0.48, 12, 12);
+            bellyGeo.scale(0.8, 0.85, 0.3);
+            const belly = new THREE.Mesh(bellyGeo, accentMat);
+            belly.position.set(0, 0.6, 0.45);
+            animalGroup.add(belly);
+
+            // 2. Head with Big Cute Pupil Eyes
+            const headGeo = new THREE.SphereGeometry(0.55, 16, 16);
+            const head = new THREE.Mesh(headGeo, mainMat);
+            head.position.set(0, 1.25, 0.25);
+            head.castShadow = true;
+            animalGroup.add(head);
+
+            // Big Friendly Eye Whites & Pupils
+            const eyeWhiteGeo = new THREE.SphereGeometry(0.12, 10, 10);
+            const eyePupilGeo = new THREE.SphereGeometry(0.07, 10, 10);
+
+            const eyeLWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+            eyeLWhite.position.set(-0.2, 1.32, 0.68);
+            const eyeLPupil = new THREE.Mesh(eyePupilGeo, eyePupilMat);
+            eyeLPupil.position.set(-0.19, 1.33, 0.76);
+
+            const eyeRWhite = eyeLWhite.clone();
+            eyeRWhite.position.x = 0.2;
+            const eyeRPupil = eyeLPupil.clone();
+            eyeRPupil.position.x = 0.21;
+
+            animalGroup.add(eyeLWhite, eyeLPupil, eyeRWhite, eyeRPupil);
+
+            // Cute Blush Cheeks
+            const cheekGeo = new THREE.SphereGeometry(0.09, 8, 8);
+            cheekGeo.scale(1, 0.6, 0.2);
+            const cheekL = new THREE.Mesh(cheekGeo, cheekMat);
+            cheekL.position.set(-0.32, 1.2, 0.65);
+            const cheekR = cheekL.clone();
+            cheekR.position.x = 0.32;
+            animalGroup.add(cheekL, cheekR);
+
+            // Nose / Snout
+            const noseGeo = new THREE.SphereGeometry(0.08, 10, 10);
+            const noseMat = new THREE.MeshBasicMaterial({ color: 0x3d271d });
+            const nose = new THREE.Mesh(noseGeo, noseMat);
+            nose.position.set(0, 1.25, 0.77);
+            animalGroup.add(nose);
+
+            // Custom Character Features
+            const earMat = new THREE.MeshStandardMaterial({ color: config.earColor });
+
+            if (config.id === 'panda') {
+                // Round Black Panda Ears
+                const earGeo = new THREE.SphereGeometry(0.16, 10, 10);
+                const earL = new THREE.Mesh(earGeo, earMat);
+                earL.position.set(-0.38, 1.68, 0.25);
+                const earR = earL.clone();
+                earR.position.x = 0.38;
+                animalGroup.add(earL, earR);
+            } else if (config.id === 'tiger') {
+                // Cute Tiger Stripes & Ears
+                const earGeo = new THREE.SphereGeometry(0.15, 10, 10);
+                const earL = new THREE.Mesh(earGeo, mainMat);
+                earL.position.set(-0.35, 1.65, 0.25);
+                const earR = earL.clone();
+                earR.position.x = 0.35;
+                animalGroup.add(earL, earR);
+            } else if (config.id === 'monkey') {
+                // Big Round Monkey Ears
+                const earGeo = new THREE.SphereGeometry(0.18, 10, 10);
+                earGeo.scale(0.3, 1, 1);
+                const earL = new THREE.Mesh(earGeo, accentMat);
+                earL.position.set(-0.52, 1.25, 0.25);
+                const earR = earL.clone();
+                earR.position.x = 0.52;
+                animalGroup.add(earL, earR);
+            } else if (config.id === 'elephant') {
+                // Flappy Elephant Ears & Trunk
+                const earGeo = new THREE.SphereGeometry(0.32, 12, 12);
+                earGeo.scale(0.2, 1, 1);
+                const earL = new THREE.Mesh(earGeo, earMat);
+                earL.position.set(-0.55, 1.3, 0.2);
+                const earR = earL.clone();
+                earR.position.x = 0.55;
+
+                // Trunk
+                const trunkGeo = new THREE.CylinderGeometry(0.08, 0.05, 0.5, 8);
+                const trunk = new THREE.Mesh(trunkGeo, mainMat);
+                trunk.position.set(0, 1.1, 0.8);
+                trunk.rotation.x = -0.5;
+
+                animalGroup.add(earL, earR, trunk);
+            } else if (config.id === 'bunny') {
+                // Long Cute Bunny Ears
+                const earGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.7, 8);
+                const earL = new THREE.Mesh(earGeo, earMat);
+                earL.position.set(-0.2, 1.9, 0.2);
+                earL.rotation.z = -0.15;
+                const earR = earL.clone();
+                earR.position.x = 0.2;
+                earR.rotation.z = 0.15;
+                animalGroup.add(earL, earR);
+            }
+
+            // Tail
+            const tailGeo = new THREE.SphereGeometry(0.12, 8, 8);
+            const tail = new THREE.Mesh(tailGeo, mainMat);
+            tail.position.set(0, 0.6, -0.6);
+            animalGroup.add(tail);
+
+            // Protective Rainbow Shield Sphere
+            const shieldGeo = new THREE.SphereGeometry(1.4, 16, 16);
+            const shieldMat = new THREE.MeshBasicMaterial({
+                color: 0x00e676,
+                transparent: true,
+                opacity: 0.45,
+                wireframe: true
+            });
+            const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            shieldMesh.name = "shield";
+            shieldMesh.visible = false;
+            animalGroup.add(shieldMesh);
+
+            currentAnimalMesh = animalGroup;
+            playerGroup.add(currentAnimalMesh);
+        }
+
+        function spawnObstacle(zPos) {
+            const laneIndex = Math.floor(Math.random() * 3);
+            const xPos = LANES[laneIndex];
+            const type = Math.random();
+
+            let mesh;
+            if (type < 0.45) {
+                // 1. Muddy Jungle Swamp Hazard (沼澤) - Jump over!
+                const swampGroup = new THREE.Group();
+
+                // Mud Pool
+                const poolGeo = new THREE.CylinderGeometry(1.4, 1.4, 0.08, 16);
+                const poolMat = new THREE.MeshStandardMaterial({
+                    color: 0x3d2817,
+                    roughness: 0.2,
+                    metalness: 0.1
+                });
+                const pool = new THREE.Mesh(poolGeo, poolMat);
+                pool.position.y = 0.04;
+
+                // Green Murky Bubbles
+                const bubbleGeo = new THREE.SphereGeometry(0.25, 8, 8);
+                const bubbleMat = new THREE.MeshStandardMaterial({ color: 0x689f38, roughness: 0.3 });
+                for (let b = 0; b < 3; b++) {
+                    const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+                    bubble.position.set((Math.random() - 0.5) * 1.5, 0.1, (Math.random() - 0.5) * 1.5);
+                    swampGroup.add(bubble);
+                    swampBubbles.push(bubble);
+                }
+
+                // Swamp Warning Wooden Sign
+                const signGeo = new THREE.BoxGeometry(0.8, 0.6, 0.1);
+                const signMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63 });
+                const sign = new THREE.Mesh(signGeo, signMat);
+                sign.position.set(-1.1, 0.5, 0);
+                swampGroup.add(pool, sign);
+
+                swampGroup.position.set(xPos, 0, zPos);
+                mesh = swampGroup;
+                mesh.userData = { type: 'barrier_low', height: 1.1 };
+            } else if (type < 0.75) {
+                // 2. High Canopy Hanging Vine Arch (可滑行鑽過)
+                const group = new THREE.Group();
+                const poleGeo = new THREE.CylinderGeometry(0.18, 0.18, 3.8, 8);
+                const woodMat = new THREE.MeshStandardMaterial({ color: 0x4e342e });
+
+                const p1 = new THREE.Mesh(poleGeo, woodMat);
+                p1.position.set(-1.3, 1.9, 0);
+                const p2 = new THREE.Mesh(poleGeo, woodMat);
+                p2.position.set(1.3, 1.9, 0);
+
+                // Hanging Foliage Arch
+                const archGeo = new THREE.BoxGeometry(2.9, 1.3, 0.5);
+                const archMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.7 });
+                const arch = new THREE.Mesh(archGeo, archMat);
+                arch.position.set(0, 2.7, 0);
+
+                group.add(p1, p2, arch);
+                group.position.set(xPos, 0, zPos);
+                mesh = group;
+                mesh.userData = { type: 'barrier_high', minHeight: 1.35 };
+            } else {
+                // 3. Fallen Jungle Log Barrier (Jump over or change lanes)
+                const logGeo = new THREE.CylinderGeometry(0.5, 0.5, 2.6, 12);
+                const logMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9 });
+                mesh = new THREE.Mesh(logGeo, logMat);
+                mesh.rotation.z = Math.PI / 2;
+                mesh.position.set(xPos, 0.5, zPos);
+                mesh.userData = { type: 'barrier_low', height: 1.2 };
+            }
+
+            mesh.castShadow = true;
+            scene.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        function spawnCollectible(zPos) {
+            // Spawn Tropical Golden Mangoes / Bananas
+            const laneIndex = Math.floor(Math.random() * 3);
+            const xPos = LANES[laneIndex];
+            const isHigh = Math.random() > 0.6;
+
+            const geo = new THREE.SphereGeometry(0.42, 12, 12);
+            geo.scale(0.8, 1.2, 0.8);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffb300, roughness: 0.3, metalness: 0.1 });
+            const fruit = new THREE.Mesh(geo, mat);
+            fruit.position.set(xPos, isHigh ? 2.6 : 1.0, zPos);
+
+            // Green Leaf Top
+            const leafGeo = new THREE.BoxGeometry(0.12, 0.25, 0.05);
+            const leafMat = new THREE.MeshBasicMaterial({ color: 0x00e676 });
+            const leaf = new THREE.Mesh(leafGeo, leafMat);
+            leaf.position.set(0, 0.5, 0);
+            fruit.add(leaf);
+
+            scene.add(fruit);
+            collectibles.push(fruit);
+        }
+
+        function setupControls() {
+            // Keyboard Listener
+            window.addEventListener('keydown', (e) => {
+                if (!isPlaying) return;
+
+                if ((e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') && currentLane > 0) {
+                    currentLane--;
+                } else if ((e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') && currentLane < 2) {
+                    currentLane++;
+                } else if ((e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp' || e.key === ' ') && !isJumping) {
+                    triggerJump();
+                } else if ((e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') && !isSliding) {
+                    triggerSlide();
+                }
+            });
+
+            // Touch Swipe Handler
+            let touchStartX = 0, touchStartY = 0;
+            window.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            window.addEventListener('touchend', (e) => {
+                if (!isPlaying) return;
+                const diffX = e.changedTouches[0].clientX - touchStartX;
+                const diffY = e.changedTouches[0].clientY - touchStartY;
+
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 30 && currentLane < 2) currentLane++;
+                    else if (diffX < -30 && currentLane > 0) currentLane--;
+                } else {
+                    if (diffY < -30 && !isJumping) triggerJump();
+                    else if (diffY > 30 && !isSliding) triggerSlide();
+                }
+            }, { passive: true });
+
+            // Mobile Screen Buttons
+            document.getElementById('btn-left').addEventListener('click', () => { if (isPlaying && currentLane > 0) currentLane--; });
+            document.getElementById('btn-right').addEventListener('click', () => { if (isPlaying && currentLane < 2) currentLane--; });
+            document.getElementById('btn-jump').addEventListener('click', () => { if (isPlaying && !isJumping) triggerJump(); });
+            document.getElementById('btn-slide').addEventListener('click', () => { if (isPlaying && !isSliding) triggerSlide(); });
+
+            // UI Start / Restart Buttons
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+        }
+
+        function triggerJump() {
+            isJumping = true;
+            jumpVelocity = 0.34;
+            sfx.playJump();
+        }
+
+        function triggerSlide() {
+            isSliding = true;
+            slideTimer = 26;
+            if (currentAnimalMesh) {
+                currentAnimalMesh.scale.set(1, 0.45, 1.2);
+                currentAnimalMesh.position.y = 0.2;
+            }
+        }
+
+        function resetSlide() {
+            isSliding = false;
+            if (currentAnimalMesh) {
+                currentAnimalMesh.scale.set(1, 1, 1);
+                currentAnimalMesh.position.y = 0;
+            }
+        }
+
+        function startGame() {
+            sfx.init();
+
+            // Pick Random Cute Animal
+            currentAnimalConfig = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
+            buildAnimalModel(currentAnimalConfig);
+
+            // Update UI Character Info
+            document.getElementById('animal-avatar-icon').innerText = currentAnimalConfig.icon;
+            document.getElementById('animal-name-tag').innerText = currentAnimalConfig.name;
+
+            // Clear Active Entities
+            obstacles.forEach(o => scene.remove(o));
+            collectibles.forEach(c => scene.remove(c));
+            obstacles = [];
+            collectibles = [];
+
+            // Reset Parameters
+            currentLane = 1;
+            playerGroup.position.set(0, 0, 0);
+            playerY = 0;
+            isJumping = false;
+            resetSlide();
+
+            score = 0;
+            collectedFruits = 0;
+            gameSpeed = 0.22;
+            distanceTraveled = 0;
+            nextObstacleDistance = 25;
+            hasShield = false;
+
+            // UI Adjustments
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('hud-ui').classList.remove('hidden');
+            document.getElementById('shield-indicator').classList.add('hidden');
+            document.getElementById('hud-fruits').innerText = '0';
+
+            isPlaying = true;
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            sfx.playSplash();
+
+            const isNewHigh = score > highScore;
+            if (isNewHigh) {
+                highScore = score;
+                window.__galleryStorage.setItem('jungle_runner_hi', Math.floor(highScore));
+            }
+
+            document.getElementById('go-score').innerText = Math.floor(score);
+            document.getElementById('new-high-tag').classList.toggle('hidden', !isNewHigh);
+            document.getElementById('hud-ui').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+            document.getElementById('menu-highscore').innerText = Math.floor(highScore);
+        }
+
+        function createLeafParticles(pos) {
+            const pGroup = new THREE.Group();
+            const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+            const pColors = [0x00e676, 0xffeb3b, 0xff9800];
+
+            for (let i = 0; i < 14; i++) {
+                const mat = new THREE.MeshBasicMaterial({ color: pColors[Math.floor(Math.random() * pColors.length)] });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.copy(pos);
+                p.userData = {
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: Math.random() * 0.3,
+                    vz: (Math.random() - 0.5) * 0.3,
+                    life: 20
+                };
+                pGroup.add(p);
+            }
+            scene.add(pGroup);
+            particleSystems.push(pGroup);
+        }
+
+        function updateGame() {
+            if (!isPlaying) return;
+
+            // Smooth Acceleration
+            gameSpeed = Math.min(maxSpeed, 0.22 + (score / 15000));
+            distanceTraveled += gameSpeed;
+            score += gameSpeed * 2;
+
+            document.getElementById('hud-score').innerText = Math.floor(score);
+
+            // 1. Smooth Lane Movement
+            const targetX = LANES[currentLane];
+            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.25;
+
+            // 2. Jumping Physics
+            if (isJumping) {
+                playerY += jumpVelocity;
+                jumpVelocity += gravity;
+                if (playerY <= 0) {
+                    playerY = 0;
+                    isJumping = false;
+                }
+            }
+            playerGroup.position.y = playerY;
+
+            // 3. Sliding Timer
+            if (isSliding) {
+                slideTimer--;
+                if (slideTimer <= 0) resetSlide();
+            }
+
+            // Shield visual
+            if (currentAnimalMesh) {
+                const shieldMesh = currentAnimalMesh.getObjectByName('shield');
+                if (shieldMesh) {
+                    shieldMesh.visible = hasShield;
+                    if (hasShield) shieldMesh.rotation.y += 0.04;
+                }
+            }
+
+            // Swamp Bubble animation
+            swampBubbles.forEach(b => {
+                b.position.y = 0.1 + Math.sin(Date.now() * 0.005 + b.position.x) * 0.08;
+            });
+
+            // 4. World Spawning
+            if (distanceTraveled >= nextObstacleDistance) {
+                spawnObstacle(-150);
+                if (Math.random() > 0.35) spawnCollectible(-130);
+                nextObstacleDistance = distanceTraveled + 28 + Math.random() * 20;
+            }
+
+            // 5. Obstacles Logic & Collisions
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.position.z += gameSpeed * 10;
+
+                if (Math.abs(obs.position.z - playerGroup.position.z) < 1.2) {
+                    const inSameLane = Math.abs(obs.position.x - playerGroup.position.x) < 1.4;
+
+                    if (inSameLane) {
+                        let hit = false;
+                        const uData = obs.userData;
+
+                        if (uData.type === 'barrier_low' && playerY < uData.height) hit = true;
+                        else if (uData.type === 'barrier_high' && !isSliding) hit = true;
+
+                        if (hit) {
+                            if (hasShield) {
+                                hasShield = false;
+                                document.getElementById('shield-indicator').classList.add('hidden');
+                                createLeafParticles(playerGroup.position);
+                                scene.remove(obs);
+                                obstacles.splice(i, 1);
+                                sfx.playShield();
+                                continue;
+                            } else {
+                                gameOver();
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                if (obs.position.z > 15) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // 6. Collectibles Logic
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.position.z += gameSpeed * 10;
+                item.rotation.y += 0.06;
+
+                const dist = item.position.distanceTo(playerGroup.position);
+                if (dist < 1.6) {
+                    sfx.playFruit();
+                    collectedFruits++;
+                    score += 100;
+                    document.getElementById('hud-fruits').innerText = collectedFruits;
+                    document.getElementById('menu-fruits').innerText = collectedFruits;
+                    createLeafParticles(item.position);
+
+                    // Shield trigger every 5 fruits
+                    if (collectedFruits % 5 === 0) {
+                        hasShield = true;
+                        document.getElementById('shield-indicator').classList.remove('hidden');
+                    }
+
+                    scene.remove(item);
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                if (item.position.z > 15) {
+                    scene.remove(item);
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // 7. Leaf Particle System
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                const ps = particleSystems[i];
+                let allDead = true;
+
+                ps.children.forEach(p => {
+                    if (p.userData.life > 0) {
+                        p.position.x += p.userData.vx;
+                        p.position.y += p.userData.vy;
+                        p.position.z += p.userData.vz;
+                        p.userData.life--;
+                        allDead = false;
+                    }
+                });
+
+                if (allDead) {
+                    scene.remove(ps);
+                    particleSystems.splice(i, 1);
+                }
+            }
+
+            // 8. Endless Jungle Scenery Loop
+            jungleDecorations.forEach(d => {
+                d.position.z += gameSpeed * 4;
+                if (d.position.z > 20) d.position.z = -230;
+            });
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-wrapper');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updateGame();
+            renderer.render(scene, camera);
+        }
+
+        // Window Load Trigger
+        window.onload = () => {
+            initEngine();
+            setupControls();
+            animate();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

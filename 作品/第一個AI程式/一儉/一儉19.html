@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>喵喵打磚塊 - Cat Brick Breaker</title>
+    <!-- Tailwind CSS for modern responsive UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for cute icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for cute rounded text -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Fredoka', 'Zen Maru Gothic', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffd1dc 0%, #ffe6eb 50%, #e8dff5 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Cute glassmorphism panel */
+        .cute-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 4px solid #ffffff;
+            box-shadow: 0 10px 25px -5px rgba(255, 182, 193, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .cute-btn {
+            background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(255, 154, 158, 0.4);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cute-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 7px 15px rgba(255, 154, 158, 0.6);
+        }
+
+        .cute-btn:active {
+            transform: translateY(1px) scale(0.97);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ffe6eb;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffb6c1;
+            border-radius: 10px;
+        }
+
+        /* Floating background paw icons animation */
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }
+            50% { transform: translateY(-20px) rotate(10deg); opacity: 0.4; }
+            100% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }
+        }
+
+        .bg-paw {
+            position: absolute;
+            color: #ffb6c1;
+            z-index: 0;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Canvas Border Effect */
+        #gameCanvas {
+            background: linear-gradient(180deg, #fff5f7 0%, #fff0f3 100%);
+            box-shadow: inset 0 0 20px rgba(255, 182, 193, 0.3);
+            border-radius: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen p-2 sm:p-4 text-gray-700 relative">
+
+    <!-- Floating Background Decor -->
+    <i class="fa-solid fa-paw bg-paw text-4xl" style="top: 10%; left: 8%; animation-delay: 0s;"></i>
+    <i class="fa-solid fa-cat bg-paw text-5xl" style="top: 60%; left: 5%; animation-delay: 2s;"></i>
+    <i class="fa-solid fa-paw bg-paw text-3xl" style="top: 20%; right: 7%; animation-delay: 1s;"></i>
+    <i class="fa-solid fa-heart bg-paw text-4xl" style="top: 75%; right: 8%; animation-delay: 3s;"></i>
+
+    <!-- Header Section -->
+    <header class="w-full max-w-2xl text-center my-2 z-10">
+        <div class="inline-block relative">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-pink-500 drop-shadow-md tracking-wider flex items-center justify-center gap-3">
+                <i class="fa-solid fa-paw text-pink-400"></i>
+                <span>喵喵打磚塊</span>
+                <i class="fa-solid fa-paw text-pink-400"></i>
+            </h1>
+            <span class="text-xs sm:text-sm font-semibold text-pink-400 tracking-widest uppercase">Cute Super Paw Breakout</span>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-2xl flex flex-col items-center z-10">
+        
+        <!-- Top Scoreboard Bar -->
+        <div class="w-full cute-panel rounded-2xl p-3 sm:p-4 mb-3 flex justify-between items-center text-sm sm:text-base font-bold text-gray-700">
+            <!-- Score & HighScore -->
+            <div class="flex items-center gap-4 sm:gap-6">
+                <div class="flex flex-col items-start">
+                    <span class="text-xs text-pink-400 uppercase font-extrabold tracking-wider">Score</span>
+                    <span id="scoreText" class="text-xl sm:text-2xl text-pink-600 font-black">0</span>
+                </div>
+                <div class="flex flex-col items-start">
+                    <span class="text-xs text-purple-400 uppercase font-extrabold tracking-wider">High Score</span>
+                    <span id="highScoreText" class="text-lg sm:text-xl text-purple-600 font-bold">0</span>
+                </div>
+            </div>
+
+            <!-- Combo & Speed Indicator -->
+            <div class="flex items-center gap-2">
+                <div id="comboBadge" class="hidden sm:flex items-center gap-1 bg-amber-100 text-amber-600 px-3 py-1 rounded-full border border-amber-300 text-xs font-black animate-pulse">
+                    <i class="fa-solid fa-fire text-amber-500"></i>
+                    <span id="comboText">COMBO x2</span>
+                </div>
+                <div id="speedBadge" class="hidden sm:flex items-center gap-1 bg-pink-100 text-pink-600 px-3 py-1 rounded-full border border-pink-300 text-xs font-black">
+                    <i class="fa-solid fa-bolt text-pink-500"></i>
+                    <span id="speedText">1.0x</span>
+                </div>
+            </div>
+
+            <!-- Lives & Sound Toggle -->
+            <div class="flex items-center gap-3 sm:gap-4">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs text-pink-400 uppercase font-extrabold tracking-wider">Lives</span>
+                    <div id="livesContainer" class="flex gap-1 text-pink-500 text-lg sm:text-xl">
+                        <!-- Hearts injected dynamically -->
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                </div>
+
+                <button id="soundBtn" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full cute-btn flex items-center justify-center text-pink-600 text-lg focus:outline-none" title="Toggle Sound">
+                    <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Area with Wrapper for Modal Overlay -->
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" class="w-full border-4 border-white shadow-xl touch-none"></canvas>
+
+            <!-- Overlay Start/Pause Modal -->
+            <div id="startOverlay" class="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mb-4 text-pink-500 text-4xl shadow-inner border-2 border-pink-200 animate-bounce">
+                    <i class="fa-solid fa-cat"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-pink-600 mb-2">喵喵準備好了！</h2>
+                <p class="text-sm sm:text-base text-gray-600 mb-6 max-w-xs font-medium">分數越高速度越快，連擊解鎖彩虹毛線球！使用方向鍵/AD鍵或拖曳控制貓貓！</p>
+                <button id="startBtn" class="cute-btn px-8 py-3 text-lg font-black text-white rounded-full flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>開始遊戲</span>
+                </button>
+            </div>
+
+            <!-- Overlay Game Over / Win Modal -->
+            <div id="resultModal" class="hidden absolute inset-0 bg-white/85 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30">
+                <div id="modalIconContainer" class="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mb-3 text-4xl border-2 border-pink-200 shadow-md">
+                    <i id="modalIcon" class="fa-solid fa-shield-cat text-pink-500"></i>
+                </div>
+                <h2 id="modalTitle" class="text-3xl font-black text-pink-600 mb-1">Game Over</h2>
+                <p id="modalSub" class="text-gray-500 font-bold mb-4 text-sm">小球掉落了，再接再厲！</p>
+                
+                <div class="bg-pink-50 border border-pink-100 rounded-2xl p-4 w-full max-w-xs mb-5 flex justify-around items-center">
+                    <div>
+                        <div class="text-xs text-gray-400 font-bold uppercase">本次得分</div>
+                        <div id="finalScore" class="text-2xl font-black text-pink-500">0</div>
+                    </div>
+                    <div class="h-8 w-px bg-pink-200"></div>
+                    <div>
+                        <div class="text-xs text-gray-400 font-bold uppercase">最高紀錄</div>
+                        <div id="finalHighScore" class="text-2xl font-black text-purple-500">0</div>
+                    </div>
+                </div>
+
+                <button id="restartBtn" class="cute-btn px-8 py-3 text-lg font-black text-white rounded-full flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>再玩一次</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- On-Screen Touch Controls for Mobile Devices -->
+        <div class="w-full flex justify-between items-center mt-3 gap-3 sm:hidden">
+            <button id="leftTouchBtn" class="flex-1 py-4 bg-white/80 rounded-2xl border-2 border-pink-200 active:bg-pink-100 text-pink-500 text-2xl flex items-center justify-center shadow-md">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="rightTouchBtn" class="flex-1 py-4 bg-white/80 rounded-2xl border-2 border-pink-200 active:bg-pink-100 text-pink-500 text-2xl flex items-center justify-center shadow-md">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-pink-400 font-medium my-2">
+        <p>🐱 超可愛彩虹喵喵打磚塊 · 速度隨分數升級 · 收集連擊彩虹球！ 🐱</p>
+    </footer>
+
+    <!-- Game Logic Script -->
+    <script>
+        // --- Web Audio API Synthesizer ---
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playPop(freq = 400, duration = 0.08) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.8, this.ctx.currentTime + duration);
+                    
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            playBounce() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(280, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(160, this.ctx.currentTime + 0.1);
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch (e) {}
+            }
+
+            playLose() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.4);
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.4);
+                } catch (e) {}
+            }
+
+            playWin() {
+                if (!this.enabled || !this.ctx) return;
+                const notes = [400, 520, 660, 880];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        this.playPop(freq, 0.15);
+                    }, idx * 100);
+                });
+            }
+        }
+
+        const soundSFX = new SoundEffects();
+
+        // --- Game Setup & State ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Logic Dimensions
+        const CANVAS_WIDTH = 600;
+        const CANVAS_HEIGHT = 700;
+
+        // Visual Colors for 10 Rows of Bricks
+        const ROW_COLORS = [
+            '#ff758f', '#ff8fa3', '#ffb3c1', '#ffccd5', '#ffe5ec',
+            '#b5e2fa', '#90e0ef', '#a8dede', '#f3c4fb', '#e7c6ff'
+        ];
+
+        let score = 0;
+        let highScore = localStorage.getItem('paw_breakout_highscore') || 0;
+        let lives = 3;
+        let comboCount = 0;
+        let gameRunning = false;
+        let animationFrameId = null;
+        let frameTicks = 0;
+
+        // Keys state
+        const keys = {
+            left: false,
+            right: false
+        };
+
+        // --- Game Entities ---
+        
+        // Super Cute Animated Cat Paddle
+        const paddle = {
+            width: 120,
+            height: 24,
+            x: CANVAS_WIDTH / 2 - 60,
+            y: CANVAS_HEIGHT - 45,
+            speed: 9,
+            targetX: CANVAS_WIDTH / 2 - 60,
+            earTilt: 0,        // Dynamic ear tilt based on movement speed
+            blinkTimer: 0,     // Blinking eyes animation timer
+            isBlinking: false
+        };
+
+        // Yarn Ball with Dynamic Speed and Color Scaling
+        const ball = {
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT - 65,
+            radius: 11,
+            dx: 4,
+            dy: -4,
+            baseSpeed: 5.5,
+            currentSpeed: 5.5,
+            rotation: 0,
+            colorHue: 340      // HSL Hue for dynamic rainbow color
+        };
+
+        // Bricks Configuration
+        const brickConfig = {
+            rows: 10,
+            cols: 8,
+            padding: 6,
+            offsetTop: 70,
+            offsetLeft: 15,
+            height: 18
+        };
+
+        let bricks = [];
+        let particles = [];
+        let floatTexts = [];
+
+        // --- Particle & Visual Effects ---
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 4 + 2;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.015;
+                this.shape = Math.random() > 0.5 ? 'circle' : 'heart';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                
+                if (this.shape === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.font = `${this.radius * 2.5}px sans-serif`;
+                    ctx.fillText('♥', this.x, this.y);
+                }
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(text, x, y, color = '#ff4d6d') {
+                this.text = text;
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -1.5;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.02;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.font = 'bold 16px Fredoka, sans-serif';
+                ctx.fillStyle = this.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // --- Initialization ---
+        function initBricks() {
+            const totalWidth = CANVAS_WIDTH - brickConfig.offsetLeft * 2;
+            const brickWidth = (totalWidth - (brickConfig.cols - 1) * brickConfig.padding) / brickConfig.cols;
+            
+            bricks = [];
+            for (let r = 0; r < brickConfig.rows; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const bx = brickConfig.offsetLeft + c * (brickWidth + brickConfig.padding);
+                    const by = brickConfig.offsetTop + r * (brickConfig.height + brickConfig.padding);
+                    bricks[r][c] = {
+                        x: bx,
+                        y: by,
+                        width: brickWidth,
+                        height: brickConfig.height,
+                        status: 1,
+                        color: ROW_COLORS[r % ROW_COLORS.length]
+                    };
+                }
+            }
+        }
+
+        function updateBallSpeed() {
+            // Speed scaling: increases by 0.15 for every 100 points
+            const speedMultiplier = 1 + Math.floor(score / 80) * 0.08;
+            ball.currentSpeed = Math.min(ball.baseSpeed * speedMultiplier, 11.5); // Cap max speed
+            
+            // Update Speed Badge
+            const speedBadge = document.getElementById('speedBadge');
+            if (speedMultiplier > 1) {
+                speedBadge.classList.remove('hidden');
+                document.getElementById('speedText').innerText = `${speedMultiplier.toFixed(1)}x`;
+            } else {
+                speedBadge.classList.add('hidden');
+            }
+        }
+
+        function resetBallAndPaddle() {
+            paddle.x = CANVAS_WIDTH / 2 - paddle.width / 2;
+            paddle.targetX = paddle.x;
+            ball.x = CANVAS_WIDTH / 2;
+            ball.y = paddle.y - ball.radius - 2;
+            
+            updateBallSpeed();
+
+            // Randomize starting upward angle
+            const angle = (Math.random() * 60 - 30) * (Math.PI / 180);
+            ball.dx = ball.currentSpeed * Math.sin(angle);
+            ball.dy = -ball.currentSpeed * Math.cos(angle);
+        }
+
+        function updateUI() {
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('highScoreText').innerText = highScore;
+
+            // Render Heart Icons for Lives
+            const livesContainer = document.getElementById('livesContainer');
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('i');
+                if (i < lives) {
+                    heart.className = 'fa-solid fa-heart text-pink-500 scale-100 transition-transform';
+                } else {
+                    heart.className = 'fa-regular fa-heart text-gray-300 scale-90';
+                }
+                livesContainer.appendChild(heart);
+            }
+
+            // Combo Badge
+            const comboBadge = document.getElementById('comboBadge');
+            if (comboCount >= 2) {
+                comboBadge.classList.remove('hidden');
+                document.getElementById('comboText').innerText = `COMBO x${comboCount}`;
+            } else {
+                comboBadge.classList.add('hidden');
+            }
+
+            updateBallSpeed();
+        }
+
+        // --- Enhanced Drawing Functions ---
+
+        // 1. Ultra Cute Cat Paddle with Floating Ear Physics & Animated Face
+        function drawPaddle() {
+            const { x, y, width, height, earTilt, isBlinking } = paddle;
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+
+            ctx.save();
+
+            // Fluffy Outer Glow
+            ctx.shadowColor = 'rgba(255, 154, 158, 0.4)';
+            ctx.shadowBlur = 10;
+
+            // Main Cat Body (Soft Rounded Pill)
+            ctx.fillStyle = '#ffa6c1';
+            ctx.beginPath();
+            ctx.roundRect(x, y, width, height, height / 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // White Creamy Belly/Inner Area
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(x + 6, y + 3, width - 12, height - 6, (height - 6) / 2);
+            ctx.fill();
+
+            // --- Floating/Bouncing Physics Cat Ears ---
+            // Left Ear
+            const leftEarX = x + 14;
+            ctx.save();
+            ctx.translate(leftEarX, y);
+            ctx.rotate(-0.15 + earTilt); // Physics tilt angle
+            ctx.fillStyle = '#ffa6c1';
+            ctx.beginPath();
+            ctx.moveTo(0, 2);
+            ctx.lineTo(-12, -14);
+            ctx.lineTo(12, 0);
+            ctx.closePath();
+            ctx.fill();
+            // Inner Ear Pink
+            ctx.fillStyle = '#ff6b93';
+            ctx.beginPath();
+            ctx.moveTo(-1, 0);
+            ctx.lineTo(-8, -9);
+            ctx.lineTo(7, -1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Right Ear
+            const rightEarX = x + width - 14;
+            ctx.save();
+            ctx.translate(rightEarX, y);
+            ctx.rotate(0.15 + earTilt); // Physics tilt angle
+            ctx.fillStyle = '#ffa6c1';
+            ctx.beginPath();
+            ctx.moveTo(0, 2);
+            ctx.lineTo(12, -14);
+            ctx.lineTo(-12, 0);
+            ctx.closePath();
+            ctx.fill();
+            // Inner Ear Pink
+            ctx.fillStyle = '#ff6b93';
+            ctx.beginPath();
+            ctx.moveTo(1, 0);
+            ctx.lineTo(8, -9);
+            ctx.lineTo(-7, -1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // --- Animated Cute Face in Center ---
+            // Blushing Cheeks
+            ctx.fillStyle = 'rgba(255, 105, 180, 0.45)';
+            ctx.beginPath();
+            ctx.arc(centerX - 16, centerY + 2, 5, 0, Math.PI * 2);
+            ctx.arc(centerX + 16, centerY + 2, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes (Blinking or Cute Happy Eyes)
+            ctx.fillStyle = '#5a3d46';
+            if (isBlinking) {
+                // Closed Blinking Curved Lines
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#5a3d46';
+                ctx.beginPath();
+                ctx.arc(centerX - 10, centerY, 3, Math.PI, 0);
+                ctx.arc(centerX + 10, centerY, 3, Math.PI, 0);
+                ctx.stroke();
+            } else {
+                // Shiny Cute Eyes
+                ctx.beginPath();
+                ctx.arc(centerX - 10, centerY - 1, 3.5, 0, Math.PI * 2);
+                ctx.arc(centerX + 10, centerY - 1, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                // Eye Highlights
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(centerX - 11, centerY - 2, 1.2, 0, Math.PI * 2);
+                ctx.arc(centerX + 9, centerY - 2, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Tiny Cute Cat Mouth (ω)
+            ctx.strokeStyle = '#5a3d46';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(centerX - 2, centerY + 3, 2, 0, Math.PI);
+            ctx.arc(centerX + 2, centerY + 3, 2, 0, Math.PI);
+            ctx.stroke();
+
+            // Outer Toe Beans on Left and Right Ends
+            ctx.fillStyle = '#ff80bf';
+            ctx.beginPath();
+            ctx.arc(x + 10, centerY, 4, 0, Math.PI * 2);
+            ctx.arc(x + width - 10, centerY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // 2. Dynamic Changing Color & Rainbow Ball with Trail Effects
+        function drawBall() {
+            ctx.save();
+
+            // Color Hue Calculation: Dynamic shifting by combo or high score
+            if (comboCount >= 3 || score >= 200) {
+                // Continuous Rainbow Cycle
+                ball.colorHue = (frameTicks * 3) % 360;
+            } else {
+                // Color shifts from Soft Pink -> Orange -> Purple as speed/score increases
+                ball.colorHue = (340 - (score / 10) * 12) % 360;
+            }
+
+            const mainColor = `hsl(${ball.colorHue}, 90%, 65%)`;
+            const shadowColor = `hsl(${ball.colorHue}, 90%, 80%)`;
+
+            // Rainbow Particle Aura in High Speed / High Combo Mode
+            if (comboCount >= 2 && gameRunning && Math.random() > 0.4) {
+                particles.push(new Particle(ball.x, ball.y, mainColor));
+            }
+
+            ctx.translate(ball.x, ball.y);
+            ctx.rotate(ball.rotation);
+
+            // Ball Glow
+            ctx.shadowColor = shadowColor;
+            ctx.shadowBlur = comboCount >= 3 ? 12 : 5;
+
+            // Main Ball Circle
+            ctx.fillStyle = mainColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // White Yarn Curved Threads
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(-2, -2, ball.radius - 3.5, 0.2, Math.PI * 1.2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(2, 2, ball.radius - 4, 2, Math.PI * 1.8);
+            ctx.stroke();
+
+            // Shiny Center Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(-3, -3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw Bricks
+        function drawBricks() {
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+
+                        // Brick Gradient
+                        const gradient = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.height);
+                        gradient.addColorStop(0, '#ffffff');
+                        gradient.addColorStop(0.35, b.color);
+                        gradient.addColorStop(1, b.color);
+
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.width, b.height, 6);
+                        ctx.fill();
+
+                        // White Top Highlight Line
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.beginPath();
+                        ctx.roundRect(b.x + 2, b.y + 2, b.width - 4, 3, 2);
+                        ctx.fill();
+
+                        // Cute Paw Icon Center
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                        ctx.font = '9px fontawesome';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('🐾', b.x + b.width / 2, b.y + b.height / 2 + 1);
+
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        // --- Collision Logic ---
+
+        function handleCollisions() {
+            // Wall Collisions
+            if (ball.x + ball.dx > CANVAS_WIDTH - ball.radius || ball.x + ball.dx < ball.radius) {
+                ball.dx = -ball.dx;
+                soundSFX.playBounce();
+            }
+
+            if (ball.y + ball.dy < ball.radius) {
+                ball.dy = -ball.dy;
+                soundSFX.playBounce();
+            } else if (ball.y + ball.dy > CANVAS_HEIGHT - ball.radius) {
+                // Ball Dropped
+                lives--;
+                comboCount = 0;
+                soundSFX.playLose();
+                updateUI();
+
+                if (lives <= 0) {
+                    endGame(false);
+                } else {
+                    resetBallAndPaddle();
+                }
+                return;
+            }
+
+            // Paddle Collision (Precise Non-Sticking Physics)
+            if (
+                ball.y + ball.radius >= paddle.y &&
+                ball.y - ball.radius <= paddle.y + paddle.height &&
+                ball.x >= paddle.x - ball.radius &&
+                ball.x <= paddle.x + paddle.width + ball.radius
+            ) {
+                if (ball.dy > 0) {
+                    ball.y = paddle.y - ball.radius; // Position fix
+
+                    const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    const maxAngle = Math.PI / 3.1;
+                    const bounceAngle = hitPoint * maxAngle;
+
+                    // Re-apply current dynamic speed
+                    ball.dx = ball.currentSpeed * Math.sin(bounceAngle);
+                    ball.dy = -ball.currentSpeed * Math.cos(bounceAngle);
+
+                    soundSFX.playBounce();
+                }
+            }
+
+            // Brick Collisions
+            let allCleared = true;
+            for (let r = 0; r < brickConfig.rows; r++) {
+                for (let c = 0; c < brickConfig.cols; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        allCleared = false;
+
+                        if (
+                            ball.x + ball.radius > b.x &&
+                            ball.x - ball.radius < b.x + b.width &&
+                            ball.y + ball.radius > b.y &&
+                            ball.y - ball.radius < b.y + b.height
+                        ) {
+                            b.status = 0;
+                            ball.dy = -ball.dy;
+
+                            comboCount++;
+                            const earnedScore = 10 + (comboCount > 1 ? (comboCount - 1) * 5 : 0);
+                            score += earnedScore;
+
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem('paw_breakout_highscore', highScore);
+                            }
+
+                            soundSFX.playPop(350 + comboCount * 40);
+
+                            // Burst Particles
+                            for (let i = 0; i < 9; i++) {
+                                particles.push(new Particle(b.x + b.width / 2, b.y + b.height / 2, b.color));
+                            }
+
+                            floatTexts.push(new FloatingText(`+${earnedScore}`, b.x + b.width / 2, b.y));
+
+                            updateUI();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (allCleared) {
+                endGame(true);
+            }
+        }
+
+        // --- Main Game Loop ---
+
+        function update() {
+            frameTicks++;
+
+            // Paddle Keyboard Controls
+            let vx = 0;
+            if (keys.left) vx -= paddle.speed;
+            if (keys.right) vx += paddle.speed;
+
+            if (vx !== 0) {
+                paddle.x += vx;
+                paddle.targetX = paddle.x;
+            } else {
+                // Smooth Target Interpolation
+                const prevX = paddle.x;
+                paddle.x += (paddle.targetX - paddle.x) * 0.3;
+                vx = paddle.x - prevX;
+            }
+
+            // Calculate Ear Tilt Physics based on velocity
+            paddle.earTilt = Math.max(-0.25, Math.min(0.25, vx * 0.03));
+
+            // Random Blinking Animation Loop
+            paddle.blinkTimer++;
+            if (paddle.blinkTimer > 180 && Math.random() < 0.05) {
+                paddle.isBlinking = true;
+            }
+            if (paddle.blinkTimer > 195) {
+                paddle.isBlinking = false;
+                paddle.blinkTimer = 0;
+            }
+
+            // Clamp Paddle inside Canvas
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, paddle.x));
+
+            // Ball Position & Rotation
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            ball.rotation += ball.dx * 0.05;
+
+            handleCollisions();
+
+            // Update Particles & Floating Text
+            particles.forEach((p, idx) => {
+                p.update();
+                if (p.alpha <= 0) particles.splice(idx, 1);
+            });
+
+            floatTexts.forEach((ft, idx) => {
+                ft.update();
+                if (ft.alpha <= 0) floatTexts.splice(idx, 1);
+            });
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Subtle Background Grid
+            ctx.strokeStyle = 'rgba(255, 182, 193, 0.15)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < CANVAS_WIDTH; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+
+            drawBricks();
+            drawPaddle();
+            drawBall();
+
+            particles.forEach(p => p.draw(ctx));
+            floatTexts.forEach(ft => ft.draw(ctx));
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            render();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- Game Controls & Flow ---
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            comboCount = 0;
+            frameTicks = 0;
+            gameRunning = true;
+
+            initBricks();
+            resetBallAndPaddle();
+            updateUI();
+
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('resultModal').classList.add('hidden');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function endGame(isWin) {
+            gameRunning = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            const resultModal = document.getElementById('resultModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSub = document.getElementById('modalSub');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalIconContainer = document.getElementById('modalIconContainer');
+
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalHighScore').innerText = highScore;
+
+            if (isWin) {
+                modalTitle.innerText = "喵喵勝利！";
+                modalTitle.className = "text-3xl font-black text-pink-500 mb-1";
+                modalSub.innerText = "太厲害了！你清空了所有的彩虹磚塊！";
+                modalIcon.className = "fa-solid fa-crown text-amber-400";
+                modalIconContainer.className = "w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-3 text-4xl border-2 border-amber-200 shadow-md";
+                soundSFX.playWin();
+            } else {
+                modalTitle.innerText = "Game Over";
+                modalTitle.className = "text-3xl font-black text-pink-600 mb-1";
+                modalSub.innerText = "小球掉落了，再接再厲喵！";
+                modalIcon.className = "fa-solid fa-shield-cat text-pink-500";
+                modalIconContainer.className = "w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mb-3 text-4xl border-2 border-pink-200 shadow-md";
+            }
+
+            resultModal.classList.remove('hidden');
+        }
+
+        // --- Canvas Resizing ---
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            const displayWidth = rect.width;
+            const displayHeight = (displayWidth / CANVAS_WIDTH) * CANVAS_HEIGHT;
+
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+
+            if (!gameRunning) {
+                render();
+            }
+        }
+
+        function getCanvasX(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            return (clientX - rect.left) * scaleX;
+        }
+
+        // --- Event Listeners ---
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const canvasX = getCanvasX(e.clientX);
+            paddle.targetX = canvasX - paddle.width / 2;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const canvasX = getCanvasX(e.touches[0].clientX);
+                paddle.targetX = canvasX - paddle.width / 2;
+            }
+        }, { passive: true });
+
+        const leftTouchBtn = document.getElementById('leftTouchBtn');
+        const rightTouchBtn = document.getElementById('rightTouchBtn');
+
+        leftTouchBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        leftTouchBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        rightTouchBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        rightTouchBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+
+        document.getElementById('soundBtn').addEventListener('click', () => {
+            soundSFX.init();
+            soundSFX.enabled = !soundSFX.enabled;
+            const icon = document.getElementById('soundIcon');
+            icon.className = soundSFX.enabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+        });
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            soundSFX.init();
+            startGame();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            soundSFX.init();
+            startGame();
+        });
+
+        window.onload = () => {
+            resizeCanvas();
+            initBricks();
+            resetBallAndPaddle();
+            updateUI();
+            render();
+        };
+    </script>
+</body>
+</html>

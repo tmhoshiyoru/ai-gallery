@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <title>Chrome Dino Runner - Pastel Weather Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            font-family: 'Press Start 2P', cursive;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+            background-color: #F3F4F6;
+        }
+
+        #canvasContainer {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 8 / 3;
+            max-height: 70vh;
+        }
+
+        #gameCanvas {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            transition: background-color 1s ease;
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 12px;
+        }
+
+        .btn-action {
+            transition: transform 0.05s, background-color 0.15s;
+        }
+        .btn-action:active {
+            transform: scale(0.94);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-slate-100 text-slate-700 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <div class="max-w-4xl w-full flex flex-col items-center">
+        <!-- Header & Stats -->
+        <div class="w-full flex justify-between items-center mb-3 px-2">
+            <h1 class="text-xs sm:text-base md:text-lg font-bold text-slate-600 flex items-center gap-2">
+                <i class="fa-solid fa-dragon text-amber-400"></i> DINO RUNNER
+            </h1>
+            <div class="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
+                <div class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-slate-400">HI:</span> <span id="highScoreText" class="text-amber-500 font-bold">00000</span>
+                </div>
+                <div class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-slate-400">SCORE:</span> <span id="scoreText" class="text-teal-600 font-bold">00000</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative w-full rounded-2xl overflow-hidden bg-white p-1.5 sm:p-3 border border-slate-200 shadow-sm">
+            <div id="canvasContainer">
+                <canvas id="gameCanvas" width="800" height="300"></canvas>
+
+                <!-- Weather Indicator Overlay -->
+                <div id="weatherBadge" class="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/80 backdrop-blur-md border border-slate-200 text-amber-500 px-3 py-1 rounded-full text-[10px] sm:text-xs flex items-center gap-2 pointer-events-none shadow-sm transition-all duration-500">
+                    <i id="weatherIcon" class="fa-solid fa-sun"></i>
+                    <span id="weatherName" class="font-bold">晴天</span>
+                </div>
+
+                <!-- Start / Game Over Overlay -->
+                <div id="overlay" class="absolute inset-0 bg-slate-900/20 backdrop-blur-sm flex flex-col items-center justify-center text-center p-4 z-10 rounded-xl">
+                    <div id="startPrompt" class="space-y-3 sm:space-y-4 bg-white/90 p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-xl max-w-sm w-full">
+                        <i class="fa-solid fa-dragon text-4xl sm:text-5xl text-amber-400 animate-bounce"></i>
+                        <h2 class="text-sm sm:text-base text-slate-700 font-bold">粉色系小恐龍冒險</h2>
+                        <p class="text-[9px] sm:text-[11px] text-slate-500 leading-relaxed">
+                            按 <span class="text-amber-500 font-bold">Space / ↑</span> 開始與跳躍<br>
+                            按 <span class="text-amber-500 font-bold">↓</span> 蹲下避開翼龍！
+                        </p>
+                        <button id="startBtn" class="btn-action bg-amber-400 hover:bg-amber-300 text-slate-800 px-6 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-amber-400/30 w-full">
+                            開始遊戲
+                        </button>
+                    </div>
+
+                    <div id="gameOverPrompt" class="space-y-3 sm:space-y-4 bg-white/90 p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-xl max-w-sm w-full hidden">
+                        <h2 class="text-lg sm:text-2xl text-rose-500 font-bold tracking-wider">GAME OVER</h2>
+                        <p id="finalScoreText" class="text-xs text-slate-600">最終得分: 0</p>
+                        <button id="restartBtn" class="btn-action bg-teal-400 hover:bg-teal-300 text-slate-800 px-6 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-teal-400/30 flex items-center justify-center gap-2 w-full">
+                            <i class="fa-solid fa-rotate-right"></i> 再玩一次
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Controls for Mobile -->
+        <div class="w-full grid grid-cols-2 gap-3 mt-3 md:hidden">
+            <button id="touchJump" class="btn-action bg-white active:bg-amber-100 border border-slate-200 rounded-xl py-3 text-center text-xs font-bold text-amber-500 flex items-center justify-center gap-2 shadow-sm touch-none">
+                <i class="fa-solid fa-arrow-up text-sm"></i>
+                <span>跳躍 (JUMP)</span>
+            </button>
+            <button id="touchDuck" class="btn-action bg-white active:bg-amber-100 border border-slate-200 rounded-xl py-3 text-center text-xs font-bold text-amber-500 flex items-center justify-center gap-2 shadow-sm touch-none">
+                <i class="fa-solid fa-arrow-down text-sm"></i>
+                <span>蹲下 (DUCK)</span>
+            </button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-3 text-center text-[9px] sm:text-[10px] text-slate-400 flex flex-wrap justify-center gap-3 sm:gap-4">
+            <span><i class="fa-solid fa-keyboard"></i> [Space / ↑ / W] 跳躍</span>
+            <span><i class="fa-solid fa-keyboard"></i> [↓ / S] 蹲下</span>
+            <span><i class="fa-solid fa-bolt text-amber-400"></i> 速度持續加快</span>
+            <span><i class="fa-solid fa-cloud-sun text-teal-400"></i> 動態天氣變化</span>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(550, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                } catch(e) {}
+            }
+
+            playScore() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.16);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.16);
+                } catch(e) {}
+            }
+
+            playHit() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                } catch(e) {}
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 300;
+        const GROUND_Y = 245;
+
+        // Soft Pastel Themes
+        const WEATHERS = [
+            { name: '晴天 Day', bg: '#F0F9FF', ground: '#94A3B8', text: '#334155', icon: 'fa-sun', color: '#F59E0B', type: 'SUN' },
+            { name: '夕陽 Sunset', bg: '#FFF7ED', ground: '#CBD5E1', text: '#431407', icon: 'fa-sun-plant-wilt', color: '#EA580C', type: 'SUNSET' },
+            { name: '雨天 Rain', bg: '#F1F5F9', ground: '#94A3B8', text: '#1E293B', icon: 'fa-cloud-showers-heavy', color: '#0284C7', type: 'RAIN' },
+            { name: '雪天 Snow', bg: '#F0FDF4', ground: '#A7F3D0', text: '#065F46', icon: 'fa-snowflake', color: '#059669', type: 'SNOW' },
+            { name: '夜晚 Night', bg: '#1E1B4B', ground: '#6366F1', text: '#EEF2FF', icon: 'fa-moon', color: '#A5B4FC', type: 'NIGHT' }
+        ];
+
+        let isRunning = false;
+        let animFrameId = null;
+        let score = 0;
+        let highScore = parseInt(window.__galleryStorage.getItem('dino_high_score') || '0', 10);
+        let gameSpeed = 5.5;
+        const INITIAL_SPEED = 5.5;
+        let frameCount = 0;
+        let currentWeatherIndex = 0;
+
+        let obstacles = [];
+        let particles = [];
+        let weatherParticles = [];
+        let clouds = [];
+        let stars = [];
+
+        class Dinosaur {
+            constructor() {
+                this.x = 60;
+                this.normalHeight = 46;
+                this.duckHeight = 26;
+                this.width = 44;
+                this.height = this.normalHeight;
+                this.y = GROUND_Y - this.height;
+                this.velocityY = 0;
+                this.gravity = 0.65;
+                this.jumpForce = -12.5;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.animFrame = 0;
+                this.animTimer = 0;
+            }
+
+            reset() {
+                this.height = this.normalHeight;
+                this.width = 44;
+                this.y = GROUND_Y - this.height;
+                this.velocityY = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+            }
+
+            jump() {
+                if (this.isGrounded && !this.isDucking) {
+                    this.velocityY = this.jumpForce;
+                    this.isGrounded = false;
+                    sound.playJump();
+                    createDustParticles(this.x + 10, GROUND_Y);
+                }
+            }
+
+            setDuck(ducking) {
+                if (!this.isGrounded) return;
+                
+                if (ducking && !this.isDucking) {
+                    this.isDucking = true;
+                    this.height = this.duckHeight;
+                    this.width = 54;
+                    this.y = GROUND_Y - this.duckHeight;
+                } else if (!ducking && this.isDucking) {
+                    this.isDucking = false;
+                    this.height = this.normalHeight;
+                    this.width = 44;
+                    this.y = GROUND_Y - this.normalHeight;
+                }
+            }
+
+            update() {
+                // Gravity & Position update
+                if (!this.isGrounded) {
+                    this.velocityY += this.gravity;
+                    this.y += this.velocityY;
+                }
+
+                const floorY = GROUND_Y - this.height;
+
+                if (this.y >= floorY) {
+                    this.y = floorY;
+                    this.velocityY = 0;
+                    if (!this.isGrounded) {
+                        createDustParticles(this.x + 10, GROUND_Y);
+                    }
+                    this.isGrounded = true;
+                }
+
+                this.animTimer++;
+                if (this.animTimer % 6 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            }
+
+            draw(textColor) {
+                ctx.fillStyle = textColor;
+
+                if (this.isDucking) {
+                    ctx.fillRect(this.x, this.y + 6, 38, 18);
+                    ctx.fillRect(this.x + 36, this.y + 2, 18, 12);
+                    ctx.fillRect(this.x + 48, this.y, 6, 4);
+                    // Eye
+                    ctx.fillStyle = WEATHERS[currentWeatherIndex].bg;
+                    ctx.fillRect(this.x + 42, this.y + 4, 3, 3);
+                    ctx.fillStyle = textColor;
+
+                    // Legs
+                    if (this.animFrame === 0) {
+                        ctx.fillRect(this.x + 10, this.y + 24, 6, 4);
+                        ctx.fillRect(this.x + 26, this.y + 24, 6, 2);
+                    } else {
+                        ctx.fillRect(this.x + 10, this.y + 24, 6, 2);
+                        ctx.fillRect(this.x + 26, this.y + 24, 6, 4);
+                    }
+                } else {
+                    ctx.fillRect(this.x + 12, this.y + 12, 22, 22);
+                    ctx.fillRect(this.x + 4, this.y + 16, 8, 8);
+                    ctx.fillRect(this.x, this.y + 12, 4, 6);
+                    ctx.fillRect(this.x + 22, this.y, 22, 16);
+                    ctx.fillRect(this.x + 36, this.y + 12, 8, 4);
+                    
+                    // Eye
+                    ctx.fillStyle = WEATHERS[currentWeatherIndex].bg;
+                    ctx.fillRect(this.x + 26, this.y + 4, 4, 4);
+                    ctx.fillStyle = textColor;
+
+                    // Arms
+                    ctx.fillRect(this.x + 30, this.y + 18, 6, 4);
+
+                    // Legs
+                    if (!this.isGrounded) {
+                        ctx.fillRect(this.x + 14, this.y + 34, 6, 8);
+                        ctx.fillRect(this.x + 24, this.y + 34, 6, 8);
+                    } else if (this.animFrame === 0) {
+                        ctx.fillRect(this.x + 14, this.y + 34, 6, 12);
+                        ctx.fillRect(this.x + 26, this.y + 34, 6, 6);
+                    } else {
+                        ctx.fillRect(this.x + 14, this.y + 34, 6, 6);
+                        ctx.fillRect(this.x + 26, this.y + 34, 6, 12);
+                    }
+                }
+            }
+        }
+
+        class Cactus {
+            constructor() {
+                this.type = 'cactus';
+                this.x = CANVAS_WIDTH + 20;
+                this.variant = Math.floor(Math.random() * 3);
+                
+                if (this.variant === 0) {
+                    this.width = 18;
+                    this.height = 36;
+                } else if (this.variant === 1) {
+                    this.width = 26;
+                    this.height = 48;
+                } else {
+                    this.width = 44;
+                    this.height = 38;
+                }
+                this.y = GROUND_Y - this.height;
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+
+            draw(color) {
+                ctx.fillStyle = color;
+                if (this.variant === 0) {
+                    ctx.fillRect(this.x + 6, this.y, 6, this.height);
+                    ctx.fillRect(this.x, this.y + 10, 6, 12);
+                    ctx.fillRect(this.x, this.y + 18, 18, 4);
+                } else if (this.variant === 1) {
+                    ctx.fillRect(this.x + 9, this.y, 8, this.height);
+                    ctx.fillRect(this.x, this.y + 14, 8, 16);
+                    ctx.fillRect(this.x, this.y + 24, 26, 5);
+                } else {
+                    ctx.fillRect(this.x + 4, this.y + 5, 6, this.height - 5);
+                    ctx.fillRect(this.x + 18, this.y, 8, this.height);
+                    ctx.fillRect(this.x + 32, this.y + 10, 6, this.height - 10);
+                }
+            }
+        }
+
+        class Pterodactyl {
+            constructor() {
+                this.type = 'bird';
+                this.x = CANVAS_WIDTH + 20;
+                this.width = 42;
+                this.height = 26;
+                
+                // Height Options:
+                // Low: GROUND_Y - 30 (Must duck)
+                // Mid: GROUND_Y - 55 (Can duck or jump)
+                const heights = [GROUND_Y - 30, GROUND_Y - 55];
+                this.y = heights[Math.floor(Math.random() * heights.length)];
+                this.animFrame = 0;
+                this.animTimer = 0;
+                this.flySpeed = 1.2; // Extra speed flying left relative to terrain
+            }
+
+            update() {
+                // Flies from RIGHT to LEFT towards player!
+                this.x -= (gameSpeed + this.flySpeed);
+                
+                this.animTimer++;
+                if (this.animTimer % 8 === 0) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                }
+            }
+
+            draw(color) {
+                ctx.fillStyle = color;
+                // Wings & Body facing LEFT
+                ctx.fillRect(this.x + 10, this.y + 8, 22, 8);
+                ctx.fillRect(this.x, this.y + 4, 12, 6); // Beak facing left
+
+                if (this.animFrame === 0) {
+                    ctx.fillRect(this.x + 16, this.y - 6, 8, 14);
+                } else {
+                    ctx.fillRect(this.x + 16, this.y + 14, 8, 14);
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, vx, vy, size, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = size;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function createDustParticles(x, y) {
+            for (let i = 0; i < 5; i++) {
+                particles.push(new Particle(
+                    x,
+                    y,
+                    (Math.random() - 0.5) * 2 - 1,
+                    -Math.random() * 2,
+                    Math.random() * 3 + 2,
+                    '#CBD5E1',
+                    15 + Math.random() * 10
+                ));
+            }
+        }
+
+        function createHitParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(
+                    x,
+                    y,
+                    (Math.random() - 0.5) * 6,
+                    (Math.random() - 0.5) * 6,
+                    Math.random() * 4 + 2,
+                    '#F43F5E',
+                    25 + Math.random() * 10
+                ));
+            }
+        }
+
+        function updateWeatherParticles() {
+            const weather = WEATHERS[currentWeatherIndex];
+            
+            if (weather.type === 'RAIN' && Math.random() < 0.6) {
+                weatherParticles.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: 0,
+                    length: Math.random() * 10 + 6,
+                    speedY: Math.random() * 6 + 8,
+                    speedX: -1.5,
+                    color: '#38BDF8'
+                });
+            } else if (weather.type === 'SNOW' && Math.random() < 0.4) {
+                weatherParticles.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: 0,
+                    size: Math.random() * 3 + 2,
+                    speedY: Math.random() * 1.5 + 1,
+                    speedX: Math.sin(frameCount / 10) * 1 - 0.5,
+                    color: '#34D399'
+                });
+            }
+
+            for (let i = weatherParticles.length - 1; i >= 0; i--) {
+                let p = weatherParticles[i];
+                p.x += p.speedX;
+                p.y += p.speedY;
+
+                ctx.fillStyle = p.color;
+                if (weather.type === 'RAIN') {
+                    ctx.fillRect(p.x, p.y, 1.5, p.length);
+                } else {
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
+
+                if (p.y > CANVAS_HEIGHT || p.x < 0) {
+                    weatherParticles.splice(i, 1);
+                }
+            }
+        }
+
+        function initCloudsAndStars() {
+            clouds = [];
+            for (let i = 0; i < 4; i++) {
+                clouds.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: Math.random() * 80 + 20,
+                    width: Math.random() * 40 + 40
+                });
+            }
+
+            stars = [];
+            for (let i = 0; i < 25; i++) {
+                stars.push({
+                    x: Math.random() * CANVAS_WIDTH,
+                    y: Math.random() * 120,
+                    size: Math.random() * 2 + 1,
+                    blink: Math.random() * 100
+                });
+            }
+        }
+
+        function drawBackground() {
+            const weather = WEATHERS[currentWeatherIndex];
+            canvas.style.backgroundColor = weather.bg;
+
+            // Night Sky Stars and Pastel Moon
+            if (weather.type === 'NIGHT') {
+                ctx.fillStyle = '#E0E7FF';
+                stars.forEach(star => {
+                    star.blink++;
+                    if (Math.sin(star.blink / 10) > 0) {
+                        ctx.fillRect(star.x, star.y, star.size, star.size);
+                    }
+                });
+                ctx.fillStyle = '#FDE047';
+                ctx.beginPath();
+                ctx.arc(700, 50, 16, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Sun / Sunset
+            if (weather.type === 'SUN' || weather.type === 'SUNSET') {
+                ctx.fillStyle = weather.type === 'SUN' ? '#FDE047' : '#FB923C';
+                ctx.beginPath();
+                ctx.arc(720, weather.type === 'SUN' ? 50 : 80, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Clouds
+            ctx.fillStyle = (weather.type === 'NIGHT') ? '#312E81' : '#E2E8F0';
+            clouds.forEach(cloud => {
+                cloud.x -= gameSpeed * 0.15;
+                if (cloud.x + cloud.width < 0) {
+                    cloud.x = CANVAS_WIDTH + Math.random() * 50;
+                    cloud.y = Math.random() * 80 + 20;
+                }
+                ctx.fillRect(cloud.x, cloud.y, cloud.width, 10);
+                ctx.fillRect(cloud.x + 10, cloud.y - 5, cloud.width - 20, 5);
+            });
+
+            // Ground Line
+            ctx.fillStyle = weather.ground;
+            ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 3);
+
+            // Ground Texture Dots
+            for (let i = 0; i < CANVAS_WIDTH; i += 30) {
+                if ((i + Math.floor(frameCount * gameSpeed)) % 70 === 0) {
+                    ctx.fillRect(i, GROUND_Y + 10, 6, 2);
+                    ctx.fillRect(i + 14, GROUND_Y + 18, 4, 2);
+                }
+            }
+        }
+
+        const dino = new Dinosaur();
+
+        function checkWeatherChange() {
+            const newIndex = Math.floor(score / 300) % WEATHERS.length;
+            if (newIndex !== currentWeatherIndex) {
+                currentWeatherIndex = newIndex;
+                weatherParticles = [];
+
+                const weather = WEATHERS[currentWeatherIndex];
+                const badge = document.getElementById('weatherBadge');
+                badge.style.color = weather.color;
+                document.getElementById('weatherIcon').className = `fa-solid ${weather.icon}`;
+                document.getElementById('weatherName').innerText = weather.name;
+            }
+        }
+
+        function spawnObstacles() {
+            // Dynamic minimum distance that scales as speed increases
+            // Ensures player always has enough time to react and jump!
+            const minGap = 260 + gameSpeed * 15;
+            
+            if (obstacles.length === 0 || (CANVAS_WIDTH - obstacles[obstacles.length - 1].x) > (minGap + Math.random() * 180)) {
+                if (score > 150 && Math.random() < 0.35) {
+                    obstacles.push(new Pterodactyl());
+                } else {
+                    obstacles.push(new Cactus());
+                }
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            const padX = 6;
+            const padY = 4;
+            return (
+                rect1.x + padX < rect2.x + rect2.width &&
+                rect1.x + rect1.width - padX > rect2.x &&
+                rect1.y + padY < rect2.y + rect2.height &&
+                rect1.y + rect1.height - padY > rect2.y
+            );
+        }
+
+        function gameLoop() {
+            if (!isRunning) return;
+
+            frameCount++;
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            checkWeatherChange();
+            drawBackground();
+            updateWeatherParticles();
+
+            // Continuous Speed Acceleration (的速度要越來越快 不能等速)
+            gameSpeed = INITIAL_SPEED + (score * 0.005);
+
+            // Update Dino
+            dino.update();
+            dino.draw(WEATHERS[currentWeatherIndex].text);
+
+            // Update & Check Obstacles
+            spawnObstacles();
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.update();
+                obs.draw(WEATHERS[currentWeatherIndex].text);
+
+                if (checkCollision(dino, obs)) {
+                    createHitParticles(dino.x + dino.width / 2, dino.y + dino.height / 2);
+                    gameOver();
+                    return;
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Update Dust Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            // Score Logic
+            if (frameCount % 4 === 0) {
+                score++;
+                if (score > 0 && score % 100 === 0) {
+                    sound.playScore();
+                }
+                document.getElementById('scoreText').innerText = String(score).padStart(5, '0');
+            }
+
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            
+            sound.init();
+            score = 0;
+            gameSpeed = INITIAL_SPEED;
+            frameCount = 0;
+            currentWeatherIndex = 0;
+            obstacles = [];
+            particles = [];
+            weatherParticles = [];
+            
+            dino.reset();
+            initCloudsAndStars();
+
+            document.getElementById('scoreText').innerText = '00000';
+            document.getElementById('highScoreText').innerText = String(highScore).padStart(5, '0');
+            document.getElementById('overlay').classList.add('hidden');
+
+            isRunning = true;
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            isRunning = false;
+            sound.playHit();
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('dino_high_score', highScore);
+                document.getElementById('highScoreText').innerText = String(highScore).padStart(5, '0');
+            }
+
+            document.getElementById('finalScoreText').innerText = `最終得分: ${score}`;
+            document.getElementById('startPrompt').classList.add('hidden');
+            document.getElementById('gameOverPrompt').classList.remove('hidden');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function triggerJump() {
+            sound.init();
+            if (!isRunning) {
+                startGame();
+            } else {
+                dino.jump();
+            }
+        }
+
+        function setDuckState(ducking) {
+            if (isRunning) {
+                dino.setDuck(ducking);
+            }
+        }
+
+        const activeKeys = {};
+
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (activeKeys[e.code]) return;
+            activeKeys[e.code] = true;
+
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                triggerJump();
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                setDuckState(true);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            activeKeys[e.code] = false;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                setDuckState(false);
+            }
+        });
+
+        const canvasContainer = document.getElementById('canvasContainer');
+        canvasContainer.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            e.preventDefault();
+            triggerJump();
+        });
+
+        // Touch Control Buttons for Mobile
+        const touchJumpBtn = document.getElementById('touchJump');
+        const touchDuckBtn = document.getElementById('touchDuck');
+
+        touchJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerJump();
+        });
+
+        touchDuckBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            setDuckState(true);
+        });
+
+        touchDuckBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            setDuckState(false);
+        });
+
+        document.getElementById('startBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+
+        // Initial Initialization
+        document.getElementById('highScoreText').innerText = String(highScore).padStart(5, '0');
+        initCloudsAndStars();
+        drawBackground();
+        dino.draw('#334155');
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

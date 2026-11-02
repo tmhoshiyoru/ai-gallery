@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打磚塊經典遊戲 - 綠色主題</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at center, #062016 0%, #020b07 100%);
+            touch-action: none;
+            user-select: none;
+        }
+        .canvas-container {
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.25), 0 0 10px rgba(52, 211, 153, 0.1);
+        }
+        .btn-emerald {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.2s ease;
+        }
+        .btn-emerald:hover {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+            transform: translateY(-2px);
+        }
+        .btn-emerald:active {
+            transform: translateY(1px);
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 text-emerald-100">
+
+    <!-- 主遊戲容器 -->
+    <div class="w-full max-w-xl flex flex-col items-center">
+        
+        <!-- 頂部標題與資訊欄 -->
+        <div class="w-full flex justify-between items-center mb-3 px-2">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-wider text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-cubes"></i> BRICK BREAKER
+                </h1>
+                <p class="text-xs text-emerald-600 font-semibold">GREEN EDITION</p>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-4 py-2">
+                <!-- 生命值 -->
+                <div class="text-center">
+                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest">Lives</div>
+                    <div id="lives" class="text-lg font-black text-red-500 tracking-widest">❤️❤️❤️</div>
+                </div>
+                <div class="h-6 w-px bg-emerald-800/50"></div>
+                <!-- 分數 -->
+                <div class="text-center">
+                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest">Score</div>
+                    <div id="score" class="text-xl font-black text-emerald-300">0</div>
+                </div>
+                <div class="h-6 w-px bg-emerald-800/50"></div>
+                <!-- 最高分 -->
+                <div class="text-center">
+                    <div class="text-[10px] text-emerald-500 uppercase tracking-widest">Best</div>
+                    <div id="highScore" class="text-xl font-black text-emerald-500">0</div>
+                </div>
+                <div class="h-6 w-px bg-emerald-800/50"></div>
+                <!-- 音效 Toggle -->
+                <button id="soundBtn" class="text-emerald-400 hover:text-emerald-200 transition text-sm p-1" title="切換音效">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <!-- 重新開始按鈕 -->
+                <button id="restartBtn" class="text-emerald-400 hover:text-emerald-200 transition text-sm p-1 ml-1" title="重新開始">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas 遊戲畫布與浮層容器 -->
+        <div class="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-emerald-600/40 canvas-container bg-emerald-950/90">
+            
+            <canvas id="gameCanvas" class="w-full h-full block cursor-none"></canvas>
+
+            <!-- 初始 / 暫停 / 遊戲結束浮層 Overlay -->
+            <div id="overlay" class="absolute inset-0 bg-emerald-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-10 transition-all duration-300">
+                <div id="overlayIcon" class="text-5xl mb-3 text-emerald-400">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <h2 id="overlayTitle" class="text-3xl font-black mb-1 text-emerald-300">準備挑戰？</h2>
+                <p id="overlaySubtitle" class="text-sm text-emerald-400/80 mb-6">消滅畫面上的全部磚塊即可過關！</p>
+                
+                <button id="startBtn" class="btn-emerald text-emerald-950 font-bold px-8 py-3 rounded-xl text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> 按 Enter 或點擊開始
+                </button>
+            </div>
+        </div>
+
+        <!-- 底部控制說明 -->
+        <div class="w-full mt-3 flex justify-between items-center text-xs text-emerald-500/80 px-2">
+            <div class="flex items-center gap-3">
+                <span><kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">◀</kbd> <kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">▶</kbd> 或 <kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">A</kbd> <kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">D</kbd> 移動</span>
+                <span><kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">Space</kbd> 暫停</span>
+                <span><kbd class="px-1.5 py-0.5 bg-emerald-900 border border-emerald-700 rounded text-emerald-300">Enter</kbd> 開始/重來</span>
+            </div>
+            <div>支援觸控與滑鼠拖曳</div>
+        </div>
+    </div>
+
+    <!-- 遊戲邏輯程式碼 -->
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI 元素
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const livesEl = document.getElementById('lives');
+        const overlay = document.getElementById('overlay');
+        const overlayIcon = document.getElementById('overlayIcon');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // 設置 Canvas 解析度
+        const CANVAS_WIDTH = 600;
+        const CANVAS_HEIGHT = 450;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // 遊戲狀態變數
+        let score = 0;
+        let lives = 3;
+        let highScore = window.__galleryStorage.getItem('breakout_green_highscore') || 0;
+        highScoreEl.textContent = highScore;
+
+        let gameRunning = false;
+        let isPaused = false;
+        let soundEnabled = true;
+
+        // 小球屬性
+        const ballRadius = 7;
+        let x = CANVAS_WIDTH / 2;
+        let y = CANVAS_HEIGHT - 30;
+        let dx = 3.5;
+        let dy = -3.5;
+
+        // 滑塊屬性
+        const paddleHeight = 12;
+        const paddleWidth = 90;
+        let paddleX = (CANVAS_WIDTH - paddleWidth) / 2;
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // 磚塊設定 (3排 x 8列 = 24個磚塊)
+        const brickRowCount = 3;
+        const brickColumnCount = 8;
+        const brickPadding = 8;
+        const brickOffsetTop = 50;
+        const brickOffsetLeft = 25;
+        const brickWidth = (CANVAS_WIDTH - (brickOffsetLeft * 2) - (brickPadding * (brickColumnCount - 1))) / brickColumnCount;
+        const brickHeight = 16;
+
+        // 磚塊顏色 (綠色系層次)
+        const brickColors = [
+            { main: '#34d399', shadow: '#059669' }, // 亮翡翠綠 (上層)
+            { main: '#10b981', shadow: '#047857' }, // 中純綠 (中層)
+            { main: '#059669', shadow: '#065f46' }  // 深森林綠 (下層)
+        ];
+
+        let bricks = [];
+
+        // 音效系統 (Web Audio API)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(freq, type = 'sine', duration = 0.1) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // 初始化磚塊
+        function initBricks() {
+            bricks = [];
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r] = { x: 0, y: 0, status: 1, colorIndex: r };
+                }
+            }
+        }
+
+        // 事件監聽：鍵盤控制
+        document.addEventListener('keydown', keyDownHandler, false);
+        document.addEventListener('keyup', keyUpHandler, false);
+        
+        // 全局 Enter 鍵與視窗聚焦處理
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!gameRunning) {
+                    startGame();
+                } else if (isPaused) {
+                    togglePause();
+                }
+            }
+        });
+
+        // 滑鼠與觸控移動控制
+        document.addEventListener('mousemove', mouseMoveHandler, false);
+        canvas.addEventListener('touchmove', touchMoveHandler, { passive: false });
+
+        function keyDownHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = true;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = true;
+            } else if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                togglePause();
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = false;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = false;
+            }
+        }
+
+        function mouseMoveHandler(e) {
+            if (!gameRunning || isPaused) return;
+            const relativeX = e.clientX - canvas.getBoundingClientRect().left;
+            const canvasScale = CANVAS_WIDTH / canvas.getBoundingClientRect().width;
+            const currentX = relativeX * canvasScale;
+            if (currentX > 0 && currentX < CANVAS_WIDTH) {
+                paddleX = currentX - paddleWidth / 2;
+                keepPaddleInBounds();
+            }
+        }
+
+        function touchMoveHandler(e) {
+            if (!gameRunning || isPaused) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const relativeX = touch.clientX - canvas.getBoundingClientRect().left;
+            const canvasScale = CANVAS_WIDTH / canvas.getBoundingClientRect().width;
+            const currentX = relativeX * canvasScale;
+            if (currentX > 0 && currentX < CANVAS_WIDTH) {
+                paddleX = currentX - paddleWidth / 2;
+                keepPaddleInBounds();
+            }
+        }
+
+        function keepPaddleInBounds() {
+            if (paddleX < 0) paddleX = 0;
+            if (paddleX + paddleWidth > CANVAS_WIDTH) paddleX = CANVAS_WIDTH - paddleWidth;
+        }
+
+        // 開始 / 重置遊戲
+        function startGame() {
+            score = 0;
+            lives = 3;
+            scoreEl.textContent = score;
+            updateLivesUI();
+            
+            initBricks();
+            resetBallAndPaddle();
+
+            gameRunning = true;
+            isPaused = false;
+            overlay.classList.add('hidden');
+            
+            playSound(523.25, 'triangle', 0.15); // C5 音效
+            window.focus();
+            draw();
+        }
+
+        // 重置球與滑塊位置
+        function resetBallAndPaddle() {
+            x = CANVAS_WIDTH / 2;
+            y = CANVAS_HEIGHT - 35;
+            // 隨機初始角度
+            const speed = 4.5;
+            const angle = (Math.random() * Math.PI / 3) + Math.PI / 3; // 60~120度向上
+            dx = speed * Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1);
+            dy = -speed * Math.sin(angle);
+            paddleX = (CANVAS_WIDTH - paddleWidth) / 2;
+        }
+
+        function updateLivesUI() {
+            livesEl.textContent = '❤️'.repeat(lives);
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                overlayTitle.textContent = "遊戲暫停";
+                overlaySubtitle.textContent = "按下 Enter 或空白鍵繼續遊戲";
+                overlayIcon.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                startBtn.innerHTML = '<i class="fa-solid fa-play"></i> 繼續遊戲';
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+                draw();
+            }
+        }
+
+        // 碰撞檢測
+        function collisionDetection() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (b.status === 1) {
+                        if (x + ballRadius > b.x && x - ballRadius < b.x + brickWidth &&
+                            y + ballRadius > b.y && y - ballRadius < b.y + brickHeight) {
+                            
+                            dy = -dy;
+                            b.status = 0;
+                            score += 10;
+                            scoreEl.textContent = score;
+                            playSound(400 + (score * 5), 'sine', 0.08);
+
+                            // 檢查是否全清過關 (24個磚塊全滅)
+                            let remainingBricks = 0;
+                            for (let col = 0; col < brickColumnCount; col++) {
+                                for (let row = 0; row < brickRowCount; row++) {
+                                    if (bricks[col][row].status === 1) remainingBricks++;
+                                }
+                            }
+
+                            if (remainingBricks === 0) {
+                                victory();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 勝利判定
+        function victory() {
+            gameRunning = false;
+            playSound(587.33, 'triangle', 0.1);
+            setTimeout(() => playSound(880, 'triangle', 0.3), 150);
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_green_highscore', highScore);
+                highScoreEl.textContent = highScore;
+            }
+
+            overlayIcon.innerHTML = '<i class="fa-solid fa-trophy text-yellow-400"></i>';
+            overlayTitle.textContent = "恭喜通關！";
+            overlaySubtitle.textContent = `完美清空磚塊！最終得分：${score} 分`;
+            startBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再玩一次 (Enter)';
+            overlay.classList.remove('hidden');
+        }
+
+        // Game Over 判定
+        function gameOver() {
+            gameRunning = false;
+            playSound(150, 'sawtooth', 0.4);
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('breakout_green_highscore', highScore);
+                highScoreEl.textContent = highScore;
+            }
+
+            overlayIcon.innerHTML = '<i class="fa-solid fa-skull text-red-400"></i>';
+            overlayTitle.textContent = "GAME OVER";
+            overlaySubtitle.textContent = `生命值已歸零！最終得分：${score} 分`;
+            startBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 重新開始 (Enter)';
+            overlay.classList.remove('hidden');
+        }
+
+        // 繪製球體
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#6ee7b7'; // 薄荷螢光綠
+            ctx.shadowColor = '#34d399';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0; // 重置陰影
+        }
+
+        // 繪製滑塊
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.roundRect(paddleX, CANVAS_HEIGHT - paddleHeight - 8, paddleWidth, paddleHeight, 6);
+            ctx.fillStyle = '#10b981';
+            ctx.shadowColor = '#059669';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+        }
+
+        // 繪製磚塊
+        function drawBricks() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    if (bricks[c][r].status === 1) {
+                        const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                        const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                        bricks[c][r].x = brickX;
+                        bricks[c][r].y = brickY;
+
+                        const colors = brickColors[r % brickColors.length];
+                        
+                        ctx.beginPath();
+                        ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 3);
+                        ctx.fillStyle = colors.main;
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+
+        // 主畫面繪製迴圈
+        function draw() {
+            if (!gameRunning || isPaused) return;
+
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            drawBricks();
+            drawBall();
+            drawPaddle();
+            collisionDetection();
+
+            // 左右牆壁反彈
+            if (x + dx > CANVAS_WIDTH - ballRadius || x + dx < ballRadius) {
+                dx = -dx;
+                playSound(250, 'square', 0.05);
+            }
+            // 天花板反彈
+            if (y + dy < ballRadius) {
+                dy = -dy;
+                playSound(250, 'square', 0.05);
+            } 
+            // 底部碰撞/掉落判定
+            else if (y + dy > CANVAS_HEIGHT - ballRadius - 12) {
+                // 接到球
+                if (x > paddleX - 5 && x < paddleX + paddleWidth + 5) {
+                    // 根據擊球位置動態調整反彈角度
+                    const hitPoint = (x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
+                    dx = hitPoint * 4.5;
+                    dy = -Math.abs(dy);
+                    playSound(320, 'triangle', 0.08);
+                } 
+                // 掉落底部
+                else if (y + dy > CANVAS_HEIGHT - ballRadius) {
+                    lives--;
+                    updateLivesUI();
+                    playSound(180, 'sawtooth', 0.2);
+
+                    if (lives <= 0) {
+                        gameOver();
+                        return;
+                    } else {
+                        resetBallAndPaddle();
+                    }
+                }
+            }
+
+            // 滑塊移動控制
+            if (rightPressed && paddleX < CANVAS_WIDTH - paddleWidth) {
+                paddleX += 6;
+            } else if (leftPressed && paddleX > 0) {
+                paddleX -= 6;
+            }
+
+            x += dx;
+            y += dy;
+
+            requestAnimationFrame(draw);
+        }
+
+        // UI 按鈕事件綁定
+        startBtn.addEventListener('click', () => {
+            if (!gameRunning) startGame();
+            else if (isPaused) togglePause();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            startGame();
+        });
+
+        soundBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundBtn.innerHTML = soundEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark text-red-400"></i>';
+        });
+
+        // 初始化磚塊陣列與渲染背景
+        initBricks();
+        
+        // 點擊頁面自動獲得鍵盤焦點
+        window.addEventListener('click', () => window.focus());
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

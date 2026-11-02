@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典賽博打磚塊 (Neon Breakout Classic)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖標庫 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* 霓虹文字發光特效 */
+        .text-glow-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+        .text-glow-rose {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+
+        /* 賽博霓虹風格按鈕 */
+        .btn-neon {
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+            transition: all 0.2s ease;
+        }
+        .btn-neon:hover {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.8);
+            transform: scale(1.02);
+        }
+        .btn-neon:active {
+            transform: scale(0.98);
+        }
+
+        /* Canvas 外觀樣式 */
+        canvas {
+            background: radial-gradient(circle at center, #0b0f19 0%, #030712 100%);
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
+            border-radius: 1rem;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+body { height: 100vh !important; }
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="flex flex-col justify-between items-center p-3 sm:p-6 relative">
+
+    <!-- 頂部遊戲資訊欄 (HUD) -->
+    <header class="w-full max-w-2xl z-10 flex justify-between items-center bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 backdrop-blur-md shadow-2xl mb-3">
+        <div class="flex items-center space-x-4 sm:space-x-8">
+            <div>
+                <span class="text-[10px] sm:text-xs text-slate-400 block font-orbitron">SCORE</span>
+                <span id="score-val" class="font-orbitron font-extrabold text-2xl sm:text-3xl text-cyan-400 text-glow-cyan">0</span>
+            </div>
+            <div class="h-8 w-px bg-slate-800"></div>
+            <div>
+                <span class="text-[10px] sm:text-xs text-slate-400 block font-orbitron">HIGH SCORE</span>
+                <span id="high-score-val" class="font-orbitron font-extrabold text-xl sm:text-2xl text-amber-400">0</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 transition text-sm">
+                <i id="sound-icon" class="fas fa-volume-up"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 遊戲主 Canvas 畫布與覆蓋層 -->
+    <main class="w-full max-w-2xl flex-1 flex items-center justify-center relative overflow-hidden my-auto">
+        
+        <!-- 中央遊戲畫布 (Canvas) -->
+        <canvas id="gameCanvas" class="w-full h-full border border-slate-800/80"></canvas>
+
+        <!-- 遊戲開始 / Game Over 彈出面板 -->
+        <div id="game-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center z-30 p-6 text-center rounded-2xl">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl text-white shadow-lg mb-4 shadow-cyan-500/30">
+                <i class="fas fa-cubes"></i>
+            </div>
+            
+            <h1 id="overlay-title" class="text-3xl sm:text-5xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-glow-cyan mb-2">
+                NEON BREAKOUT
+            </h1>
+            
+            <p id="overlay-desc" class="text-slate-400 text-xs sm:text-sm mb-6 max-w-md">
+                使用左右方向鍵或滑鼠移動底部滑塊，擊碎所有磚塊！
+            </p>
+            
+            <!-- 分數統計區塊 (結束時顯示) -->
+            <div id="stats-summary" class="hidden grid grid-cols-2 gap-4 w-full max-w-xs mb-6 font-orbitron text-left">
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block">FINAL SCORE</span>
+                    <span id="final-score" class="text-xl font-bold text-cyan-400">0</span>
+                </div>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <span class="text-[10px] text-slate-500 block">BEST SCORE</span>
+                    <span id="best-score" class="text-xl font-bold text-amber-400">0</span>
+                </div>
+            </div>
+
+            <!-- 開始/重試按鈕 -->
+            <button id="start-btn" onclick="startGame()" class="w-full max-w-xs py-3.5 rounded-xl font-orbitron font-extrabold text-base text-white btn-neon tracking-wider">
+                <i class="fas fa-play mr-2"></i>START GAME
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部操作指示欄 -->
+    <footer class="w-full max-w-2xl text-center text-[11px] text-slate-500 mt-3 font-orbitron flex justify-between items-center px-2">
+        <span><i class="fas fa-keyboard mr-1"></i> CONTROLS: LEFT / RIGHT ARROWS</span>
+        <span>CLASSIC EDITION</span>
+    </footer>
+
+    <script>
+        // Web Audio API 音效產生器 (無須外掛音效檔)
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            // 擊中滑塊音效
+            playPaddleHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } catch(e){}
+            }
+
+            // 擊碎磚塊音效
+            playBrickHit() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(850, now + 0.08);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } catch(e){}
+            }
+
+            // Game Over 音效
+            playGameOver() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } catch(e){}
+            }
+
+            // 通關慶祝音效
+            playWin() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.2);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.1);
+                        osc.stop(now + idx * 0.1 + 0.2);
+                    });
+                } catch(e){}
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // Canvas 畫布與全域遊戲變數
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let isGameRunning = false;
+        let score = 0;
+        let highScore = window.__galleryStorage.getItem('classic_breakout_high') || 0;
+
+        // 科目名稱列表 (填入磚塊中)
+        const SUBJECTS = [
+            '國語', '數學', '英文', '自然', '社會', '歷史', '地理',
+            '物理', '化學', '生物', '地科', '公民', '音樂', '美術',
+            '體育', '資訊', '家政', '童軍', '健體', '科技', '藝術'
+        ];
+
+        // 3 排磚塊的顏色設定 (鮮豔霓虹色彩)
+        const ROW_COLORS = [
+            '#f43f5e', // 第一排：亮玫瑰紅
+            '#3b82f6', // 第二排：寶藍色
+            '#10b981'  // 第三排：翡翠綠
+        ];
+
+        // 滑塊 (Paddle) 物件定義
+        let paddle = {
+            w: 100,
+            h: 14,
+            x: 0,
+            y: 0,
+            speed: 8
+        };
+
+        // 球體 (Ball/Chalk) 物件定義 - 改為粉筆樣式
+        let ball = {
+            x: 0,
+            y: 0,
+            radius: 8,       // 碰撞判定半徑
+            w: 24,           // 粉筆長度
+            h: 8,            // 粉筆寬度
+            angle: 0,        // 粉筆飛行旋轉角度
+            vx: 0,
+            vy: 0,
+            speed: 8.5,
+            maxSpeed: 16.0, // 球速上限
+            speedInc: 0.25  // 每擊中一塊磚塊增加的速度
+        };
+
+        // 磚塊陣列與爆破/粉筆灰粒子
+        let bricks = [];
+        let particles = [];
+        let chalkDust = []; // 粉筆飛行尾跡粒子
+        let sparks = [];    // 撞擊火花粒子
+
+        // 按鍵按壓狀態
+        let leftPressed = false;
+        let rightPressed = false;
+
+        // 畫面尺寸適應邏輯
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+
+            // 調整滑塊初始 Y 軸位置
+            paddle.y = canvas.height - 35;
+            if (!isGameRunning) {
+                paddle.x = (canvas.width - paddle.w) / 2;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // 初始化 3 排磚塊
+        function initBricks() {
+            bricks = [];
+            const rows = 3; // 依要求生成 3 排
+            const cols = 10; // 欄數 10 欄
+            const padding = 8;
+            const offsetTop = 45;
+            const offsetLeft = 12;
+
+            // 動態計算每塊磚塊寬度以完美適應畫布
+            const brickWidth = (canvas.width - (offsetLeft * 2) - (padding * (cols - 1))) / cols;
+            const brickHeight = 22;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const subjectIndex = (r * cols + c) % SUBJECTS.length;
+                    bricks.push({
+                        x: offsetLeft + c * (brickWidth + padding),
+                        y: offsetTop + r * (brickHeight + padding),
+                        w: brickWidth,
+                        h: brickHeight,
+                        color: ROW_COLORS[r],
+                        text: SUBJECTS[subjectIndex],
+                        active: true
+                    });
+                }
+            }
+        }
+
+        // 創建碰撞粒子爆炸特效
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 2.5 + 1,
+                    color: color,
+                    alpha: 1,
+                    life: 0.04
+                });
+            }
+        }
+
+        // 創建撞擊火花特效 (Sparks)
+        function createSparks(x, y, count = 15, baseColor = '#ffb703') {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 2;
+                sparks.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    length: Math.random() * 8 + 4,
+                    color: Math.random() > 0.4 ? baseColor : '#ffffff',
+                    alpha: 1,
+                    life: Math.random() * 0.08 + 0.05
+                });
+            }
+        }
+
+        // 創建粉筆飛行尾跡 (粉筆灰特效)
+        function createChalkDust(x, y) {
+            for (let i = 0; i < 2; i++) {
+                chalkDust.push({
+                    x: x + (Math.random() - 0.5) * 6,
+                    y: y + (Math.random() - 0.5) * 6,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    radius: Math.random() * 2 + 1,
+                    alpha: 0.7,
+                    life: 0.05
+                });
+            }
+        }
+
+        // 鍵盤事件監聽 (左右方向鍵)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = false;
+        });
+
+        // 滑鼠移動控制
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isGameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, mouseX - paddle.w / 2));
+        });
+
+        // 觸控螢幕拖曳控制
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isGameRunning || !e.touches[0]) return;
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, touchX - paddle.w / 2));
+        });
+
+        // 核心邏輯更新
+        function update() {
+            if (!isGameRunning) return;
+
+            // 1. 移動滑塊
+            if (leftPressed) {
+                paddle.x = Math.max(0, paddle.x - paddle.speed);
+            }
+            if (rightPressed) {
+                paddle.x = Math.min(canvas.width - paddle.w, paddle.x + paddle.speed);
+            }
+
+            // 2. 移動球體 (粉筆)
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // 計算粉筆飛行的傾斜角度 (依據速度方向)
+            ball.angle = Math.atan2(ball.vy, ball.vx);
+
+            // 產生粉筆飛行的粉筆灰尾跡
+            createChalkDust(ball.x, ball.y);
+
+            // 3. 牆壁邊界碰撞檢查 (左、右、頂部)
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.vx *= -1;
+            }
+            if (ball.x + ball.radius > canvas.width) {
+                ball.x = canvas.width - ball.radius;
+                ball.vx *= -1;
+            }
+            if (ball.y - ball.radius < 0) {
+                ball.y = ball.radius;
+                ball.vy *= -1;
+            }
+
+            // 4. 滑塊碰撞檢查 (Paddle Collision)
+            if (ball.y + ball.radius >= paddle.y && 
+                ball.y - ball.radius <= paddle.y + paddle.h &&
+                ball.x >= paddle.x && 
+                ball.x <= paddle.x + paddle.w) {
+                
+                sound.playPaddleHit();
+                ball.y = paddle.y - ball.radius; // 修正重疊
+
+                // 在碰撞點產生青藍色亮彩火花
+                createSparks(ball.x, paddle.y, 16, '#06b6d4');
+
+                // 根據撞擊滑塊位置決定反彈角度 (越偏兩側角度越大)
+                let hitPoint = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+                let speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+                ball.vx = hitPoint * speed * 0.85;
+                ball.vy = -Math.sqrt(Math.max(12, speed * speed - ball.vx * ball.vx));
+            }
+
+            // 5. 磚塊碰撞檢查 (Bricks Collision)
+            for (let b of bricks) {
+                if (!b.active) continue;
+
+                if (ball.x + ball.radius > b.x && 
+                    ball.x - ball.radius < b.x + b.w &&
+                    ball.y + ball.radius > b.y && 
+                    ball.y - ball.radius < b.y + b.h) {
+                    
+                    b.active = false; // 磚塊消失
+                    score += 10;     // 得 10 分
+                    document.getElementById('score-val').textContent = score;
+
+                    sound.playBrickHit();
+                    createParticles(b.x + b.w / 2, b.y + b.h / 2, b.color);
+                    // 撞擊磚塊時產生對應濃度的火花
+                    createSparks(ball.x, ball.y, 18, b.color);
+
+                    // 漸進式加速機制：計算目前速度並增加，但不超過 maxSpeed
+                    let currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+                    let newSpeed = Math.min(ball.maxSpeed, currentSpeed + ball.speedInc);
+                    
+                    // 簡單的反彈方向切換
+                    ball.vy *= -1;
+
+                    // 套用更新後的加速度
+                    if (currentSpeed > 0) {
+                        ball.vx = (ball.vx / currentSpeed) * newSpeed;
+                        ball.vy = (ball.vy / currentSpeed) * newSpeed;
+                    }
+                    break;
+                }
+            }
+
+            // 6. 檢查是否全清通關
+            if (bricks.length > 0 && bricks.every(b => !b.active)) {
+                endGame(true);
+                return;
+            }
+
+            // 7. 檢查球是否掉落底部邊界 (Game Over)
+            if (ball.y - ball.radius > canvas.height) {
+                endGame(false);
+                return;
+            }
+
+            // 8. 更新粒子 (爆破粒子、粉筆灰與火花)
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.life;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = chalkDust.length - 1; i >= 0; i--) {
+                let d = chalkDust[i];
+                d.x += d.vx;
+                d.y += d.vy;
+                d.alpha -= d.life;
+                if (d.alpha <= 0) chalkDust.splice(i, 1);
+            }
+
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                let s = sparks[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.alpha -= s.life;
+                if (s.alpha <= 0) sparks.splice(i, 1);
+            }
+        }
+
+        // 渲染畫面 (Draw)
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製粉筆灰尾跡 (Chalk Dust Trail)
+            chalkDust.forEach(d => {
+                ctx.globalAlpha = d.alpha;
+                ctx.fillStyle = '#f8fafc'; // 白色粉筆灰
+                ctx.shadowColor = '#e2e8f0';
+                ctx.shadowBlur = 4;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+            });
+
+            // 繪製火花特效 (Sparks)
+            sparks.forEach(s => {
+                ctx.globalAlpha = s.alpha;
+                ctx.strokeStyle = s.color;
+                ctx.shadowColor = s.color;
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x - s.vx * 0.8, s.y - s.vy * 0.8);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+            });
+
+            // 繪製磚塊 (Bricks)
+            bricks.forEach(b => {
+                if (!b.active) return;
+                ctx.fillStyle = b.color;
+                ctx.shadowColor = b.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.roundRect(b.x, b.y, b.w, b.h, 4);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 繪製磚塊上的中文科目名稱
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px "Noto Sans TC", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(b.text, b.x + b.w / 2, b.y + b.h / 2);
+            });
+
+            // 繪製滑塊 (Paddle)
+            ctx.fillStyle = '#06b6d4';
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 繪製粉筆 (Chalk Stick)
+            if (isGameRunning) {
+                ctx.save();
+                ctx.translate(ball.x, ball.y);
+                ctx.rotate(ball.angle); // 隨飛行方向旋轉
+
+                // 粉筆發光外框
+                ctx.shadowColor = '#f1f5f9';
+                ctx.shadowBlur = 10;
+
+                // 繪製白色粉筆主體
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.roundRect(-ball.w / 2, -ball.h / 2, ball.w, ball.h, [3, 2, 2, 3]);
+                ctx.fill();
+
+                // 粉筆尾端紅色保護套/握把細節
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.roundRect(-ball.w / 2, -ball.h / 2, 6, ball.h, [3, 0, 0, 3]);
+                ctx.fill();
+
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            }
+
+            // 繪製爆破粒子 (Particles)
+            particles.forEach(p => {
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // 主遊戲迴圈
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 開始遊戲
+        function startGame() {
+            sound.init();
+            score = 0;
+            document.getElementById('score-val').textContent = score;
+
+            resizeCanvas();
+            initBricks();
+
+            // 重置滑塊與球體位置
+            paddle.x = (canvas.width - paddle.w) / 2;
+            ball.x = canvas.width / 2;
+            ball.y = paddle.y - 15;
+            
+            // 隨機角度發射球
+            const angle = (Math.random() * 0.6 - 0.3) * Math.PI; // -54deg ~ +54deg
+            ball.vx = ball.speed * Math.sin(angle);
+            ball.vy = -ball.speed * Math.cos(angle);
+
+            isGameRunning = true;
+            document.getElementById('game-overlay').classList.add('hidden');
+        }
+
+        // 結束遊戲 (Game Over 或 MISSION CLEAR)
+        function endGame(isWin) {
+            isGameRunning = false;
+
+            if (score > highScore) {
+                highScore = score;
+                window.__galleryStorage.setItem('classic_breakout_high', highScore);
+            }
+
+            document.getElementById('high-score-val').textContent = highScore;
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('best-score').textContent = highScore;
+
+            const titleEl = document.getElementById('overlay-title');
+            const descEl = document.getElementById('overlay-desc');
+            const btnEl = document.getElementById('start-btn');
+
+            if (isWin) {
+                sound.playWin();
+                titleEl.textContent = 'MISSION CLEAR';
+                titleEl.className = 'text-3xl sm:text-5xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 text-glow-cyan mb-2';
+                descEl.textContent = '太厲害了！你擊碎了所有磚塊！';
+            } else {
+                sound.playGameOver();
+                titleEl.textContent = 'GAME OVER';
+                titleEl.className = 'text-3xl sm:text-5xl font-black font-orbitron tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 text-glow-rose mb-2';
+                descEl.textContent = '小球掉落到底部邊界了，再試一次吧！';
+            }
+
+            document.getElementById('stats-summary').classList.remove('hidden');
+            btnEl.innerHTML = '<i class="fas fa-redo mr-2"></i>PLAY AGAIN';
+            document.getElementById('game-overlay').classList.remove('hidden');
+        }
+
+        // 開關音效
+        function toggleSound() {
+            sound.enabled = !sound.enabled;
+            const icon = document.getElementById('sound-icon');
+            if (sound.enabled) {
+                icon.className = 'fas fa-volume-up';
+            } else {
+                icon.className = 'fas fa-volume-mute text-rose-500';
+            }
+        }
+
+        // 頁面載入完成後初始化
+        window.onload = () => {
+            document.getElementById('high-score-val').textContent = highScore;
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極限霓虹恐龍跑酷：天氣與換裝大冒險</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background-color: #05070f;
+            color: #f1f5f9;
+        }
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.8);
+        }
+        /* Glassmorphism Panel Styling */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .glass-btn {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-btn:hover {
+            background: rgba(51, 65, 85, 0.85);
+            border-color: rgba(56, 189, 248, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+        }
+        .glass-btn.active {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(168, 85, 247, 0.4));
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+        /* Pulse Animation */
+        @keyframes subtleGlow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4)); }
+            50% { filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.6)); }
+        }
+        .glow-effect {
+            animation: subtleGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-cyan-500 selection:text-black">
+
+    <!-- Navigation Header -->
+    <header class="w-full bg-slate-950/80 border-b border-slate-800/80 p-3 sm:p-4 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center text-2xl shadow-lg shadow-cyan-500/20 glow-effect">
+                    🦖
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black tracking-wider bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent orbitron">
+                        DINO RUNNER: ULTRA
+                    </h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-2">
+                        <span>多重極限生態</span> • <span>動態天氣系統</span> • <span>造型換裝</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Header Controls & Scores -->
+            <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
+                    <span class="text-amber-400 font-bold">🪙 金幣:</span>
+                    <span id="coin-count" class="orbitron font-bold text-amber-300 text-base">0</span>
+                </div>
+                <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
+                    <span class="text-cyan-400 font-bold">🏆 最高分:</span>
+                    <span id="high-score" class="orbitron text-cyan-300 font-bold text-base">00000</span>
+                </div>
+                <button id="sound-toggle" class="glass-btn p-2 rounded-xl text-lg flex items-center justify-center" title="切換音效">
+                    🔊
+                </button>
+                <button id="music-toggle" class="glass-btn p-2 rounded-xl text-lg flex items-center justify-center" title="切換音樂">
+                    🎵
+                </button>
+                <button id="customizer-btn" class="glass-btn px-3 py-2 rounded-xl font-bold bg-gradient-to-r from-purple-600/50 to-pink-600/50 hover:from-purple-500 hover:to-pink-500 text-white flex items-center gap-1.5 border-fuchsia-500/30">
+                    <span>👗</span>
+                    <span class="hidden sm:inline">造型試衣間</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="max-w-7xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col justify-center items-center gap-4">
+        
+        <!-- Game Viewport Wrapper -->
+        <div class="relative w-full aspect-[21/9] min-h-[340px] max-h-[580px] rounded-3xl overflow-hidden border-2 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-slate-950 group">
+            
+            <!-- Canvas Engine -->
+            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+            <!-- Dynamic Weather Change HUD Alert -->
+            <div id="weather-toast" class="absolute top-5 left-1/2 -translate-x-1/2 glass-panel px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 opacity-0 -translate-y-6 transition-all duration-500 pointer-events-none z-20 border border-cyan-500/30">
+                <span id="weather-toast-icon" class="text-2xl animate-bounce">🌩️</span>
+                <div>
+                    <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">天候劇變警報</div>
+                    <div id="weather-toast-msg" class="text-xs sm:text-sm font-bold text-slate-100">暴風雨即將來襲！</div>
+                </div>
+            </div>
+
+            <!-- In-Game HUD Details -->
+            <div class="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none z-10">
+                <!-- Weather Indicator -->
+                <div id="weather-hud" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
+                    <span id="weather-icon" class="text-lg">☀️</span>
+                    <div class="flex flex-col">
+                        <span id="weather-name" class="text-xs font-bold text-slate-100">晴空萬里</span>
+                        <span id="biome-name" class="text-[10px] text-cyan-400">賽博霓虹都市</span>
+                    </div>
+                </div>
+                <!-- Active Power-ups Bar -->
+                <div id="powerup-bar" class="flex gap-2"></div>
+            </div>
+
+            <!-- Score Display -->
+            <div id="hud-score" class="absolute top-4 right-4 pointer-events-none flex flex-col items-end z-10">
+                <div class="orbitron text-2xl sm:text-3xl text-cyan-300 font-black drop-shadow-[0_2px_10px_rgba(6,182,212,0.8)] tracking-widest">
+                    <span id="current-score">00000</span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Score</div>
+            </div>
+
+            <!-- Overlay Screens: Game Start / Pause / Game Over -->
+            <div id="game-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300">
+                <div id="overlay-content" class="max-w-md w-full flex flex-col items-center gap-5">
+                    <div class="relative">
+                        <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-500 via-fuchsia-500 to-amber-400 p-0.5 shadow-2xl glow-effect">
+                            <div class="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center text-4xl">
+                                🦖
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1">
+                        <h2 id="overlay-title" class="text-3xl sm:text-4xl font-black bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent orbitron">
+                            READY TO RUN
+                        </h2>
+                        <p id="overlay-subtitle" class="text-slate-400 text-xs sm:text-sm">
+                            按下 <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-300">Space</kbd> 或點擊開始遊戲
+                        </p>
+                    </div>
+
+                    <!-- Final Stats Summary (Show on Game Over) -->
+                    <div id="overlay-stats" class="hidden w-full grid grid-cols-3 gap-2 glass-panel p-3 rounded-2xl text-xs">
+                        <div class="flex flex-col">
+                            <span class="text-slate-400">總得分</span>
+                            <span id="final-score" class="orbitron font-bold text-cyan-300 text-sm">0</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-slate-400">收集金幣</span>
+                            <span id="final-coins" class="orbitron font-bold text-amber-300 text-sm">0</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-slate-400">經歷天氣</span>
+                            <span id="final-weathers" class="orbitron font-bold text-fuchsia-300 text-sm">0</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 w-full max-w-xs">
+                        <button id="start-btn" class="flex-1 py-3.5 bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-600 hover:from-cyan-400 hover:to-fuchsia-500 text-white font-bold rounded-2xl shadow-lg shadow-cyan-500/25 hover:scale-105 active:scale-95 transition text-base tracking-wider border border-cyan-300/30">
+                            開始冒險
+                        </button>
+                        <button id="overlay-dress-btn" class="px-4 py-3.5 glass-btn rounded-2xl text-xl hover:scale-105 active:scale-95 transition" title="前往試衣間">
+                            👗
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Biome Environment Selector Tabs -->
+        <div class="w-full glass-panel p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-300">
+                <span>🏞️</span>
+                <span>冒險生態圈:</span>
+            </div>
+            <div class="flex flex-wrap gap-2" id="biome-selector">
+                <button data-biome="cyberpunk" class="biome-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 active">
+                    <span>🏙️</span> 賽博都市
+                </button>
+                <button data-biome="jungle" class="biome-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <span>🌿</span> 遠古雨林
+                </button>
+                <button data-biome="twilight" class="biome-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <span>💎</span> 幻彩仙境
+                </button>
+                <button data-biome="volcano" class="biome-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <span>🌋</span> 火山廢土
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Control Buttons -->
+        <div class="w-full grid grid-cols-2 gap-3 sm:hidden">
+            <button id="touch-duck" class="py-4 glass-panel active:bg-slate-800 rounded-2xl flex items-center justify-center font-bold text-lg select-none active:scale-95 transition border-slate-700">
+                👇 蹲下 (Duck)
+            </button>
+            <button id="touch-jump" class="py-4 bg-gradient-to-r from-cyan-600 to-indigo-600 active:from-cyan-500 active:to-indigo-500 rounded-2xl flex items-center justify-center font-bold text-lg select-none active:scale-95 transition text-white shadow-lg shadow-cyan-500/20">
+                🚀 跳躍 / 二段跳
+            </button>
+        </div>
+    </main>
+
+    <!-- Customization / Dress-Up Modal Hub -->
+    <div id="customizer-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg flex items-center justify-center p-3 sm:p-6 z-50 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="max-w-4xl w-full glass-panel border-slate-800 rounded-3xl p-4 sm:p-6 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">👗</span>
+                    <div>
+                        <h3 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent orbitron">
+                            DINO CUSTOMIZER
+                        </h3>
+                        <p class="text-xs text-slate-400">打造專屬恐龍造型，裝備服飾與酷炫粒子特效！</p>
+                    </div>
+                </div>
+                <button id="close-customizer" class="glass-btn p-2 rounded-xl text-slate-400 hover:text-white text-xl">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Customizer Content Layout (Preview + Selectors) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                
+                <!-- Character Live Canvas Preview -->
+                <div class="lg:col-span-5 flex flex-col items-center justify-center glass-panel p-4 rounded-2xl border-cyan-500/20 bg-slate-900/60">
+                    <div class="text-xs font-bold text-cyan-400 mb-2 tracking-wider flex items-center gap-1">
+                        <span>✨</span> 即時造型預覽
+                    </div>
+                    <div class="relative w-full aspect-square max-w-[260px] flex items-center justify-center">
+                        <canvas id="previewCanvas" width="260" height="260" class="w-full h-full block rounded-2xl"></canvas>
+                    </div>
+                    <div id="outfit-summary" class="mt-3 text-xs text-slate-400 text-center font-medium">
+                        賽博恐龍 • 無頭飾 • 無眼鏡 • 預設披風
+                    </div>
+                </div>
+
+                <!-- Customization Options Selector Tabs -->
+                <div class="lg:col-span-7 flex flex-col gap-4">
+                    
+                    <!-- Category Tabs -->
+                    <div class="flex border-b border-slate-800 gap-2 overflow-x-auto pb-2" id="custom-tabs">
+                        <button data-tab="avatar" class="tab-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold active">
+                            🦖 恐龍種類
+                        </button>
+                        <button data-tab="hat" class="tab-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold">
+                            🎩 帽子頭飾
+                        </button>
+                        <button data-tab="glasses" class="tab-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold">
+                            🕶️ 眼鏡配件
+                        </button>
+                        <button data-tab="accessory" class="tab-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold">
+                            🚀 配件披風
+                        </button>
+                        <button data-tab="skin" class="tab-btn glass-btn px-3 py-1.5 rounded-xl text-xs font-bold">
+                            🎨 皮膚配色
+                        </button>
+                    </div>
+
+                    <!-- Options Grid Container -->
+                    <div id="options-container" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[260px] overflow-y-auto p-1">
+                        <!-- Options injected via JavaScript -->
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Modal Footer Controls -->
+            <div class="flex items-center justify-end gap-3 border-t border-slate-800 pt-3">
+                <button id="randomize-dress" class="glass-btn px-4 py-2 rounded-xl text-xs font-bold text-amber-300 border-amber-500/30 flex items-center gap-1.5">
+                    🎲 隨機搭配
+                </button>
+                <button id="save-customizer" class="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold rounded-xl text-xs tracking-wider shadow-lg shadow-cyan-500/20">
+                    儲存造型並重返遊戲
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center text-xs text-slate-600 py-3 border-t border-slate-900">
+        HTML5 Modern Dynamic Canvas Game Engine • 2026 Edition
+    </footer>
+
+    <!-- Sound Engine Script -->
+    <script>
+        class WebAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.soundEnabled = true;
+                this.musicEnabled = true;
+                this.bgmTimer = null;
+                this.bgmNoteIndex = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(750, now + 0.12);
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+
+            playDoubleJump() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(380, now);
+                osc.frequency.exponentialRampToValueAtTime(1100, now + 0.16);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.16);
+            }
+
+            playCoin() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playPowerup() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [330, 440, 554.37, 659.25, 880];
+                freqs.forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.08, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05);
+                    osc.stop(now + i * 0.05 + 0.1);
+                });
+            }
+
+            playThunder() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(70, now);
+                osc.frequency.linearRampToValueAtTime(25, now + 0.7);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.7);
+            }
+
+            playHit() {
+                if (!this.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            toggleBGM(running) {
+                if (!this.musicEnabled || !running) {
+                    if (this.bgmTimer) clearInterval(this.bgmTimer);
+                    this.bgmTimer = null;
+                    return;
+                }
+                this.init();
+                if (this.bgmTimer) return;
+
+                const notes = [220, 261.63, 293.66, 329.63, 392, 440, 392, 329.63]; // Synthwave Melody Scale
+                this.bgmTimer = setInterval(() => {
+                    if (!this.musicEnabled) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(notes[this.bgmNoteIndex], now);
+
+                    gain.gain.setValueAtTime(0.03, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+
+                    this.bgmNoteIndex = (this.bgmNoteIndex + 1) % notes.length;
+                }, 250);
+            }
+        }
+
+        const audio = new WebAudioEngine();
+    </script>
+
+    <!-- Core Game Engine -->
+    <script>
+        /* Biome Configurations */
+        const BIOMES = {
+            cyberpunk: {
+                name: '賽博霓虹都市',
+                skyGradient: ['#030712', '#0f172a', '#1e1b4b'],
+                groundColor: '#0f172a',
+                gridLineColor: 'rgba(56, 189, 248, 0.3)',
+                mountainColor: '#1e1b4b',
+                fogColor: 'rgba(14, 165, 233, 0.15)',
+                obstacleColor: '#f43f5e',
+                accentColor: '#38bdf8'
+            },
+            jungle: {
+                name: '遠古侏儸紀雨林',
+                skyGradient: ['#022c22', '#064e3b', '#065f46'],
+                groundColor: '#064e3b',
+                gridLineColor: 'rgba(52, 211, 153, 0.3)',
+                mountainColor: '#022c22',
+                fogColor: 'rgba(16, 185, 129, 0.15)',
+                obstacleColor: '#eab308',
+                accentColor: '#10b981'
+            },
+            twilight: {
+                name: '幻彩水晶仙境',
+                skyGradient: ['#1e1035', '#2e1065', '#3b0764'],
+                groundColor: '#3b0764',
+                gridLineColor: 'rgba(216, 180, 254, 0.3)',
+                mountainColor: '#2e1065',
+                fogColor: 'rgba(192, 132, 252, 0.15)',
+                obstacleColor: '#a855f7',
+                accentColor: '#c084fc'
+            },
+            volcano: {
+                name: '末日火山廢土',
+                skyGradient: ['#1c0505', '#450a0a', '#7f1d1d'],
+                groundColor: '#450a0a',
+                gridLineColor: 'rgba(249, 115, 22, 0.3)',
+                mountainColor: '#1c0505',
+                fogColor: 'rgba(239, 68, 68, 0.15)',
+                obstacleColor: '#ef4444',
+                accentColor: '#f97316'
+            }
+        };
+
+        /* Dynamic Weather Types */
+        const WEATHERS = {
+            sunny: { name: '晴空萬里', icon: '☀️', toast: '天候晴朗，適合急速馳騁！' },
+            rain: { name: '暴風驟雨', icon: '🌩️', toast: '警告：豪雨降臨，視線受阻！' },
+            snow: { name: '寒冬暴雪', icon: '❄️', toast: '警報：嚴寒暴雪，注意冰霜！' },
+            sand: { name: '沙塵暴襲擊', icon: '🌪️️', toast: '注意：強烈沙塵暴襲來！' },
+            meteor: { name: '流星雨', icon: '☄️', toast: '奇觀：流星劃過天際！' }
+        };
+
+        /* Customization Outfit Options Data */
+        const DRESS_UP_DATA = {
+            avatar: [
+                { id: 'rex', name: '經典霸王龍', icon: '🦖' },
+                { id: 'mecha', name: '賽博機械龍', icon: '🤖' },
+                { id: 'dragon', name: '烈焰噴火龍', icon: '🐲' },
+                { id: 'baby', name: '萌萌小恐龍', icon: '🐣' }
+            ],
+            hat: [
+                { id: 'none', name: '無頭飾', icon: '🚫' },
+                { id: 'tophat', name: '紳士高帽', icon: '🎩' },
+                { id: 'crown', name: '黃金皇冠', icon: '👑' },
+                { id: 'headphones', name: '電競耳機', icon: '🎧' },
+                { id: 'cap', name: '潮流棒球帽', icon: '🧢' }
+            ],
+            glasses: [
+                { id: 'none', name: '無眼鏡', icon: '🚫' },
+                { id: 'thug', name: '墨鏡 (Thug Life)', icon: '🕶️' },
+                { id: 'visor', name: '未來戰鬥儀', icon: '🥽' },
+                { id: 'cute', name: '愛心眼鏡', icon: '👓' }
+            ],
+            accessory: [
+                { id: 'none', name: '無裝備', icon: '🚫' },
+                { id: 'cape', name: '英雄紅披風', icon: '🧣' },
+                { id: 'jetpack', name: '噴射背包', icon: '🚀' },
+                { id: 'bowtie', name: '紅領結', icon: '🎀' }
+            ],
+            skin: [
+                { id: 'cyan', name: '霓虹青綠', color: '#06b6d4' },
+                { id: 'flame', name: '烈焰橙紅', color: '#f97316' },
+                { id: 'purple', name: '虛空暗紫', color: '#a855f7' },
+                { id: 'gold', name: '尊爵皇家金', color: '#eab308' }
+            ]
+        };
+
+        // Active Player Outfit Selection State
+        let playerOutfit = {
+            avatar: 'rex',
+            hat: 'tophat',
+            glasses: 'thug',
+            accessory: 'cape',
+            skin: 'cyan'
+        };
+
+        /* Core Game State Variables */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const pCtx = previewCanvas.getContext('2d');
+
+        let gameWidth = 1000;
+        let gameHeight = 420;
+
+        let isRunning = false;
+        let isPaused = false;
+        let score = 0;
+        let highScore = localStorage.getItem('dino_ultra_high') || 0;
+        let coins = parseInt(localStorage.getItem('dino_ultra_coins') || '0');
+        let speed = 7;
+        let distance = 0;
+
+        let activeBiome = 'cyberpunk';
+        let currentWeather = 'sunny';
+        let weatherTimer = 0;
+        let weatherSurvivedCount = 0;
+        let lightningFlash = 0;
+
+        // Particle pools
+        let weatherParticles = [];
+        let dustParticles = [];
+
+        // Game Entities
+        let obstacles = [];
+        let collectibles = [];
+        let powerups = [];
+
+        // Active Powerups State
+        let activeEffects = {
+            shield: 0,
+            magnet: 0,
+            slow: 0,
+            jetpack: 0
+        };
+
+        /* Player Character Object */
+        const player = {
+            x: 80,
+            y: 0,
+            width: 54,
+            height: 64,
+            velocityY: 0,
+            gravity: 0.7,
+            jumpForce: -13.5,
+            isGrounded: false,
+            isDucking: false,
+            canDoubleJump: true,
+            legFrame: 0,
+            capeAnim: 0,
+
+            reset() {
+                this.y = gameHeight - 80 - this.height;
+                this.velocityY = 0;
+                this.isGrounded = true;
+                this.isDucking = false;
+                this.canDoubleJump = true;
+            },
+
+            update() {
+                // Apply Jetpack or Normal Gravity
+                if (activeEffects.jetpack > 0) {
+                    this.velocityY = -2; // Float upwards softly
+                } else {
+                    this.velocityY += this.gravity;
+                }
+
+                this.y += this.velocityY;
+
+                const groundY = gameHeight - 80 - (this.isDucking ? this.height * 0.6 : this.height);
+
+                if (this.y >= groundY) {
+                    this.y = groundY;
+                    this.velocityY = 0;
+                    if (!this.isGrounded) {
+                        // Create dust particles upon landing
+                        createDust(this.x + this.width / 2, this.y + this.height);
+                    }
+                    this.isGrounded = true;
+                    this.canDoubleJump = true;
+                }
+
+                this.legFrame += 0.25;
+                this.capeAnim += 0.15;
+            },
+
+            jump() {
+                if (this.isGrounded) {
+                    this.velocityY = this.jumpForce;
+                    this.isGrounded = false;
+                    audio.playJump();
+                    createDust(this.x + this.width / 2, this.y + this.height);
+                } else if (this.canDoubleJump) {
+                    this.velocityY = this.jumpForce * 0.9;
+                    this.canDoubleJump = false;
+                    audio.playDoubleJump();
+                    createDust(this.x + this.width / 2, this.y + this.height / 2);
+                }
+            }
+        };
+
+        /* Detailed Character Renderer Function */
+        function drawDino(targetCtx, x, y, width, height, outfit, legFrame, isDucking, isGrounded) {
+            targetCtx.save();
+
+            const skinColor = DRESS_UP_DATA.skin.find(s => s.id === outfit.skin)?.color || '#06b6d4';
+
+            // Ducking height adjustments
+            const actualHeight = isDucking ? height * 0.6 : height;
+            const drawY = isDucking ? y + height * 0.4 : y;
+
+            // 1. Draw Accessory (Cape or Jetpack behind body)
+            if (outfit.accessory === 'cape') {
+                targetCtx.fillStyle = '#ef4444';
+                targetCtx.beginPath();
+                const wave = Math.sin(legFrame || 0) * 8;
+                targetCtx.moveTo(x + 12, drawY + 20);
+                targetCtx.quadraticCurveTo(x - 20, drawY + 25 + wave, x - 25, drawY + actualHeight - 10);
+                targetCtx.lineTo(x + 10, drawY + 32);
+                targetCtx.closePath();
+                targetCtx.fill();
+            } else if (outfit.accessory === 'jetpack') {
+                targetCtx.fillStyle = '#64748b';
+                targetCtx.fillRect(x - 12, drawY + 18, 14, 26);
+                targetCtx.fillStyle = '#38bdf8';
+                targetCtx.fillRect(x - 8, drawY + 22, 6, 18);
+
+                // Jetpack Flames
+                targetCtx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#eab308';
+                targetCtx.beginPath();
+                targetCtx.moveTo(x - 12, drawY + 44);
+                targetCtx.lineTo(x - 5, drawY + 56 + Math.random() * 8);
+                targetCtx.lineTo(x, drawY + 44);
+                targetCtx.fill();
+            }
+
+            // 2. Main Body Base
+            targetCtx.fillStyle = skinColor;
+            targetCtx.beginPath();
+
+            if (outfit.avatar === 'mecha') {
+                // Cyber Robotic Dino Body Shapes
+                targetCtx.roundRect(x + 8, drawY + 12, width - 12, actualHeight - 20, 8);
+                targetCtx.fill();
+                // Glowing Cyber Lines
+                targetCtx.strokeStyle = '#38bdf8';
+                targetCtx.lineWidth = 2;
+                targetCtx.strokeRect(x + 14, drawY + 18, width - 24, actualHeight - 32);
+            } else if (outfit.avatar === 'baby') {
+                // Cute Rounded Baby Dino Body
+                targetCtx.arc(x + width / 2, drawY + actualHeight / 2, actualHeight / 2 - 2, 0, Math.PI * 2);
+                targetCtx.fill();
+            } else if (outfit.avatar === 'dragon') {
+                // Dragon Body + Back Spikes
+                targetCtx.roundRect(x + 10, drawY + 10, width - 14, actualHeight - 18, 10);
+                targetCtx.fill();
+                // Spikes
+                targetCtx.fillStyle = '#ef4444';
+                for (let i = 0; i < 3; i++) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(x + 8, drawY + 15 + i * 12);
+                    targetCtx.lineTo(x - 2, drawY + 20 + i * 12);
+                    targetCtx.lineTo(x + 8, drawY + 25 + i * 12);
+                    targetCtx.fill();
+                }
+            } else {
+                // Classic Rex Body
+                targetCtx.roundRect(x + 6, drawY + 10, width - 12, actualHeight - 16, 12);
+                targetCtx.fill();
+            }
+
+            // 3. Legs & Running Animation
+            targetCtx.fillStyle = skinColor;
+            const legOffset = isGrounded ? Math.sin(legFrame) * 10 : 4;
+            targetCtx.fillRect(x + 12, drawY + actualHeight - 10, 8, 12 + (isGrounded ? legOffset : 0));
+            targetCtx.fillRect(x + width - 22, drawY + actualHeight - 10, 8, 12 - (isGrounded ? legOffset : 0));
+
+            // 4. Eyes & Facial Features
+            targetCtx.fillStyle = '#ffffff';
+            targetCtx.beginPath();
+            targetCtx.arc(x + width - 14, drawY + 18, 5, 0, Math.PI * 2);
+            targetCtx.fill();
+            targetCtx.fillStyle = '#0f172a';
+            targetCtx.beginPath();
+            targetCtx.arc(x + width - 12, drawY + 18, 2.5, 0, Math.PI * 2);
+            targetCtx.fill();
+
+            // 5. Eyewear Customization
+            if (outfit.glasses === 'thug') {
+                targetCtx.fillStyle = '#000000';
+                targetCtx.fillRect(x + width - 24, drawY + 14, 18, 8);
+                targetCtx.fillRect(x + width - 10, drawY + 16, 6, 2);
+            } else if (outfit.glasses === 'visor') {
+                targetCtx.fillStyle = 'rgba(56, 189, 248, 0.8)';
+                targetCtx.fillRect(x + width - 26, drawY + 14, 22, 9);
+                targetCtx.strokeStyle = '#ffffff';
+                targetCtx.lineWidth = 1;
+                targetCtx.strokeRect(x + width - 26, drawY + 14, 22, 9);
+            } else if (outfit.glasses === 'cute') {
+                targetCtx.fillStyle = '#ec4899';
+                targetCtx.beginPath();
+                targetCtx.arc(x + width - 14, drawY + 18, 6, 0, Math.PI * 2);
+                targetCtx.fill();
+            }
+
+            // 6. Hat Customization
+            if (outfit.hat === 'tophat') {
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.fillRect(x + width - 28, drawY - 14, 24, 14);
+                targetCtx.fillRect(x + width - 32, drawY, 32, 4);
+                targetCtx.fillStyle = '#ef4444';
+                targetCtx.fillRect(x + width - 28, drawY - 3, 24, 3);
+            } else if (outfit.hat === 'crown') {
+                targetCtx.fillStyle = '#eab308';
+                targetCtx.beginPath();
+                targetCtx.moveTo(x + width - 28, drawY + 2);
+                targetCtx.lineTo(x + width - 28, drawY - 12);
+                targetCtx.lineTo(x + width - 20, drawY - 4);
+                targetCtx.lineTo(x + width - 14, drawY - 14);
+                targetCtx.lineTo(x + width - 8, drawY - 4);
+                targetCtx.lineTo(x + width, drawY - 12);
+                targetCtx.lineTo(x + width, drawY + 2);
+                targetCtx.closePath();
+                targetCtx.fill();
+            } else if (outfit.hat === 'headphones') {
+                targetCtx.strokeStyle = '#a855f7';
+                targetCtx.lineWidth = 4;
+                targetCtx.beginPath();
+                targetCtx.arc(x + width - 16, drawY + 14, 14, Math.PI, 0);
+                targetCtx.stroke();
+                targetCtx.fillStyle = '#38bdf8';
+                targetCtx.fillRect(x + width - 28, drawY + 10, 6, 12);
+            } else if (outfit.hat === 'cap') {
+                targetCtx.fillStyle = '#3b82f6';
+                targetCtx.fillRect(x + width - 26, drawY - 4, 20, 8);
+                targetCtx.fillRect(x + width - 14, drawY + 0, 16, 4);
+            }
+
+            // 7. Bowtie
+            if (outfit.accessory === 'bowtie') {
+                targetCtx.fillStyle = '#ef4444';
+                targetCtx.beginPath();
+                targetCtx.moveTo(x + width - 20, drawY + 30);
+                targetCtx.lineTo(x + width - 28, drawY + 24);
+                targetCtx.lineTo(x + width - 28, drawY + 36);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                targetCtx.beginPath();
+                targetCtx.moveTo(x + width - 20, drawY + 30);
+                targetCtx.lineTo(x + width - 12, drawY + 24);
+                targetCtx.lineTo(x + width - 12, drawY + 36);
+                targetCtx.closePath();
+                targetCtx.fill();
+            }
+
+            targetCtx.restore();
+        }
+
+        /* Particle & Weather Generator */
+        function triggerWeather(weatherKey) {
+            currentWeather = weatherKey;
+            const w = WEATHERS[weatherKey];
+            document.getElementById('weather-icon').textContent = w.icon;
+            document.getElementById('weather-name').textContent = w.name;
+
+            const toast = document.getElementById('weather-toast');
+            document.getElementById('weather-toast-icon').textContent = w.icon;
+            document.getElementById('weather-toast-msg').textContent = w.toast;
+
+            toast.classList.remove('opacity-0', '-translate-y-6');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-6');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 3500);
+
+            if (weatherKey === 'rain') {
+                audio.playThunder();
+                lightningFlash = 1.0;
+            }
+
+            weatherSurvivedCount++;
+        }
+
+        function createDust(x, y) {
+            for (let i = 0; i < 5; i++) {
+                dustParticles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: -Math.random() * 2,
+                    size: Math.random() * 4 + 2,
+                    alpha: 1.0
+                });
+            }
+        }
+
+        function updateParticles() {
+            // Weather particles spawning
+            if (currentWeather === 'rain' && Math.random() < 0.6) {
+                weatherParticles.push({
+                    x: Math.random() * gameWidth,
+                    y: -10,
+                    vx: -3,
+                    vy: Math.random() * 10 + 12,
+                    length: Math.random() * 15 + 10,
+                    type: 'rain'
+                });
+            } else if (currentWeather === 'snow' && Math.random() < 0.4) {
+                weatherParticles.push({
+                    x: Math.random() * gameWidth,
+                    y: -10,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: Math.random() * 2 + 1,
+                    size: Math.random() * 4 + 2,
+                    type: 'snow'
+                });
+            } else if (currentWeather === 'sand' && Math.random() < 0.5) {
+                weatherParticles.push({
+                    x: gameWidth + 10,
+                    y: Math.random() * gameHeight,
+                    vx: -(Math.random() * 8 + 6),
+                    vy: (Math.random() - 0.5) * 1,
+                    size: Math.random() * 3 + 1,
+                    type: 'sand'
+                });
+            } else if (currentWeather === 'meteor' && Math.random() < 0.15) {
+                weatherParticles.push({
+                    x: Math.random() * gameWidth + 200,
+                    y: -20,
+                    vx: -8,
+                    vy: 12,
+                    size: Math.random() * 6 + 4,
+                    type: 'meteor'
+                });
+            }
+
+            // Update weather particles
+            for (let i = weatherParticles.length - 1; i >= 0; i--) {
+                let p = weatherParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.y > gameHeight || p.x < -20) {
+                    weatherParticles.splice(i, 1);
+                }
+            }
+
+            // Update dust particles
+            for (let i = dustParticles.length - 1; i >= 0; i--) {
+                let d = dustParticles[i];
+                d.x += d.vx;
+                d.y += d.vy;
+                d.alpha -= 0.04;
+                if (d.alpha <= 0) {
+                    dustParticles.splice(i, 1);
+                }
+            }
+        }
+
+        /* Spawn Obstacles and Items */
+        function spawnEntities() {
+            // Spawn Obstacle
+            if (Math.random() < 0.018 && obstacles.length < 3) {
+                const lastObstacle = obstacles[obstacles.length - 1];
+                if (!lastObstacle || (gameWidth - lastObstacle.x > 260)) {
+                    const isFlying = Math.random() > 0.65;
+                    obstacles.push({
+                        x: gameWidth + 40,
+                        y: isFlying ? gameHeight - 140 : gameHeight - 120,
+                        width: isFlying ? 45 : 36,
+                        height: isFlying ? 35 : 45,
+                        isFlying: isFlying,
+                        wingFrame: 0
+                    });
+                }
+            }
+
+            // Spawn Coins
+            if (Math.random() < 0.02) {
+                collectibles.push({
+                    x: gameWidth + 20,
+                    y: gameHeight - 110 - Math.random() * 80,
+                    size: 12,
+                    rot: 0
+                });
+            }
+
+            // Spawn Powerups
+            if (Math.random() < 0.003 && powerups.length === 0) {
+                const types = ['shield', 'magnet', 'slow', 'jetpack'];
+                const selectedType = types[Math.floor(Math.random() * types.length)];
+                powerups.push({
+                    x: gameWidth + 30,
+                    y: gameHeight - 130,
+                    type: selectedType,
+                    size: 24
+                });
+            }
+        }
+
+        /* Graphics Background & Parallax Renderer */
+        function drawParallaxBackground() {
+            const biome = BIOMES[activeBiome];
+
+            // 1. Sky Gradient Fill
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, gameHeight);
+            skyGrad.addColorStop(0, biome.skyGradient[0]);
+            skyGrad.addColorStop(0.5, biome.skyGradient[1]);
+            skyGrad.addColorStop(1, biome.skyGradient[2]);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
+
+            // 2. Far Parallax Mountains / Skyscrapers
+            ctx.fillStyle = biome.mountainColor;
+            ctx.beginPath();
+            const scrollFar = (distance * 0.2) % 120;
+            for (let x = -120; x < gameWidth + 120; x += 120) {
+                ctx.lineTo(x - scrollFar, gameHeight - 180);
+                ctx.lineTo(x + 60 - scrollFar, gameHeight - 260);
+                ctx.lineTo(x + 120 - scrollFar, gameHeight - 180);
+            }
+            ctx.lineTo(gameWidth, gameHeight);
+            ctx.lineTo(0, gameHeight);
+            ctx.fill();
+
+            // 3. Ground Terrain Line
+            ctx.fillStyle = biome.groundColor;
+            ctx.fillRect(0, gameHeight - 80, gameWidth, 80);
+
+            // Cyber Perspective Grid Lines
+            ctx.strokeStyle = biome.gridLineColor;
+            ctx.lineWidth = 1.5;
+            const scrollNear = (distance * 1.2) % 40;
+            for (let x = -40; x < gameWidth + 40; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x - scrollNear, gameHeight - 80);
+                ctx.lineTo(x - scrollNear, gameHeight);
+                ctx.stroke();
+            }
+            ctx.beginPath();
+            ctx.moveTo(0, gameHeight - 80);
+            ctx.lineTo(gameWidth, gameHeight - 80);
+            ctx.stroke();
+        }
+
+        /* Game Loop Step */
+        function updateGame() {
+            if (!isRunning || isPaused) return;
+
+            // Apply Time Dilation Slowdown Powerup
+            const effectiveSpeed = activeEffects.slow > 0 ? speed * 0.55 : speed;
+
+            distance += effectiveSpeed * 0.1;
+            score = Math.floor(distance * 10);
+            document.getElementById('current-score').textContent = String(score).padStart(5, '0');
+
+            // Random Weather Switcher Logic (Every ~300 points)
+            weatherTimer++;
+            if (weatherTimer > 900) {
+                weatherTimer = 0;
+                const weatherKeys = Object.keys(WEATHERS);
+                const randomW = weatherKeys[Math.floor(Math.random() * weatherKeys.length)];
+                triggerWeather(randomW);
+            }
+
+            // Powerup Timers Decrement
+            Object.keys(activeEffects).forEach(key => {
+                if (activeEffects[key] > 0) {
+                    activeEffects[key]--;
+                    if (activeEffects[key] === 0) updatePowerupHUD();
+                }
+            });
+
+            // Update Player Physics
+            player.update();
+
+            // Magnet logic: Pull coins towards player
+            if (activeEffects.magnet > 0) {
+                collectibles.forEach(c => {
+                    const dx = (player.x + player.width / 2) - c.x;
+                    const dy = (player.y + player.height / 2) - c.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 220) {
+                        c.x += (dx / dist) * 9;
+                        c.y += (dy / dist) * 9;
+                    }
+                });
+            }
+
+            // Update Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= effectiveSpeed;
+                if (obs.isFlying) obs.wingFrame += 0.2;
+
+                // Collision Detection with Player
+                if (
+                    player.x < obs.x + obs.width - 6 &&
+                    player.x + player.width - 6 > obs.x &&
+                    player.y < obs.y + obs.height - 6 &&
+                    player.y + player.height - 6 > obs.y
+                ) {
+                    if (activeEffects.shield > 0) {
+                        // Shield blocks collision!
+                        activeEffects.shield = 0;
+                        updatePowerupHUD();
+                        obstacles.splice(i, 1);
+                        audio.playHit();
+                        createDust(obs.x, obs.y);
+                    } else if (activeEffects.jetpack > 0) {
+                        // Jetpack smashes obstacle
+                        obstacles.splice(i, 1);
+                        audio.playHit();
+                    } else {
+                        // Game Over!
+                        gameOver();
+                        return;
+                    }
+                }
+
+                if (obs.x < -60) obstacles.splice(i, 1);
+            }
+
+            // Update Collectible Coins
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                let c = collectibles[i];
+                c.x -= effectiveSpeed;
+                c.rot += 0.1;
+
+                if (Math.hypot((player.x + player.width / 2) - c.x, (player.y + player.height / 2) - c.y) < 28) {
+                    coins += 1;
+                    localStorage.setItem('dino_ultra_coins', coins);
+                    document.getElementById('coin-count').textContent = coins;
+                    audio.playCoin();
+                    collectibles.splice(i, 1);
+                } else if (c.x < -30) {
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // Update Powerups Pickup
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                let p = powerups[i];
+                p.x -= effectiveSpeed;
+
+                if (Math.hypot((player.x + player.width / 2) - p.x, (player.y + player.height / 2) - p.y) < 32) {
+                    activeEffects[p.type] = 400; // 400 frames of powerup duration
+                    audio.playPowerup();
+                    updatePowerupHUD();
+                    powerups.splice(i, 1);
+                } else if (p.x < -40) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Increase Difficulty Gradually
+            speed = 7 + Math.floor(score / 350) * 0.8;
+
+            // Spawn new entities & update particles
+            spawnEntities();
+            updateParticles();
+        }
+
+        /* Master Render Frame Function */
+        function render() {
+            ctx.clearRect(0, 0, gameWidth, gameHeight);
+
+            // 1. Render Background
+            drawParallaxBackground();
+
+            // 2. Render Weather Particles
+            weatherParticles.forEach(p => {
+                ctx.save();
+                if (p.type === 'rain') {
+                    ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x + p.vx, p.y + p.length);
+                    ctx.stroke();
+                } else if (p.type === 'snow') {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 'sand') {
+                    ctx.fillStyle = 'rgba(251, 146, 60, 0.7)';
+                    ctx.fillRect(p.x, p.y, p.size * 2, p.size);
+                } else if (p.type === 'meteor') {
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 3. Render Dust Particles
+            dustParticles.forEach(d => {
+                ctx.fillStyle = `rgba(203, 213, 225, ${d.alpha})`;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 4. Render Collectible Coins
+            collectibles.forEach(c => {
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate(c.rot);
+                ctx.fillStyle = '#eab308';
+                ctx.beginPath();
+                ctx.arc(0, 0, c.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(0, 0, c.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 5. Render Powerup Capsules
+            powerups.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                const colors = { shield: '#38bdf8', magnet: '#eab308', slow: '#a855f7', jetpack: '#ef4444' };
+                ctx.fillStyle = colors[p.type] || '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const icons = { shield: '🛡️', magnet: '🧲', slow: '⏳', jetpack: '🚀' };
+                ctx.fillText(icons[p.type] || '⚡', 0, 0);
+                ctx.restore();
+            });
+
+            // 6. Render Obstacles
+            const biome = BIOMES[activeBiome];
+            obstacles.forEach(obs => {
+                ctx.save();
+                ctx.fillStyle = biome.obstacleColor;
+                if (obs.isFlying) {
+                    // Flying Cyber Drone
+                    ctx.roundRect(obs.x, obs.y, obs.width, obs.height, 8);
+                    ctx.fill();
+                    // Flapping Wing
+                    const wingY = Math.sin(obs.wingFrame) * 10;
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(obs.x - 6, obs.y + 10 + wingY, 10, 4);
+                    ctx.fillRect(obs.x + obs.width - 4, obs.y + 10 - wingY, 10, 4);
+                } else {
+                    // Ground Spike / Cactus Barricade
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + obs.height);
+                    ctx.lineTo(obs.x + obs.width / 2, obs.y);
+                    ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 7. Render Player Dino
+            drawDino(ctx, player.x, player.y, player.width, player.height, playerOutfit, player.legFrame, player.isDucking, player.isGrounded);
+
+            // Render Active Shield Aura Barrier
+            if (activeEffects.shield > 0) {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.height * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 8. Lightning Flash Effect overlay during Thunderstorms
+            if (lightningFlash > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${lightningFlash})`;
+                ctx.fillRect(0, 0, gameWidth, gameHeight);
+                lightningFlash -= 0.05;
+            }
+
+            // Weather Fog Tint Layer
+            ctx.fillStyle = BIOMES[activeBiome].fogColor;
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
+        }
+
+        /* Master Game Loop Handler */
+        function gameLoop() {
+            updateGame();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* Update Active Powerups HUD Icons Bar */
+        function updatePowerupHUD() {
+            const bar = document.getElementById('powerup-bar');
+            bar.innerHTML = '';
+            const icons = { shield: '🛡️', magnet: '🧲', slow: '⏳', jetpack: '🚀' };
+            Object.keys(activeEffects).forEach(key => {
+                if (activeEffects[key] > 0) {
+                    const badge = document.createElement('div');
+                    badge.className = 'glass-panel px-2.5 py-1 rounded-xl text-xs flex items-center gap-1 text-cyan-300 font-bold animate-pulse';
+                    badge.innerHTML = `<span>${icons[key]}</span> <span>${Math.ceil(activeEffects[key] / 60)}s</span>`;
+                    bar.appendChild(badge);
+                }
+            });
+        }
+
+        /* Game Over Logic */
+        function gameOver() {
+            isRunning = false;
+            audio.playHit();
+            audio.toggleBGM(false);
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('dino_ultra_high', highScore);
+                document.getElementById('high-score').textContent = String(highScore).padStart(5, '0');
+            }
+
+            document.getElementById('overlay-title').textContent = 'GAME OVER';
+            document.getElementById('overlay-subtitle').textContent = '遭遇障礙撞擊！再次挑戰新紀錄吧！';
+            document.getElementById('overlay-stats').classList.remove('hidden');
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('final-coins').textContent = coins;
+            document.getElementById('final-weathers').textContent = weatherSurvivedCount;
+            document.getElementById('start-btn').textContent = '再次挑戰';
+
+            document.getElementById('game-overlay').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        /* Start / Restart Game Handler */
+        function startGame() {
+            obstacles = [];
+            collectibles = [];
+            powerups = [];
+            weatherParticles = [];
+            dustParticles = [];
+            score = 0;
+            distance = 0;
+            speed = 7;
+            weatherSurvivedCount = 0;
+
+            Object.keys(activeEffects).forEach(k => activeEffects[k] = 0);
+            updatePowerupHUD();
+
+            player.reset();
+            isRunning = true;
+            isPaused = false;
+
+            document.getElementById('game-overlay').classList.add('opacity-0', 'pointer-events-none');
+            audio.toggleBGM(true);
+            triggerWeather('sunny');
+        }
+
+        /* Customizer Modal & Preview Renderer */
+        function renderPreview() {
+            pCtx.clearRect(0, 0, 260, 260);
+            // Background grid
+            pCtx.fillStyle = '#0f172a';
+            pCtx.fillRect(0, 0, 260, 260);
+
+            // Grid lines
+            pCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            pCtx.lineWidth = 1;
+            for (let i = 0; i < 260; i += 20) {
+                pCtx.beginPath(); pCtx.moveTo(i, 0); pCtx.lineTo(i, 260); pCtx.stroke();
+                pCtx.beginPath(); pCtx.moveTo(0, i); pCtx.lineTo(260, i); pCtx.stroke();
+            }
+
+            // Draw Dino Centered
+            drawDino(pCtx, 100, 90, 60, 70, playerOutfit, Date.now() * 0.005, false, true);
+
+            // Update Outfit Text Summary
+            const avatarName = DRESS_UP_DATA.avatar.find(a => a.id === playerOutfit.avatar)?.name;
+            const hatName = DRESS_UP_DATA.hat.find(h => h.id === playerOutfit.hat)?.name;
+            const glassesName = DRESS_UP_DATA.glasses.find(g => g.id === playerOutfit.glasses)?.name;
+            document.getElementById('outfit-summary').textContent = `${avatarName} • ${hatName} • ${glassesName}`;
+        }
+
+        function loadCustomizerTab(tabKey) {
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            const items = DRESS_UP_DATA[tabKey] || [];
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                const isActive = playerOutfit[tabKey] === item.id;
+                btn.className = `glass-btn p-3 rounded-2xl flex flex-col items-center gap-1.5 transition ${isActive ? 'active' : ''}`;
+
+                if (tabKey === 'skin') {
+                    btn.innerHTML = `
+                        <div class="w-8 h-8 rounded-full border-2 border-white/40 shadow-lg" style="background-color: ${item.color}"></div>
+                        <span class="text-[11px] font-bold text-slate-200">${item.name}</span>
+                    `;
+                } else {
+                    btn.innerHTML = `
+                        <span class="text-2xl">${item.icon}</span>
+                        <span class="text-[11px] font-bold text-slate-200">${item.name}</span>
+                    `;
+                }
+
+                btn.onclick = () => {
+                    playerOutfit[tabKey] = item.id;
+                    loadCustomizerTab(tabKey);
+                    renderPreview();
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
+        /* Canvas Resize & Responsive Scaling Handler */
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = gameWidth;
+            canvas.height = gameHeight;
+        }
+
+        /* Event Listeners Initialization */
+        function initEventListeners() {
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Keyboard Controls
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' || e.code === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!isRunning) {
+                        startGame();
+                    } else {
+                        player.jump();
+                    }
+                } else if (e.code === 'ArrowDown') {
+                    e.preventDefault();
+                    if (isRunning) player.isDucking = true;
+                } else if (e.code === 'KeyP') {
+                    isPaused = !isPaused;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'ArrowDown') {
+                    player.isDucking = false;
+                }
+            });
+
+            // Touch Screen Mobile Controls
+            document.getElementById('touch-jump').onclick = () => {
+                if (!isRunning) startGame();
+                else player.jump();
+            };
+
+            const duckBtn = document.getElementById('touch-duck');
+            duckBtn.ontouchstart = (e) => { e.preventDefault(); player.isDucking = true; };
+            duckBtn.ontouchend = (e) => { e.preventDefault(); player.isDucking = false; };
+            duckBtn.onmousedown = () => player.isDucking = true;
+            duckBtn.onmouseup = () => player.isDucking = false;
+
+            // Header Controls
+            document.getElementById('start-btn').onclick = startGame;
+            document.getElementById('sound-toggle').onclick = (e) => {
+                audio.soundEnabled = !audio.soundEnabled;
+                e.target.textContent = audio.soundEnabled ? '🔊' : '🔇';
+            };
+            document.getElementById('music-toggle').onclick = (e) => {
+                audio.musicEnabled = !audio.musicEnabled;
+                e.target.textContent = audio.musicEnabled ? '🎵' : '🔇';
+                audio.toggleBGM(isRunning);
+            };
+
+            // Biome Tabs
+            document.querySelectorAll('.biome-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.biome-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeBiome = btn.dataset.biome;
+                    document.getElementById('biome-name').textContent = BIOMES[activeBiome].name;
+                };
+            });
+
+            // Customizer Modal Toggles
+            const customModal = document.getElementById('customizer-modal');
+            const openCustomizer = () => {
+                customModal.classList.remove('opacity-0', 'pointer-events-none');
+                loadCustomizerTab('avatar');
+                renderPreview();
+            };
+            const closeCustomizer = () => {
+                customModal.classList.add('opacity-0', 'pointer-events-none');
+            };
+
+            document.getElementById('customizer-btn').onclick = openCustomizer;
+            document.getElementById('overlay-dress-btn').onclick = openCustomizer;
+            document.getElementById('close-customizer').onclick = closeCustomizer;
+            document.getElementById('save-customizer').onclick = closeCustomizer;
+
+            // Customizer Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadCustomizerTab(btn.dataset.tab);
+                };
+            });
+
+            // Randomize Outfit Button
+            document.getElementById('randomize-dress').onclick = () => {
+                Object.keys(DRESS_UP_DATA).forEach(key => {
+                    const items = DRESS_UP_DATA[key];
+                    playerOutfit[key] = items[Math.floor(Math.random() * items.length)].id;
+                });
+                const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+                loadCustomizerTab(activeTab);
+                renderPreview();
+            };
+        }
+
+        /* Initial Setup Handler on Load */
+        window.onload = function() {
+            document.getElementById('high-score').textContent = String(highScore).padStart(5, '0');
+            document.getElementById('coin-count').textContent = coins;
+
+            initEventListeners();
+            player.reset();
+
+            // Start Graphic Render Loop
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
