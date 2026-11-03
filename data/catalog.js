@@ -1940,6 +1940,19 @@ window.GALLERY_CATALOG = {
               "tag": "離線小恐龍"
             },
             {
+              "id": "A41D4E1B1C",
+              "title": "作品 A41D4E",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B817.html",
+              "sourceHash": "cb9e8bb5a4238299c35ad928a1000811cf6ac972dda405c0936fc3e56381c4ed",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/A41D4E1B1C.jpg?v=cb9e8bb5a423",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E6%9B%B8/A41D4E1B1C.html",
+              "tag": "跑酷冒險"
+            },
+            {
               "id": "AC1EBB7EA0",
               "title": "作品 AC1EBB",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B801.html",
@@ -2099,7 +2112,7 @@ window.GALLERY_CATALOG = {
         }
       ],
       "ballot": {
-        "fingerprint": "e78141d1f8272720",
+        "fingerprint": "4a06101ca48862ea",
         "entries": [
           {
             "id": "2201D4A0CB",
@@ -2984,6 +2997,12 @@ window.GALLERY_CATALOG = {
             "title": "作品 961CEE"
           },
           {
+            "id": "A41D4E1B1C",
+            "className": "一書",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B817.html",
+            "title": "作品 A41D4E"
+          },
+          {
             "id": "AC1EBB7EA0",
             "className": "一書",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B801.html",
@@ -3071,7 +3090,7 @@ window.GALLERY_CATALOG = {
     }
   ],
   "ballot": {
-    "fingerprint": "e78141d1f8272720",
+    "fingerprint": "4a06101ca48862ea",
     "entries": [
       {
         "id": "2201D4A0CB",
@@ -3954,6 +3973,12 @@ window.GALLERY_CATALOG = {
         "className": "一書",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B823.html",
         "title": "作品 961CEE"
+      },
+      {
+        "id": "A41D4E1B1C",
+        "className": "一書",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/%E4%B8%80%E6%9B%B817.html",
+        "title": "作品 A41D4E"
       },
       {
         "id": "AC1EBB7EA0",

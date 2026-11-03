@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E6%9B%B8/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>夢幻公主跑酷：星芒衣櫥 - 豪華擴充版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Fredoka', 'Outfit', system-ui, sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0F0A1C;
+        }
+
+        #gameCanvas {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
+        .dreamy-glass {
+            background: rgba(30, 18, 50, 0.88);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 2px solid rgba(244, 114, 182, 0.4);
+        }
+
+        @keyframes pastelGlow {
+            0%, 100% { box-shadow: 0 0 25px rgba(244, 114, 182, 0.35), inset 0 0 15px rgba(192, 132, 252, 0.2); }
+            50% { box-shadow: 0 0 40px rgba(192, 132, 252, 0.65), inset 0 0 25px rgba(244, 114, 182, 0.3); }
+        }
+
+        .dreamy-box {
+            animation: pastelGlow 3.5s infinite ease-in-out;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(244, 114, 182, 0.5);
+            border-radius: 10px;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
+        .pulse-anim {
+            animation: pulseGlow 1.5s infinite ease-in-out;
+        }
+    </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-slate-950 text-purple-100 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 transition-colors duration-500">
+
+    <div class="w-full max-w-4xl dreamy-glass dreamy-box rounded-3xl shadow-2xl p-3 sm:p-5 transition-all duration-500">
+        
+        <!-- Header Controls & Status Bar -->
+        <div class="flex flex-wrap justify-between items-center mb-3 gap-2 border-b border-pink-500/20 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-400 via-purple-400 to-indigo-300 flex items-center justify-center text-white shadow-lg shadow-pink-500/30 text-2xl border border-white/40">
+                    👑
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-wider bg-gradient-to-r from-pink-300 via-purple-200 to-indigo-200 bg-clip-text text-transparent">
+                        PRINCESS RUNNER EX
+                    </h1>
+                    <p class="text-xs text-pink-300/80 font-medium">星芒衣櫥 • 豪華技能擴充版</p>
+                </div>
+            </div>
+            
+            <!-- Wardrobe, Quests & Controls -->
+            <div class="flex items-center gap-2">
+                <!-- Hearts UI -->
+                <div id="heartsContainer" class="px-2.5 py-1 rounded-xl bg-pink-950/60 border border-pink-500/40 text-sm font-bold flex items-center gap-1">
+                    <span class="text-xs text-pink-300">生命:</span>
+                    <span id="heartsText" class="text-base tracking-widest">💖💖💖</span>
+                </div>
+
+                <div class="px-3 py-1.5 rounded-xl bg-purple-950/60 text-pink-200 border border-pink-500/30 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                    <span>✨</span>
+                    <span id="starCount" class="font-mono text-sm text-yellow-300 font-extrabold">0</span>
+                </div>
+
+                <button id="openQuestsBtn" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border border-purple-300/40 text-xs font-bold transition shadow-md hover:scale-105 active:scale-95 flex items-center gap-1">
+                    <span>🏆 任務</span>
+                </button>
+
+                <button id="openWardrobeBtn" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white border border-pink-300/40 text-xs font-bold transition shadow-md hover:scale-105 active:scale-95 flex items-center gap-1.5">
+                    <span>👗 衣櫥</span>
+                    <span id="unlockedBadge" class="bg-yellow-400 text-purple-950 px-1.5 py-0.2 rounded-full text-[10px] font-black">1/8</span>
+                </button>
+
+                <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-pink-300 border border-pink-500/30 transition shadow-sm" title="聲音開關">
+                    <svg id="soundOnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                    <svg id="soundOffIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Canvas Screen Container -->
+        <div class="relative w-full aspect-[21/9] sm:aspect-[24/9] bg-slate-950 rounded-2xl overflow-hidden border-2 border-pink-400/40 shadow-inner">
+            <canvas id="gameCanvas" width="1000" height="350" class="w-full h-full block cursor-pointer"></canvas>
+            
+            <!-- Active Fever Bar Overlay on Top of Canvas -->
+            <div id="feverBarContainer" class="absolute top-3 left-4 right-4 h-3 bg-slate-900/80 rounded-full border border-pink-500/40 overflow-hidden shadow-inner flex items-center p-0.5">
+                <div id="feverFill" class="h-full bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 rounded-full transition-all duration-200 w-0"></div>
+            </div>
+
+            <!-- Toast Banner for Dress Unlock or Quest -->
+            <div id="dressToast" class="absolute top-8 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-500/95 via-purple-500/95 to-indigo-500/95 text-white px-5 py-2 rounded-2xl shadow-xl border border-white/50 text-xs sm:text-sm font-bold flex items-center gap-2 transform -translate-y-20 transition-all duration-500 pointer-events-none z-20">
+                <span class="text-xl">🎁</span>
+                <span id="toastText">解鎖新禮服！</span>
+            </div>
+
+            <!-- Start / Game Over Overlays -->
+            <div id="overlayScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/70 backdrop-blur-md transition-opacity duration-300 p-3 z-10">
+                <div id="startMessage" class="text-center bg-slate-900/90 p-5 rounded-3xl shadow-2xl border border-pink-400/50 max-w-lg">
+                    <div class="text-3xl mb-1 animate-bounce">🐰👑✨</div>
+                    <h2 class="text-xl font-bold text-pink-200 mb-1 tracking-wide">兔兔公主 • 星願啟程 EX</h2>
+                    <p class="text-xs text-pink-300/80 mb-2.5">按 <span class="px-2 py-0.5 bg-pink-950 text-pink-200 rounded font-bold border border-pink-500/40">Space/↑</span> 跳躍 | <span class="px-2 py-0.5 bg-pink-950 text-pink-200 rounded font-bold border border-pink-500/40">Shift</span> 護盾</p>
+
+                    <!-- World Stage Picker -->
+                    <div class="my-2.5 border-t border-b border-pink-500/20 py-2">
+                        <p class="text-xs font-bold text-purple-300 mb-1.5">🗺️ 選擇冒險關卡：</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="stage-select-btn px-2 py-1.5 bg-pink-500/30 border border-pink-400 rounded-xl text-xs font-bold text-pink-200 hover:bg-pink-500/50 transition" data-stage="0">🌅 夕陽仙境</button>
+                            <button class="stage-select-btn px-2 py-1.5 bg-purple-900/40 border border-purple-500/30 rounded-xl text-xs font-bold text-purple-200 hover:bg-purple-500/50 transition" data-stage="1">🌌 星空銀河</button>
+                            <button class="stage-select-btn px-2 py-1.5 bg-emerald-900/40 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-200 hover:bg-emerald-500/50 transition" data-stage="2">✨ 極光水晶</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Guide Rules -->
+                    <div class="text-[11px] text-purple-200/90 space-y-1.5 text-left">
+                        <div class="bg-purple-950/60 p-2 rounded-xl border border-pink-500/20 grid grid-cols-2 gap-1.5">
+                            <p class="col-span-2 font-bold text-pink-300">✦ 擴充功能說明：</p>
+                            <p>🌀 <b>二段跳躍：</b>空中再按一次跳躍</p>
+                            <p>🛡️ <b>精靈護盾：</b>CD完畢可按 Shift 擋傷</p>
+                            <p>💖 <b>三心生命：</b>不再一撞即死，有無敵時間</p>
+                            <p>🔥 <b>星願狂熱：</b>吃滿星星觸發無敵衝刺</p>
+                        </div>
+                    </div>
+
+                    <button id="startGameBtn" class="mt-3 w-full py-2.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-400 hover:to-purple-400 text-white rounded-2xl text-xs font-bold shadow-lg border border-white/30 transform active:scale-95 transition">
+                        💖 開始冒險 (START)
+                    </button>
+                </div>
+                
+                <div id="gameOverMessage" class="text-center hidden bg-slate-900/95 p-6 rounded-3xl shadow-2xl border border-pink-500 max-w-md">
+                    <p class="text-2xl font-bold text-pink-400 mb-1 tracking-wider">PRINCESS RESTING</p>
+                    <p id="finalScoreText" class="text-xs font-bold text-pink-200/90 mb-4">冒險里程: 00000</p>
+                    <button id="restartBtn" class="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-400 hover:to-purple-400 text-white rounded-2xl text-xs font-bold shadow-lg border border-white/30 transform active:scale-95 transition flex items-center justify-center gap-2">
+                        <span>💖 再玩一次 (REPLAY)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Pad & Active Skill Controls -->
+        <div class="mt-3 grid grid-cols-3 gap-2">
+            <button id="mobileJumpBtn" class="py-3 bg-gradient-to-r from-pink-500 to-purple-500 active:from-pink-600 active:to-purple-600 text-white rounded-xl text-center text-xs font-bold shadow-md border border-pink-300/30 active:scale-95 transition flex items-center justify-center gap-1">
+                <span>▲ 跳躍/二段跳</span>
+            </button>
+            <button id="mobileDuckBtn" class="py-3 bg-gradient-to-r from-purple-800 to-indigo-900 active:from-purple-700 active:to-indigo-800 text-pink-200 rounded-xl text-center text-xs font-bold shadow-md border border-purple-500/30 active:scale-95 transition flex items-center justify-center gap-1">
+                <span>▼ 滑行 (Glide)</span>
+            </button>
+            <button id="mobileShieldBtn" class="py-3 bg-gradient-to-r from-cyan-600 to-blue-600 active:from-cyan-700 active:to-blue-700 text-white rounded-xl text-center text-xs font-bold shadow-md border border-cyan-300/40 active:scale-95 transition flex items-center justify-center gap-1">
+                <span id="shieldBtnText">🛡️ 護盾(Ready)</span>
+            </button>
+        </div>
+
+        <!-- Footer Control Info -->
+        <div class="mt-3 text-xs text-purple-300/80 border-t border-pink-500/20 pt-2.5 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-pink-300">操作：</span>
+                <span class="px-1.5 py-0.5 bg-slate-900 rounded border border-purple-500/30 font-mono">Space</span> 跳/二段跳
+                <span class="px-1.5 py-0.5 bg-slate-900 rounded border border-purple-500/30 font-mono">↓</span> 滑行
+                <span class="px-1.5 py-0.5 bg-slate-900 rounded border border-purple-500/30 font-mono">Shift</span> 護盾
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="bgPhaseText" class="text-pink-300 font-medium">關卡: 🌅 棉花糖夕陽</span>
+                <span id="speedIndicator" class="font-mono text-purple-300 font-bold">速度: 1.0x</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wardrobe Closet Modal -->
+    <div id="wardrobeModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900/95 border-2 border-pink-400 rounded-3xl max-w-xl w-full p-5 shadow-2xl relative dreamy-box">
+            <button id="closeWardrobeBtn" class="absolute top-4 right-4 text-purple-300 hover:text-white text-xl bg-slate-800 p-2 rounded-full w-9 h-9 flex items-center justify-center border border-pink-500/30">✕</button>
+            
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-2xl">👗</span>
+                <h2 class="text-xl font-bold text-pink-200">公主皇家衣櫥 (Royal Closet)</h2>
+            </div>
+            <p class="text-xs text-purple-300/80 mb-4">收集禮服寶盒或完成任務解鎖新套裝！點擊下方已解鎖的禮服更換：</p>
+
+            <div id="outfitsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scroll">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="mt-4 border-t border-pink-500/20 pt-3 flex justify-between items-center text-xs">
+                <span id="activeOutfitName" class="text-pink-300 font-bold">當前穿著: 夢幻粉櫻禮服</span>
+                <button id="confirmWardrobeBtn" class="px-5 py-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold rounded-xl shadow">確定穿著</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievements / Quest Modal -->
+    <div id="questsModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900/95 border-2 border-purple-400 rounded-3xl max-w-lg w-full p-5 shadow-2xl relative dreamy-box">
+            <button id="closeQuestsBtn" class="absolute top-4 right-4 text-purple-300 hover:text-white text-xl bg-slate-800 p-2 rounded-full w-9 h-9 flex items-center justify-center border border-purple-500/30">✕</button>
+            
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-2xl">🏆</span>
+                <h2 class="text-xl font-bold text-purple-200">皇家成就與任務 (Royal Quests)</h2>
+            </div>
+            <p class="text-xs text-purple-300/80 mb-4">達成任務即可領取豐厚星星與特殊禮服獎勵！</p>
+
+            <div id="questsList" class="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scroll">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Synthesized Audio Engine
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.16);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+            }
+
+            playDoubleJump() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.2);
+            }
+
+            playShield() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(900, now + 0.3);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+
+            playCollectStar() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [659.25, 880.00, 1046.50].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.04);
+                    gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.04 + 0.12);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.04); osc.stop(now + idx * 0.04 + 0.12);
+                });
+            }
+
+            playUnlockDress() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08); osc.stop(now + idx * 0.08 + 0.35);
+                });
+            }
+
+            playHit() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.22);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.22);
+            }
+        }
+
+        const sound = new AudioEngine();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_WIDTH = 1000;
+        const GAME_HEIGHT = 350;
+        const GROUND_Y = 285;
+
+        let gameState = 'START';
+        let selectedStage = 0; // 0: Sunset, 1: Galaxy, 2: Crystal
+        let score = 0;
+        let starCount = 0;
+        let feverVal = 0;
+        let isFeverActive = false;
+        let feverTimer = 0;
+        let hearts = 3;
+        let invincibilityTimer = 0;
+
+        let shieldActive = false;
+        let shieldCooldown = 0;
+        const SHIELD_COOLDOWN_MAX = 500; // ~8 seconds
+
+        let highScore = parseInt(window.__galleryStorage.getItem('princess_runner_hi_ex') || '0', 10);
+        let speed = 7.0;
+        const baseSpeed = 7.0;
+        const maxSpeed = 16.5;
+        let frameCount = 0;
+        let magicParticles = [];
+        let floatTexts = [];
+
+        const DRESS_DATABASE = [
+            { id: 'sakura_pink', name: '🌸 夢幻粉櫻禮服', unlocked: true, dressColor: '#F472B6', dressAccent: '#FCE7F3', bowColor: '#EC4899', crownColor: '#FBBF24', sparkleColor: '#F472B6' },
+            { id: 'galaxy_purple', name: '🌌 星空銀河禮服', unlocked: false, dressColor: '#8B5CF6', dressAccent: '#C4B5FD', bowColor: '#6D28D9', crownColor: '#E0E7FF', sparkleColor: '#C4B5FD' },
+            { id: 'golden_empress', name: '👑 金燦女皇禮服', unlocked: false, dressColor: '#F59E0B', dressAccent: '#FEF3C7', bowColor: '#D97706', crownColor: '#F59E0B', sparkleColor: '#FBBF24' },
+            { id: 'emerald_fairy', name: '🍃 翡翠仙子禮服', unlocked: false, dressColor: '#10B981', dressAccent: '#D1FAE5', bowColor: '#059669', crownColor: '#34D399', sparkleColor: '#6EE7B7' },
+            { id: 'rainbow_magic', name: '🌈 夢幻彩虹禮服', unlocked: false, dressColor: '#EC4899', dressAccent: '#3B82F6', bowColor: '#10B981', crownColor: '#FBBF24', sparkleColor: '#38BDF8' },
+            { id: 'bunny_maid', name: '🐰 萌兔女僕禮服', unlocked: false, dressColor: '#1E293B', dressAccent: '#FFFFFF', bowColor: '#EF4444', crownColor: '#CBD5E1', sparkleColor: '#F43F5E' },
+            { id: 'ocean_siren', name: '🧜‍♀️ 蔚藍人魚禮服', unlocked: false, dressColor: '#06B6D4', dressAccent: '#CFFAFE', bowColor: '#0284C7', crownColor: '#38BDF8', sparkleColor: '#67E8F9' },
+            { id: 'starlight_goddess', name: '✨ 璀璨星願禮服', unlocked: false, dressColor: '#E11D48', dressAccent: '#FFE4E6', bowColor: '#9F1239', crownColor: '#FDE047', sparkleColor: '#FDA4AF' }
+        ];
+
+        const savedUnlocked = JSON.parse(window.__galleryStorage.getItem('princess_unlocked_dresses_ex') || '["sakura_pink"]');
+        DRESS_DATABASE.forEach(d => { if (savedUnlocked.includes(d.id)) d.unlocked = true; });
+
+        let currentOutfitIndex = 0;
+
+        const QUESTS_DATABASE = [
+            { id: 'q_star_15', text: '收集 15 顆星星', target: 15, current: 0, rewardType: 'star', rewardAmount: 20, done: false },
+            { id: 'q_dist_500', text: '累積跑程達到 500 米', target: 500, current: 0, rewardType: 'star', rewardAmount: 30, done: false },
+            { id: 'q_dress_3', text: '擁有 3 件解鎖禮服', target: 3, current: 1, rewardType: 'dress', done: false },
+            { id: 'q_fever_1', text: '觸發 1 次星願狂熱模式', target: 1, current: 0, rewardType: 'star', rewardAmount: 50, done: false }
+        ];
+
+        const princess = {
+            x: 95,
+            y: GROUND_Y - 70,
+            width: 58,
+            height: 70,
+            normalHeight: 70,
+            normalWidth: 58,
+            duckHeight: 42,
+            duckWidth: 72,
+            vy: 0,
+            gravity: 0.85,
+            jumpForce: -15.2,
+            isJumping: false,
+            canDoubleJump: false,
+            isDucking: false,
+            runFrame: 0,
+            frameTimer: 0,
+
+            reset() {
+                this.width = this.normalWidth;
+                this.height = this.normalHeight;
+                this.y = GROUND_Y - this.normalHeight;
+                this.vy = 0;
+                this.isJumping = false;
+                this.canDoubleJump = false;
+                this.isDucking = false;
+                this.runFrame = 0;
+            },
+
+            jump() {
+                if (this.isDucking) return;
+
+                if (!this.isJumping) {
+                    this.vy = this.jumpForce;
+                    this.isJumping = true;
+                    this.canDoubleJump = true;
+                    sound.playJump();
+                    this.spawnJumpParticles();
+                } else if (this.canDoubleJump) {
+                    this.vy = this.jumpForce * 0.9;
+                    this.canDoubleJump = false;
+                    sound.playDoubleJump();
+                    this.spawnJumpParticles('#38BDF8');
+                }
+            },
+
+            spawnJumpParticles(overrideColor) {
+                const outfit = DRESS_DATABASE[currentOutfitIndex];
+                for (let i = 0; i < 9; i++) {
+                    magicParticles.push({
+                        x: this.x + 20,
+                        y: this.y + this.height,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: -Math.random() * 3,
+                        size: 3 + Math.random() * 3,
+                        life: 1,
+                        color: overrideColor || outfit.sparkleColor
+                    });
+                }
+            },
+
+            duck(enable) {
+                if (this.isJumping) {
+                    if (enable) this.vy += 2.4;
+                    return;
+                }
+
+                if (enable && !this.isDucking) {
+                    this.isDucking = true;
+                    this.width = this.duckWidth;
+                    this.height = this.duckHeight;
+                    this.y = GROUND_Y - this.duckHeight;
+                } else if (!enable && this.isDucking) {
+                    this.isDucking = false;
+                    this.width = this.normalWidth;
+                    this.height = this.normalHeight;
+                    this.y = GROUND_Y - this.normalHeight;
+                }
+            },
+
+            update() {
+                if (this.isJumping) {
+                    this.vy += this.gravity;
+                    this.y += this.vy;
+
+                    if (this.y >= GROUND_Y - this.height) {
+                        this.y = GROUND_Y - this.height;
+                        this.isJumping = false;
+                        this.canDoubleJump = false;
+                        this.vy = 0;
+                    }
+                }
+
+                this.frameTimer++;
+                if (this.frameTimer >= Math.max(2, 6 - Math.floor(speed / 3))) {
+                    this.runFrame = (this.runFrame + 1) % 4;
+                    this.frameTimer = 0;
+                }
+            },
+
+            draw(ctx) {
+                const x = this.x;
+                const y = this.y;
+                const outfit = DRESS_DATABASE[currentOutfitIndex];
+
+                ctx.save();
+
+                // I-frame flickering effect
+                if (invincibilityTimer > 0 && Math.floor(frameCount / 3) % 2 === 0) {
+                    ctx.globalAlpha = 0.4;
+                }
+
+                if (this.isDucking) {
+                    ctx.fillStyle = outfit.dressColor;
+                    ctx.beginPath(); ctx.ellipse(x + 25, y + 26, 28, 14, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = outfit.dressAccent;
+                    ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+                    // Ears
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath(); ctx.ellipse(x + 10, y + 8, 5, 16, -0.6, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#F472B6';
+                    ctx.beginPath(); ctx.ellipse(x + 10, y + 8, 2.5, 11, -0.6, 0, Math.PI * 2); ctx.fill();
+
+                    // Chibi Head
+                    ctx.fillStyle = '#FFF1F2';
+                    ctx.beginPath(); ctx.arc(x + 48, y + 15, 14, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#FDA4AF'; ctx.beginPath(); ctx.arc(x + 44, y + 18, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#1E1B4B'; ctx.beginPath(); ctx.arc(x + 52, y + 14, 2.5, 0, Math.PI * 2); ctx.fill();
+
+                    // Tiara
+                    ctx.fillStyle = outfit.crownColor;
+                    ctx.beginPath(); ctx.moveTo(x + 42, y + 3); ctx.lineTo(x + 45, y - 4); ctx.lineTo(x + 48, y + 2); ctx.lineTo(x + 51, y - 4); ctx.lineTo(x + 54, y + 3); ctx.closePath(); ctx.fill();
+                } else {
+                    const bounce = Math.sin(frameCount * 0.3) * 2;
+
+                    // Ears
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath(); ctx.ellipse(x + 20, y - 4 + bounce, 6, 20, -0.15, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(x + 32, y - 4 + bounce, 6, 20, 0.15, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#F472B6';
+                    ctx.beginPath(); ctx.ellipse(x + 20, y - 4 + bounce, 3, 13, -0.15, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(x + 32, y - 4 + bounce, 3, 13, 0.15, 0, Math.PI * 2); ctx.fill();
+
+                    // Ballgown Dress
+                    const dressY = y + 30;
+                    ctx.fillStyle = outfit.dressColor;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 16, dressY); ctx.quadraticCurveTo(x + 28, dressY - 4, x + 42, dressY);
+                    ctx.lineTo(x + 52, dressY + 28); ctx.quadraticCurveTo(x + 28, dressY + 36, x + 4, dressY + 28);
+                    ctx.closePath(); ctx.fill();
+
+                    // Dress Ruffles Accent
+                    ctx.fillStyle = outfit.dressAccent;
+                    ctx.beginPath(); ctx.arc(x + 14, dressY + 28, 6, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(x + 28, dressY + 30, 7, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(x + 42, dressY + 28, 6, 0, Math.PI * 2); ctx.fill();
+
+                    // Bow
+                    ctx.fillStyle = outfit.bowColor;
+                    ctx.beginPath(); ctx.arc(x + 28, dressY + 4, 4, 0, Math.PI * 2); ctx.fill();
+
+                    // Head
+                    ctx.fillStyle = '#FFE4E6';
+                    ctx.beginPath(); ctx.arc(x + 28, y + 18 + bounce, 15, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#312E81';
+                    ctx.beginPath(); ctx.arc(x + 33, y + 17 + bounce, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath(); ctx.arc(x + 32, y + 15.5 + bounce, 1.2, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#FB7185';
+                    ctx.beginPath(); ctx.arc(x + 23, y + 21 + bounce, 3.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(x + 35, y + 21 + bounce, 3.5, 0, Math.PI * 2); ctx.fill();
+
+                    // Crown
+                    ctx.fillStyle = outfit.crownColor;
+                    ctx.beginPath(); ctx.moveTo(x + 20, y + 5 + bounce); ctx.lineTo(x + 24, y - 2 + bounce); ctx.lineTo(x + 28, y + 3 + bounce); ctx.lineTo(x + 32, y - 2 + bounce); ctx.lineTo(x + 36, y + 5 + bounce); ctx.closePath(); ctx.fill();
+
+                    // Shoes
+                    ctx.fillStyle = outfit.bowColor;
+                    const legStride = Math.sin(frameCount * 0.4) * 8;
+                    ctx.beginPath(); ctx.arc(x + 22 + legStride, GROUND_Y - 3, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(x + 34 - legStride, GROUND_Y - 3, 5, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Draw Active Shield Aura
+                if (shieldActive) {
+                    ctx.strokeStyle = '#38BDF8';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#0284C7';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(x + this.width / 2, y + this.height / 2, 42, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Draw Fever Mode Rainbow Aura
+                if (isFeverActive) {
+                    ctx.strokeStyle = `hsl(${frameCount * 10 % 360}, 100%, 70%)`;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(x + this.width / 2, y + this.height / 2, 46, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        };
+
+        let obstacles = [];
+        let collectibles = [];
+        let obstacleTimer = 0;
+        let itemTimer = 0;
+
+        class CuteSlime {
+            constructor(x) { this.x = x; this.width = 44; this.height = 38; this.y = GROUND_Y - this.height; this.squishTimer = Math.random() * 10; }
+            update() { this.x -= speed; this.squishTimer += 0.15; }
+            draw(ctx) {
+                const squish = Math.sin(this.squishTimer) * 3;
+                const x = this.x; const y = this.y + squish;
+                ctx.save();
+                const grad = ctx.createLinearGradient(x, y, x, y + this.height);
+                grad.addColorStop(0, '#F472B6'); grad.addColorStop(1, '#C084FC');
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.ellipse(x + 22, y + 22, 22, 16 - squish, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#312E81'; ctx.beginPath(); ctx.arc(x + 14, y + 16, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(x + 30, y + 16, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class CrystalSpire {
+            constructor(x) { this.x = x; this.width = 40; this.height = 68; this.y = GROUND_Y - this.height; }
+            update() { this.x -= speed; }
+            draw(ctx) {
+                const x = this.x; const y = this.y;
+                ctx.save();
+                const grad = ctx.createLinearGradient(x, y, x + this.width, y + this.height);
+                grad.addColorStop(0, '#DDD6FE'); grad.addColorStop(0.5, '#A78BFA'); grad.addColorStop(1, '#6D28D9');
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(x + 18, y); ctx.lineTo(x + 34, y + this.height); ctx.lineTo(x + 2, y + this.height); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FlyingSprite {
+            constructor(x) {
+                this.x = x; this.width = 46; this.height = 36;
+                this.y = GROUND_Y - 95; // Golden height: hits standing, ducking avoids
+                this.wingTimer = 0;
+            }
+            update() { this.x -= (speed + 1.2); this.wingTimer += 0.2; }
+            draw(ctx) {
+                const x = this.x; const y = this.y; const wingY = Math.sin(this.wingTimer) * 8;
+                ctx.save();
+                ctx.fillStyle = 'rgba(244, 114, 182, 0.85)';
+                ctx.beginPath(); ctx.ellipse(x + 12, y + wingY, 15, 7, -0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(x + 32, y + wingY, 15, 7, 0.4, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowColor = '#EC4899'; ctx.shadowBlur = 12; ctx.fillStyle = '#E11D48';
+                ctx.beginPath(); ctx.arc(x + 22, y + 18, 12, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class StarCoin {
+            constructor(x) { this.x = x; this.y = GROUND_Y - (70 + Math.random() * 55); this.width = 24; this.height = 24; this.rot = Math.random() * 10; }
+            update() {
+                if (isFeverActive) {
+                    // Star Magnet pull effect toward princess
+                    const dx = princess.x - this.x; const dy = princess.y - this.y;
+                    this.x += dx * 0.12; this.y += dy * 0.12;
+                } else {
+                    this.x -= speed;
+                }
+                this.rot += 0.08;
+            }
+            draw(ctx) {
+                const bobY = this.y + Math.sin(this.rot) * 5; const x = this.x;
+                ctx.save();
+                ctx.fillStyle = '#FBBF24'; ctx.beginPath(); ctx.arc(x + 12, bobY + 12, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FEF08A'; ctx.beginPath(); ctx.arc(x + 12, bobY + 12, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#D97706'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★', x + 12, bobY + 15);
+                ctx.restore();
+            }
+        }
+
+        class DressGiftBox {
+            constructor(x) { this.x = x; this.y = GROUND_Y - (75 + Math.random() * 40); this.width = 30; this.height = 30; this.floatTimer = Math.random() * 10; }
+            update() { this.x -= speed; this.floatTimer += 0.1; }
+            draw(ctx) {
+                const bobY = this.y + Math.sin(this.floatTimer) * 7; const x = this.x;
+                ctx.save();
+                ctx.fillStyle = 'rgba(244, 114, 182, 0.4)'; ctx.beginPath(); ctx.arc(x + 15, bobY + 15, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#EC4899'; ctx.beginPath(); ctx.roundRect(x + 3, bobY + 8, 24, 20, 4); ctx.fill();
+                ctx.fillStyle = '#FBBF24'; ctx.fillRect(x + 12, bobY + 8, 6, 20); ctx.fillRect(x + 3, bobY + 15, 24, 5);
+                ctx.restore();
+            }
+        }
+
+        let clouds = []; let stars = [];
+        function initEnvironment() {
+            clouds = []; stars = [];
+            for (let i = 0; i < 6; i++) clouds.push({ x: i * 200, y: 40 + Math.random() * 70, width: 120 + Math.random() * 60, scale: 0.8 + Math.random() * 0.5 });
+            for (let i = 0; i < 25; i++) stars.push({ x: Math.random() * GAME_WIDTH, y: Math.random() * 180, size: 1 + Math.random() * 2.5 });
+        }
+
+        function updateEnvironment() {
+            clouds.forEach(c => { c.x -= speed * 0.15; if (c.x + c.width < -50) { c.x = GAME_WIDTH + Math.random() * 50; c.y = 40 + Math.random() * 70; } });
+            for (let i = magicParticles.length - 1; i >= 0; i--) {
+                const p = magicParticles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                if (p.life <= 0) magicParticles.splice(i, 1);
+            }
+            for (let i = floatTexts.length - 1; i >= 0; i--) {
+                const t = floatTexts[i]; t.y -= 1.2; t.life -= 0.02;
+                if (t.life <= 0) floatTexts.splice(i, 1);
+            }
+        }
+
+        function drawEnvironment(ctx) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+            let stageLabel = '🌅 棉花糖夕陽';
+
+            if (selectedStage === 0) {
+                stageLabel = '🌅 夕陽仙境';
+                skyGrad.addColorStop(0, '#2E1065'); skyGrad.addColorStop(0.5, '#7E22CE'); skyGrad.addColorStop(1, '#F472B6');
+            } else if (selectedStage === 1) {
+                stageLabel = '🌌 星空銀河';
+                skyGrad.addColorStop(0, '#0F172A'); skyGrad.addColorStop(0.6, '#1E1B4B'); skyGrad.addColorStop(1, '#4C1D95');
+            } else {
+                stageLabel = '✨ 極光水晶';
+                skyGrad.addColorStop(0, '#022C22'); skyGrad.addColorStop(0.5, '#065F46'); skyGrad.addColorStop(1, '#831843');
+            }
+
+            document.getElementById('bgPhaseText').innerText = `關卡: ${stageLabel}`;
+            ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            stars.forEach(s => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + Math.sin(frameCount * 0.05 + s.x) * 0.4})`;
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+            });
+
+            clouds.forEach(c => {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.beginPath(); ctx.arc(c.x, c.y, 20 * c.scale, 0, Math.PI * 2);
+                ctx.arc(c.x + 18 * c.scale, c.y - 10 * c.scale, 25 * c.scale, 0, Math.PI * 2);
+                ctx.arc(c.x + 42 * c.scale, c.y, 22 * c.scale, 0, Math.PI * 2); ctx.fill();
+            });
+
+            ctx.fillStyle = '#F472B6'; ctx.fillRect(0, GROUND_Y, GAME_WIDTH, 4);
+            const groundGrad = ctx.createLinearGradient(0, GROUND_Y + 4, 0, GAME_HEIGHT);
+            groundGrad.addColorStop(0, '#312E81'); groundGrad.addColorStop(1, '#0F172A');
+            ctx.fillStyle = groundGrad; ctx.fillRect(0, GROUND_Y + 4, GAME_WIDTH, GAME_HEIGHT - GROUND_Y);
+
+            magicParticles.forEach(p => {
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function spawnFloatingText(text, x, y, color = '#FEF08A') {
+            floatTexts.push({ text, x, y, color, life: 1.0 });
+        }
+
+        function spawnEntities() {
+            obstacleTimer++; itemTimer++;
+            const minInterval = Math.max(42, 90 - Math.floor(speed * 3.5));
+            if (obstacleTimer > minInterval + Math.random() * 35) {
+                obstacleTimer = 0; const rand = Math.random();
+                if (rand < 0.35) obstacles.push(new CuteSlime(GAME_WIDTH + 30));
+                else if (rand < 0.7) obstacles.push(new CrystalSpire(GAME_WIDTH + 30));
+                else obstacles.push(new FlyingSprite(GAME_WIDTH + 30));
+            }
+
+            if (itemTimer > 140 + Math.random() * 150) {
+                itemTimer = 0;
+                if (Math.random() < 0.35) collectibles.push(new DressGiftBox(GAME_WIDTH + 30));
+                else collectibles.push(new StarCoin(GAME_WIDTH + 30));
+            }
+        }
+
+        function unlockRandomDress() {
+            const locked = DRESS_DATABASE.filter(d => !d.unlocked);
+            if (locked.length > 0) {
+                const picked = locked[Math.floor(Math.random() * locked.length)];
+                picked.unlocked = true;
+                const unlockedIds = DRESS_DATABASE.filter(d => d.unlocked).map(d => d.id);
+                window.__galleryStorage.setItem('princess_unlocked_dresses_ex', JSON.stringify(unlockedIds));
+                currentOutfitIndex = DRESS_DATABASE.findIndex(d => d.id === picked.id);
+                sound.playUnlockDress();
+                showDressToast(`✨ 解鎖新禮服：${picked.name}！`);
+                updateWardrobeUI();
+                checkQuests();
+            } else {
+                starCount += 10; score += 200;
+                document.getElementById('starCount').innerText = starCount;
+                sound.playCollectStar();
+                showDressToast(`💖 收藏全滿！獲得額外 10 顆星星！`);
+            }
+        }
+
+        function triggerFever() {
+            isFeverActive = true; feverTimer = 300; feverVal = 0;
+            sound.playUnlockDress();
+            showDressToast(`🔥 星願狂熱！無敵衝刺＋星星磁鐵！`);
+            checkQuests('fever');
+        }
+
+        function checkCollisions() {
+            const padX = 12; const padY = 6;
+            const pBox = {
+                left: princess.x + padX,
+                right: princess.x + princess.width - padX,
+                top: princess.y + padY,
+                bottom: princess.y + princess.height - 2
+            };
+
+            // Obstacles
+            if (invincibilityTimer <= 0 && !isFeverActive) {
+                for (let obs of obstacles) {
+                    const oPad = 6;
+                    const oBox = { left: obs.x + oPad, right: obs.x + obs.width - oPad, top: obs.y + oPad, bottom: obs.y + obs.height - oPad };
+
+                    if (pBox.left < oBox.right && pBox.right > oBox.left && pBox.top < oBox.bottom && pBox.bottom > oBox.top) {
+                        if (shieldActive) {
+                            shieldActive = false;
+                            sound.playShield();
+                            spawnFloatingText("🛡️ 護盾擋傷！", princess.x, princess.y - 15, "#38BDF8");
+                            invincibilityTimer = 60;
+                            return false;
+                        } else {
+                            hearts--;
+                            updateHeartsUI();
+                            sound.playHit();
+                            invincibilityTimer = 90; // I-frame duration
+
+                            if (hearts <= 0) {
+                                gameState = 'GAMEOVER';
+                                if (score > highScore) {
+                                    highScore = score;
+                                    window.__galleryStorage.setItem('princess_runner_hi_ex', highScore.toString());
+                                }
+                                showOverlay(true);
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Collectibles
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                if (pBox.left < item.x + item.width && pBox.right > item.x && pBox.top < item.y + item.height + 10 && pBox.bottom > item.y) {
+                    if (item instanceof StarCoin) {
+                        starCount++; score += 50;
+                        feverVal = Math.min(100, feverVal + 12);
+                        document.getElementById('starCount').innerText = starCount;
+                        sound.playCollectStar();
+                        spawnFloatingText("+50 ★", item.x, item.y);
+                        checkQuests('star');
+                        if (feverVal >= 100 && !isFeverActive) triggerFever();
+                    } else if (item instanceof DressGiftBox) {
+                        unlockRandomDress();
+                    }
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            return false;
+        }
+
+        function update() {
+            if (gameState !== 'RUNNING') return;
+
+            frameCount++; score += 1;
+            checkQuests('distance');
+
+            if (invincibilityTimer > 0) invincibilityTimer--;
+            if (shieldCooldown > 0) {
+                shieldCooldown--;
+                updateShieldBtnUI();
+            }
+
+            if (isFeverActive) {
+                feverTimer--;
+                feverVal = (feverTimer / 300) * 100;
+                if (feverTimer <= 0) { isFeverActive = false; feverVal = 0; }
+            }
+
+            document.getElementById('feverFill').style.width = `${feverVal}%`;
+
+            speed = Math.min(maxSpeed, baseSpeed + Math.floor(score / 250) * 0.75 + (isFeverActive ? 4.0 : 0));
+            document.getElementById('speedIndicator').innerText = `速度: ${speed.toFixed(1)}x`;
+
+            princess.update();
+            updateEnvironment();
+            spawnEntities();
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                if (obstacles[i].x + obstacles[i].width < -20) obstacles.splice(i, 1);
+            }
+
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                collectibles[i].update();
+                if (collectibles[i].x < -30) collectibles.splice(i, 1);
+            }
+
+            checkCollisions();
+        }
+
+        function render() {
+            drawEnvironment(ctx);
+            collectibles.forEach(item => item.draw(ctx));
+            obstacles.forEach(obs => obs.draw(ctx));
+            princess.draw(ctx);
+
+            // Floating Text Popups
+            floatTexts.forEach(t => {
+                ctx.save();
+                ctx.fillStyle = t.color;
+                ctx.globalAlpha = t.life;
+                ctx.font = 'bold 14px "Fredoka", sans-serif';
+                ctx.fillText(t.text, t.x, t.y);
+                ctx.restore();
+            });
+
+            // HUD
+            ctx.save();
+            ctx.fillStyle = '#FCE7F3';
+            ctx.font = 'bold 15px "Fredoka", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`HI ${String(highScore).padStart(5, '0')}   ${String(score).padStart(5, '0')}`, GAME_WIDTH - 25, 35);
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update(); render(); requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            score = 0; starCount = 0; frameCount = 0; hearts = 3;
+            speed = baseSpeed; feverVal = 0; isFeverActive = false;
+            shieldActive = false; shieldCooldown = 0; invincibilityTimer = 0;
+            obstacles = []; collectibles = []; magicParticles = []; floatTexts = [];
+            obstacleTimer = 0; itemTimer = 0;
+            document.getElementById('starCount').innerText = '0';
+            updateHeartsUI(); updateShieldBtnUI();
+            princess.reset(); gameState = 'RUNNING'; showOverlay(false);
+        }
+
+        function activateShield() {
+            if (shieldCooldown <= 0 && !shieldActive) {
+                shieldActive = true; shieldCooldown = SHIELD_COOLDOWN_MAX;
+                sound.playShield(); spawnFloatingText("🛡️ 護盾已開啟！", princess.x, princess.y - 10, "#38BDF8");
+                updateShieldBtnUI();
+            }
+        }
+
+        function updateHeartsUI() {
+            let str = '';
+            for (let i = 0; i < hearts; i++) str += '💖';
+            for (let i = hearts; i < 3; i++) str += '🖤';
+            document.getElementById('heartsText').innerText = str;
+        }
+
+        function updateShieldBtnUI() {
+            const btnText = document.getElementById('shieldBtnText');
+            if (shieldActive) btnText.innerText = "🛡️ 護盾中";
+            else if (shieldCooldown > 0) btnText.innerText = `🛡️ (${Math.ceil(shieldCooldown / 60)}s)`;
+            else btnText.innerText = "🛡️ 護盾(Ready)";
+        }
+
+        function checkQuests(type) {
+            QUESTS_DATABASE.forEach(q => {
+                if (q.done) return;
+                if (type === 'star' && q.id === 'q_star_15') q.current = starCount;
+                if (type === 'distance' && q.id === 'q_dist_500') q.current = score;
+                if (type === 'fever' && q.id === 'q_fever_1') q.current = 1;
+                if (q.id === 'q_dress_3') q.current = DRESS_DATABASE.filter(d => d.unlocked).length;
+
+                if (q.current >= q.target) {
+                    q.done = true;
+                    sound.playUnlockDress();
+                    showDressToast(`🏆 達成任務：${q.text}！`);
+                }
+            });
+            updateQuestsUI();
+        }
+
+        function updateQuestsUI() {
+            const list = document.getElementById('questsList');
+            list.innerHTML = '';
+            QUESTS_DATABASE.forEach(q => {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl border flex items-center justify-between ${q.done ? 'bg-purple-950/40 border-green-400/50' : 'bg-slate-800/70 border-purple-500/30'}`;
+                item.innerHTML = `
+                    <div>
+                        <p class="text-xs font-bold text-pink-200">${q.text}</p>
+                        <p class="text-[10px] text-purple-300">進度: ${Math.min(q.current, q.target)} / ${q.target}</p>
+                    </div>
+                    <span class="text-xs font-bold ${q.done ? 'text-green-400' : 'text-yellow-300'}">${q.done ? '✓ 已完成' : '進行中'}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function showDressToast(msg) {
+            const toast = document.getElementById('dressToast');
+            document.getElementById('toastText').innerText = msg;
+            toast.classList.remove('-translate-y-20'); toast.classList.add('translate-y-0');
+            setTimeout(() => { toast.classList.remove('translate-y-0'); toast.classList.add('-translate-y-20'); }, 3000);
+        }
+
+        function showOverlay(isGameOver) {
+            const overlay = document.getElementById('overlayScreen');
+            const startMsg = document.getElementById('startMessage');
+            const gameOverMsg = document.getElementById('gameOverMessage');
+            if (gameState === 'RUNNING') overlay.classList.add('hidden');
+            else {
+                overlay.classList.remove('hidden');
+                if (isGameOver) {
+                    startMsg.classList.add('hidden'); gameOverMsg.classList.remove('hidden');
+                    document.getElementById('finalScoreText').innerText = `最終冒險里程: ${score} | 收集星星: ${starCount}`;
+                } else {
+                    startMsg.classList.remove('hidden'); gameOverMsg.classList.add('hidden');
+                }
+            }
+        }
+
+        function updateWardrobeUI() {
+            const grid = document.getElementById('outfitsGrid'); grid.innerHTML = '';
+            let unlockedCount = 0;
+            DRESS_DATABASE.forEach((dress, idx) => {
+                if (dress.unlocked) unlockedCount++;
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center gap-1.5 relative ${
+                    dress.unlocked ? (currentOutfitIndex === idx ? 'bg-pink-500/20 border-pink-400 ring-2 ring-pink-400' : 'bg-slate-800/80 border-purple-500/30 hover:border-pink-300') : 'bg-slate-900/60 border-slate-700 opacity-50'
+                }`;
+                card.innerHTML = `
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg shadow" style="background:${dress.dressColor}">${dress.unlocked ? '👗' : '🔒'}</div>
+                    <span class="text-[11px] font-bold ${dress.unlocked ? 'text-pink-200' : 'text-gray-400'} text-center leading-tight">${dress.name}</span>
+                `;
+                if (dress.unlocked) card.addEventListener('click', () => { currentOutfitIndex = idx; updateWardrobeUI(); });
+                grid.appendChild(card);
+            });
+            document.getElementById('unlockedBadge').innerText = `${unlockedCount}/${DRESS_DATABASE.length}`;
+            document.getElementById('activeOutfitName').innerText = `當前穿著: ${DRESS_DATABASE[currentOutfitIndex].name}`;
+        }
+
+        // Keyboard & Touch Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (gameState === 'START' || gameState === 'GAMEOVER') resetGame();
+                else princess.jump();
+            } else if (e.code === 'ArrowDown') {
+                e.preventDefault(); if (gameState === 'RUNNING') princess.duck(true);
+            } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                if (gameState === 'RUNNING') activateShield();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown' && gameState === 'RUNNING') princess.duck(false);
+        });
+
+        // Stage Buttons
+        document.querySelectorAll('.stage-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                selectedStage = parseInt(e.target.dataset.stage, 10);
+                document.querySelectorAll('.stage-select-btn').forEach(b => b.classList.remove('ring-2', 'ring-pink-400'));
+                e.target.classList.add('ring-2', 'ring-pink-400');
+            });
+        });
+
+        document.getElementById('mobileJumpBtn').addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'START' || gameState === 'GAMEOVER') resetGame(); else princess.jump(); });
+        document.getElementById('mobileDuckBtn').addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'RUNNING') princess.duck(true); });
+        document.getElementById('mobileDuckBtn').addEventListener('touchend', (e) => { e.preventDefault(); if (gameState === 'RUNNING') princess.duck(false); });
+        document.getElementById('mobileShieldBtn').addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'RUNNING') activateShield(); });
+
+        canvas.addEventListener('click', () => { if (gameState === 'START' || gameState === 'GAMEOVER') resetGame(); else princess.jump(); });
+        document.getElementById('startGameBtn').addEventListener('click', () => resetGame());
+        document.getElementById('restartBtn').addEventListener('click', () => resetGame());
+
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            document.getElementById('soundOnIcon').classList.toggle('hidden', !sound.enabled);
+            document.getElementById('soundOffIcon').classList.toggle('hidden', sound.enabled);
+        });
+
+        // Modals Controls
+        const wardrobeModal = document.getElementById('wardrobeModal');
+        document.getElementById('openWardrobeBtn').addEventListener('click', () => { updateWardrobeUI(); wardrobeModal.classList.remove('hidden'); });
+        document.getElementById('closeWardrobeBtn').addEventListener('click', () => wardrobeModal.classList.add('hidden'));
+        document.getElementById('confirmWardrobeBtn').addEventListener('click', () => wardrobeModal.classList.add('hidden'));
+
+        const questsModal = document.getElementById('questsModal');
+        document.getElementById('openQuestsBtn').addEventListener('click', () => { updateQuestsUI(); questsModal.classList.remove('hidden'); });
+        document.getElementById('closeQuestsBtn').addEventListener('click', () => questsModal.classList.add('hidden'));
+
+        window.onload = function() {
+            initEnvironment(); updateWardrobeUI(); updateQuestsUI(); showOverlay(false); gameLoop();
+        };
+    </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>
