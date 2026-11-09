@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>動畫風霓虹貪吃蛇 NeoSnake</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            overflow: hidden;
+        }
+        /* Canvas Glowing Shadow */
+        .glow-canvas {
+            box-shadow: 0 0 35px rgba(99, 102, 241, 0.25), inset 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        /* Custom Scrollbar for Settings modal */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 3px;
+        }
+        /* Animated Gradient Background */
+        .bg-animated-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+        /* Keyframe Animations */
+        @keyframes pulse-light {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        .animate-pulse-light {
+            animation: pulse-light 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center bg-animated-grid relative overflow-hidden">
+
+    <!-- Header Navigation & Title -->
+    <header class="w-full max-w-4xl px-4 pt-3 pb-1 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse-light">
+                <i class="fa-solid font-bold fa-staff-snake text-xl text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-pink-400 to-purple-400">
+                    NEOSNAKE
+                </h1>
+                <p class="text-xs text-gray-400 hidden sm:block" id="sub-title">霓虹極光貪吃蛇</p>
+            </div>
+        </div>
+
+        <!-- Top Status Indicators -->
+        <div class="flex items-center gap-3 md:gap-6 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-700/50 shadow-inner">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-trophy text-amber-400 text-sm md:text-base"></i>
+                <div>
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider" id="label-high-score">最高分</div>
+                    <div id="high-score" class="font-bold text-sm md:text-lg text-amber-300">0</div>
+                </div>
+            </div>
+            <div class="w-[1px] h-6 bg-slate-700"></div>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-star text-indigo-400 text-sm md:text-base"></i>
+                <div>
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider" id="label-score">得分</div>
+                    <div id="score" class="font-bold text-sm md:text-lg text-indigo-300">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Utility Buttons -->
+        <div class="flex gap-2">
+            <button id="btn-sound" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-gray-300 hover:text-white transition-all">
+                <i class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+            <button id="btn-pause" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-gray-300 hover:text-white transition-all">
+                <i class="fa-solid fa-pause text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full max-w-4xl flex items-center justify-center p-2 sm:p-4">
+        <div class="relative w-full h-full max-w-[600px] max-h-[600px] aspect-square flex items-center justify-center">
+            
+            <!-- Game Canvas -->
+            <canvas id="game-canvas" class="w-full h-full rounded-3xl bg-slate-900/90 border-2 border-indigo-500/30 glow-canvas"></canvas>
+
+            <!-- Overlay Screen: Start / Game Over / Pause -->
+            <div id="overlay" class="absolute inset-0 rounded-3xl bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 transition-all duration-300">
+                
+                <!-- Title Dynamic -->
+                <div id="overlay-icon" class="w-20 h-20 rounded-3xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center mb-4 text-indigo-400 text-4xl shadow-xl shadow-indigo-500/10 animate-bounce">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+
+                <h2 id="overlay-title" class="text-3xl md:text-4xl font-black mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-pink-300 to-purple-300">
+                    遊戲操作說明
+                </h2>
+
+                <!-- Stats Panel (Game Over Summary) -->
+                <div id="game-stats" class="w-full max-w-sm bg-slate-900/90 border border-slate-700/60 rounded-2xl p-4 mb-4 text-left text-xs md:text-sm text-gray-300 space-y-2 hidden shadow-inner">
+                    <div class="font-bold text-indigo-300 mb-2 pb-1 border-b border-slate-800 flex justify-between items-center">
+                        <span><i class="fa-solid fa-chart-pie mr-1.5"></i>本局吃蛋戰績統計</span>
+                        <span id="stat-total-eggs" class="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">共 0 顆</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-slate-100 inline-block"></span>普通白蛋 (+10)</span>
+                        <span id="stat-normal-count" class="font-bold text-white font-mono">0 顆</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>黃金蛋 (+100)</span>
+                        <span id="stat-golden-count" class="font-bold text-amber-300 font-mono">0 顆</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>發臭綠蛋 (-20)</span>
+                        <span id="stat-rotten-count" class="font-bold text-emerald-400 font-mono">0 顆</span>
+                    </div>
+                </div>
+
+                <!-- Game Instructions Panel -->
+                <div id="game-instructions" class="w-full max-w-sm bg-slate-900/90 border border-slate-700/60 rounded-2xl p-4 mb-5 text-left text-xs md:text-sm text-gray-300 space-y-2.5 shadow-inner">
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono font-bold">↑ ↓ ← →</span>
+                        <span>或 <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">WASD</span> 移動蛇蛇方向</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-slate-100 inline-block"></span>
+                        <span><strong>普通白蛋</strong>：+10分 (停留60秒)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+                        <span><strong>黃金蛋</strong>：+100分 (停留5秒)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                        <span><strong>發臭綠蛋</strong>：-20分，長度+1 (停留10秒)</span>
+                    </div>
+                </div>
+
+                <!-- Options Bar (Difficulty & Map) -->
+                <div id="menu-options" class="flex flex-wrap justify-center gap-3 mb-6 w-full max-w-sm">
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-gray-400 mb-1" id="label-difficulty">遊戲難度</label>
+                        <select id="select-difficulty" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-200 outline-none focus:border-indigo-500">
+                            <option value="easy">簡單 (Casual)</option>
+                            <option value="normal" selected>正常 (Normal)</option>
+                            <option value="hard">困難 (Insane)</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs text-gray-400 mb-1" id="label-map">地圖模式</label>
+                        <select id="select-map" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-gray-200 outline-none focus:border-indigo-500">
+                            <option value="walled" selected>經典封閉牆壁</option>
+                            <option value="obstacles">障礙物迷宮</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button id="btn-start" class="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-bold text-lg shadow-lg shadow-indigo-500/30 hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span id="btn-start-text">點擊開始遊戲</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Virtual Controller (D-Pad) -->
+    <footer class="w-full max-w-xs px-4 pb-4 md:hidden flex justify-center z-10">
+        <div class="grid grid-cols-3 gap-2 w-48 h-48 bg-slate-900/60 p-3 rounded-3xl border border-slate-800 backdrop-blur-sm">
+            <div></div>
+            <button id="ctrl-up" class="w-full h-full rounded-2xl bg-slate-800/80 active:bg-indigo-600 text-gray-300 active:text-white flex items-center justify-center text-xl transition-colors border border-slate-700/50">
+                <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <div></div>
+            
+            <button id="ctrl-left" class="w-full h-full rounded-2xl bg-slate-800/80 active:bg-indigo-600 text-gray-300 active:text-white flex items-center justify-center text-xl transition-colors border border-slate-700/50">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="flex items-center justify-center text-xs text-gray-600 font-bold">DPAD</div>
+            <button id="ctrl-right" class="w-full h-full rounded-2xl bg-slate-800/80 active:bg-indigo-600 text-gray-300 active:text-white flex items-center justify-center text-xl transition-colors border border-slate-700/50">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            
+            <div></div>
+            <button id="ctrl-down" class="w-full h-full rounded-2xl bg-slate-800/80 active:bg-indigo-600 text-gray-300 active:text-white flex items-center justify-center text-xl transition-colors border border-slate-700/50">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div></div>
+        </div>
+    </footer>
+
+    <!-- Game Logic & Scripts -->
+    <script>
+        /**
+         * Web Audio Synthesizer for SFX
+         * Generates sound effect waveforms dynamically.
+         */
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playEat() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playSpecialEat() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playBadEat() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(90, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playDie() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+
+            playClick() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+        }
+
+        /**
+         * Particle System for visual impact
+         */
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 4 + 2;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.015;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        /**
+         * Main Game Engine Class
+         */
+        class SnakeGame {
+            constructor() {
+                // Canvas setup
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // Audio Manager
+                this.sfx = new SoundEffects();
+
+                // Grid Parameters
+                this.gridSize = 20; // 20x20 Grid
+                this.cellSize = 0; // Dynamic pixel size calculated on resize
+
+                // Game State
+                this.state = 'INIT'; // INIT, PLAYING, PAUSED, GAMEOVER
+                this.score = 0;
+                this.highScore = parseInt(localStorage.getItem('neosnake_highscore') || '0');
+                
+                // Snake Data
+                this.snake = [];
+                this.direction = { x: 1, y: 0 };
+                // Input Direction Queue for precise grid turning
+                this.inputQueue = [];
+
+                // Stat Counters
+                this.eggStats = { normal: 0, golden: 0, rotten: 0 };
+
+                // Foods Management (Multiple Eggs)
+                this.foods = []; // List of { x, y, type, duration, createdAt }
+                this.nextFoodSpawnTime = 0;
+                this.obstacles = [];
+
+                // Visual Effects
+                this.particles = [];
+                this.pulseAngle = 0;
+
+                // Config
+                this.difficulty = 'normal';
+                this.mapMode = 'walled';
+                this.baseSpeed = 120; // MS per tick
+                this.lastTickTime = 0;
+
+                // UI Elements Reference
+                this.uiScore = document.getElementById('score');
+                this.uiHighScore = document.getElementById('high-score');
+                this.uiOverlay = document.getElementById('overlay');
+                this.uiOverlayTitle = document.getElementById('overlay-title');
+                this.uiOverlayDesc = document.getElementById('overlay-desc');
+                this.uiOverlayIcon = document.getElementById('overlay-icon');
+                this.uiBtnStartText = document.getElementById('btn-start-text');
+                this.uiMenuOptions = document.getElementById('menu-options');
+                this.uiGameStats = document.getElementById('game-stats');
+
+                // Initialize listeners and viewport
+                this.initResizeObserver();
+                this.bindEvents();
+                this.updateUI();
+            }
+
+            initResizeObserver() {
+                const resize = () => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const dpr = window.devicePixelRatio || 1;
+                    
+                    this.canvas.width = rect.width * dpr;
+                    this.canvas.height = rect.height * dpr;
+                    this.ctx.scale(dpr, dpr);
+                    
+                    this.cellSize = rect.width / this.gridSize;
+                };
+
+                window.addEventListener('resize', resize);
+                resize();
+            }
+
+            bindEvents() {
+                // Keyboard Input
+                window.addEventListener('keydown', (e) => {
+                    this.sfx.init();
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                        e.preventDefault();
+                    }
+
+                    if (this.state === 'PLAYING') {
+                        let newDir = null;
+                        switch (e.code) {
+                            case 'ArrowUp': case 'KeyW':
+                                newDir = { x: 0, y: -1 }; break;
+                            case 'ArrowDown': case 'KeyS':
+                                newDir = { x: 0, y: 1 }; break;
+                            case 'ArrowLeft': case 'KeyA':
+                                newDir = { x: -1, y: 0 }; break;
+                            case 'ArrowRight': case 'KeyD':
+                                newDir = { x: 1, y: 0 }; break;
+                        }
+                        if (newDir) this.queueInput(newDir);
+                    }
+                });
+
+                // Touch / Swipe Logic
+                let startX = 0, startY = 0;
+                this.canvas.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                }, { passive: true });
+
+                this.canvas.addEventListener('touchend', (e) => {
+                    if (this.state !== 'PLAYING') return;
+                    const diffX = e.changedTouches[0].clientX - startX;
+                    const diffY = e.changedTouches[0].clientY - startY;
+
+                    if (Math.abs(diffX) > Math.abs(diffY)) {
+                        if (Math.abs(diffX) > 30) {
+                            this.queueInput({ x: diffX > 0 ? 1 : -1, y: 0 });
+                        }
+                    } else {
+                        if (Math.abs(diffY) > 30) {
+                            this.queueInput({ x: 0, y: diffY > 0 ? 1 : -1 });
+                        }
+                    }
+                }, { passive: true });
+
+                // Virtual D-Pad Buttons
+                const bindDpad = (id, dir) => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
+                    const trigger = (e) => {
+                        e.preventDefault();
+                        this.sfx.init();
+                        if (this.state === 'PLAYING') {
+                            this.queueInput(dir);
+                        }
+                    };
+                    btn.addEventListener('touchstart', trigger);
+                    btn.addEventListener('mousedown', trigger);
+                };
+
+                bindDpad('ctrl-up', { x: 0, y: -1 });
+                bindDpad('ctrl-down', { x: 0, y: 1 });
+                bindDpad('ctrl-left', { x: -1, y: 0 });
+                bindDpad('ctrl-right', { x: 1, y: 0 });
+
+                // UI Controls
+                document.getElementById('btn-start').addEventListener('click', () => {
+                    this.sfx.init();
+                    this.sfx.playClick();
+                    if (this.state === 'PAUSED') {
+                        this.resumeGame();
+                    } else {
+                        this.startGame();
+                    }
+                });
+
+                document.getElementById('btn-pause').addEventListener('click', () => {
+                    this.sfx.init();
+                    this.sfx.playClick();
+                    this.togglePause();
+                });
+
+                const soundBtn = document.getElementById('btn-sound');
+                soundBtn.addEventListener('click', () => {
+                    this.sfx.init();
+                    this.sfx.muted = !this.sfx.muted;
+                    soundBtn.innerHTML = this.sfx.muted 
+                        ? '<i class="fa-solid fa-volume-xmark text-sm text-red-400"></i>' 
+                        : '<i class="fa-solid fa-volume-high text-sm"></i>';
+                });
+
+                document.getElementById('select-difficulty').addEventListener('change', (e) => {
+                    this.difficulty = e.target.value;
+                });
+
+                document.getElementById('select-map').addEventListener('change', (e) => {
+                    this.mapMode = e.target.value;
+                });
+            }
+
+            startGame() {
+                // Settings Speed
+                const speedMap = { easy: 150, normal: 110, hard: 75 };
+                this.baseSpeed = speedMap[this.difficulty] || 110;
+
+                // Reset State
+                this.score = 0;
+                this.snake = [
+                    { x: 5, y: 10 },
+                    { x: 4, y: 10 },
+                    { x: 3, y: 10 }
+                ];
+                this.direction = { x: 1, y: 0 };
+                this.nextDirection = { x: 1, y: 0 };
+                this.particles = [];
+                this.foods = [];
+
+                // Generate Map Obstacles
+                this.generateObstacles();
+
+                // Spawn Initial Egg
+                this.spawnEgg();
+                this.nextFoodSpawnTime = performance.now() + 1000 + Math.random() * 1500;
+
+                // State Transition
+                this.state = 'PLAYING';
+                this.uiOverlay.classList.add('opacity-0', 'pointer-events-none');
+                this.updateUI();
+
+                // Start Main Loop
+                this.lastTickTime = performance.now();
+                requestAnimationFrame(this.loop.bind(this));
+            }
+
+            generateObstacles() {
+                this.obstacles = [];
+                if (this.mapMode !== 'obstacles') return;
+
+                // Add central obstacles blocks
+                const center = Math.floor(this.gridSize / 2);
+                const blocks = [
+                    { x: center - 4, y: center - 4 }, { x: center - 3, y: center - 4 },
+                    { x: center + 4, y: center - 4 }, { x: center + 3, y: center - 4 },
+                    { x: center - 4, y: center + 4 }, { x: center - 3, y: center + 4 },
+                    { x: center + 4, y: center + 4 }, { x: center + 3, y: center + 4 }
+                ];
+
+                this.obstacles = blocks;
+            }
+
+            spawnEgg() {
+                // Limit maximum simultaneous eggs on board to prevent crowding
+                if (this.foods.length >= 6) return;
+
+                // Calculate total available spaces to prevent infinite loops when almost full
+                const totalCells = this.gridSize * this.gridSize;
+                const occupiedCells = this.snake.length + this.obstacles.length + this.foods.length;
+                if (totalCells - occupiedCells <= 1) return; // Not enough space left to spawn safely
+
+                // Calculate current head's next tile direction
+                const nextHeadX = this.snake[0] ? this.snake[0].x + this.direction.x : -1;
+                const nextHeadY = this.snake[0] ? this.snake[0].y + this.direction.y : -1;
+
+                let valid = false;
+                let newX, newY;
+                let attempts = 0;
+
+                while (!valid && attempts < 200) {
+                    attempts++;
+                    newX = Math.floor(Math.random() * this.gridSize);
+                    newY = Math.floor(Math.random() * this.gridSize);
+
+                    // Avoid snake body
+                    const onSnake = this.snake.some(s => s.x === newX && s.y === newY);
+                    // Avoid obstacles
+                    const onObstacle = this.obstacles.some(o => o.x === newX && o.y === newY);
+                    // Avoid other foods
+                    const onFood = this.foods.some(f => f.x === newX && f.y === newY);
+                    // Avoid the tile directly in front of snake head
+                    const isNextHeadTile = (newX === nextHeadX && newY === nextHeadY);
+
+                    if (!onSnake && !onObstacle && !onFood && !isNextHeadTile) {
+                        valid = true;
+                    }
+                }
+
+                if (!valid) return;
+
+                // Pick egg type based on probabilities
+                const rand = Math.random();
+                let type = 'normal';
+                let duration = 60000; // 60s for normal white egg
+
+                if (rand < 0.20) {
+                    type = 'golden';
+                    duration = 5000; // 5s for golden egg (+100)
+                } else if (rand < 0.45) {
+                    type = 'rotten';
+                    duration = 10000; // 10s for rotten green egg (-20)
+                }
+
+                this.foods.push({
+                    x: newX,
+                    y: newY,
+                    type: type,
+                    duration: duration,
+                    createdAt: performance.now()
+                });
+            }
+
+            queueInput(dir) {
+                // Limit queue capacity to prevent delayed inputs
+                if (this.inputQueue.length >= 2) return;
+
+                // Compare with the last queued direction or current direction
+                const lastDir = this.inputQueue.length > 0 
+                    ? this.inputQueue[this.inputQueue.length - 1] 
+                    : this.direction;
+
+                // Prevent 180-degree immediate reversal
+                if (dir.x !== -lastDir.x || dir.y !== -lastDir.y) {
+                    if (dir.x !== lastDir.x || dir.y !== lastDir.y) {
+                        this.inputQueue.push(dir);
+                    }
+                }
+            }
+
+            startGame() {
+                // Settings Speed
+                const speedMap = { easy: 150, normal: 110, hard: 75 };
+                this.baseSpeed = speedMap[this.difficulty] || 110;
+
+                // Reset State
+                this.score = 0;
+                this.eggStats = { normal: 0, golden: 0, rotten: 0 };
+                this.snake = [
+                    { x: 5, y: 10 },
+                    { x: 4, y: 10 },
+                    { x: 3, y: 10 }
+                ];
+                this.direction = { x: 1, y: 0 };
+                this.inputQueue = [];
+                this.particles = [];
+                this.foods = [];
+
+                // Generate Map Obstacles
+                this.generateObstacles();
+
+                // Spawn Initial Egg
+                this.spawnEgg();
+                this.nextFoodSpawnTime = performance.now() + 1000 + Math.random() * 1500;
+
+                // State Transition
+                this.state = 'PLAYING';
+                if (this.uiGameStats) this.uiGameStats.classList.add('hidden');
+                this.uiOverlay.classList.add('opacity-0', 'pointer-events-none');
+                this.updateUI();
+
+                // Start Main Loop
+                this.lastTickTime = performance.now();
+                requestAnimationFrame(this.loop.bind(this));
+            }
+<!-- ... existing code ... discount Stats Overlay display on Game Over ... -->
+            gameOver() {
+                this.state = 'GAMEOVER';
+                this.sfx.playDie();
+
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('neosnake_highscore', this.highScore.toString());
+                }
+
+                this.showGameOverOverlay('<i class="fa-solid fa-skull text-pink-400"></i>', '遊戲結束');
+            }
+
+            gameWin() {
+                this.state = 'GAMEOVER';
+                this.sfx.playSpecialEat();
+
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('neosnake_highscore', this.highScore.toString());
+                }
+
+                this.showGameOverOverlay('<i class="fa-solid fa-crown text-amber-400"></i>', 'Good Job!');
+            }
+
+            showGameOverOverlay(iconHtml, titleText) {
+                this.uiOverlayIcon.innerHTML = iconHtml;
+                this.uiOverlayTitle.innerText = titleText;
+                
+                const instructions = document.getElementById('game-instructions');
+                if (instructions) instructions.classList.add('hidden');
+
+                // Render Egg Stats Summary
+                if (this.uiGameStats) {
+                    const total = this.eggStats.normal + this.eggStats.golden + this.eggStats.rotten;
+                    document.getElementById('stat-total-eggs').innerText = `共 ${total} 顆`;
+                    document.getElementById('stat-normal-count').innerText = `${this.eggStats.normal} 顆`;
+                    document.getElementById('stat-golden-count').innerText = `${this.eggStats.golden} 顆`;
+                    document.getElementById('stat-rotten-count').innerText = `${this.eggStats.rotten} 顆`;
+                    this.uiGameStats.classList.remove('hidden');
+                }
+
+                this.uiBtnStartText.innerText = '再次挑戰';
+                this.uiMenuOptions.classList.remove('hidden');
+                this.uiOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                this.updateUI();
+            }
+
+            createExplosion(x, y, color, count = 12) {
+                const pixelX = (x + 0.5) * this.cellSize;
+                const pixelY = (y + 0.5) * this.cellSize;
+                for (let i = 0; i < count; i++) {
+                    this.particles.push(new Particle(pixelX, pixelY, color));
+                }
+            }
+
+            update(now) {
+                // Spawn egg periodically (at least 1 second interval)
+                if (now >= this.nextFoodSpawnTime) {
+                    this.spawnEgg();
+                    this.nextFoodSpawnTime = now + 1000 + Math.random() * 1500;
+                }
+
+                // Check expired eggs
+                for (let i = this.foods.length - 1; i >= 0; i--) {
+                    const egg = this.foods[i];
+                    if (now - egg.createdAt >= egg.duration) {
+                        this.foods.splice(i, 1);
+                    }
+                }
+
+                // Ensure there is at least 1 egg on screen
+                if (this.foods.length === 0) {
+                    this.spawnEgg();
+                }
+
+                // Tick Controls
+                if (now - this.lastTickTime >= this.baseSpeed) {
+                    this.lastTickTime = now;
+                    this.tick();
+                }
+
+                // Update Particles Animation
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.update();
+                    if (p.alpha <= 0) this.particles.splice(i, 1);
+                }
+
+                this.pulseAngle += 0.05;
+            }
+
+            tick() {
+                // Process the next queued direction on grid tick
+                if (this.inputQueue.length > 0) {
+                    this.direction = this.inputQueue.shift();
+                }
+
+                const head = { 
+                    x: this.snake[0].x + this.direction.x, 
+                    y: this.snake[0].y + this.direction.y 
+                };
+
+                // Border Handle (Walled)
+                if (head.x < 0 || head.x >= this.gridSize || head.y < 0 || head.y >= this.gridSize) {
+                    return this.gameOver();
+                }
+
+                // Self Collision
+                if (this.snake.some(s => s.x === head.x && s.y === head.y)) {
+                    return this.gameOver();
+                }
+
+                // Obstacle Collision
+                if (this.obstacles.some(obs => obs.x === head.x && obs.y === head.y)) {
+                    return this.gameOver();
+                }
+
+                // Move Forward
+                this.snake.unshift(head);
+
+                // Check Victory Condition: Body fills all available grid cells
+                const totalCells = this.gridSize * this.gridSize;
+                if (this.snake.length + this.obstacles.length >= totalCells) {
+                    return this.gameWin();
+                }
+
+                // Check collisions with all eggs
+                const eatenIndex = this.foods.findIndex(f => f.x === head.x && f.y === head.y);
+
+                if (eatenIndex !== -1) {
+                    const eaten = this.foods[eatenIndex];
+                    this.foods.splice(eatenIndex, 1);
+
+                    if (eaten.type === 'normal') {
+                        this.score += 10;
+                        this.eggStats.normal++;
+                        this.sfx.playEat();
+                        this.createExplosion(head.x, head.y, '#f8fafc');
+                    } else if (eaten.type === 'golden') {
+                        this.score += 100;
+                        this.eggStats.golden++;
+                        this.sfx.playSpecialEat();
+                        this.createExplosion(head.x, head.y, '#fbbf24', 20);
+                    } else if (eaten.type === 'rotten') {
+                        this.score = Math.max(0, this.score - 20);
+                        this.eggStats.rotten++;
+                        this.sfx.playBadEat();
+                        this.createExplosion(head.x, head.y, '#10b981', 15);
+                    }
+
+                    this.updateUI();
+                } else {
+                    this.snake.pop(); // Remove tail if no food eaten
+                }
+            }
+
+            draw() {
+                const rect = this.canvas.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+
+                // Clear background
+                this.ctx.clearRect(0, 0, width, height);
+
+                // Draw Grid Layer
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.cellSize;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(pos, 0);
+                    this.ctx.lineTo(pos, height);
+                    this.ctx.stroke();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, pos);
+                    this.ctx.lineTo(width, pos);
+                    this.ctx.stroke();
+                }
+
+                // Draw Obstacles
+                this.obstacles.forEach(obs => {
+                    this.ctx.fillStyle = '#475569';
+                    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.shadowBlur = 8;
+                    this.drawRoundedRect(
+                        obs.x * this.cellSize + 2, 
+                        obs.y * this.cellSize + 2, 
+                        this.cellSize - 4, 
+                        this.cellSize - 4, 
+                        6
+                    );
+                    this.ctx.shadowBlur = 0;
+                });
+
+                // Draw Eggs (3 Types)
+                const now = performance.now();
+                this.foods.forEach(egg => {
+                    const eggX = egg.x * this.cellSize + this.cellSize / 2;
+                    const eggY = egg.y * this.cellSize + this.cellSize / 2;
+                    
+                    // Lifetime blinking effect when near expiration
+                    const elapsed = now - egg.createdAt;
+                    const remaining = egg.duration - elapsed;
+                    if (remaining < 2000 && Math.floor(remaining / 200) % 2 === 0) {
+                        return; // Blink hide briefly
+                    }
+
+                    const pulse = Math.sin(this.pulseAngle * (egg.type === 'golden' ? 2 : 1)) * 1.2;
+                    const eggWidth = Math.max(2, (this.cellSize / 2 - 4) + pulse);
+                    const eggHeight = eggWidth * 1.3;
+
+                    this.ctx.save();
+
+                    if (egg.type === 'normal') {
+                        // 1. Normal White Egg (+10)
+                        this.ctx.shadowColor = '#ffffff';
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.fillStyle = '#f8fafc'; // Clean eggshell white
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(eggX, eggY, eggWidth, eggHeight, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        // Highlight & Blush
+                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(eggX - eggWidth * 0.3, eggY - eggHeight * 0.3, eggWidth * 0.3, eggHeight * 0.2, -Math.PI / 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        this.ctx.fillStyle = '#f472b6'; // Blush
+                        this.ctx.beginPath();
+                        this.ctx.arc(eggX - eggWidth * 0.35, eggY + eggHeight * 0.1, eggWidth * 0.12, 0, Math.PI * 2);
+                        this.ctx.arc(eggX + eggWidth * 0.35, eggY + eggHeight * 0.1, eggWidth * 0.12, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                    } else if (egg.type === 'golden') {
+                        // 2. Golden Egg (+100)
+                        this.ctx.shadowColor = '#fbbf24';
+                        this.ctx.shadowBlur = 20;
+                        this.ctx.fillStyle = '#f59e0b';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(eggX, eggY, eggWidth * 1.1, eggHeight * 1.1, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        this.ctx.fillStyle = '#fef08a'; // Golden shine
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(eggX - eggWidth * 0.3, eggY - eggHeight * 0.3, eggWidth * 0.35, eggHeight * 0.22, -Math.PI / 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                    } else if (egg.type === 'rotten') {
+                        // 3. Rotten Green Stinky Egg (-20)
+                        this.ctx.shadowColor = '#10b981';
+                        this.ctx.shadowBlur = 14;
+                        this.ctx.fillStyle = '#047857'; // Deep rotten green
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(eggX, eggY, eggWidth, eggHeight, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        // Rotten spots
+                        this.ctx.fillStyle = '#022c22';
+                        this.ctx.beginPath();
+                        this.ctx.arc(eggX - eggWidth * 0.2, eggY - eggHeight * 0.1, eggWidth * 0.18, 0, Math.PI * 2);
+                        this.ctx.arc(eggX + eggWidth * 0.25, eggY + eggHeight * 0.2, eggWidth * 0.15, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        // Stink wave lines above
+                        this.ctx.strokeStyle = '#34d399';
+                        this.ctx.lineWidth = 1.5;
+                        this.ctx.beginPath();
+                        this.ctx.arc(eggX - 3, eggY - eggHeight - 2, 3, 0, Math.PI);
+                        this.ctx.stroke();
+                    }
+
+                    this.ctx.restore();
+                });
+
+                // Draw Snake Body & Head as a Single Continuous Smooth Curved Path
+                if (this.snake.length > 0) {
+                    this.ctx.save();
+                    
+                    // Render Continuous Snake Body
+                    if (this.snake.length > 1) {
+                        this.ctx.beginPath();
+                        
+                        // Convert grid coordinates to cell center points
+                        const points = this.snake.map(s => ({
+                            x: (s.x + 0.5) * this.cellSize,
+                            y: (s.y + 0.5) * this.cellSize
+                        }));
+
+                        this.ctx.moveTo(points[0].x, points[0].y);
+
+                        for (let i = 1; i < points.length; i++) {
+                            this.ctx.lineTo(points[i].x, points[i].y);
+                        }
+
+                        // Smooth rounded body path styling
+                        this.ctx.lineCap = 'round';
+                        this.ctx.lineJoin = 'round';
+                        this.ctx.lineWidth = this.cellSize * 0.85;
+                        this.ctx.strokeStyle = '#6366f1';
+                        this.ctx.shadowColor = '#818cf8';
+                        this.ctx.shadowBlur = 12;
+                        this.ctx.stroke();
+
+                        // Inner lighter highlight layer for continuous 3D depth
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(points[0].x, points[0].y);
+                        for (let i = 1; i < points.length; i++) {
+                            this.ctx.lineTo(points[i].x, points[i].y);
+                        }
+                        this.ctx.lineWidth = this.cellSize * 0.45;
+                        this.ctx.strokeStyle = '#a5b4fc';
+                        this.ctx.shadowBlur = 0;
+                        this.ctx.stroke();
+                    } else {
+                        // Single cell head fallback
+                        const headX = (this.snake[0].x + 0.5) * this.cellSize;
+                        const headY = (this.snake[0].y + 0.5) * this.cellSize;
+                        this.ctx.fillStyle = '#6366f1';
+                        this.ctx.beginPath();
+                        this.ctx.arc(headX, headY, this.cellSize * 0.42, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+
+                    // Render Snake Head Details (Cute Animated Eyes on Top)
+                    const head = this.snake[0];
+                    const centerX = (head.x + 0.5) * this.cellSize;
+                    const centerY = (head.y + 0.5) * this.cellSize;
+                    const eyeOffset = this.cellSize * 0.22;
+                    const eyeRadius = this.cellSize * 0.12;
+
+                    let eyeX1 = centerX, eyeY1 = centerY;
+                    let eyeX2 = centerX, eyeY2 = centerY;
+
+                    if (this.direction.x === 1) { // Right
+                        eyeX1 = centerX + eyeOffset; eyeY1 = centerY - eyeOffset;
+                        eyeX2 = centerX + eyeOffset; eyeY2 = centerY + eyeOffset;
+                    } else if (this.direction.x === -1) { // Left
+                        eyeX1 = centerX - eyeOffset; eyeY1 = centerY - eyeOffset;
+                        eyeX2 = centerX - eyeOffset; eyeY2 = centerY + eyeOffset;
+                    } else if (this.direction.y === -1) { // Up
+                        eyeX1 = centerX - eyeOffset; eyeY1 = centerY - eyeOffset;
+                        eyeX2 = centerX + eyeOffset; eyeY2 = centerY - eyeOffset;
+                    } else if (this.direction.y === 1) { // Down
+                        eyeX1 = centerX - eyeOffset; eyeY1 = centerY + eyeOffset;
+                        eyeX2 = centerX + eyeOffset; eyeY2 = centerY + eyeOffset;
+                    }
+
+                    // Outer White Eyes
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(eyeX1, eyeY1, eyeRadius, 0, Math.PI * 2);
+                    this.ctx.arc(eyeX2, eyeY2, eyeRadius, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Inner Black Pupils
+                    this.ctx.fillStyle = '#0f172a';
+                    this.ctx.beginPath();
+                    this.ctx.arc(eyeX1, eyeY1, eyeRadius * 0.5, 0, Math.PI * 2);
+                    this.ctx.arc(eyeX2, eyeY2, eyeRadius * 0.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.restore();
+                }
+
+                // Draw Particles
+                this.particles.forEach(p => p.draw(this.ctx));
+            }
+
+            drawRoundedRect(x, y, width, height, radius) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + radius, y);
+                this.ctx.arcTo(x + width, y, x + width, y + height, radius);
+                this.ctx.arcTo(x + width, y + height, x, y + height, radius);
+                this.ctx.arcTo(x, y + height, x, y, radius);
+                this.ctx.arcTo(x, y, x + width, y, radius);
+                this.ctx.closePath();
+                this.ctx.fill();
+            }
+
+            updateUI() {
+                this.uiScore.innerText = this.score;
+                this.uiHighScore.innerText = this.highScore;
+            }
+
+            loop(now) {
+                if (this.state === 'PLAYING') {
+                    this.update(now);
+                    this.draw();
+                    requestAnimationFrame(this.loop.bind(this));
+                }
+            }
+        }
+
+        // Initialize Game Instance on Page Load
+        window.addEventListener('load', () => {
+            window.game = new SnakeGame();
+        });
+    </script>
+</body>
+</html>

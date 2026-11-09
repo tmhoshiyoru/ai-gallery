@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>血月詛咒：陰森棘藤</title>
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #05020a;
+    font-family: 'Georgia', 'Microsoft JhengHei', serif;
+    color: #e0d8f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 100%;
+    max-height: 750px;
+    box-shadow: 0 0 35px rgba(139, 0, 0, 0.6), 0 0 15px rgba(126, 34, 206, 0.4);
+    background: #0d0614;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    text-align: center;
+    padding: 24px;
+    transition: opacity 0.3s ease;
+    z-index: 20;
+}
+
+.interactive {
+    pointer-events: auto;
+}
+
+.hidden {
+    display: none !important;
+}
+
+h1 {
+    font-size: 2.2rem;
+    color: #ef4444;
+    text-shadow: 0 0 12px #ff0000, 2px 2px 4px #000;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+
+h2 {
+    font-size: 1.8rem;
+    color: #da77f2;
+    text-shadow: 0 0 10px #862e9c;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #a9a0c0;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.btn {
+    background: linear-gradient(180deg, #4c1d95 0%, #2e1065 100%);
+    border: 2px solid #a855f7;
+    color: #f3e8ff;
+    padding: 12px 28px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+    transition: all 0.2s ease;
+    margin-top: 8px;
+    font-weight: bold;
+    width: 100%;
+    max-width: 240px;
+}
+
+.btn:hover, .btn:active {
+    background: linear-gradient(180deg, #6b21a8 0%, #3b0764 100%);
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.8);
+    transform: scale(1.03);
+}
+
+.btn-secondary {
+    background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+    border-color: #6366f1;
+    color: #c7d2fe;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-secondary:hover, .btn-secondary:active {
+    background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+}
+
+.btn-danger {
+    background: linear-gradient(180deg, #881337 0%, #4c0519 100%);
+    border-color: #f43f5e;
+    color: #fecdd3;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+    font-size: 0.9rem;
+    padding: 8px 18px;
+}
+
+.btn-danger:hover, .btn-danger:active {
+    background: linear-gradient(180deg, #9f1239 0%, #881337 100%);
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.6);
+}
+
+#score-hud {
+    position: absolute;
+    top: 25px;
+    width: 100%;
+    text-align: center;
+    font-size: 2.8rem;
+    font-weight: bold;
+    color: #f3e8ff;
+    text-shadow: 0 0 12px #a855f7, 2px 2px 6px #000;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#jumpscare-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 0, 10, 0.95);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+#jumpscare-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.jumpscare-active #game-container {
+    animation: cameraShake 0.05s infinite alternate;
+}
+
+.jumpscare-active #jumpscare-overlay {
+    animation: redFlash 0.1s infinite alternate;
+}
+
+@keyframes cameraShake {
+    0% { transform: translate(-12px, 8px) scale(1.02) rotate(-1.5deg); }
+    50% { transform: translate(10px, -10px) scale(1.05) rotate(2deg); }
+    100% { transform: translate(-8px, -12px) scale(1.01) rotate(-1deg); }
+}
+
+@keyframes redFlash {
+    0% { background: rgba(90, 0, 0, 0.95); }
+    100% { background: rgba(5, 0, 10, 0.98); }
+}
+
+#dialogue-box {
+    width: 100%;
+    background: rgba(18, 9, 28, 0.92);
+    border: 2px solid #9333ea;
+    border-radius: 8px;
+    padding: 18px;
+    box-shadow: 0 0 25px rgba(147, 51, 234, 0.6);
+    z-index: 60;
+    text-align: left;
+}
+
+#dialogue-speaker {
+    color: #f43f5e;
+    font-size: 1.15rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-shadow: 0 0 8px #e11d48;
+}
+
+#dialogue-text {
+    color: #e9d5ff;
+    font-size: 1rem;
+    min-height: 50px;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.ending-badge {
+    font-size: 0.88rem;
+    color: #fbbf24;
+    border: 1px solid #d97706;
+    padding: 4px 14px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    background: rgba(217, 119, 6, 0.15);
+    font-weight: bold;
+}
+
+.ending-title {
+    font-size: 1.8rem;
+    color: #f43f5e;
+    text-shadow: 0 0 15px #e11d48;
+    margin-bottom: 12px;
+    font-weight: bold;
+}
+
+.ending-desc {
+    color: #cbd5e1;
+    font-size: 1rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.ending-progress {
+    font-size: 0.95rem;
+    color: #c084fc;
+    margin-bottom: 18px;
+}
+
+/* 子選單樣式 */
+.sub-screen {
+    justify-content: flex-start;
+    padding-top: 40px;
+    background: rgba(13, 6, 20, 0.96);
+}
+
+.gallery-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 15px 0;
+    max-height: 440px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.gallery-card {
+    background: rgba(24, 9, 40, 0.8);
+    border: 1px solid #6b21a8;
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.gallery-card.unlocked {
+    border-color: #f43f5e;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.2);
+    background: rgba(35, 12, 55, 0.9);
+}
+
+.gallery-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.gallery-card-title {
+    font-weight: bold;
+    font-size: 1.05rem;
+    color: #94a3b8;
+}
+
+.gallery-card.unlocked .gallery-card-title {
+    color: #f43f5e;
+    text-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+}
+
+.gallery-card-status {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #334155;
+    color: #cbd5e1;
+}
+
+.gallery-card.unlocked .gallery-card-status {
+    background: rgba(217, 119, 6, 0.2);
+    border: 1px solid #d97706;
+    color: #fbbf24;
+}
+
+.gallery-card-desc {
+    font-size: 0.88rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.gallery-card.unlocked .gallery-card-desc {
+    color: #cbd5e1;
+}
+
+/* 幽魂型態卡片特化 */
+.skin-card {
+    cursor: pointer;
+}
+
+.skin-card.selected {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4) !important;
+}
+
+#confirm-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal-card {
+    background: #180928;
+    border: 2px solid #e11d48;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(225, 29, 72, 0.5);
+}
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="score-hud" class="hidden">0</div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="ui-layer interactive">
+        <h1>血月詛咒</h1>
+        <p>幽魂迷失於古木深淵<br>點擊螢幕或按空白鍵浮游<br>避開穿透闇夜的滴血棘藤</p>
+        <div class="ending-progress" id="start-progress">已解鎖結局：0 / 3</div>
+        <button class="btn" id="start-btn">開始探索</button>
+        <button class="btn btn-secondary" id="skins-btn">幽魂型態</button>
+        <button class="btn btn-secondary" id="gallery-btn">結局圖鑑</button>
+        <button class="btn btn-danger" id="reset-btn" style="margin-top: 12px;">重置遊戲存檔</button>
+    </div>
+
+    <!-- 幽魂型態選單畫面 -->
+    <div id="skins-screen" class="ui-layer interactive sub-screen hidden">
+        <h2>幽魂型態</h2>
+        <p style="margin-bottom: 10px; font-size: 0.9rem;">解鎖結局以獲得更多形態與特效</p>
+        <div class="gallery-list" id="skins-list"></div>
+        <button class="btn" id="skins-back-btn">返回主選單</button>
+    </div>
+
+    <!-- 結局圖鑑畫面 -->
+    <div id="gallery-screen" class="ui-layer interactive sub-screen hidden">
+        <h2>結局圖鑑</h2>
+        <div class="ending-progress" id="gallery-progress-text">解鎖進度：0 / 3</div>
+        <div class="gallery-list" id="gallery-list"></div>
+        <button class="btn" id="gallery-back-btn">返回主選單</button>
+    </div>
+
+    <!-- 普通遊戲結束畫面 -->
+    <div id="gameover-screen" class="ui-layer interactive hidden">
+        <h2>魂飛魄散</h2>
+        <p>本次得分: <span id="final-score" style="color:#a855f7; font-weight:bold;">0</span></p>
+        <p>最高紀錄: <span id="high-score" style="color:#e9d5ff;">0</span></p>
+        <button class="btn" id="restart-btn">再次嘗試</button>
+        <button class="btn btn-secondary" id="gameover-gallery-btn">結局圖鑑</button>
+    </div>
+
+    <!-- 結局畫面 -->
+    <div id="ending-screen" class="ui-layer interactive hidden">
+        <div class="ending-badge" id="ending-badge">NEW ENDING UNLOCKED</div>
+        <div class="ending-title" id="ending-title">結局名稱</div>
+        <div class="ending-desc" id="ending-desc">結局詳細說明文字</div>
+        <div class="ending-progress" id="ending-progress-text">結局收集進度：1 / 3</div>
+        <button class="btn" id="ending-restart-btn">繼續突破其他結局</button>
+        <button class="btn btn-secondary" id="ending-gallery-btn">查看結局圖鑑</button>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="hidden">
+        <div class="modal-card">
+            <p style="color:#fecdd3; margin-bottom: 15px;">確定要重置所有紀錄嗎？<br>將會清空已解鎖的結局與得分！</p>
+            <div style="display:flex; gap: 10px; justify-content:center;">
+                <button class="btn btn-danger" id="confirm-yes-btn" style="width: auto;">確定重置</button>
+                <button class="btn" id="confirm-no-btn" style="width: auto;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jump Scare 對話層 -->
+    <div id="jumpscare-overlay">
+        <div id="dialogue-box">
+            <div id="dialogue-speaker">???</div>
+            <div id="dialogue-text">……</div>
+            <button class="btn" id="dialogue-next-btn" style="width: 100%; max-width: 100%;">繼續對話</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const GAME_WIDTH = 420;
+const GAME_HEIGHT = 750;
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
+
+// UI Elements
+const startScreen = document.getElementById('start-screen');
+const skinsScreen = document.getElementById('skins-screen');
+const galleryScreen = document.getElementById('gallery-screen');
+const gameoverScreen = document.getElementById('gameover-screen');
+const endingScreen = document.getElementById('ending-screen');
+const jumpscareOverlay = document.getElementById('jumpscare-overlay');
+const scoreHud = document.getElementById('score-hud');
+const finalScoreEl = document.getElementById('final-score');
+const highScoreEl = document.getElementById('high-score');
+const dialogueSpeaker = document.getElementById('dialogue-speaker');
+const dialogueText = document.getElementById('dialogue-text');
+const dialogueNextBtn = document.getElementById('dialogue-next-btn');
+
+const skinsList = document.getElementById('skins-list');
+const skinsBtn = document.getElementById('skins-btn');
+const skinsBackBtn = document.getElementById('skins-back-btn');
+
+const galleryList = document.getElementById('gallery-list');
+const galleryBtn = document.getElementById('gallery-btn');
+const galleryBackBtn = document.getElementById('gallery-back-btn');
+const gameoverGalleryBtn = document.getElementById('gameover-gallery-btn');
+const endingGalleryBtn = document.getElementById('ending-gallery-btn');
+
+const confirmModal = document.getElementById('confirm-modal');
+const resetBtn = document.getElementById('reset-btn');
+const confirmYesBtn = document.getElementById('confirm-yes-btn');
+const confirmNoBtn = document.getElementById('confirm-no-btn');
+
+// Endings Data
+const ENDINGS_DATA = {
+    'DEVOUR': {
+        id: 'DEVOUR',
+        title: '【結局一：血盆大口】',
+        desc: '你在暗黑棘藤中累積陣亡了 15 次。<br>影鬼張開巨大的血盆大口，將你的靈魂徹底吞噬。<br>你成為了血月古堡中永恆的孤魂野鬼。',
+        condition: '累積死亡達到 15 次'
+    },
+    'ESCAPE': {
+        id: 'ESCAPE',
+        title: '【結局二：逃出生天】',
+        desc: '恭喜！你成功穿越了 10 組凶險的血色棘藤！<br>幽魂突破了血月的萬丈陰霾，迎來了黎明的微光。<br>你成功逃離了這片詛咒之地！',
+        condition: '單局成功通過 10 組棘藤'
+    },
+    'EXILE': {
+        id: 'EXILE',
+        title: '【結局三：自我放逐】',
+        desc: '你在完全沒過任何障礙的情況下，連續摔死 10 次。<br>影鬼對你的放棄感到無言與無奈。<br>你被永遠放逐在時間停滯的陰暗角落裡。',
+        condition: '連續 10 次開局直接墜落死亡'
+    }
+};
+
+// Skins Data
+const SKINS_DATA = {
+    'DEFAULT': {
+        id: 'DEFAULT',
+        name: '微光幽魂',
+        desc: '初次迷失在深淵中的純白幽魂，散發著微弱的紫羅蘭色靈光。',
+        reqEnding: null,
+        mainColor: '#f3e8ff',
+        glowColor: '#d8b4fe',
+        particleColor: 'rgba(192, 132, 252, ',
+        eyeColor: '#4c1d95',
+        crown: false
+    },
+    'BLOOD': {
+        id: 'BLOOD',
+        name: '血月怨靈',
+        desc: '汲取了無數恐懼與怨念後蛻變的型態，伴隨著緋紅燃燒的火焰拖尾。',
+        reqEnding: 'DEVOUR',
+        reqTitle: '【結局一：血盆大口】',
+        mainColor: '#fca5a5',
+        glowColor: '#ef4444',
+        particleColor: 'rgba(239, 68, 68, ',
+        eyeColor: '#7f1d1d',
+        crown: false
+    },
+    'SAINT': {
+        id: 'SAINT',
+        name: '黎明聖靈',
+        desc: '突破詛咒並帶來黎明曙光的聖潔型態，頂著星芒皇冠與純金靈氣。',
+        reqEnding: 'ESCAPE',
+        reqTitle: '【結局二：逃出生天】',
+        mainColor: '#fef08a',
+        glowColor: '#eab308',
+        particleColor: 'rgba(234, 179, 8, ',
+        eyeColor: '#713f12',
+        crown: true
+    }
+};
+
+// State
+let gameState = 'MENU';
+let score = 0;
+let highScore = parseInt(localStorage.getItem('gothic_bird_highscore') || '0', 10);
+let totalDeaths = parseInt(localStorage.getItem('gothic_bird_deaths') || '0', 10);
+let zeroScoreDeathCount = parseInt(localStorage.getItem('gothic_bird_zero_deaths') || '0', 10);
+let unlockedEndings = JSON.parse(localStorage.getItem('gothic_bird_endings') || '[]');
+let currentSkinId = localStorage.getItem('gothic_bird_skin') || 'DEFAULT';
+
+// Audio System
+let audioCtx = null;
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playSound(type) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(380, audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.12);
+        } else if (type === 'score') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(780, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        } else if (type === 'hit') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === 'jumpscare') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+    } catch(e) {}
+}
+
+function saveEndings() {
+    localStorage.setItem('gothic_bird_endings', JSON.stringify(unlockedEndings));
+    updateProgressUI();
+}
+
+function updateProgressUI() {
+    const progressStr = `已解鎖結局：${unlockedEndings.length} / 3`;
+    document.getElementById('start-progress').innerText = progressStr;
+    document.getElementById('ending-progress-text').innerText = `結局收集進度：${unlockedEndings.length} / 3`;
+    document.getElementById('gallery-progress-text').innerText = `解鎖進度：${unlockedEndings.length} / 3`;
+}
+
+// Render Gallery
+function renderGallery() {
+    galleryList.innerHTML = '';
+    Object.keys(ENDINGS_DATA).forEach(key => {
+        const ending = ENDINGS_DATA[key];
+        const isUnlocked = unlockedEndings.includes(key);
+        
+        const card = document.createElement('div');
+        card.className = `gallery-card ${isUnlocked ? 'unlocked' : ''}`;
+        card.innerHTML = `
+            <div class="gallery-card-header">
+                <div class="gallery-card-title">${isUnlocked ? ending.title : '【未解鎖結局】'}</div>
+                <div class="gallery-card-status">${isUnlocked ? '已解鎖' : '未達成'}</div>
+            </div>
+            <div class="gallery-card-desc">
+                ${isUnlocked ? `${ending.desc}<br><span style="color:#a855f7; font-size:0.8rem; margin-top:6px; display:block;">達成條件：${ending.condition}</span>` : '解鎖條件：？？？（請親自探索解鎖）'}
+            </div>
+        `;
+        galleryList.appendChild(card);
+    });
+}
+
+// Render Skins
+function renderSkins() {
+    skinsList.innerHTML = '';
+    Object.keys(SKINS_DATA).forEach(key => {
+        const skin = SKINS_DATA[key];
+        const isUnlocked = !skin.reqEnding || unlockedEndings.includes(skin.reqEnding);
+        const isSelected = currentSkinId === key;
+
+        const card = document.createElement('div');
+        card.className = `gallery-card skin-card ${isUnlocked ? 'unlocked' : ''} ${isSelected ? 'selected' : ''}`;
+        
+        card.innerHTML = `
+            <div class="gallery-card-header">
+                <div class="gallery-card-title" style="color: ${isUnlocked ? skin.glowColor : '#94a3b8'}">${skin.name} ${isSelected ? '（裝備中）' : ''}</div>
+                <div class="gallery-card-status">${isUnlocked ? (isSelected ? '使用中' : '點擊選擇') : '未解鎖'}</div>
+            </div>
+            <div class="gallery-card-desc">
+                ${skin.desc}<br>
+                <small style="color: #a855f7; margin-top:6px; display:block;">
+                    ${isUnlocked ? '解鎖狀態：已獲得' : `解鎖條件：需先解鎖 ${skin.reqTitle}`}
+                </small>
+            </div>
+        `;
+
+        if (isUnlocked) {
+            card.addEventListener('click', () => {
+                currentSkinId = key;
+                localStorage.setItem('gothic_bird_skin', currentSkinId);
+                renderSkins();
+            });
+        }
+
+        skinsList.appendChild(card);
+    });
+}
+
+function showGallery() {
+    renderGallery();
+    startScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    endingScreen.classList.add('hidden');
+    skinsScreen.classList.add('hidden');
+    galleryScreen.classList.remove('hidden');
+}
+
+function showSkins() {
+    renderSkins();
+    startScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    endingScreen.classList.add('hidden');
+    galleryScreen.classList.add('hidden');
+    skinsScreen.classList.remove('hidden');
+}
+
+galleryBtn.addEventListener('click', showGallery);
+gameoverGalleryBtn.addEventListener('click', showGallery);
+endingGalleryBtn.addEventListener('click', showGallery);
+galleryBackBtn.addEventListener('click', () => {
+    galleryScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+});
+
+skinsBtn.addEventListener('click', showSkins);
+skinsBackBtn.addEventListener('click', () => {
+    skinsScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+});
+
+// Reset Storage
+resetBtn.addEventListener('click', () => confirmModal.classList.remove('hidden'));
+confirmNoBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
+confirmYesBtn.addEventListener('click', () => {
+    localStorage.removeItem('gothic_bird_highscore');
+    localStorage.removeItem('gothic_bird_deaths');
+    localStorage.removeItem('gothic_bird_zero_deaths');
+    localStorage.removeItem('gothic_bird_endings');
+    localStorage.removeItem('gothic_bird_skin');
+
+    highScore = 0;
+    totalDeaths = 0;
+    zeroScoreDeathCount = 0;
+    unlockedEndings = [];
+    currentSkinId = 'DEFAULT';
+
+    updateProgressUI();
+    confirmModal.classList.add('hidden');
+});
+
+// Jumpscare State
+let jumpscareType = 'DEATH_5';
+let dialogueStep = 0;
+let currentDialogues = [];
+
+// Player Ghost
+const ghost = {
+    x: 80,
+    y: GAME_HEIGHT / 2,
+    radius: 14,
+    velocity: 0,
+    gravity: 0.38,
+    jump: -7.2,
+    rotation: 0,
+    particles: [],
+    reset() {
+        this.y = GAME_HEIGHT / 2;
+        this.velocity = 0;
+        this.rotation = 0;
+        this.particles = [];
+    },
+    update() {
+        this.velocity += this.gravity;
+        this.y += this.velocity;
+        this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.velocity * 0.08));
+
+        if (Math.random() < 0.65) {
+            this.particles.push({
+                x: this.x - 10 + Math.random() * 6,
+                y: this.y + (Math.random() - 0.5) * 12,
+                radius: Math.random() * 5 + 2,
+                alpha: 0.8,
+                vx: -(Math.random() * 1.5 + 0.5),
+                vy: (Math.random() - 0.5) * 0.8
+            });
+        }
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.035;
+            if (p.alpha <= 0) this.particles.splice(i, 1);
+        }
+    },
+    draw() {
+        const activeSkin = SKINS_DATA[currentSkinId] || SKINS_DATA['DEFAULT'];
+
+        this.particles.forEach(p => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `${activeSkin.particleColor}${p.alpha})`;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = activeSkin.glowColor;
+            ctx.fill();
+            ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = activeSkin.glowColor;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = activeSkin.mainColor;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(-2, -2, this.radius * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = activeSkin.eyeColor;
+        ctx.beginPath();
+        ctx.arc(4, -3, 2.5, 0, Math.PI * 2);
+        ctx.arc(10, -3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (activeSkin.crown) {
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(-6, -this.radius);
+            ctx.lineTo(-2, -this.radius - 8);
+            ctx.lineTo(2, -this.radius - 3);
+            ctx.lineTo(6, -this.radius - 8);
+            ctx.lineTo(10, -this.radius);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+};
+
+// Vines
+let vines = [];
+const VINE_WIDTH = 68;
+const GAP_HEIGHT = 160;
+let vineSpawnTimer = 0;
+
+function createVine() {
+    const minHeight = 80;
+    const maxHeight = GAME_HEIGHT - GAP_HEIGHT - minHeight - 60;
+    const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+
+    vines.push({
+        x: GAME_WIDTH,
+        topHeight: topHeight,
+        bottomY: topHeight + GAP_HEIGHT,
+        passed: false,
+        thorns: generateThornDetails(topHeight, GAME_HEIGHT - (topHeight + GAP_HEIGHT)),
+        bloodDrips: []
+    });
+}
+
+function generateThornDetails(topH, bottomH) {
+    const list = [];
+    for (let y = 25; y < topH - 25; y += 35) {
+        list.push({ side: Math.random() > 0.5 ? 'left' : 'right', y: y, isTop: true });
+    }
+    for (let y = 25; y < bottomH - 25; y += 35) {
+        list.push({ side: Math.random() > 0.5 ? 'left' : 'right', y: y, isTop: false });
+    }
+    return list;
+}
+
+function updateVines() {
+    vineSpawnTimer++;
+    if (vineSpawnTimer > 105) {
+        createVine();
+        vineSpawnTimer = 0;
+    }
+
+    for (let i = vines.length - 1; i >= 0; i--) {
+        let v = vines[i];
+        v.x -= 2.6;
+
+        if (Math.random() < 0.08) {
+            v.bloodDrips.push({
+                x: v.x + Math.random() * VINE_WIDTH,
+                y: v.topHeight,
+                vy: Math.random() * 2 + 1,
+                alpha: 0.9
+            });
+        }
+
+        for (let d = v.bloodDrips.length - 1; d >= 0; d--) {
+            let drip = v.bloodDrips[d];
+            drip.y += drip.vy;
+            drip.alpha -= 0.02;
+            if (drip.alpha <= 0) v.bloodDrips.splice(d, 1);
+        }
+
+        if (!v.passed && v.x + VINE_WIDTH < ghost.x) {
+            v.passed = true;
+            score++;
+            playSound('score');
+            scoreHud.innerText = score;
+
+            zeroScoreDeathCount = 0;
+            localStorage.setItem('gothic_bird_zero_deaths', 0);
+
+            if (score >= 10) {
+                triggerEnding('ESCAPE');
+                return;
+            }
+        }
+
+        if (v.x + VINE_WIDTH < -20) {
+            vines.splice(i, 1);
+        }
+    }
+}
+
+function drawVines() {
+    vines.forEach(v => {
+        drawSingleVine(v.x, 0, VINE_WIDTH, v.topHeight, true, v.thorns);
+        drawSingleVine(v.x, v.bottomY, VINE_WIDTH, GAME_HEIGHT - v.bottomY, false, v.thorns);
+
+        v.bloodDrips.forEach(d => {
+            ctx.save();
+            ctx.fillStyle = `rgba(185, 28, 28, ${d.alpha})`;
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    });
+}
+
+function drawSingleVine(x, y, width, height, isTop, thorns) {
+    ctx.save();
+    let grad = ctx.createLinearGradient(x, 0, x + width, 0);
+    grad.addColorStop(0, '#04170b');
+    grad.addColorStop(0.3, '#14532d');
+    grad.addColorStop(0.7, '#0f391b');
+    grad.addColorStop(1, '#020d06');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, width, height);
+
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 15, y);
+    ctx.lineTo(x + 25, y + height);
+    ctx.moveTo(x + width - 18, y);
+    ctx.lineTo(x + width - 28, y + height);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    ctx.fillStyle = '#166534';
+    const headHeight = 22;
+    const headY = isTop ? y + height - headHeight : y;
+    ctx.fillRect(x - 5, headY, width + 10, headHeight);
+    ctx.strokeStyle = '#4ade80';
+    ctx.strokeRect(x - 5, headY, width + 10, headHeight);
+
+    thorns.forEach(t => {
+        if (t.isTop === isTop) {
+            let thornY = y + t.y;
+            ctx.fillStyle = '#0f391b';
+            ctx.beginPath();
+            if (t.side === 'left') {
+                ctx.moveTo(x, thornY);
+                ctx.lineTo(x - 14, thornY + 8);
+                ctx.lineTo(x, thornY + 16);
+            } else {
+                ctx.moveTo(x + width, thornY);
+                ctx.lineTo(x + width + 14, thornY + 8);
+                ctx.lineTo(x + width, thornY + 16);
+            }
+            ctx.fill();
+        }
+    });
+
+    ctx.restore();
+}
+
+// Background
+let fogOffset = 0;
+function drawBackground() {
+    let sky = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    sky.addColorStop(0, '#090212');
+    sky.addColorStop(0.6, '#1a0526');
+    sky.addColorStop(1, '#2d0619');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(GAME_WIDTH - 90, 110, 45, 0, Math.PI * 2);
+    ctx.fillStyle = '#9f1239';
+    ctx.shadowBlur = 35;
+    ctx.shadowColor = '#e11d48';
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#05020a';
+    ctx.beginPath();
+    ctx.moveTo(0, GAME_HEIGHT - 40);
+    ctx.lineTo(40, GAME_HEIGHT - 120);
+    ctx.lineTo(70, GAME_HEIGHT - 70);
+    ctx.lineTo(120, GAME_HEIGHT - 160);
+    ctx.lineTo(160, GAME_HEIGHT - 80);
+    ctx.lineTo(240, GAME_HEIGHT - 140);
+    ctx.lineTo(310, GAME_HEIGHT - 60);
+    ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - 100);
+    ctx.lineTo(GAME_WIDTH, GAME_HEIGHT);
+    ctx.lineTo(0, GAME_HEIGHT);
+    ctx.fill();
+
+    fogOffset += 0.4;
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.05)';
+    ctx.beginPath();
+    for (let x = 0; x <= GAME_WIDTH; x += 20) {
+        let y = GAME_HEIGHT - 80 + Math.sin((x + fogOffset) * 0.02) * 15;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.lineTo(GAME_WIDTH, GAME_HEIGHT);
+    ctx.lineTo(0, GAME_HEIGHT);
+    ctx.fill();
+}
+
+function checkCollision() {
+    if (ghost.y + ghost.radius >= GAME_HEIGHT - 10 || ghost.y - ghost.radius <= 0) {
+        return true;
+    }
+    for (let v of vines) {
+        if (ghost.x + ghost.radius > v.x && ghost.x - ghost.radius < v.x + VINE_WIDTH) {
+            if (ghost.y - ghost.radius < v.topHeight) return true;
+            if (ghost.y + ghost.radius > v.bottomY) return true;
+        }
+    }
+    return false;
+}
+
+// Jumpscare
+function drawJumpscareFace() {
+    if (gameState !== 'JUMPSCARE') return;
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    const centerX = GAME_WIDTH / 2;
+    const centerY = GAME_HEIGHT / 2 - 80;
+
+    if (jumpscareType === 'ZERO_10') {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#a855f7';
+        ctx.fillStyle = '#1e1b4b';
+        ctx.beginPath();
+        ctx.arc(centerX - 60, centerY - 20, 22, 0, Math.PI * 2);
+        ctx.arc(centerX + 60, centerY - 20, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(centerX - 63, centerY - 5, 6, 35);
+        ctx.fillRect(centerX + 57, centerY - 5, 6, 35);
+    } else if (jumpscareType === 'DEATH_15') {
+        let time = Date.now() * 0.005;
+        ctx.shadowBlur = 35;
+        ctx.shadowColor = '#ff0000';
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(centerX - 70, centerY - 40, 38 + Math.sin(time) * 3, 0, Math.PI * 2);
+        ctx.arc(centerX + 70, centerY - 40, 38 + Math.sin(time) * 3, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#e11d48';
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(centerX - 55, centerY - 30, 24, 0, Math.PI * 2);
+        ctx.arc(centerX + 55, centerY - 30, 24, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function triggerJumpscare(type) {
+    gameState = 'JUMPSCARE';
+    jumpscareType = type;
+    dialogueStep = 0;
+    playSound('jumpscare');
+
+    if (type === 'ZERO_10') {
+        currentDialogues = [
+            { speaker: "深淵影鬼", text: "……" },
+            { speaker: "深淵影鬼", text: "你...連起飛都懶得飛了嗎？連續十次，全是在完全沒過任何障礙前直接掉下去摔死。" },
+            { speaker: "深淵影鬼", text: "連棘藤都還沒碰到就放棄...我對你無話可說。" }
+        ];
+    } else if (type === 'DEATH_15') {
+        currentDialogues = [
+            { speaker: "深淵影鬼", text: "哈哈哈！累積 15 次的徘徊與掙扎！你的靈魂已經徹底被怨念浸透了！" },
+            { speaker: "深淵影鬼", text: "不要再做無謂的掙扎了，獻出你的靈魂，成為這片暗黑棘藤的養分吧！" }
+        ];
+    } else {
+        currentDialogues = [
+            { speaker: "深淵影鬼", text: "沉淪的靈魂啊……這已經是你第 5 次在這片血月迷霧中陣亡了。" },
+            { speaker: "深淵影鬼", text: "每一次死亡，棘藤都在汲取你的恐懼……你真的以為能逃離這裡嗎？" }
+        ];
+    }
+
+    updateDialogueUI();
+    document.body.classList.add('jumpscare-active');
+    jumpscareOverlay.classList.add('visible');
+    setTimeout(() => document.body.classList.remove('jumpscare-active'), 3000);
+}
+
+function updateDialogueUI() {
+    const current = currentDialogues[dialogueStep];
+    dialogueSpeaker.innerText = current.speaker;
+    dialogueText.innerText = current.text;
+    dialogueNextBtn.innerText = (dialogueStep === currentDialogues.length - 1) ? ((jumpscareType === 'DEATH_15' || jumpscareType === 'ZERO_10') ? "查看結局" : "回到遊戲") : "繼續對話";
+}
+
+dialogueNextBtn.addEventListener('click', () => {
+    dialogueStep++;
+    if (dialogueStep < currentDialogues.length) {
+        updateDialogueUI();
+    } else {
+        jumpscareOverlay.classList.remove('visible');
+        document.body.classList.remove('jumpscare-active');
+        if (jumpscareType === 'DEATH_15') triggerEnding('DEVOUR');
+        else if (jumpscareType === 'ZERO_10') triggerEnding('EXILE');
+        else showGameOverUI();
+    }
+});
+
+function triggerEnding(endingType) {
+    gameState = 'ENDING';
+    scoreHud.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    startScreen.classList.add('hidden');
+    galleryScreen.classList.add('hidden');
+    skinsScreen.classList.add('hidden');
+    endingScreen.classList.remove('hidden');
+
+    if (!unlockedEndings.includes(endingType)) {
+        unlockedEndings.push(endingType);
+        saveEndings();
+    } else {
+        updateProgressUI();
+    }
+
+    const endingData = ENDINGS_DATA[endingType];
+    if (endingData) {
+        document.getElementById('ending-title').innerText = endingData.title;
+        document.getElementById('ending-desc').innerHTML = endingData.desc;
+    }
+}
+
+function handleGameOver() {
+    playSound('hit');
+    gameState = 'GAMEOVER';
+
+    totalDeaths++;
+    localStorage.setItem('gothic_bird_deaths', totalDeaths);
+
+    if (score === 0) zeroScoreDeathCount++;
+    else zeroScoreDeathCount = 0;
+    localStorage.setItem('gothic_bird_zero_deaths', zeroScoreDeathCount);
+
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('gothic_bird_highscore', highScore);
+    }
+
+    if (zeroScoreDeathCount >= 10) {
+        zeroScoreDeathCount = 0;
+        localStorage.setItem('gothic_bird_zero_deaths', 0);
+        triggerJumpscare('ZERO_10');
+    } else if (totalDeaths % 15 === 0) {
+        triggerJumpscare('DEATH_15');
+    } else if (totalDeaths === 5) {
+        triggerJumpscare('DEATH_5');
+    } else {
+        showGameOverUI();
+    }
+}
+
+function showGameOverUI() {
+    gameState = 'GAMEOVER';
+    scoreHud.classList.add('hidden');
+    finalScoreEl.innerText = score;
+    highScoreEl.innerText = highScore;
+    gameoverScreen.classList.remove('hidden');
+}
+
+function resetGame() {
+    score = 0;
+    vines = [];
+    vineSpawnTimer = 0;
+    ghost.reset();
+    scoreHud.innerText = '0';
+}
+
+function startGame() {
+    initAudio();
+    resetGame();
+    gameState = 'PLAYING';
+    startScreen.classList.add('hidden');
+    galleryScreen.classList.add('hidden');
+    skinsScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    endingScreen.classList.add('hidden');
+    scoreHud.classList.remove('hidden');
+}
+
+function playerJump() {
+    if (gameState === 'PLAYING') {
+        ghost.velocity = ghost.jump;
+        playSound('jump');
+    }
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+document.getElementById('ending-restart-btn').addEventListener('click', startGame);
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (gameState === 'PLAYING') playerJump();
+        else if (gameState === 'MENU') startGame();
+    }
+});
+
+canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (gameState === 'PLAYING') playerJump();
+});
+
+function gameLoop() {
+    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    drawBackground();
+
+    if (gameState === 'PLAYING') {
+        ghost.update();
+        updateVines();
+        if (checkCollision()) handleGameOver();
+    }
+
+    drawVines();
+    ghost.draw();
+
+    if (gameState === 'JUMPSCARE') drawJumpscareFace();
+    requestAnimationFrame(gameLoop);
+}
+
+updateProgressUI();
+gameLoop();
+</script>
+</body>
+</html>

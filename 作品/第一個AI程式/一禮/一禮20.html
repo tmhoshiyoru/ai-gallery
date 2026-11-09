@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萬聖節打地鼠 Spooky Whack-A-Mole</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f051d;
+            background-image: 
+                radial-gradient(circle at 50% 20%, #2a085c 0%, transparent 70%),
+                radial-gradient(circle at 80% 80%, #3b0764 0%, transparent 50%);
+            color: #fff;
+            user-select: none;
+            touch-action: manipulation;
+            overflow-x: hidden;
+            /* 自訂木槌滑鼠指標 */
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m15 5 4 4'/><path d='M13 7 4 16'/><path d='m8 20 4-4'/><path d='m9 3 7 7'/><path d='m2 14 7 7'/></svg>") 8 8, auto;
+        }
+
+        .spooky-font {
+            font-family: 'Creepster', cursive;
+        }
+
+        /* 揮槌點擊動畫效果 */
+        body:active {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' transform='rotate(-25)'><path d='m15 5 4 4'/><path d='M13 7 4 16'/><path d='m8 20 4-4'/><path d='m9 3 7 7'/><path d='m2 14 7 7'/></svg>") 8 8, auto;
+        }
+
+        /* Hole mound styling */
+        .hole-container {
+            perspective: 1000px;
+            overflow: hidden;
+            border-radius: 50% / 40%;
+            background: radial-gradient(ellipse at center, #090214 0%, #1a0833 70%, #2d0b54 100%);
+            box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.9), 0 5px 15px rgba(126, 34, 206, 0.3);
+            border: 3px solid #3b0764;
+        }
+
+        .hole-mound {
+            position: absolute;
+            bottom: -5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 110%;
+            height: 35%;
+            background: linear-gradient(to top, #2e104d, #140524);
+            border-radius: 50% 50% 0 0;
+            z-index: 5;
+            border-top: 3px solid #581c87;
+            pointer-events: none;
+        }
+
+        /* Monster Styling: 1.5x Giant Size & Ultra Hitbox */
+        .monster {
+            position: absolute;
+            width: 100%;
+            height: 120%;
+            left: 0;
+            bottom: -100%;
+            transition: bottom 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4.8rem;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.7));
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: pointer;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
+
+        .monster.up {
+            bottom: 5%;
+            transform: scale(1.15);
+        }
+
+        /* Floating Score Text */
+        .floating-score {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                transform: translateY(-30px) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-60px) scale(0.8);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 sm:p-6">
+
+    <!-- Header & Dashboard -->
+    <header class="w-full max-w-4xl flex flex-col items-center gap-3">
+        <h1 class="text-4xl sm:text-6xl text-amber-400 spooky-font tracking-wider drop-shadow-[0_4px_10px_rgba(245,158,11,0.5)]">
+            🎃 萬聖節打地鼠 🎃
+        </h1>
+
+        <!-- Stats Bar -->
+        <div class="w-full bg-purple-950/80 border-2 border-purple-700/60 backdrop-blur-md rounded-2xl p-3 sm:p-4 grid grid-cols-4 gap-2 sm:gap-4 text-center shadow-xl">
+            <!-- Level -->
+            <div class="flex flex-col items-center justify-center bg-purple-900/40 p-2 rounded-xl border border-purple-600/30">
+                <span class="text-purple-300 text-xs sm:text-sm font-bold">關卡</span>
+                <span id="levelDisplay" class="text-xl sm:text-3xl font-black text-amber-400">1</span>
+            </div>
+            <!-- Score -->
+            <div class="flex flex-col items-center justify-center bg-purple-900/40 p-2 rounded-xl border border-purple-600/30">
+                <span class="text-purple-300 text-xs sm:text-sm font-bold">目前得分</span>
+                <span id="scoreDisplay" class="text-xl sm:text-3xl font-black text-emerald-400">0</span>
+            </div>
+            <!-- Target -->
+            <div class="flex flex-col items-center justify-center bg-purple-900/40 p-2 rounded-xl border border-purple-600/30">
+                <span class="text-purple-300 text-xs sm:text-sm font-bold">目標分數</span>
+                <span id="targetDisplay" class="text-xl sm:text-3xl font-black text-amber-300">750</span>
+            </div>
+            <!-- Time Left -->
+            <div class="flex flex-col items-center justify-center bg-purple-900/40 p-2 rounded-xl border border-purple-600/30">
+                <span class="text-purple-300 text-xs sm:text-sm font-bold">剩餘時間</span>
+                <span id="timeDisplay" class="text-xl sm:text-3xl font-black text-rose-400">30</span>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-purple-950/70 rounded-full h-4 p-0.5 border border-purple-800 relative overflow-hidden shadow-inner">
+            <div id="targetProgress" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-300 w-0"></div>
+            <span id="progressText" class="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-black text-white drop-shadow">0%</span>
+        </div>
+    </header>
+
+    <!-- Main Game Playfield -->
+    <main class="w-full max-w-4xl my-auto py-4">
+        <div id="gameArea" class="grid grid-cols-3 gap-3 sm:gap-6 max-w-2xl mx-auto">
+            <!-- 9 Holes will be generated dynamically -->
+        </div>
+    </main>
+
+    <!-- Footer Rules Legend -->
+    <footer class="w-full max-w-4xl bg-purple-950/60 border border-purple-800/40 rounded-2xl p-3 text-center text-xs text-purple-300">
+        <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-6 font-bold">
+            <div class="flex items-center gap-1.5">👻 幽靈 <span class="text-emerald-400">+25</span></div>
+            <div class="flex items-center gap-1.5">🧛 吸血鬼 <span class="text-emerald-400">+38</span></div>
+            <div class="flex items-center gap-1.5">🧟 殭屍 <span class="text-emerald-400">+50</span></div>
+            <div class="flex items-center gap-1.5">🧙‍♀️ 黃金巫師 <span class="text-amber-300">+125</span></div>
+            <div class="flex items-center gap-1.5">💀 詛咒頭骨 <span class="text-rose-400">-38</span></div>
+            <div class="flex items-center gap-1.5">🐈 黑貓 <span class="text-rose-400">-25</span></div>
+        </div>
+    </footer>
+
+    <!-- SUCCESS / NEXT LEVEL MODAL -->
+    <div id="winModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gradient-to-b from-purple-900 to-purple-950 border-2 border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl">
+            <div class="text-6xl mb-2 animate-bounce">🎉</div>
+            <h2 class="text-3xl sm:text-4xl font-black text-emerald-400 mb-2">關卡突破！</h2>
+            <p class="text-purple-200 text-sm mb-6">太棒了！您順利達成了關卡過關目標。</p>
+
+            <div class="bg-purple-900/60 rounded-2xl p-4 mb-6 border border-purple-700/50">
+                <div class="text-sm text-purple-300">下一關目標分數</div>
+                <div id="nextLevelTargetDisplay" class="text-3xl font-black text-amber-400">1000</div>
+            </div>
+
+            <button onclick="nextLevel()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-3.5 rounded-xl text-lg transition shadow-lg transform active:scale-95">
+                進入下一關 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME OVER / RETRY MODAL -->
+    <div id="loseModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gradient-to-b from-purple-900 to-purple-950 border-2 border-rose-500 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl">
+            <div class="text-6xl mb-2">💀</div>
+            <h2 class="text-3xl sm:text-4xl font-black text-rose-500 mb-2">時間到！</h2>
+            <p class="text-purple-200 text-sm mb-4">可惜未達到關卡要求的 <span id="failedTargetDisplay" class="font-bold text-amber-400">750</span> 分。</p>
+
+            <div class="bg-purple-900/60 rounded-2xl p-4 mb-6 border border-purple-700/50">
+                <div class="text-sm text-purple-300">本次最終得分</div>
+                <div id="finalScoreDisplay" class="text-3xl font-black text-rose-400">0</div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-black py-3.5 rounded-xl text-lg transition shadow-lg transform active:scale-95">
+                重新挑戰 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game Sound Effects using Web Audio API (No External Assets)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playHitSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playTrapSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        }
+
+        // Monsters Types & Halved Scores
+        const monsterTypes = [
+            { type: 'ghost', emoji: '👻', score: 25, chance: 0.35 },
+            { type: 'vampire', emoji: '🧛', score: 38, chance: 0.25 },
+            { type: 'zombie', emoji: '🧟', score: 50, chance: 0.20 },
+            { type: 'witch', emoji: '🧙‍♀️', score: 125, chance: 0.05 },
+            { type: 'skull', emoji: '💀', score: -38, chance: 0.08, trap: true },
+            { type: 'cat', emoji: '🐈', score: -25, chance: 0.07, trap: true }
+        ];
+
+        // Game State Variables
+        let currentLevel = 1;
+        let score = 0;
+        let levelTime = 30;
+        let targetScore = 750;
+        let gameActive = false;
+        let timerInterval = null;
+        let monsterInterval = null;
+        let activeMonsters = new Array(9).fill(false);
+        let activeTimeoutIds = new Array(9).fill(null);
+
+        // Initialize Hole Grid Elements
+        const gameArea = document.getElementById('gameArea');
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.className = 'hole-container aspect-square relative cursor-pointer';
+            hole.dataset.index = i;
+
+            const monster = document.createElement('div');
+            monster.className = 'monster';
+            monster.id = `monster-${i}`;
+            
+            // Ultra-responsive touch, pointerdown and click listeners
+            const triggerWhack = (e) => {
+                whack(i, e.touches ? e.touches[0] : e);
+            };
+
+            monster.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                triggerWhack(e);
+            }, { passive: false });
+
+            monster.addEventListener('pointerdown', (e) => {
+                if (e.pointerType !== 'touch') {
+                    triggerWhack(e);
+                }
+            });
+
+            const mound = document.createElement('div');
+            mound.className = 'hole-mound';
+
+            hole.appendChild(monster);
+            hole.appendChild(mound);
+            gameArea.appendChild(hole);
+        }
+
+        // Direct Game Start on Page Load
+        window.onload = () => {
+            startLevel(1);
+        };
+
+        function startLevel(levelNum) {
+            currentLevel = levelNum;
+            score = 0;
+            levelTime = 30;
+            
+            // Level 1: 750, Level 2: 1000, Level 3: 1250...
+            targetScore = 750 + (currentLevel - 1) * 250;
+            gameActive = true;
+
+            // Update UI
+            document.getElementById('levelDisplay').innerText = currentLevel;
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('timeDisplay').innerText = levelTime;
+            document.getElementById('targetDisplay').innerText = targetScore;
+            
+            updateProgressBar();
+
+            // Hide modals
+            document.getElementById('winModal').classList.add('hidden');
+            document.getElementById('loseModal').classList.add('hidden');
+
+            // Reset timers & holes
+            clearInterval(timerInterval);
+            clearInterval(monsterInterval);
+            activeTimeoutIds.forEach(id => clearTimeout(id));
+            activeMonsters.fill(false);
+            for (let i = 0; i < 9; i++) {
+                const el = document.getElementById(`monster-${i}`);
+                el.classList.remove('up');
+                el.innerText = '';
+            }
+
+            // 30s Countdown Timer
+            timerInterval = setInterval(() => {
+                levelTime--;
+                document.getElementById('timeDisplay').innerText = levelTime;
+
+                if (levelTime <= 0) {
+                    endLevel();
+                }
+            }, 1000);
+
+            // Spawn rate: 900ms ~ 1000ms interval
+            const spawnRate = Math.max(700, 950 - (currentLevel * 30));
+            monsterInterval = setInterval(popMonster, spawnRate);
+        }
+
+        function popMonster() {
+            if (!gameActive) return;
+
+            const availableHoles = activeMonsters.map((active, index) => active ? null : index).filter(v => v !== null);
+            if (availableHoles.length === 0) return;
+
+            const randomIndex = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+            
+            // Pick Monster Type
+            const rand = Math.random();
+            let cumulative = 0;
+            let selectedType = monsterTypes[0];
+
+            for (let type of monsterTypes) {
+                cumulative += type.chance;
+                if (rand <= cumulative) {
+                    selectedType = type;
+                    break;
+                }
+            }
+
+            const monsterEl = document.getElementById(`monster-${randomIndex}`);
+            monsterEl.innerText = selectedType.emoji;
+            monsterEl.dataset.type = selectedType.type;
+            monsterEl.dataset.score = selectedType.score;
+            monsterEl.dataset.trap = selectedType.trap || false;
+            monsterEl.classList.add('up');
+            activeMonsters[randomIndex] = true;
+
+            // Stay duration ~ 850ms - 1000ms
+            const duration = Math.max(650, 925 - (currentLevel * 25));
+
+            activeTimeoutIds[randomIndex] = setTimeout(() => {
+                if (monsterEl.classList.contains('up')) {
+                    monsterEl.classList.remove('up');
+                }
+                activeMonsters[randomIndex] = false;
+            }, duration);
+        }
+
+        function whack(index, e) {
+            if (!gameActive) return;
+
+            const monsterEl = document.getElementById(`monster-${index}`);
+            if (!monsterEl.classList.contains('up')) return;
+
+            // Retract instantly on hit
+            monsterEl.classList.remove('up');
+            activeMonsters[index] = false;
+            if (activeTimeoutIds[index]) clearTimeout(activeTimeoutIds[index]);
+
+            const isTrap = monsterEl.dataset.trap === 'true';
+            const points = parseInt(monsterEl.dataset.score, 10);
+
+            if (isTrap) {
+                playTrapSound();
+                score = Math.max(0, score + points);
+                shakeScreen();
+            } else {
+                playHitSound();
+                score += points;
+            }
+
+            document.getElementById('scoreDisplay').innerText = score;
+            updateProgressBar();
+
+            showFloatingScore(e, points, isTrap);
+        }
+
+        function updateProgressBar() {
+            const percent = Math.min(100, Math.round((score / targetScore) * 100));
+            document.getElementById('targetProgress').style.width = `${percent}%`;
+            document.getElementById('progressText').innerText = `${percent}%`;
+        }
+
+        function showFloatingScore(e, points, isTrap) {
+            const popup = document.createElement('div');
+            popup.className = `floating-score font-black text-2xl ${isTrap ? 'text-red-500' : 'text-amber-400'}`;
+            popup.innerText = points > 0 ? `+${points}` : points;
+
+            let x = (e && e.clientX) ? e.clientX : window.innerWidth / 2;
+            let y = (e && e.clientY) ? e.clientY : window.innerHeight / 2;
+
+            popup.style.left = `${x - 20}px`;
+            popup.style.top = `${y - 30}px`;
+
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 800);
+        }
+
+        function shakeScreen() {
+            document.body.classList.add('translate-x-1');
+            setTimeout(() => {
+                document.body.classList.remove('translate-x-1');
+            }, 150);
+        }
+
+        function endLevel() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            clearInterval(monsterInterval);
+
+            if (score >= targetScore) {
+                // NEXT LEVEL WIN
+                document.getElementById('nextLevelTargetDisplay').innerText = 750 + currentLevel * 250;
+                document.getElementById('winModal').classList.remove('hidden');
+            } else {
+                // LOSE
+                document.getElementById('failedTargetDisplay').innerText = targetScore;
+                document.getElementById('finalScoreDisplay').innerText = score;
+                document.getElementById('loseModal').classList.remove('hidden');
+            }
+        }
+
+        function nextLevel() {
+            startLevel(currentLevel + 1);
+        }
+
+        function restartGame() {
+            document.getElementById('winModal').classList.add('hidden');
+            document.getElementById('loseModal').classList.add('hidden');
+            startLevel(1);
+        }
+    </script>
+</body>
+</html>

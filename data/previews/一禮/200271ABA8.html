@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一禮黃海茵25</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #030713;
+      color: #00f3ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      letter-spacing: 4px;
+      color: #7928ca;
+      background: linear-gradient(90deg, #00f3ff, #7928ca, #ff007f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+      margin-bottom: 8px;
+    }
+    .status-bar {
+      display: flex;
+      gap: 25px;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    .score-board {
+      color: #ff007f;
+      text-shadow: 0 0 8px #ff007f;
+    }
+    .highscore-board {
+      color: #ffb703;
+      text-shadow: 0 0 8px #ffb703;
+    }
+    .lives-board {
+      color: #00f3ff;
+      text-shadow: 0 0 8px #00f3ff;
+    }
+    canvas {
+      background: #060d26;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.35), inset 0 0 20px rgba(0, 0, 0, 0.9);
+      border-radius: 8px;
+    }
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .restart-btn {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(121, 40, 202, 0.2));
+      color: #00f3ff;
+      border: 2px solid #00f3ff;
+      padding: 8px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px #00f3ff;
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+      transition: all 0.25s ease-in-out;
+    }
+    .restart-btn:hover {
+      background: #00f3ff;
+      color: #030713;
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.9);
+      transform: translateY(-2px);
+    }
+    .instructions {
+      color: #7b8c9d;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+  </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body>
+
+  <div class="header">
+    <h1>SPACE BREAKOUT</h1>
+    <div class="status-bar">
+      <div class="score-board">SCORE: <span id="score">0</span></div>
+      <div class="highscore-board">HIGH: <span id="highScore">0</span></div>
+      <div class="lives-board">SHIELD: <span id="lives">🛡️🛡️🛡️</span></div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" width="600" height="450"></canvas>
+
+  <div class="controls">
+    <button class="restart-btn" id="restartBtn">LAUNCH AGAIN</button>
+    <div class="instructions">使用鍵盤 [ ← ] [ → ] 方向鍵駕駛太空船</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const highScoreEl = document.getElementById("highScore");
+    const livesEl = document.getElementById("lives");
+    const restartBtn = document.getElementById("restartBtn");
+
+    // 遊戲狀態與分數
+    let score = 0;
+    let highScore = window.__galleryStorage.getItem("space_breakout_highscore") || 0;
+    let lives = 3;
+    let gameOver = false;
+    let animationFrameId;
+
+    highScoreEl.textContent = highScore;
+
+    // 動態閃爍星空生成
+    const stars = [];
+    const starCount = 60;
+    for (let i = 0; i < starCount; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.5 + 0.5,
+        alpha: Math.random(),
+        speed: Math.random() * 0.03 + 0.01
+      });
+    }
+
+    // 能量球 (小球)
+    let x, y, dx, dy;
+    const ballRadius = 8;
+    let energyPulse = 0;
+
+    // 太空船 (滑塊)
+    const paddleHeight = 14;
+    const basePaddleWidth = 90;
+    let currentPaddleWidth = basePaddleWidth;
+    let paddleX;
+    let rightPressed = false;
+    let leftPressed = false;
+    let paddleExpandTimer = null;
+
+    // 道具陣列
+    let items = [];
+
+    // 磚塊
+    const brickRowCount = 3;
+    const brickColumnCount = 7;
+    const brickWidth = 70;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 40;
+    const brickOffsetLeft = 25;
+    const rowColors = ["#ff007f", "#7928ca", "#00f3ff"];
+    let bricks = [];
+
+    function resetBallAndPaddle() {
+      x = canvas.width / 2;
+      y = canvas.height - 35;
+      dx = 4;
+      dy = -4;
+      paddleX = (canvas.width - currentPaddleWidth) / 2;
+    }
+
+    function initBricks() {
+      bricks = [];
+      for (let c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < brickRowCount; r++) {
+          bricks[c][r] = { x: 0, y: 0, status: 1 };
+        }
+      }
+    }
+
+    function updateLivesDisplay() {
+      livesEl.textContent = "🛡️".repeat(Math.max(0, lives));
+    }
+
+    function updateHighScore() {
+      if (score > highScore) {
+        highScore = score;
+        window.__galleryStorage.setItem("space_breakout_highscore", highScore);
+        highScoreEl.textContent = highScore;
+      }
+    }
+
+    function initGame() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (paddleExpandTimer) {
+        clearTimeout(paddleExpandTimer);
+        paddleExpandTimer = null;
+      }
+      currentPaddleWidth = basePaddleWidth;
+      items = [];
+      score = 0;
+      lives = 3;
+      gameOver = false;
+      scoreEl.textContent = score;
+      updateLivesDisplay();
+      resetBallAndPaddle();
+      initBricks();
+      draw();
+    }
+
+    // 鍵盤事件
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+      if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+      if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+    });
+
+    restartBtn.addEventListener("click", initGame);
+
+    // 繪製背景
+    function drawSpaceBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#03071e");
+      gradient.addColorStop(1, "#0a1128");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      stars.forEach(star => {
+        star.alpha += star.speed;
+        if (star.alpha > 1 || star.alpha < 0.2) {
+          star.speed = -star.speed;
+        }
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
+        ctx.fill();
+      });
+    }
+
+    // 繪製能量球
+    function drawEnergyBall() {
+      energyPulse += 0.1;
+      const pulseRadius = ballRadius + Math.sin(energyPulse) * 2;
+
+      ctx.beginPath();
+      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#00f3ff";
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.beginPath();
+      ctx.arc(x, y, pulseRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(0, 243, 255, 0.6)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.closePath();
+
+      ctx.shadowBlur = 0;
+    }
+
+    // 繪製太空船
+    function drawSpaceship() {
+      const py = canvas.height - paddleHeight - 12;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(paddleX + 15, py);
+      ctx.lineTo(paddleX + currentPaddleWidth - 15, py);
+      ctx.lineTo(paddleX + currentPaddleWidth, py + paddleHeight);
+      ctx.lineTo(paddleX, py + paddleHeight);
+      ctx.closePath();
+      ctx.fillStyle = currentPaddleWidth > basePaddleWidth ? "#39ff14" : "#00f3ff";
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = currentPaddleWidth > basePaddleWidth ? "#39ff14" : "#00f3ff";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.roundRect(paddleX + currentPaddleWidth / 2 - 12, py - 4, 24, 8, 4);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.rect(paddleX + 5, py + paddleHeight, 8, 5);
+      ctx.rect(paddleX + currentPaddleWidth - 13, py + paddleHeight, 8, 5);
+      ctx.fillStyle = "#ff007f";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#ff007f";
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 繪製磚塊
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
+
+            ctx.beginPath();
+            ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 4);
+            ctx.fillStyle = rowColors[r];
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = rowColors[r];
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+    }
+
+    // 繪製與更新道具
+    function updateAndDrawItems() {
+      const py = canvas.height - paddleHeight - 12;
+
+      for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        item.y += item.speed;
+
+        // 畫道具外框膠囊
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(item.x - 12, item.y - 8, 24, 16, 8);
+        ctx.fillStyle = "#ffb703";
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#ffb703";
+        ctx.fill();
+
+        ctx.font = "bold 10px sans-serif";
+        ctx.fillStyle = "#030713";
+        ctx.textAlign = "center";
+        ctx.fillText("↔", item.x, item.y + 3);
+        ctx.restore();
+
+        // 檢測是否被太空船接到
+        if (
+          item.y + 8 >= py &&
+          item.y - 8 <= py + paddleHeight &&
+          item.x >= paddleX &&
+          item.x <= paddleX + currentPaddleWidth
+        ) {
+          // 觸發變長效果 5 秒
+          currentPaddleWidth = basePaddleWidth * 1.5;
+          if (paddleExpandTimer) clearTimeout(paddleExpandTimer);
+          paddleExpandTimer = setTimeout(() => {
+            currentPaddleWidth = basePaddleWidth;
+          }, 5000);
+
+          items.splice(i, 1);
+          continue;
+        }
+
+        // 掉落底部消失
+        if (item.y > canvas.height) {
+          items.splice(i, 1);
+        }
+      }
+    }
+
+    // 碰撞檢測
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            if (
+              x > b.x &&
+              x < b.x + brickWidth &&
+              y > b.y &&
+              y < b.y + brickHeight
+            ) {
+              dy = -dy;
+              b.status = 0;
+              score += 10;
+              scoreEl.textContent = score;
+
+              // 20% 機率掉落道具
+              if (Math.random() < 0.2) {
+                items.push({
+                  x: b.x + brickWidth / 2,
+                  y: b.y + brickHeight,
+                  speed: 2
+                });
+              }
+
+              updateHighScore();
+
+              if (score === brickRowCount * brickColumnCount * 10) {
+                drawVictory();
+                gameOver = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function drawGameOver() {
+      ctx.font = "bold 40px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#ff0055";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#ff0055";
+      ctx.textAlign = "center";
+      ctx.fillText("MISSION FAILED", canvas.width / 2, canvas.height / 2);
+      ctx.shadowBlur = 0;
+    }
+
+    function drawVictory() {
+      ctx.font = "bold 40px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#39ff14";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#39ff14";
+      ctx.textAlign = "center";
+      ctx.fillText("SECTOR CLEARED!", canvas.width / 2, canvas.height / 2);
+      ctx.shadowBlur = 0;
+    }
+
+    // 遊戲主循環
+    function draw() {
+      if (gameOver) return;
+
+      drawSpaceBackground();
+      drawBricks();
+      drawEnergyBall();
+      drawSpaceship();
+      updateAndDrawItems();
+      collisionDetection();
+
+      // 牆壁碰撞 (左右)
+      if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+        dx = -dx;
+      }
+
+      // 牆壁碰撞 (頂部)
+      if (y + dy < ballRadius) {
+        dy = -dy;
+      } 
+      // 底部與太空船碰撞
+      else if (y + dy > canvas.height - ballRadius - 12) {
+        if (x > paddleX && x < paddleX + currentPaddleWidth) {
+          dy = -dy;
+        } else if (y + dy > canvas.height - ballRadius) {
+          lives--;
+          updateLivesDisplay();
+
+          if (lives === 0) {
+            drawGameOver();
+            gameOver = true;
+            return;
+          } else {
+            resetBallAndPaddle();
+          }
+        }
+      }
+
+      // 移動太空船
+      if (rightPressed && paddleX < canvas.width - currentPaddleWidth) {
+        paddleX += 7;
+      } else if (leftPressed && paddleX > 0) {
+        paddleX -= 7;
+      }
+
+      x += dx;
+      y += dy;
+
+      animationFrameId = requestAnimationFrame(draw);
+    }
+
+    initGame();
+  </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

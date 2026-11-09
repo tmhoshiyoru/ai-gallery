@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歐式復古打奶龍 - Medieval Dragon Slayer</title>
+    <!-- Google Fonts for Medieval Aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=MedievalSharp&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS for UI Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #0d0b09;
+            font-family: 'MedievalSharp', 'Noto Serif TC', serif;
+            color: #e8d5b5;
+            overflow: hidden;
+        }
+
+        /* Parchment Texture & Vintage Frame */
+        .parchment-bg {
+            background: radial-gradient(circle, #2a1f17 0%, #140d09 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        .gold-border {
+            border: 4px solid #c59b27;
+            border-image: linear-gradient(to bottom right, #f3e085, #b8860b, #593e0b, #d4af37) 1;
+            box-shadow: 0 0 20px rgba(197, 155, 39, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .medieval-btn {
+            background: linear-gradient(180deg, #601818 0%, #3a0a0a 100%);
+            border: 2px solid #d4af37;
+            color: #fce8b3;
+            text-shadow: 1px 1px 3px #000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            transition: all 0.15s ease-in-out;
+        }
+
+        .medieval-btn:hover {
+            background: linear-gradient(180deg, #8a2424 0%, #521010 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(212, 175, 55, 0.4), inset 0 1px 4px rgba(255, 255, 255, 0.5);
+        }
+
+        .medieval-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+        }
+
+        .title-font {
+            font-family: 'Cinzel Decorative', 'Noto Serif TC', serif;
+        }
+
+        /* Scanline / Retro Overlay Effect */
+        .retro-scanlines {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-2 md:p-4">
+
+    <!-- Game Main Container -->
+    <div class="relative w-full max-w-4xl h-[92vh] max-h-[850px] parchment-bg gold-border rounded-lg overflow-hidden flex flex-col justify-between">
+        
+        <!-- Retro Scanlines Effect Layer -->
+        <div class="absolute inset-0 retro-scanlines z-10"></div>
+
+        <!-- Top Status Bar (HUD) -->
+        <div id="hud" class="relative z-20 flex justify-between items-center px-4 py-2 bg-black/60 border-b-2 border-[#b8860b]/40 text-sm md:text-base">
+            <!-- Health & Shields -->
+            <div class="flex items-center space-x-2">
+                <span class="text-[#d4af37] font-bold">騎士 HP:</span>
+                <div class="flex space-x-1" id="hp-icons">
+                    <span class="text-red-500 text-lg">❤️</span>
+                    <span class="text-red-500 text-lg">❤️</span>
+                    <span class="text-red-500 text-lg">❤️</span>
+                </div>
+            </div>
+
+            <!-- Score & Combo -->
+            <div class="text-center">
+                <div class="text-[#fce8b3] font-bold tracking-wider">討伐得分: <span id="score-text" class="text-amber-400">0</span></div>
+                <div id="combo-container" class="text-xs text-orange-400 opacity-0 transition-opacity">COMBO x<span id="combo-text">0</span></div>
+            </div>
+
+            <!-- Remaining Dragons -->
+            <div class="flex items-center space-x-2">
+                <span class="text-[#d4af37] font-bold">剩餘奶龍:</span>
+                <span id="dragons-left-text" class="text-xl text-yellow-300 font-bold">12</span>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="relative flex-1 w-full h-full overflow-hidden flex items-center justify-center">
+            <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+
+            <!-- Overlay: Start Screen -->
+            <div id="start-screen" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 p-6 text-center">
+                <div class="text-amber-500 text-xs md:text-sm tracking-widest uppercase mb-2">Medieval Quest Arcade</div>
+                <h1 class="title-font text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-amber-400 to-yellow-700 mb-4 drop-shadow-lg">
+                    歐式復古打奶龍
+                </h1>
+                <p class="text-amber-100/80 max-w-md text-xs md:text-sm mb-6 leading-relaxed border-y border-amber-900/60 py-3">
+                    邪惡又呆萌的「奶龍王國」入侵了王國城堡！身為聖殿騎士，請揮動手中的寶劍，發射劍氣將所有奶龍全部消滅吧！
+                </p>
+
+                <!-- Controls Guide -->
+                <div class="bg-amber-950/40 border border-amber-800/50 rounded p-4 mb-6 text-xs md:text-sm text-amber-200/90 max-w-sm w-full">
+                    <div class="font-bold text-amber-400 mb-2 border-b border-amber-800/40 pb-1">操作說明</div>
+                    <div class="flex justify-between my-1">
+                        <span>方向鍵 ◄ ► 或 A / D</span>
+                        <span class="text-amber-400">左右移動</span>
+                    </div>
+                    <div class="flex justify-between my-1">
+                        <span>空白鍵 (Spacebar) / 點擊螢幕</span>
+                        <span class="text-amber-400">揮劍斬擊</span>
+                    </div>
+                </div>
+
+                <button id="btn-start" class="medieval-btn px-8 py-3 rounded-md text-lg font-bold tracking-wider uppercase">
+                    ⚔️ 踏上征途 ⚔️
+                </button>
+            </div>
+
+            <!-- Overlay: Victory Screen -->
+            <div id="victory-screen" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/85 p-6 text-center">
+                <div class="text-yellow-400 text-5xl mb-2 animate-bounce">🏆</div>
+                <h2 class="title-font text-3xl md:text-4xl text-amber-300 font-bold mb-2">任務完成！討伐成功！</h2>
+                <p class="text-amber-200/80 text-sm mb-6">王國恢復了安寧，奶龍們皆被聖光驅散！</p>
+                
+                <div class="bg-amber-950/60 border border-amber-700/60 rounded-lg p-4 mb-6 w-full max-w-xs space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-amber-300/70">最終得分:</span>
+                        <span id="victory-score" class="font-bold text-amber-300">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-amber-300/70">最大連擊:</span>
+                        <span id="victory-combo" class="font-bold text-orange-400">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-amber-300/70">通關耗時:</span>
+                        <span id="victory-time" class="font-bold text-yellow-200">0 秒</span>
+                    </div>
+                </div>
+
+                <button id="btn-restart-victory" class="medieval-btn px-6 py-2.5 rounded-md text-base font-bold">
+                    再次挑戰
+                </button>
+            </div>
+
+            <!-- Overlay: Game Over Screen -->
+            <div id="gameover-screen" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 p-6 text-center">
+                <div class="text-red-600 text-5xl mb-2">💀</div>
+                <h2 class="title-font text-3xl md:text-4xl text-red-500 font-bold mb-2">騎士倒下了...</h2>
+                <p class="text-amber-200/70 text-sm mb-6">奶龍的火球數量壓倒了騎士的防禦。</p>
+
+                <button id="btn-restart-gameover" class="medieval-btn px-6 py-2.5 rounded-md text-base font-bold">
+                    重新來過
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch / On-screen Controls (Mobile Friendly) -->
+        <div class="relative z-20 flex justify-between items-center px-4 py-3 bg-black/70 border-t border-[#b8860b]/30 md:hidden">
+            <div class="flex space-x-2">
+                <button id="btn-left" class="medieval-btn px-5 py-3 rounded-lg text-lg font-bold select-none">◄ Left</button>
+                <button id="btn-right" class="medieval-btn px-5 py-3 rounded-lg text-lg font-bold select-none">Right ►</button>
+            </div>
+            <button id="btn-attack" class="medieval-btn px-6 py-3 rounded-lg text-lg font-bold bg-gradient-to-r from-amber-700 to-red-700 select-none">
+                ⚔️ 斬擊
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Code -->
+    <script>
+        // --- Web Audio API Sound Synthesizer ---
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playSlash() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playHit() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playHurt() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playVictory() {
+                if (!this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.12);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime + index * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.12);
+                    osc.stop(this.ctx.currentTime + index * 0.12 + 0.3);
+                });
+            }
+        }
+
+        const audio = new SoundFX();
+
+        // --- Game Setup & State ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = 'START'; // START, PLAYING, VICTORY, GAMEOVER
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let playerHp = 3;
+        let totalDragons = 12;
+        let dragonsDefeated = 0;
+        let startTime = 0;
+        let elapsedTime = 0;
+
+        // Input Handling
+        const keys = { left: false, right: false, space: false };
+        let lastAttackTime = 0;
+
+        // Resize Canvas to fit container dynamically
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Game Entities ---
+
+        // Knight Object
+        class Knight {
+            constructor() {
+                this.width = 54;
+                this.height = 64;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - this.height - 20;
+                this.speed = 7;
+                this.isAttacking = false;
+                this.attackFrame = 0;
+                this.facingLeft = false;
+            }
+
+            reset() {
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - this.height - 20;
+                this.isAttacking = false;
+            }
+
+            update() {
+                if (keys.left) {
+                    this.x -= this.speed;
+                    this.facingLeft = true;
+                }
+                if (keys.right) {
+                    this.x += this.speed;
+                    this.facingLeft = false;
+                }
+
+                // Screen boundaries
+                if (this.x < 10) this.x = 10;
+                if (this.x + this.width > canvas.width - 10) this.x = canvas.width - 10 - this.width;
+
+                if (this.isAttacking) {
+                    this.attackFrame++;
+                    if (this.attackFrame > 10) {
+                        this.isAttacking = false;
+                        this.attackFrame = 0;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+                if (this.facingLeft) {
+                    ctx.scale(-1, 1);
+                }
+
+                // Knight Body Armor (Medieval Steel/Gold)
+                // Legs
+                ctx.fillStyle = '#4a5568';
+                ctx.fillRect(-12, 16, 8, 16);
+                ctx.fillRect(4, 16, 8, 16);
+
+                // Body Cuirass
+                ctx.fillStyle = '#718096';
+                ctx.beginPath();
+                ctx.moveTo(-16, -10);
+                ctx.lineTo(16, -10);
+                ctx.lineTo(12, 16);
+                ctx.lineTo(-12, 16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Red Cape
+                ctx.fillStyle = '#9b2c2c';
+                ctx.beginPath();
+                ctx.moveTo(-14, -8);
+                ctx.lineTo(-24, 20);
+                ctx.lineTo(-10, 22);
+                ctx.closePath();
+                ctx.fill();
+
+                // Helmet & Visor
+                ctx.fillStyle = '#a0aec0';
+                ctx.beginPath();
+                ctx.arc(0, -18, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Helmet Visor Slot
+                ctx.fillStyle = '#1a202c';
+                ctx.fillRect(0, -20, 10, 4);
+
+                // Plume / Feather
+                ctx.fillStyle = '#e53e3e';
+                ctx.beginPath();
+                ctx.moveTo(-2, -30);
+                ctx.quadraticCurveTo(-10, -40, -18, -30);
+                ctx.quadraticCurveTo(-8, -26, -2, -30);
+                ctx.fill();
+
+                // Sword Drawing & Attack Animation
+                ctx.save();
+                ctx.translate(10, 0);
+                if (this.isAttacking) {
+                    // Slash rotation
+                    ctx.rotate(-Math.PI / 3 + (this.attackFrame / 10) * (Math.PI * 0.9));
+                } else {
+                    ctx.rotate(-Math.PI / 6);
+                }
+
+                // Sword Hilt & Guard
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(-3, 0, 6, 4);
+                ctx.fillRect(-8, -4, 16, 4);
+
+                // Sword Blade
+                ctx.fillStyle = '#edf2f7';
+                ctx.beginPath();
+                ctx.moveTo(-3, -4);
+                ctx.lineTo(-2, -38);
+                ctx.lineTo(0, -44);
+                ctx.lineTo(2, -38);
+                ctx.lineTo(3, -4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#cbd5e0';
+                ctx.stroke();
+
+                // Blade Glow
+                if (this.isAttacking) {
+                    ctx.shadowColor = '#f6e05e';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#fff';
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+                ctx.restore();
+            }
+        }
+
+        // Milk Dragon (奶龍) Entity
+        class MilkDragon {
+            constructor(x, y) {
+                this.width = 46;
+                this.height = 46;
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.wingAngle = 0;
+                this.hp = 1;
+                this.bobbingOffset = Math.random() * 100;
+                this.fireTimer = Math.random() * 200 + 100;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy + Math.sin(Date.now() * 0.005 + this.bobbingOffset) * 0.4;
+
+                // Bounce off canvas edges
+                if (this.x < 20 || this.x + this.width > canvas.width - 20) {
+                    this.vx *= -1;
+                }
+                if (this.y < 30 || this.y > canvas.height * 0.55) {
+                    this.vy *= -1;
+                }
+
+                this.wingAngle += 0.15;
+
+                // Fireball Attack Logic
+                this.fireTimer--;
+                if (this.fireTimer <= 0) {
+                    this.shootFireball();
+                    this.fireTimer = Math.random() * 250 + 150;
+                }
+            }
+
+            shootFireball() {
+                fireballs.push(new Fireball(this.x + this.width / 2, this.y + this.height));
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+                // Cute Wings (Back)
+                const wingY = Math.sin(this.wingAngle) * 5;
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.ellipse(-18, -4 + wingY, 12, 6, -Math.PI / 4, 0, Math.PI * 2);
+                ctx.ellipse(18, -4 + wingY, 12, 6, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#eab308';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Cute Chubby Milky Yellow Body
+                ctx.fillStyle = '#fef9c3'; // Milky Yellow
+                ctx.beginPath();
+                ctx.arc(0, 2, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Milky White Belly
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(0, 6, 12, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Dragon Tiny Horns
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.moveTo(-10, -16);
+                ctx.lineTo(-6, -24);
+                ctx.lineTo(-2, -18);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(2, -18);
+                ctx.lineTo(6, -24);
+                ctx.lineTo(10, -16);
+                ctx.fill();
+
+                // Big Cute Eyes
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(-7, -4, 3.5, 0, Math.PI * 2);
+                ctx.arc(7, -4, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye Highlights
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-8, -5, 1.2, 0, Math.PI * 2);
+                ctx.arc(6, -5, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Rosy Cheeks
+                ctx.fillStyle = '#fda4af';
+                ctx.beginPath();
+                ctx.arc(-12, 2, 3, 0, Math.PI * 2);
+                ctx.arc(12, 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cute Smile
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 3, 4, 0.1, Math.PI - 0.1);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // Sword Slash Beam (Projected Beam Attack)
+        class SlashBeam {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 44;
+                this.height = 18;
+                this.speed = 12;
+                this.alive = true;
+                this.opacity = 1.0;
+            }
+
+            update() {
+                this.y -= this.speed;
+                if (this.y < -30) this.alive = false;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Golden Glowing Arc Slash Wave
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(0, 0, 24, Math.PI * 1.1, Math.PI * 1.9);
+                ctx.quadraticCurveTo(0, -10, 24 * Math.cos(Math.PI * 1.9), 24 * Math.sin(Math.PI * 1.9));
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // Dragon Fireball Attack
+        class Fireball {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 7;
+                this.speed = 3.5;
+                this.alive = true;
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height + 20) this.alive = false;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowColor = '#f97316';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Particle System for Hits & Sparkles
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.size = Math.random() * 4 + 2;
+                this.color = color;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.04 + 0.02;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- Instances & Lists ---
+        const knight = new Knight();
+        let dragons = [];
+        let slashes = [];
+        let fireballs = [];
+        let particles = [];
+
+        function spawnDragons(count) {
+            dragons = [];
+            const cols = 4;
+            const paddingX = canvas.width / (cols + 1);
+            for (let i = 0; i < count; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = paddingX * (col + 1) - 20 + (Math.random() * 20 - 10);
+                const y = 60 + row * 65 + (Math.random() * 15);
+                dragons.push(new MilkDragon(x, y));
+            }
+        }
+
+        function createSparkles(x, y, color = '#facc15', count = 12) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // --- Keyboard & Touch Event Listeners ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                triggerAttack();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        // Touch Control Buttons
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnAttack = document.getElementById('btn-attack');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+        btnAttack.addEventListener('touchstart', (e) => { e.preventDefault(); triggerAttack(); });
+
+        canvas.addEventListener('click', () => {
+            if (gameState === 'PLAYING') triggerAttack();
+        });
+
+        function triggerAttack() {
+            if (gameState !== 'PLAYING') return;
+            const now = Date.now();
+            if (now - lastAttackTime > 220) { // Cooldown between slashes
+                knight.isAttacking = true;
+                knight.attackFrame = 0;
+                slashes.push(new SlashBeam(knight.x + knight.width / 2, knight.y));
+                audio.playSlash();
+                lastAttackTime = now;
+            }
+        }
+
+        // --- Game Controls & UI Workflow ---
+        const startScreen = document.getElementById('start-screen');
+        const victoryScreen = document.getElementById('victory-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const btnStart = document.getElementById('btn-start');
+        const btnRestartVic = document.getElementById('btn-restart-victory');
+        const btnRestartGov = document.getElementById('btn-restart-gameover');
+
+        btnStart.addEventListener('click', startGame);
+        btnRestartVic.addEventListener('click', startGame);
+        btnRestartGov.addEventListener('click', startGame);
+
+        function startGame() {
+            audio.init();
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            playerHp = 3;
+            dragonsDefeated = 0;
+            totalDragons = 12;
+            startTime = Date.now();
+
+            slashes = [];
+            fireballs = [];
+            particles = [];
+            knight.reset();
+            spawnDragons(totalDragons);
+
+            updateHUD();
+            startScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+
+            gameState = 'PLAYING';
+        }
+
+        function updateHUD() {
+            document.getElementById('score-text').innerText = score;
+            document.getElementById('dragons-left-text').innerText = totalDragons - dragonsDefeated;
+
+            // Health Heart Icons
+            const hpIcons = document.getElementById('hp-icons');
+            hpIcons.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < playerHp) {
+                    hpIcons.innerHTML += '<span class="text-red-500 text-lg">❤️</span>';
+                } else {
+                    hpIcons.innerHTML += '<span class="text-gray-600 text-lg">🖤</span>';
+                }
+            }
+
+            // Combo Text
+            const comboContainer = document.getElementById('combo-container');
+            if (combo > 1) {
+                comboContainer.classList.remove('opacity-0');
+                document.getElementById('combo-text').innerText = combo;
+            } else {
+                comboContainer.classList.add('opacity-0');
+            }
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            audio.playHurt();
+            gameoverScreen.classList.remove('hidden');
+        }
+
+        function triggerVictory() {
+            gameState = 'VICTORY';
+            elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            audio.playVictory();
+
+            document.getElementById('victory-score').innerText = score;
+            document.getElementById('victory-combo').innerText = maxCombo;
+            document.getElementById('victory-time').innerText = `${elapsedTime} 秒`;
+
+            victoryScreen.classList.remove('hidden');
+        }
+
+        // --- Main Game Loop ---
+        function gameLoop() {
+            // Clear & Draw Background (Parchment Grid Motif)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle Background Pattern & Castle Floor Line
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.08)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+
+            // Floor Line
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 15);
+            ctx.lineTo(canvas.width, canvas.height - 15);
+            ctx.stroke();
+
+            if (gameState === 'PLAYING') {
+                // Update Knight
+                knight.update();
+
+                // Update Slashes
+                slashes.forEach((slash, sIndex) => {
+                    slash.update();
+
+                    // Collision Slash vs Milk Dragons
+                    dragons.forEach((dragon, dIndex) => {
+                        const dist = Math.hypot(slash.x - (dragon.x + dragon.width / 2), slash.y - (dragon.y + dragon.height / 2));
+                        if (dist < 32) {
+                            // Hit Dragon!
+                            slash.alive = false;
+                            createSparkles(dragon.x + dragon.width / 2, dragon.y + dragon.height / 2, '#fef08a', 15);
+                            audio.playHit();
+
+                            // Remove Dragon
+                            dragons.splice(dIndex, 1);
+                            dragonsDefeated++;
+                            combo++;
+                            if (combo > maxCombo) maxCombo = combo;
+                            score += 100 * combo;
+
+                            updateHUD();
+
+                            // Victory Check
+                            if (dragonsDefeated >= totalDragons) {
+                                triggerVictory();
+                            }
+                        }
+                    });
+                });
+                slashes = slashes.filter(s => s.alive);
+
+                // Update Fireballs
+                fireballs.forEach((fb, fIndex) => {
+                    fb.update();
+
+                    // Collision Fireball vs Knight
+                    const knightCenterX = knight.x + knight.width / 2;
+                    const knightCenterY = knight.y + knight.height / 2;
+                    const dist = Math.hypot(fb.x - knightCenterX, fb.y - knightCenterY);
+
+                    if (dist < 26) {
+                        fb.alive = false;
+                        createSparkles(knightCenterX, knightCenterY, '#ef4444', 10);
+                        audio.playHurt();
+                        playerHp--;
+                        combo = 0; // Reset Combo on hit
+                        updateHUD();
+
+                        if (playerHp <= 0) {
+                            triggerGameOver();
+                        }
+                    }
+                });
+                fireballs = fireballs.filter(f => f.alive);
+
+                // Update Dragons
+                dragons.forEach(dragon => dragon.update());
+
+                // Update Particles
+                particles.forEach(p => p.update());
+                particles = particles.filter(p => p.life > 0);
+            }
+
+            // --- Render Entities ---
+            dragons.forEach(dragon => dragon.draw());
+            slashes.forEach(slash => slash.draw());
+            fireballs.forEach(fb => fb.draw());
+            particles.forEach(p => p.draw());
+            knight.draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start Loop
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><base href="../../../%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/"><script>
+window.__galleryStorage = (() => {
+  try { const storage = window.localStorage; storage.getItem('__gallery_probe'); return storage; } catch {}
+  const values = new Map();
+  return { getItem: key => values.get(String(key)) ?? null,
+    setItem: (key, value) => { values.set(String(key), String(value)); },
+    removeItem: key => { values.delete(String(key)); }, clear: () => values.clear(),
+    key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
+})();
+</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小熊軟糖換裝大冒險 - Gummy Bear Dress-Up Game</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Fredoka & Zen Maru Gothic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Zen Maru Gothic', 'Fredoka', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(134, 239, 172, 0.6);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(134, 239, 172, 0.9);
+    }
+
+    /* Q彈動畫 */
+    @keyframes jellyBounce {
+      0% { transform: scale(1, 1); }
+      30% { transform: scale(1.12, 0.88); }
+      50% { transform: scale(0.92, 1.08); }
+      70% { transform: scale(1.04, 0.96); }
+      100% { transform: scale(1, 1); }
+    }
+    .animate-jelly {
+      animation: jellyBounce 0.6s ease-in-out;
+    }
+
+    /* 白綠漸層背景風格樣式 */
+    .bg-white-green {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%);
+    }
+    .bg-candyland {
+      background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 50%, #a7f3d0 100%);
+    }
+    .bg-pastel {
+      background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 50%, #bae6fd 100%);
+    }
+    .bg-magic {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+      background-image: radial-gradient(#86efac 1px, transparent 1px), radial-gradient(#34d399 1px, #f1f5f9 1px);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+    }
+    .bg-choco {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    }
+
+    /* 選中的飾品控制框 */
+    .selected-prop-box {
+      outline: 2px dashed #10b981;
+      outline-offset: 4px;
+    }
+
+    /* 飾品上的控制句柄 (Handle) 樣式 */
+    .prop-handle {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 30;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .prop-handle:hover {
+      transform: scale(1.2);
+    }
+    .prop-handle-delete {
+      top: -12px;
+      left: -12px;
+      background-color: #ef4444;
+    }
+    .prop-handle-rotate {
+      top: -12px;
+      right: -12px;
+      background-color: #0d9488;
+      cursor: grab;
+    }
+    .prop-handle-scale {
+      bottom: -12px;
+      right: -12px;
+      background-color: #10b981;
+      cursor: nwse-resize;
+    }
+  </style>
+<style id="gallery-layout-support">
+html { overflow-y: auto !important; }
+body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; }
+/* Full-height games need a definite containing height for percentage-sized canvases. */
+body.h-full, body.h-screen { height: 100vh !important; }
+
+body > header, body > main, body > footer, body > canvas { flex-shrink: 0; }
+
+</style></head>
+<body class="bg-white-green min-h-screen text-slate-700 flex flex-col justify-between overflow-x-hidden">
+
+  <!-- Header Header Header -->
+  <header class="w-full bg-white/80 backdrop-blur-md border-b border-emerald-100 py-3 px-4 sm:px-8 flex justify-between items-center shadow-sm sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+        <i class="fa-solid font-bold text-xl fa-bear-hug text-white">🧸</i>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-emerald-600 tracking-wide">小熊軟糖換裝大冒險</h1>
+        <p class="text-xs text-emerald-500 hidden sm:block">打造專屬於你的 Q 彈夢幻軟糖夥伴！</p>
+      </div>
+    </div>
+
+    <!-- 頂部快捷按鈕 -->
+  <div class="flex items-center gap-2 sm:gap-3">
+    <button id="btn-sound" onclick="toggleSound()" class="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition flex items-center gap-1.5 text-sm font-bold shadow-xs">
+      <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+      <span class="hidden sm:inline">音效</span>
+    </button>
+    <button onclick="saveDesign()" class="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition flex items-center gap-1.5 text-sm font-bold shadow-sm shadow-indigo-200 active:scale-95">
+      <i class="fa-solid fa-bookmark"></i>
+      <span>儲存作品</span>
+    </button>
+    <button onclick="randomizeBear()" class="px-3 py-2 bg-amber-400 hover:bg-amber-500 text-white rounded-xl transition flex items-center gap-1.5 text-sm font-bold shadow-sm shadow-amber-200 active:scale-95">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <span>隨機</span>
+    </button>
+    <button onclick="resetBear()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-xl transition flex items-center gap-1.5 text-sm font-bold active:scale-95">
+      <i class="fa-solid fa-rotate-left"></i>
+      <span>重置</span>
+    </button>
+    <button onclick="exportImage()" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition flex items-center gap-1.5 text-sm font-bold shadow-md shadow-emerald-200 active:scale-95">
+      <i class="fa-solid fa-camera"></i>
+      <span>拍照存檔</span>
+    </button>
+  </div>
+</header>
+
+<!-- 新增：已儲存作品展示欄 Showcase Row -->
+<section class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4">
+  <div class="bg-white/80 backdrop-blur-md rounded-2xl p-3 border border-emerald-100 shadow-sm flex flex-col gap-2">
+    <div class="flex items-center justify-between px-1">
+      <h2 class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+        <i class="fa-solid fa-box-archive text-emerald-500"></i> 我的小熊收藏館 (Saved Designs)
+        <span id="saved-count-badge" class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">0 件作品</span>
+      </h2>
+      <span class="text-[11px] text-slate-400">點擊卡片可即時切換載入造型</span>
+    </div>
+    
+    <!-- 歷史作品橫向滾動容器 -->
+    <div id="saved-designs-container" class="flex items-center gap-3 overflow-x-auto py-1 min-h-[76px]">
+      <div id="saved-empty-tip" class="w-full text-center py-2 text-xs text-slate-400 italic">
+        尚未儲存任何作品！設計好小熊後，點擊右上方「儲存作品」按鈕即可在此收藏囉 🧸
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 主遊戲區域 Main Canvas & Controls -->
+<main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- 左側 / 中央：畫布展示區 (Canvas Container) -->
+    <div class="lg:col-span-7 flex flex-col items-center gap-4">
+      
+      <!-- 換裝舞台 (Stage Container) -->
+      <div id="stage-container" class="relative w-full max-w-[480px] aspect-square rounded-3xl shadow-xl overflow-hidden border-4 border-white bg-candyland transition-all duration-500 flex items-center justify-center">
+        
+        <!-- Canvas/SVG Artboard -->
+        <div id="artboard" class="relative w-full h-full flex items-center justify-center select-none" onclick="deselectProp(event)">
+          
+          <!-- 閃爍光芒背景效果 -->
+          <div class="absolute inset-0 pointer-events-none opacity-40">
+            <svg width="100%" height="100%">
+              <circle cx="50%" cy="50%" r="40%" fill="none" stroke="white" stroke-width="2" stroke-dasharray="8 8"/>
+              <circle cx="50%" cy="50%" r="48%" fill="none" stroke="white" stroke-width="1" stroke-dasharray="12 12"/>
+            </svg>
+          </div>
+
+          <!-- 3D 質感 SVG 小熊主體 -->
+          <svg id="gummy-bear-svg" class="w-[75%] h-[75%] drop-shadow-2xl transition-transform duration-300" viewBox="0 0 300 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- 軟糖動態主體漸層 -->
+              <radialGradient id="bearBodyGrad" cx="35%" cy="30%" r="70%">
+                <stop offset="0%" id="grad-stop-1" stop-color="#86EFAC" />
+                <stop offset="70%" id="grad-stop-2" stop-color="#34D399" />
+                <stop offset="100%" id="grad-stop-3" stop-color="#059669" />
+              </radialGradient>
+
+              <!-- 立體高光光澤 -->
+              <linearGradient id="glossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.7"/>
+                <stop offset="30%" stop-color="#FFFFFF" stop-opacity="0.2"/>
+                <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+              </linearGradient>
+
+              <!-- 內部陰影與質感提升 filter -->
+              <filter id="gummyGlow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.15"/>
+              </filter>
+            </defs>
+
+            <!-- 小熊主體群組 (調整比例：頭部縮小、身體放大) -->
+            <g id="bear-body-group" filter="url(#gummyGlow)" style="opacity: 0.92;">
+              <!-- 耳朵 (左 & 右 - 配合小頭調整位置) -->
+              <circle cx="95" cy="100" r="32" fill="url(#bearBodyGrad)"/>
+              <circle cx="95" cy="100" r="20" fill="#FFFFFF" opacity="0.3"/>
+              
+              <circle cx="205" cy="100" r="32" fill="url(#bearBodyGrad)"/>
+              <circle cx="205" cy="100" r="20" fill="#FFFFFF" opacity="0.3"/>
+
+              <!-- 腳 / 腿 (左下 & 右下 - 配合長身體向下微調) -->
+              <circle cx="90" cy="315" r="34" fill="url(#bearBodyGrad)"/>
+              <circle cx="210" cy="315" r="34" fill="url(#bearBodyGrad)"/>
+              <ellipse cx="90" cy="315" rx="20" ry="16" fill="#FFFFFF" opacity="0.25"/>
+              <ellipse cx="210" cy="315" rx="20" ry="16" fill="#FFFFFF" opacity="0.25"/>
+
+              <!-- 手臂 (左 & 右 - 配合修長身體調整位置與角度) -->
+              <ellipse cx="68" cy="225" rx="26" ry="38" transform="rotate(12 68 225)" fill="url(#bearBodyGrad)"/>
+              <ellipse cx="232" cy="225" rx="26" ry="38" transform="rotate(-12 232 225)" fill="url(#bearBodyGrad)"/>
+              <ellipse cx="65" cy="220" rx="13" ry="22" transform="rotate(12 65 220)" fill="#FFFFFF" opacity="0.3"/>
+              <ellipse cx="235" cy="220" rx="13" ry="22" transform="rotate(-12 235 220)" fill="#FFFFFF" opacity="0.3"/>
+
+              <!-- 身體 (長橢圓形：左右寬度收窄、上下高度拉長) -->
+              <path d="M 85,170 C 85,135 215,135 215,170 C 224,240 215,325 150,325 C 85,325 76,240 85,170 Z" fill="url(#bearBodyGrad)"/>
+              <!-- 肚子立體光澤高光 (配合橢圓長身) -->
+              <ellipse cx="150" cy="240" rx="42" ry="52" fill="#FFFFFF" opacity="0.2"/>
+
+              <!-- 頭部 (圓潤小巧，半徑為58) -->
+              <circle cx="150" cy="145" r="58" fill="url(#bearBodyGrad)"/>
+
+              <!-- 頭部果凍高光 Highlight Reflection -->
+              <path d="M 112,108 Q 150,90 180,108 Q 146,100 112,108 Z" fill="#FFFFFF" opacity="0.65"/>
+              <circle cx="112" cy="124" r="7" fill="#FFFFFF" opacity="0.6"/>
+              <circle cx="104" cy="135" r="3.5" fill="#FFFFFF" opacity="0.5"/>
+              
+              <!-- 嘴鼻凸起處 (Muzzle) -->
+              <ellipse cx="150" cy="158" rx="22" ry="17" fill="#FFFFFF" opacity="0.35"/>
+              <!-- 鼻子 -->
+              <polygon points="150,147 143,155 157,155" fill="#064e3b" rx="2" ry="2" opacity="0.85"/>
+              <!-- 嘴巴線條 -->
+              <path d="M 145,159 Q 150,165 155,159" stroke="#064e3b" stroke-width="2.8" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+              <!-- 默認眼睛 -->
+              <g id="default-eyes">
+                <circle cx="124" cy="136" r="5.5" fill="#064e3b"/>
+                <circle cx="176" cy="136" r="5.5" fill="#064e3b"/>
+                <circle cx="122" cy="134" r="2" fill="#FFFFFF"/>
+                <circle cx="174" cy="134" r="2" fill="#FFFFFF"/>
+              </g>
+
+              <!-- 預設腮紅 -->
+              <g id="default-blush">
+                <ellipse cx="110" cy="152" rx="9" ry="5.5" fill="#FF2E93" opacity="0.35"/>
+                <ellipse cx="190" cy="152" rx="9" ry="5.5" fill="#FF2E93" opacity="0.35"/>
+              </g>
+
+              <!-- 全局軟糖水晶透明反射層 -->
+              <path d="M 98,128 Q 150,78 202,128 Q 192,94 150,94 Q 108,94 98,128 Z" fill="url(#glossGrad)" />
+            </g>
+          </svg>
+
+          <!-- 動態飾品掛載層 -->
+          <div id="props-layer" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+
+      </div>
+
+      <!-- 飾品控制輔助棒（下方微調按鈕） -->
+      <div id="prop-controls" class="w-full max-w-[480px] bg-white rounded-2xl p-3 shadow-md border border-emerald-100 flex items-center justify-between gap-2 opacity-50 pointer-events-none transition-all">
+        <span id="selected-prop-name" class="text-xs font-bold text-emerald-600 px-2 truncate">未選取配件</span>
+        <div class="flex items-center gap-1 sm:gap-2">
+          <button onclick="adjustSelectedProp('scale', 0.1)" class="w-8 h-8 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-xs font-bold flex items-center justify-center active:scale-95" title="放大">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          </button>
+          <button onclick="adjustSelectedProp('scale', -0.1)" class="w-8 h-8 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg text-xs font-bold flex items-center justify-center active:scale-95" title="縮小">
+            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          </button>
+          <button onclick="adjustSelectedProp('rotate', 15)" class="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg text-xs font-bold flex items-center justify-center active:scale-95" title="順時針旋轉">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button onclick="adjustSelectedProp('rotate', -15)" class="w-8 h-8 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg text-xs font-bold flex items-center justify-center active:scale-95" title="逆時針旋轉">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button onclick="removeSelectedProp()" class="w-8 h-8 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold flex items-center justify-center active:scale-95" title="刪除飾品">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 右側：自訂選單區 (Customization Panel) -->
+    <div class="lg:col-span-5 bg-white/90 backdrop-blur-md rounded-3xl p-5 shadow-xl border border-emerald-100 flex flex-col gap-5">
+      
+      <!-- 分類分頁 (Category Tabs) -->
+      <div class="grid grid-cols-4 gap-1.5 p-1.5 bg-emerald-50/70 rounded-2xl border border-emerald-100">
+        <button onclick="switchTab('color')" id="tab-color" class="tab-btn py-2.5 rounded-xl font-bold text-xs sm:text-sm text-center transition-all bg-white text-emerald-600 shadow-sm">
+          <i class="fa-solid fa-palette block text-base mb-1"></i>軟糖顏色
+        </button>
+        <button onclick="switchTab('sauce')" id="tab-sauce" class="tab-btn py-2.5 rounded-xl font-bold text-xs sm:text-sm text-center transition-all text-slate-500 hover:text-emerald-500">
+          <i class="fa-solid fa-bottle-droplet block text-base mb-1"></i>淋醬裝飾
+        </button>
+        <button onclick="switchTab('accessory')" id="tab-accessory" class="tab-btn py-2.5 rounded-xl font-bold text-xs sm:text-sm text-center transition-all text-slate-500 hover:text-emerald-500">
+          <i class="fa-solid fa-hat-wizard block text-base mb-1"></i>帽子頭飾
+        </button>
+        <button onclick="switchTab('face')" id="tab-face" class="tab-btn py-2.5 rounded-xl font-bold text-xs sm:text-sm text-center transition-all text-slate-500 hover:text-emerald-500">
+          <i class="fa-solid fa-face-smile block text-base mb-1"></i>表情配件
+        </button>
+      </div>
+
+      <!-- 面板內容區域 (Panel Content) -->
+      <div class="min-h-[300px]">
+
+        <!-- Tab 1: 軟糖顏色與材質控制 -->
+        <div id="panel-color" class="panel-content space-y-5">
+          
+          <!-- 大尺寸隨心所欲 Color Picker 色盤控制 -->
+          <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <label for="custom-color-picker" class="text-sm font-bold text-emerald-700 flex items-center gap-2">
+                <i class="fa-solid fa-eye-dropper"></i> 隨心所欲調色盤 (Color Picker)
+              </label>
+              <span id="color-hex-display" class="text-xs font-mono font-bold bg-white px-2 py-1 rounded-md text-emerald-600 border border-emerald-200">#86EFAC</span>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <!-- 大畫框 Input Color -->
+              <div class="relative w-16 h-16 rounded-2xl overflow-hidden shadow-inner border-2 border-white cursor-pointer group flex-shrink-0">
+                <input type="color" id="custom-color-picker" value="#86efac" oninput="setCustomColor(this.value)" class="absolute -inset-4 w-24 h-24 cursor-pointer border-0">
+                <div class="absolute inset-0 pointer-events-none border border-black/10 rounded-2xl"></div>
+              </div>
+              <div class="text-xs text-slate-500 flex-1">
+                點擊或拖曳左側色彩區塊，可即時調整小熊漸層主色，打造獨一無二的夢幻色彩！
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-droplet text-emerald-500"></i> 經典口味預設 (Presets)
+            </h3>
+            <div class="grid grid-cols-4 gap-3" id="color-preset-grid">
+              <!-- JS 動態渲染顏色球 -->
+            </div>
+          </div>
+
+          <!-- 透明度與質感 Slider -->
+          <div class="pt-3 border-t border-slate-100 space-y-4">
+            <!-- 透明晶瑩度 Slider -->
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                <span>果凍透明度 (Opacity)</span>
+                <span id="opacity-val-text">92%</span>
+              </div>
+              <input type="range" min="40" max="100" value="92" class="w-full accent-emerald-500 cursor-pointer" oninput="updateGummyOpacity(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: 淋醬與美味裝飾 -->
+        <div id="panel-sauce" class="panel-content hidden">
+          <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-spoon text-amber-500"></i> 美味醬料與巧克力豆
+          </h3>
+          <div class="grid grid-cols-3 gap-3" id="sauce-grid">
+            <!-- JS 動態生成醬料按鈕 -->
+          </div>
+        </div>
+
+        <!-- Tab 3: 帽子與頭飾配件 -->
+        <div id="panel-accessory" class="panel-content hidden">
+          <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-crown text-amber-400"></i> 點擊縮圖穿戴飾品
+          </h3>
+          <div class="grid grid-cols-3 gap-3" id="accessory-grid">
+            <!-- JS 動態生成飾品按鈕 -->
+          </div>
+        </div>
+
+        <!-- Tab 4: 表情與五官貼紙 -->
+        <div id="panel-face" class="panel-content hidden">
+          <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-face-laugh-beam text-teal-500"></i> 可愛五官與面飾
+          </h3>
+          <div class="grid grid-cols-3 gap-3" id="face-grid">
+            <!-- JS 動態生成表情按鈕 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 操作提示小貼士 -->
+      <div class="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100 text-xs text-emerald-600 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-base text-emerald-500"></i>
+        <span>提示：點擊飾品可進行拖曳，使用右上角點點旋轉、右下角點點拉大拉小！</span>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 頁腳 Footer -->
+  <footer class="py-3 text-center text-xs text-slate-400 border-t border-emerald-100 bg-white/50">
+    <p>🧸 HTML5 軟糖換裝小遊戲 &copy; 2026 - Powered by HTML5 & Web Audio API</p>
+  </footer>
+
+  <!-- JavaScript 遊戲核心邏輯 -->
+  <script>
+    /* ==========================================
+       1. 遊戲資料與狀態 State & Data
+       ========================================== */
+    const state = {
+      color: { stop1: '#86EFAC', stop2: '#34D399', stop3: '#059669' },
+      opacity: 0.92,
+      extraGloss: true,
+      background: 'bg-candyland',
+      soundEnabled: true,
+      placedProps: [], // 已放置的飾品物件 [{id, type, name, svg, x, y, scale, rotate}]
+      selectedPropId: null,
+      nextPropId: 1,
+      savedDesigns: [] // 儲存的設計 [{id, timestamp, color, opacity, extraGloss, placedProps}]
+    };
+
+    // 預設顏色庫
+    const colorPresets = [
+      { name: '薄荷綠', stop1: '#86EFAC', stop2: '#34D399', stop3: '#059669' },
+      { name: '草莓紅', stop1: '#FF758F', stop2: '#FF4D6D', stop3: '#C9184A' },
+      { name: '鮮橙橘', stop1: '#FFBF69', stop2: '#FF9F1C', stop3: '#E07A5F' },
+      { name: '檸檬黃', stop1: '#FFE699', stop2: '#FFD166', stop3: '#F4A261' },
+      { name: '藍莓蘇打', stop1: '#4CC9F0', stop2: '#118AB2', stop3: '#073B4C' },
+      { name: '葡萄紫', stop1: '#B5179E', stop2: '#7209B7', stop3: '#3A0CA3' },
+      { name: '水蜜桃', stop1: '#FECFEF', stop2: '#FF9A9E', stop3: '#F687B3' },
+      { name: '抹茶青', stop1: '#A7F3D0', stop2: '#6EE7B7', stop3: '#047857' }
+    ];
+
+    // 飾品資料庫 (包含向量 SVG code)
+    const propsLibrary = {
+      sauce: [
+        {
+          name: '巧克力醬',
+          icon: '🍫',
+          svg: `<svg viewBox="0 0 120 70" class="w-full h-full drop-shadow"><path d="M 15,20 Q 30,5 60,10 Q 90,5 105,20 Q 115,35 100,45 Q 85,30 70,48 Q 55,25 40,45 Q 25,30 15,38 Z" fill="#3D2314"/><ellipse cx="45" cy="18" rx="20" ry="6" fill="#5C3A21" opacity="0.6"/><circle cx="70" cy="52" r="3.5" fill="#3D2314"/><circle cx="32" cy="48" r="2.5" fill="#3D2314"/></svg>`
+        },
+        {
+          name: '草莓醬',
+          icon: '🍓',
+          svg: `<svg viewBox="0 0 120 70" class="w-full h-full drop-shadow"><path d="M 15,20 Q 35,8 60,12 Q 85,5 105,20 Q 115,35 95,45 Q 80,30 65,50 Q 50,25 35,42 Q 20,30 15,38 Z" fill="#FF2A55"/><ellipse cx="50" cy="18" rx="22" ry="6" fill="#FF6B8B" opacity="0.7"/><circle cx="65" cy="54" r="4" fill="#FF2A55"/><circle cx="28" cy="45" r="3" fill="#FF2A55"/></svg>`
+        },
+        {
+          name: '抹茶醬',
+          icon: '🍵',
+          svg: `<svg viewBox="0 0 120 70" class="w-full h-full drop-shadow"><path d="M 15,20 Q 35,8 60,12 Q 85,5 105,20 Q 115,35 95,45 Q 80,30 65,50 Q 50,25 35,42 Q 20,30 15,38 Z" fill="#2D5A27"/><ellipse cx="50" cy="18" rx="22" ry="6" fill="#4E8746" opacity="0.7"/><circle cx="65" cy="54" r="4" fill="#2D5A27"/></svg>`
+        },
+        {
+          name: '奶蓋鮮奶糖醬',
+          icon: '🥛',
+          svg: `<svg viewBox="0 0 120 70" class="w-full h-full drop-shadow"><path d="M 15,20 Q 35,8 60,12 Q 85,5 105,20 Q 115,35 95,45 Q 80,30 65,50 Q 50,25 35,42 Q 20,30 15,38 Z" fill="#FFFDF0" stroke="#F0EAD6" stroke-width="2"/><ellipse cx="50" cy="18" rx="22" ry="6" fill="#FFFFFF" opacity="0.9"/></svg>`
+        },
+        {
+          name: '巧克力豆',
+          icon: '🟤',
+          svg: `<svg viewBox="0 0 100 60" class="w-full h-full drop-shadow"><ellipse cx="25" cy="20" rx="9" ry="6" transform="rotate(-15 25 20)" fill="#4A2511"/><ellipse cx="50" cy="35" rx="8" ry="5" transform="rotate(20 50 35)" fill="#3D2314"/><ellipse cx="75" cy="22" rx="10" ry="7" transform="rotate(-10 75 22)" fill="#4A2511"/><ellipse cx="38" cy="18" rx="7" ry="5" transform="rotate(40 38 18)" fill="#2C160A"/><ellipse cx="62" cy="38" rx="8" ry="5" transform="rotate(-30 62 38)" fill="#4A2511"/><circle cx="23" cy="18" r="2" fill="#7A4325"/><circle cx="73" cy="20" r="2" fill="#7A4325"/></svg>`
+        },
+        {
+          name: '彩虹糖粒',
+          icon: '🌈',
+          svg: `<svg viewBox="0 0 100 60" class="w-full h-full drop-shadow"><rect x="18" y="15" width="12" height="5" rx="2.5" fill="#FF477E" transform="rotate(25 24 17)"/><rect x="45" y="12" width="12" height="5" rx="2.5" fill="#FFD166" transform="rotate(-35 51 14)"/><rect x="70" y="20" width="12" height="5" rx="2.5" fill="#06D6A0" transform="rotate(15 76 22)"/><rect x="30" y="35" width="12" height="5" rx="2.5" fill="#118AB2" transform="rotate(-10 36 37)"/><rect x="60" y="38" width="12" height="5" rx="2.5" fill="#8338EC" transform="rotate(45 66 40)"/></svg>`
+        }
+      ],
+      accessory: [
+        {
+          name: '皇冠',
+          icon: '👑',
+          svg: `<svg viewBox="0 0 100 80" class="w-full h-full drop-shadow"><polygon points="10,60 20,20 40,45 50,10 60,45 80,20 90,60" fill="#FFD700" stroke="#DAA520" stroke-width="4"/><circle cx="20" cy="20" r="5" fill="#FF4500"/><circle cx="50" cy="10" r="6" fill="#1E90FF"/><circle cx="80" cy="20" r="5" fill="#FF4500"/><rect x="15" y="60" width="70" height="10" rx="3" fill="#DAA520"/></svg>`
+        },
+        {
+          name: '派對帽',
+          icon: '🥳',
+          svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow"><polygon points="50,10 15,85 85,85" fill="#FF6B6B"/><path d="M 25,65 Q 50,75 75,65 L 85,85 Q 50,95 15,85 Z" fill="#4ECDC4"/><circle cx="50" cy="10" r="8" fill="#FFE66D"/><circle cx="35" cy="40" r="4" fill="#FFFFFF"/><circle cx="65" cy="55" r="5" fill="#FFFFFF"/></svg>`
+        },
+        {
+          name: '蝴蝶結',
+          icon: '🎀',
+          svg: `<svg viewBox="0 0 100 70" class="w-full h-full drop-shadow"><path d="M 50,35 L 10,15 Q 5,35 10,55 Z" fill="#FF477E"/><path d="M 50,35 L 90,15 Q 95,35 90,55 Z" fill="#FF477E"/><circle cx="50" cy="35" r="10" fill="#FF0054"/></svg>`
+        },
+        {
+          name: '兔耳朵',
+          icon: '🐰',
+          svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow"><ellipse cx="35" cy="45" rx="14" ry="40" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="3"/><ellipse cx="35" cy="45" rx="7" ry="25" fill="#FF8FAB"/><ellipse cx="65" cy="45" rx="14" ry="40" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="3"/><ellipse cx="65" cy="45" rx="7" ry="25" fill="#FF8FAB"/></svg>`
+        },
+        {
+          name: '墨鏡',
+          icon: '🕶️',
+          svg: `<svg viewBox="0 0 120 50" class="w-full h-full drop-shadow"><path d="M 10,15 Q 35,5 60,15 Q 85,5 110,15 L 105,35 Q 85,45 65,35 L 55,35 Q 35,45 15,35 Z" fill="#1E293B"/><rect x="53" y="14" width="14" height="5" fill="#1E293B"/></svg>`
+        },
+        {
+          name: '天使光環',
+          icon: '😇',
+          svg: `<svg viewBox="0 0 100 40" class="w-full h-full drop-shadow"><ellipse cx="50" cy="20" rx="40" ry="12" fill="none" stroke="#FFD700" stroke-width="8"/><ellipse cx="50" cy="20" rx="40" ry="12" fill="none" stroke="#FFF7AD" stroke-width="3"/></svg>`
+        }
+      ],
+      face: [
+        {
+          name: '淚痕',
+          icon: '💧',
+          svg: `<svg viewBox="0 0 120 50" class="w-full h-full drop-shadow"><rect x="14" y="6" width="12" height="38" rx="6" fill="#38BDF8" opacity="0.8"/><rect x="16" y="8" width="4" height="20" rx="2" fill="#FFFFFF" opacity="0.7"/><rect x="94" y="6" width="12" height="38" rx="6" fill="#38BDF8" opacity="0.8"/><rect x="96" y="8" width="4" height="20" rx="2" fill="#FFFFFF" opacity="0.7"/></svg>`
+        },
+        {
+          name: '可愛腮紅',
+          icon: '😊',
+          svg: `<svg viewBox="0 0 120 30" class="w-full h-full"><ellipse cx="20" cy="15" rx="15" ry="9" fill="#FF2E93" opacity="0.6"/><ellipse cx="100" cy="15" rx="15" ry="9" fill="#FF2E93" opacity="0.6"/></svg>`
+        },
+        {
+          name: '鬍子',
+          icon: '🥸',
+          svg: `<svg viewBox="0 0 100 40" class="w-full h-full"><path d="M 50,20 Q 30,5 10,20 Q 30,30 50,20 Z" fill="#2D3748"/><path d="M 50,20 Q 70,5 90,20 Q 70,30 50,20 Z" fill="#2D3748"/></svg>`
+        },
+        {
+          name: '棒棒糖',
+          icon: '🍭',
+          svg: `<svg viewBox="0 0 80 100" class="w-full h-full drop-shadow"><rect x="36" y="45" width="8" height="50" rx="4" fill="#E2E8F0"/><circle cx="40" cy="30" r="25" fill="#FF477E"/><path d="M 40,10 A 20,20 0 0,1 60,30 A 20,20 0 0,1 40,50" fill="none" stroke="#FFFFFF" stroke-width="5"/></svg>`
+        },
+        {
+          name: '珍珠奶茶',
+          icon: '🧋',
+          svg: `<svg viewBox="0 0 70 90" class="w-full h-full drop-shadow"><path d="M 15,25 L 20,80 Q 35,85 50,80 L 55,25 Z" fill="#D4A373"/><rect x="10" y="15" width="50" height="10" rx="3" fill="#FAEDCD"/><rect x="32" y="2" width="6" height="30" fill="#E76F51"/><circle cx="28" cy="70" r="4" fill="#264653"/><circle cx="40" cy="72" r="4" fill="#264653"/><circle cx="34" cy="62" r="4" fill="#264653"/></svg>`
+        },
+        {
+          name: '星星魔杖',
+          icon: '🪄',
+          svg: `<svg viewBox="0 0 80 100" class="w-full h-full drop-shadow"><rect x="37" y="35" width="6" height="60" rx="3" fill="#D4AF37" transform="rotate(-15 40 60)"/><polygon points="35,5 42,20 58,22 46,33 50,48 35,40 20,48 24,33 12,22 28,20" fill="#FFD700" stroke="#FFF" stroke-width="2"/></svg>`
+        }
+      ]
+    };
+
+    /* ==========================================
+       2. Web Audio API 音效生成器
+       ========================================== */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+    }
+
+    function playSound(type) {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'pop') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } else if (type === 'magic') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          osc.frequency.setValueAtTime(1046.50, now + 0.24);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'trash') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.linearRampToValueAtTime(120, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        }
+      } catch (e) {
+        console.log('Audio play error:', e);
+      }
+    }
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      const btn = document.getElementById('sound-icon');
+      if (state.soundEnabled) {
+        btn.className = 'fa-solid fa-volume-high';
+        playSound('pop');
+      } else {
+        btn.className = 'fa-solid fa-volume-xmark';
+      }
+    }
+
+    /* ==========================================
+       3. 色彩與外觀控制 Helpers & Update
+       ========================================== */
+    function hexToRgb(hex) {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(x => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('');
+    }
+
+    function adjustColor(hex, percent) {
+      const { r, g, b } = hexToRgb(hex);
+      const factor = 1 + percent / 100;
+      return rgbToHex(r * factor, g * factor, b * factor);
+    }
+
+    function setCustomColor(hex) {
+      playSound('pop');
+      state.color = {
+        stop1: adjustColor(hex, 20),
+        stop2: hex,
+        stop3: adjustColor(hex, -30)
+      };
+      document.getElementById('color-hex-display').innerText = hex.toUpperCase();
+      updateBearAppearance();
+    }
+
+    function applyColorPreset(index) {
+      playSound('pop');
+      const c = colorPresets[index];
+      if (!c) return;
+      state.color = { stop1: c.stop1, stop2: c.stop2, stop3: c.stop3 };
+      document.getElementById('custom-color-picker').value = c.stop2;
+      document.getElementById('color-hex-display').innerText = c.stop2.toUpperCase();
+      updateBearAppearance();
+    }
+
+    function updateGummyOpacity(val) {
+      state.opacity = val / 100;
+      document.getElementById('opacity-val-text').innerText = `${val}%`;
+      updateBearAppearance();
+    }
+
+    function toggleExtraGloss() {
+      playSound('pop');
+      state.extraGloss = !state.extraGloss;
+      const dot = document.getElementById('gloss-dot');
+      const btn = document.getElementById('btn-toggle-gloss');
+      if (state.extraGloss) {
+        dot.style.transform = 'translateX(24px)';
+        btn.classList.replace('bg-slate-300', 'bg-emerald-500');
+      } else {
+        dot.style.transform = 'translateX(0px)';
+        btn.classList.replace('bg-emerald-500', 'bg-slate-300');
+      }
+      updateBearAppearance();
+    }
+
+    function changeBackground(bgClass) {
+      playSound('pop');
+      state.background = bgClass;
+      const stage = document.getElementById('stage-container');
+      stage.className = `relative w-full max-w-[480px] aspect-square rounded-3xl shadow-xl overflow-hidden border-4 border-white ${bgClass} transition-all duration-500 flex items-center justify-center`;
+    }
+
+    function updateBearAppearance() {
+      const s1 = document.getElementById('grad-stop-1');
+      const s2 = document.getElementById('grad-stop-2');
+      const s3 = document.getElementById('grad-stop-3');
+      const bearGroup = document.getElementById('bear-body-group');
+      const glossGrad = document.getElementById('glossGrad');
+
+      if (s1) s1.setAttribute('stop-color', state.color.stop1);
+      if (s2) s2.setAttribute('stop-color', state.color.stop2);
+      if (s3) s3.setAttribute('stop-color', state.color.stop3);
+
+      if (bearGroup) {
+        bearGroup.style.opacity = state.opacity;
+      }
+
+      if (glossGrad) {
+        const stops = glossGrad.querySelectorAll('stop');
+        if (stops.length >= 2) {
+          stops[0].setAttribute('stop-opacity', state.extraGloss ? '0.85' : '0.4');
+          stops[1].setAttribute('stop-opacity', state.extraGloss ? '0.35' : '0.1');
+        }
+      }
+
+      const svg = document.getElementById('gummy-bear-svg');
+      if (svg) {
+        svg.classList.remove('animate-jelly');
+        void svg.offsetWidth;
+        svg.classList.add('animate-jelly');
+      }
+    }
+
+    /* ==========================================
+       4. 飾品與配件控制 Accessories & Layers
+       ========================================== */
+    function addProp(type, index) {
+      playSound('pop');
+      const item = propsLibrary[type][index];
+      if (!item) return;
+
+      // 判斷特定手持道具（棒棒糖、珍珠奶茶、星星魔杖）需要大幅往下移至手部位置 (Y=280)
+      const isHandheld = (item.name === '棒棒糖' || item.name === '珍珠奶茶' || item.name === '星星魔杖');
+
+      const newProp = {
+        id: `prop-${state.nextPropId++}`,
+        type: type,
+        name: item.name,
+        svg: item.svg,
+        x: 245 + (Math.random() * 6 - 3), // X 軸保持在 245
+        // 帽子與淋醬 Y=130，手持道具往下移至 280，其餘表情五官維持在 210
+        y: type === 'sauce' ? 130 : (type === 'accessory' ? 130 : (isHandheld ? 280 : 210)),
+        scale: type === 'sauce' ? 1.2 : 1,
+        rotate: 0
+      };
+
+      state.placedProps.push(newProp);
+      renderPropsLayer();
+      selectProp(newProp.id);
+    }
+
+    function renderPropsLayer() {
+      const layer = document.getElementById('props-layer');
+      if (!layer) return;
+
+      layer.innerHTML = state.placedProps.map(p => {
+        const isSelected = p.id === state.selectedPropId;
+        const handles = isSelected ? `
+          <div class="prop-handle prop-handle-delete" onclick="onHandleDelete(event, '${p.id}')" title="刪除">
+            <i class="fa-solid fa-xmark"></i>
+          </div>
+          <div class="prop-handle prop-handle-rotate" onmousedown="startRotateHandle(event, '${p.id}')" ontouchstart="startRotateHandle(event, '${p.id}')" title="按住拖曳旋轉">
+            <i class="fa-solid fa-rotate"></i>
+          </div>
+          <div class="prop-handle prop-handle-scale" onmousedown="startScaleHandle(event, '${p.id}')" ontouchstart="startScaleHandle(event, '${p.id}')" title="按住拖曳縮放">
+            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+          </div>
+        ` : '';
+
+        return `
+          <div id="${p.id}"
+               onclick="onPropClick(event, '${p.id}')"
+               onmousedown="startDrag(event, '${p.id}')"
+               ontouchstart="startDrag(event, '${p.id}')"
+               class="absolute pointer-events-auto cursor-grab active:cursor-grabbing transition-transform flex items-center justify-center ${isSelected ? 'selected-prop-box' : ''}"
+               style="left: ${p.x}px; top: ${p.y}px; transform: translate(-50%, -50%) scale(${p.scale}) rotate(${p.rotate}deg); width: 90px; height: 90px;">
+            ${p.svg}
+            ${handles}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectProp(id) {
+      state.selectedPropId = id;
+      const controls = document.getElementById('prop-controls');
+      const label = document.getElementById('selected-prop-name');
+
+      if (id) {
+        const prop = state.placedProps.find(p => p.id === id);
+        if (label && prop) label.innerText = `選取配件：${prop.name}`;
+        if (controls) {
+          controls.classList.remove('opacity-50', 'pointer-events-none');
+        }
+      } else {
+        if (label) label.innerText = '未選取配件';
+        if (controls) {
+          controls.classList.add('opacity-50', 'pointer-events-none');
+        }
+      }
+      renderPropsLayer();
+    }
+
+    /* ==========================================
+       5. 介面渲染與初始化 UI Rendering
+       ========================================== */
+    window.addEventListener('DOMContentLoaded', function() {
+      renderColorPresets();
+      renderPropsGrid('sauce');
+      renderPropsGrid('accessory');
+      renderPropsGrid('face');
+      updateBearAppearance();
+      renderSavedDesigns();
+    });
+
+    function renderColorPresets() {
+      const container = document.getElementById('color-preset-grid');
+      if (!container) return;
+      container.innerHTML = colorPresets.map((c, index) => `
+        <button onclick="applyColorPreset(${index})" class="flex flex-col items-center gap-1 group active:scale-95 transition">
+          <div class="w-12 h-12 rounded-2xl shadow-md border-2 border-white transition-transform group-hover:scale-110 flex items-center justify-center" 
+               style="background: linear-gradient(135deg, ${c.stop1}, ${c.stop3});">
+          </div>
+          <span class="text-[11px] font-bold text-slate-500">${c.name}</span>
+        </button>
+      `).join('');
+    }
+
+    function renderPropsGrid(type) {
+      const container = document.getElementById(`${type}-grid`);
+      if (!container) return;
+      const list = propsLibrary[type];
+      if (!list) return;
+      container.innerHTML = list.map((item, index) => `
+        <button onclick="addProp('${type}', ${index})" class="p-3 bg-emerald-50/60 hover:bg-emerald-100/80 border border-emerald-100/80 rounded-2xl flex flex-col items-center justify-center gap-2 transition active:scale-95 hover:shadow-md group">
+          <div class="w-12 h-12 flex items-center justify-center transition-transform group-hover:scale-110">
+            ${item.svg}
+          </div>
+          <span class="text-xs font-bold text-slate-700">${item.name}</span>
+        </button>
+      `).join('');
+    }
+
+    function switchTab(tabName) {
+      playSound('pop');
+      // 重置所有分頁按鈕樣式
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-emerald-600', 'shadow-sm');
+        btn.classList.add('text-slate-500');
+      });
+      // 隱藏所有面板
+      document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
+
+      // 啟用當前分頁按鈕
+      const activeTab = document.getElementById(`tab-${tabName}`);
+      if (activeTab) {
+        activeTab.classList.add('bg-white', 'text-emerald-600', 'shadow-sm');
+        activeTab.classList.remove('text-slate-500');
+      }
+
+      // 顯示當前面板
+      const activePanel = document.getElementById(`panel-${tabName}`);
+      if (activePanel) {
+        activePanel.classList.remove('hidden');
+      }
+    }
+
+    function deselectProp(event) {
+      if (event.target.id === 'artboard' || event.target.id === 'gummy-bear-svg') {
+        selectProp(null);
+      }
+    }
+
+    function onPropClick(event, id) {
+      event.stopPropagation();
+      selectProp(id);
+    }
+
+    function adjustSelectedProp(action, amount) {
+      if (!state.selectedPropId) return;
+      playSound('pop');
+      const prop = state.placedProps.find(p => p.id === state.selectedPropId);
+      if (!prop) return;
+
+      if (action === 'scale') {
+        prop.scale = Math.max(0.3, Math.min(3.0, prop.scale + amount));
+      } else if (action === 'rotate') {
+        prop.rotate = (prop.rotate + amount) % 360;
+      }
+      renderPropsLayer();
+    }
+
+    function removeSelectedProp() {
+      if (!state.selectedPropId) return;
+      playSound('trash');
+      state.placedProps = state.placedProps.filter(p => p.id !== state.selectedPropId);
+      selectProp(null);
+      renderPropsLayer();
+    }
+
+    function onHandleDelete(e, id) {
+      e.stopPropagation();
+      selectProp(id);
+      removeSelectedProp();
+    }
+
+    /* ------------------------------------------
+       拖曳、縮放與旋轉 控制邏輯 (Interactive Drag, Scale, Rotate)
+       ------------------------------------------ */
+    let draggingPropId = null;
+    let dragMode = 'move'; // 'move' | 'scale' | 'rotate'
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let initialScale = 1;
+    let initialDist = 0;
+    let initialAngle = 0;
+    let initialRotate = 0;
+
+    function startDrag(e, id) {
+      // 若點擊到 Control Handle，不觸發整塊拖曳
+      if (e.target.closest('.prop-handle')) return;
+      
+      e.stopPropagation();
+      selectProp(id);
+      draggingPropId = id;
+      dragMode = 'move';
+
+      const prop = state.placedProps.find(p => p.id === id);
+      const stageRect = document.getElementById('artboard').getBoundingClientRect();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      dragOffsetX = clientX - stageRect.left - prop.x;
+      dragOffsetY = clientY - stageRect.top - prop.y;
+
+      bindDragEvents();
+    }
+
+    function startScaleHandle(e, id) {
+      e.stopPropagation();
+      e.preventDefault();
+      selectProp(id);
+      draggingPropId = id;
+      dragMode = 'scale';
+
+      const prop = state.placedProps.find(p => p.id === id);
+      const stageRect = document.getElementById('artboard').getBoundingClientRect();
+      const centerAbsoluteX = stageRect.left + prop.x;
+      const centerAbsoluteY = stageRect.top + prop.y;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      initialDist = Math.hypot(clientX - centerAbsoluteX, clientY - centerAbsoluteY);
+      initialScale = prop.scale;
+
+      bindDragEvents();
+    }
+
+    function startRotateHandle(e, id) {
+      e.stopPropagation();
+      e.preventDefault();
+      selectProp(id);
+      draggingPropId = id;
+      dragMode = 'rotate';
+
+      const prop = state.placedProps.find(p => p.id === id);
+      const stageRect = document.getElementById('artboard').getBoundingClientRect();
+      const centerAbsoluteX = stageRect.left + prop.x;
+      const centerAbsoluteY = stageRect.top + prop.y;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      initialAngle = Math.atan2(clientY - centerAbsoluteY, clientX - centerAbsoluteX) * (180 / Math.PI);
+      initialRotate = prop.rotate;
+
+      bindDragEvents();
+    }
+
+    function bindDragEvents() {
+      document.addEventListener('mousemove', onDragging);
+      document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchmove', onDragging, { passive: false });
+      document.addEventListener('touchend', stopDrag);
+    }
+
+    function onDragging(e) {
+      if (!draggingPropId) return;
+      if (e.cancelable) e.preventDefault();
+
+      const prop = state.placedProps.find(p => p.id === draggingPropId);
+      if (!prop) return;
+
+      const stageRect = document.getElementById('artboard').getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      if (dragMode === 'move') {
+        let newX = clientX - stageRect.left - dragOffsetX;
+        let newY = clientY - stageRect.top - dragOffsetY;
+
+        newX = Math.max(20, Math.min(stageRect.width - 20, newX));
+        newY = Math.max(20, Math.min(stageRect.height - 20, newY));
+
+        prop.x = newX;
+        prop.y = newY;
+      } else if (dragMode === 'scale') {
+        const centerAbsoluteX = stageRect.left + prop.x;
+        const centerAbsoluteY = stageRect.top + prop.y;
+        const currentDist = Math.hypot(clientX - centerAbsoluteX, clientY - centerAbsoluteY);
+        
+        if (initialDist > 0) {
+          const ratio = currentDist / initialDist;
+          prop.scale = Math.max(0.3, Math.min(3.0, initialScale * ratio));
+        }
+      } else if (dragMode === 'rotate') {
+        const centerAbsoluteX = stageRect.left + prop.x;
+        const centerAbsoluteY = stageRect.top + prop.y;
+        const currentAngle = Math.atan2(clientY - centerAbsoluteY, clientX - centerAbsoluteX) * (180 / Math.PI);
+        const diff = currentAngle - initialAngle;
+        prop.rotate = (initialRotate + diff) % 360;
+      }
+
+      // 更新元素渲染與位置
+      const el = document.getElementById(prop.id);
+      if (el) {
+        el.style.left = `${prop.x}px`;
+        el.style.top = `${prop.y}px`;
+        el.style.transform = `translate(-50%, -50%) scale(${prop.scale}) rotate(${prop.rotate}deg)`;
+      }
+    }
+
+    function stopDrag() {
+      draggingPropId = null;
+      document.removeEventListener('mousemove', onDragging);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchmove', onDragging);
+      document.removeEventListener('touchend', stopDrag);
+    }
+
+    /* ==========================================
+       6. 隨機與重置按鈕
+       ========================================== */
+    function randomizeBear() {
+      playSound('magic');
+      const randomColorIndex = Math.floor(Math.random() * colorPresets.length);
+      const c = colorPresets[randomColorIndex];
+      state.color = { stop1: c.stop1, stop2: c.stop2, stop3: c.stop3 };
+      document.getElementById('custom-color-picker').value = c.stop1;
+      document.getElementById('color-hex-display').innerText = c.stop1.toUpperCase();
+
+      state.placedProps = [];
+      
+      const stageCenterX = 245;
+
+      // 隨機選擇：帽子頭飾 或 淋醬裝飾
+      const isSauce = Math.random() > 0.5;
+      if (isSauce) {
+        const sauceRand = Math.floor(Math.random() * propsLibrary.sauce.length);
+        state.placedProps.push({
+          id: `prop-${state.nextPropId++}`,
+          type: 'sauce',
+          name: propsLibrary.sauce[sauceRand].name,
+          svg: propsLibrary.sauce[sauceRand].svg,
+          x: stageCenterX,
+          y: 130, // 淋醬往上移至 130
+          scale: 1.2,
+          rotate: 0
+        });
+      } else {
+        const accRand = Math.floor(Math.random() * propsLibrary.accessory.length);
+        state.placedProps.push({
+          id: `prop-${state.nextPropId++}`,
+          type: 'accessory',
+          name: propsLibrary.accessory[accRand].name,
+          svg: propsLibrary.accessory[accRand].svg,
+          x: stageCenterX,
+          y: 130, // 帽子往上移至 130
+          scale: 1,
+          rotate: 0
+        });
+      }
+
+      // 隨機選擇五官與表情 (X = 245)
+      const faceRand = Math.floor(Math.random() * propsLibrary.face.length);
+      const faceItem = propsLibrary.face[faceRand];
+      const isHandheld = (faceItem.name === '棒棒糖' || faceItem.name === '珍珠奶茶' || faceItem.name === '星星魔杖');
+
+      state.placedProps.push({
+        id: `prop-${state.nextPropId++}`,
+        type: 'face',
+        name: faceItem.name,
+        svg: faceItem.svg,
+        x: stageCenterX,
+        y: isHandheld ? 280 : 210, // 手持道具往下移至 280，其餘五官維持 210
+        scale: 1,
+        rotate: 0
+      });
+
+      updateBearAppearance();
+      renderPropsLayer();
+      selectProp(null);
+    }
+
+    function resetBear() {
+      playSound('trash');
+      state.color = { stop1: '#86EFAC', stop2: '#34D399', stop3: '#059669' };
+      state.opacity = 0.92;
+      state.extraGloss = true;
+      state.placedProps = [];
+      state.selectedPropId = null;
+
+      document.getElementById('custom-color-picker').value = '#86efac';
+      document.getElementById('color-hex-display').innerText = '#86EFAC';
+      document.getElementById('opacity-val-text').innerText = '92%';
+
+      updateBearAppearance();
+      renderPropsLayer();
+      selectProp(null);
+    }
+
+    /* ==========================================
+       7. 作品儲存與讀取 (Saved Designs Showcase)
+       ========================================== */
+    function saveDesign() {
+      playSound('magic');
+      const design = {
+        id: `design-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        color: { ...state.color },
+        opacity: state.opacity,
+        extraGloss: state.extraGloss,
+        placedProps: JSON.parse(JSON.stringify(state.placedProps))
+      };
+
+      state.savedDesigns.unshift(design);
+      renderSavedDesigns();
+    }
+
+    function loadDesign(id) {
+      playSound('pop');
+      const design = state.savedDesigns.find(d => d.id === id);
+      if (!design) return;
+
+      state.color = { ...design.color };
+      state.opacity = design.opacity;
+      state.extraGloss = design.extraGloss;
+      state.placedProps = JSON.parse(JSON.stringify(design.placedProps));
+      state.selectedPropId = null;
+
+      document.getElementById('custom-color-picker').value = state.color.stop2;
+      document.getElementById('color-hex-display').innerText = state.color.stop2.toUpperCase();
+      document.getElementById('opacity-val-text').innerText = `${Math.round(state.opacity * 100)}%`;
+
+      updateBearAppearance();
+      renderPropsLayer();
+      selectProp(null);
+    }
+
+    function deleteDesign(e, id) {
+      e.stopPropagation();
+      playSound('trash');
+      state.savedDesigns = state.savedDesigns.filter(d => d.id !== id);
+      renderSavedDesigns();
+    }
+
+    function renderSavedDesigns() {
+      const container = document.getElementById('saved-designs-container');
+      const badge = document.getElementById('saved-count-badge');
+      if (!container) return;
+
+      if (badge) badge.innerText = `${state.savedDesigns.length} 件作品`;
+
+      if (state.savedDesigns.length === 0) {
+        container.innerHTML = `
+          <div id="saved-empty-tip" class="w-full text-center py-2 text-xs text-slate-400 italic">
+            尚未儲存任何作品！設計好小熊後，點擊右上方「儲存作品」按鈕即可在此收藏囉 🧸
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = state.savedDesigns.map((d, index) => `
+        <div onclick="loadDesign('${d.id}')" class="relative group cursor-pointer flex-shrink-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-2 flex items-center gap-2 transition active:scale-95 shadow-xs">
+          <div class="w-8 h-8 rounded-lg shadow-xs flex items-center justify-center text-xs font-bold text-white border border-white" style="background: linear-gradient(135deg, ${d.color.stop1}, ${d.color.stop3});">
+            🧸
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-slate-700">作品 #${state.savedDesigns.length - index}</span>
+            <span class="text-[10px] text-slate-400">${d.placedProps.length} 個配件 • ${d.timestamp}</span>
+          </div>
+          <button onclick="deleteDesign(event, '${d.id}')" class="ml-1 text-slate-400 hover:text-rose-500 p-1 rounded-md transition opacity-0 group-hover:opacity-100" title="刪除作品">
+            <i class="fa-solid fa-trash text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    /* ==========================================
+       8. 匯出與拍照存檔 Export Image
+       ========================================== */
+    function exportImage() {
+      playSound('magic');
+      const svgElement = document.getElementById('gummy-bear-svg');
+      const stage = document.getElementById('stage-container');
+      if (!svgElement || !stage) return;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const width = 480;
+      const height = 480;
+      canvas.width = width;
+      canvas.height = height;
+
+      // 1. 繪製背景
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, '#f0fdf4');
+      grad.addColorStop(0.5, '#dcfce7');
+      grad.addColorStop(1, '#bbf7d0');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. 轉譯小熊 SVG
+      const xml = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = function() {
+        // 小熊繪製在舞台中央
+        const bearW = width * 0.75;
+        const bearH = height * 0.75;
+        const bearX = (width - bearW) / 2;
+        const bearY = (height - bearH) / 2;
+        ctx.drawImage(img, bearX, bearY, bearW, bearH);
+        URL.revokeObjectURL(url);
+
+        // 3. 繪製已掛載飾品
+        const propsPromises = state.placedProps.map(p => {
+          return new Promise(resolve => {
+            const propSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 90 90">${p.svg}</svg>`;
+            const pBlob = new Blob([propSvg], { type: 'image/svg+xml;charset=utf-8' });
+            const pUrl = URL.createObjectURL(pBlob);
+            const pImg = new Image();
+            pImg.onload = () => {
+              ctx.save();
+              ctx.translate(p.x, p.y);
+              ctx.rotate((p.rotate * Math.PI) / 180);
+              ctx.scale(p.scale, p.scale);
+              ctx.drawImage(pImg, -45, -45, 90, 90);
+              ctx.restore();
+              URL.revokeObjectURL(pUrl);
+              resolve();
+            };
+            pImg.src = pUrl;
+          });
+        });
+
+        Promise.all(propsPromises).then(() => {
+          // 下載圖片
+          const link = document.createElement('a');
+          link.download = `my-gummy-bear-${Date.now()}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        });
+      };
+      img.src = url;
+    }
+  </script>
+<script>
+addEventListener('message', async event => {
+  if (event.source !== parent || event.data?.type !== 'gallery-measure') return;
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const root = document.scrollingElement || document.documentElement;
+  const bodyStyle = getComputedStyle(document.body);
+  const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+  const flowHeight = Math.max(0, ...[...document.body.children].filter(element => ['static', 'relative'].includes(getComputedStyle(element).position)).map(element => element.getBoundingClientRect().height + bodyPadding));
+  let overflow = 0;
+  for (const element of [...document.querySelectorAll('body *')].slice(0, 3000)) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height < 200 || rect.width < 150) continue;
+    const style = getComputedStyle(element);
+    if (!['absolute', 'fixed'].includes(style.position) && style.overflowY !== 'hidden') continue;
+    const childHeight = Math.max(0, ...[...element.children].map(child => child.getBoundingClientRect().height));
+    overflow = Math.max(overflow, element.scrollHeight - element.clientHeight, childHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) - element.clientHeight);
+  }
+  parent.postMessage({ type: 'gallery-size', request: event.data.request, height: Math.max(root.scrollHeight, document.body.scrollHeight, innerHeight, flowHeight) + Math.max(0, overflow) }, '*');
+});
+</script></body>
+</html>

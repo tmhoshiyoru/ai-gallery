@@ -22,6 +22,19 @@ window.GALLERY_CATALOG = {
               "tag": "太空射擊"
             },
             {
+              "id": "23E1FDF88C",
+              "title": "作品 23E1FD",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8910.html",
+              "sourceHash": "566cf057654eed17c4bec2d19beea2c4af6ab236080209d8597b95225af66c86",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/23E1FDF88C.jpg?v=566cf057654e",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/23E1FDF88C.html",
+              "tag": "打磚塊"
+            },
+            {
               "id": "3418181EAA",
               "title": "作品 341818",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8928.html",
@@ -58,7 +71,7 @@ window.GALLERY_CATALOG = {
               "thumbnail": "data/thumbnails/3AFA2AC884.jpg?v=0c16fdffc83b",
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E5%84%89/3AFA2AC884.html",
-              "tag": "其他"
+              "tag": "問答測驗"
             },
             {
               "id": "4DB54F155F",
@@ -98,6 +111,19 @@ window.GALLERY_CATALOG = {
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E5%84%89/5ACBB0DC98.html",
               "tag": "打磚塊"
+            },
+            {
+              "id": "5C873E33FA",
+              "title": "作品 5C873E",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8916.html",
+              "sourceHash": "ec1fb46ce54bde7664398e7695b09c5141e975a2977ba9c97607e9a4b689640b",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/5C873E33FA.jpg?v=ec1fb46ce54b",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/5C873E33FA.html",
+              "tag": "其他"
             },
             {
               "id": "68D63A90AB",
@@ -204,6 +230,19 @@ window.GALLERY_CATALOG = {
               "tag": "打磚塊"
             },
             {
+              "id": "9E6F47CFE0",
+              "title": "作品 9E6F47",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8914.html",
+              "sourceHash": "2ba7442d10ebe9396ab2cae53e346f4b1237979be64f898873b1ef95d0844307",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/9E6F47CFE0.jpg?v=2ba7442d10eb",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/9E6F47CFE0.html",
+              "tag": "其他"
+            },
+            {
               "id": "A44F2F0D6D",
               "title": "作品 A44F2F",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8935.html",
@@ -230,6 +269,19 @@ window.GALLERY_CATALOG = {
               "tag": "打磚塊"
             },
             {
+              "id": "AA3B1D658C",
+              "title": "作品 AA3B1D",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8911.html",
+              "sourceHash": "1c98f6ad892a81f0203f92818cfcb754ea5306dbe8456fa9e59ada4fe0b93527",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/AA3B1D658C.jpg?v=1c98f6ad892a",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/AA3B1D658C.html",
+              "tag": "打磚塊"
+            },
+            {
               "id": "B8C21AD260",
               "title": "作品 B8C21A",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8930.html",
@@ -241,6 +293,45 @@ window.GALLERY_CATALOG = {
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E5%84%89/B8C21AD260.html",
               "tag": "貪食蛇"
+            },
+            {
+              "id": "BB509A4878",
+              "title": "作品 BB509A",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8903.html",
+              "sourceHash": "07d357fd6d2d55fe22c4b651c1c2b03f4dece1eb3c59b1484840e41ae7cbae60",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/BB509A4878.jpg?v=07d357fd6d2d",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/BB509A4878.html",
+              "tag": "其他"
+            },
+            {
+              "id": "BD3B0C77DC",
+              "title": "作品 BD3B0C",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8908.html",
+              "sourceHash": "3883cbadc61a1d5801b7b19b2cdd9ed95ffcb2d89a7bf0d19ca6d3f9fc569a71",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/BD3B0C77DC.jpg?v=3883cbadc61a",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/BD3B0C77DC.html",
+              "tag": "貪食蛇"
+            },
+            {
+              "id": "BF0A0B5480",
+              "title": "作品 BF0A0B",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8905.html",
+              "sourceHash": "207b54cc48ac7d9c5e8c7ea8509e192438322b0f325522372bc202c62ea65b06",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/BF0A0B5480.jpg?v=207b54cc48ac",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/BF0A0B5480.html",
+              "tag": "其他"
             },
             {
               "id": "C3EB151247",
@@ -280,6 +371,19 @@ window.GALLERY_CATALOG = {
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E5%84%89/CAD82BAC0F.html",
               "tag": "打磚塊"
+            },
+            {
+              "id": "D59E35A8AB",
+              "title": "作品 D59E35",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8926.html",
+              "sourceHash": "cbf18c8a473e469763576fccddd1992fcb7587784c1ad2b5a42e20c7d2732f4a",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/D59E35A8AB.jpg?v=cbf18c8a473e",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E5%84%89/D59E35A8AB.html",
+              "tag": "貪食蛇"
             },
             {
               "id": "DD0E6675D4",
@@ -851,6 +955,32 @@ window.GALLERY_CATALOG = {
               "tag": "隨機抽選"
             },
             {
+              "id": "13406BD781",
+              "title": "作品 13406B",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE27.html",
+              "sourceHash": "7456de198394ee1ca82b7b711fe431eaed7ad39a57d9fbe51c8bfa4b79d9e506",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/13406BD781.jpg?v=7456de198394",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/13406BD781.html",
+              "tag": "貪食蛇"
+            },
+            {
+              "id": "13784B2721",
+              "title": "作品 13784B",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE10.html",
+              "sourceHash": "3403ea55d9e23c9d2308f47fcef9899f3ca77725f7b52d5328b17c53fcb0874d",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/13784B2721.jpg?v=3403ea55d9e2",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/13784B2721.html",
+              "tag": "其他"
+            },
+            {
               "id": "14F07B1062",
               "title": "作品 14F07B",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE26.html",
@@ -862,6 +992,32 @@ window.GALLERY_CATALOG = {
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E7%A6%AE/14F07B1062.html",
               "tag": "隨機抽選"
+            },
+            {
+              "id": "200271ABA8",
+              "title": "作品 200271",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE25.html",
+              "sourceHash": "bcae5c5c4cd93ec483532045e65ec0334b382863a9c1b6ae7b927b54c7413449",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/200271ABA8.jpg?v=bcae5c5c4cd9",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/200271ABA8.html",
+              "tag": "其他"
+            },
+            {
+              "id": "238E559812",
+              "title": "作品 238E55",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE20.html",
+              "sourceHash": "97c9d006376e6b3767f5a28cad4e29da82b99c316fab5bca4463992a6ecde7d2",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/238E559812.jpg?v=97c9d006376e",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/238E559812.html",
+              "tag": "其他"
             },
             {
               "id": "27CC4D8827",
@@ -913,6 +1069,19 @@ window.GALLERY_CATALOG = {
               "thumbnail": "data/thumbnails/4D5A96BC93.jpg?v=3587e8712364",
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E7%A6%AE/4D5A96BC93.html",
+              "tag": "問答測驗"
+            },
+            {
+              "id": "513CC44B7C",
+              "title": "作品 513CC4",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE32.html",
+              "sourceHash": "22bb1cdf0bf8f9c93c3f64897721b75ea44880f0b06a7bd3a56139106c5fa4e0",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/513CC44B7C.jpg?v=22bb1cdf0bf8",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/513CC44B7C.html",
               "tag": "其他"
             },
             {
@@ -1033,6 +1202,19 @@ window.GALLERY_CATALOG = {
               "tag": "打磚塊"
             },
             {
+              "id": "9839C56F06",
+              "title": "作品 9839C5",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE09.html",
+              "sourceHash": "799a9c1ea491363ae6629b4af90d16de6e3669efd6ff92e1a90fe8edc4e34642",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/9839C56F06.jpg?v=799a9c1ea491",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/9839C56F06.html",
+              "tag": "問答測驗"
+            },
+            {
               "id": "9CA115DDEA",
               "title": "作品 9CA115",
               "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE07.html",
@@ -1070,6 +1252,19 @@ window.GALLERY_CATALOG = {
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E7%A6%AE/AB7F0D6D31.html",
               "tag": "經營養成"
+            },
+            {
+              "id": "AC4D1B50CE",
+              "title": "作品 AC4D1B",
+              "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE33.html",
+              "sourceHash": "9db8cc194f66e077cda731762ac18f0643b06e696749b425c9bf05c96754955f",
+              "exhibitionId": "first",
+              "thumbnailDirectory": "data/thumbnails",
+              "displayMinWidth": null,
+              "thumbnail": "data/thumbnails/AC4D1B50CE.jpg?v=9db8cc194f66",
+              "thumbnailStatus": "ready",
+              "url": "data/previews/%E4%B8%80%E7%A6%AE/AC4D1B50CE.html",
+              "tag": "打磚塊"
             },
             {
               "id": "B5395CEB1D",
@@ -1121,7 +1316,7 @@ window.GALLERY_CATALOG = {
               "thumbnail": "data/thumbnails/C00642197E.jpg?v=d1ffe1ef97ce",
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E7%A6%AE/C00642197E.html",
-              "tag": "其他"
+              "tag": "問答測驗"
             },
             {
               "id": "C426CE2A9D",
@@ -1859,7 +2054,7 @@ window.GALLERY_CATALOG = {
               "thumbnail": "data/thumbnails/7958F448FC.jpg?v=0bcb6c34db9f",
               "thumbnailStatus": "ready",
               "url": "data/previews/%E4%B8%80%E6%9B%B8/7958F448FC.html",
-              "tag": "其他"
+              "tag": "問答測驗"
             },
             {
               "id": "7C90F915DD",
@@ -2112,13 +2307,19 @@ window.GALLERY_CATALOG = {
         }
       ],
       "ballot": {
-        "fingerprint": "4a06101ca48862ea",
+        "fingerprint": "4c73f746e21eabde",
         "entries": [
           {
             "id": "2201D4A0CB",
             "className": "一儉",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8920.html",
             "title": "作品 2201D4"
+          },
+          {
+            "id": "23E1FDF88C",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8910.html",
+            "title": "作品 23E1FD"
           },
           {
             "id": "3418181EAA",
@@ -2155,6 +2356,12 @@ window.GALLERY_CATALOG = {
             "className": "一儉",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8902.html",
             "title": "作品 5ACBB0"
+          },
+          {
+            "id": "5C873E33FA",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8916.html",
+            "title": "作品 5C873E"
           },
           {
             "id": "68D63A90AB",
@@ -2205,6 +2412,12 @@ window.GALLERY_CATALOG = {
             "title": "作品 9A6A0F"
           },
           {
+            "id": "9E6F47CFE0",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8914.html",
+            "title": "作品 9E6F47"
+          },
+          {
             "id": "A44F2F0D6D",
             "className": "一儉",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8935.html",
@@ -2217,10 +2430,34 @@ window.GALLERY_CATALOG = {
             "title": "作品 A845C3"
           },
           {
+            "id": "AA3B1D658C",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8911.html",
+            "title": "作品 AA3B1D"
+          },
+          {
             "id": "B8C21AD260",
             "className": "一儉",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8930.html",
             "title": "作品 B8C21A"
+          },
+          {
+            "id": "BB509A4878",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8903.html",
+            "title": "作品 BB509A"
+          },
+          {
+            "id": "BD3B0C77DC",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8908.html",
+            "title": "作品 BD3B0C"
+          },
+          {
+            "id": "BF0A0B5480",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8905.html",
+            "title": "作品 BF0A0B"
           },
           {
             "id": "C3EB151247",
@@ -2239,6 +2476,12 @@ window.GALLERY_CATALOG = {
             "className": "一儉",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8909.html",
             "title": "作品 CAD82B"
+          },
+          {
+            "id": "D59E35A8AB",
+            "className": "一儉",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8926.html",
+            "title": "作品 D59E35"
           },
           {
             "id": "DD0E6675D4",
@@ -2499,10 +2742,34 @@ window.GALLERY_CATALOG = {
             "title": "作品 02D408"
           },
           {
+            "id": "13406BD781",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE27.html",
+            "title": "作品 13406B"
+          },
+          {
+            "id": "13784B2721",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE10.html",
+            "title": "作品 13784B"
+          },
+          {
             "id": "14F07B1062",
             "className": "一禮",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE26.html",
             "title": "作品 14F07B"
+          },
+          {
+            "id": "200271ABA8",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE25.html",
+            "title": "作品 200271"
+          },
+          {
+            "id": "238E559812",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE20.html",
+            "title": "作品 238E55"
           },
           {
             "id": "27CC4D8827",
@@ -2527,6 +2794,12 @@ window.GALLERY_CATALOG = {
             "className": "一禮",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE13.html",
             "title": "作品 4D5A96"
+          },
+          {
+            "id": "513CC44B7C",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE32.html",
+            "title": "作品 513CC4"
           },
           {
             "id": "54DA8B77BA",
@@ -2583,6 +2856,12 @@ window.GALLERY_CATALOG = {
             "title": "作品 93E3E4"
           },
           {
+            "id": "9839C56F06",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE09.html",
+            "title": "作品 9839C5"
+          },
+          {
             "id": "9CA115DDEA",
             "className": "一禮",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE07.html",
@@ -2599,6 +2878,12 @@ window.GALLERY_CATALOG = {
             "className": "一禮",
             "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE30.html",
             "title": "作品 AB7F0D"
+          },
+          {
+            "id": "AC4D1B50CE",
+            "className": "一禮",
+            "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE33.html",
+            "title": "作品 AC4D1B"
           },
           {
             "id": "B5395CEB1D",
@@ -3090,13 +3375,19 @@ window.GALLERY_CATALOG = {
     }
   ],
   "ballot": {
-    "fingerprint": "4a06101ca48862ea",
+    "fingerprint": "4c73f746e21eabde",
     "entries": [
       {
         "id": "2201D4A0CB",
         "className": "一儉",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8920.html",
         "title": "作品 2201D4"
+      },
+      {
+        "id": "23E1FDF88C",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8910.html",
+        "title": "作品 23E1FD"
       },
       {
         "id": "3418181EAA",
@@ -3133,6 +3424,12 @@ window.GALLERY_CATALOG = {
         "className": "一儉",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8902.html",
         "title": "作品 5ACBB0"
+      },
+      {
+        "id": "5C873E33FA",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8916.html",
+        "title": "作品 5C873E"
       },
       {
         "id": "68D63A90AB",
@@ -3183,6 +3480,12 @@ window.GALLERY_CATALOG = {
         "title": "作品 9A6A0F"
       },
       {
+        "id": "9E6F47CFE0",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8914.html",
+        "title": "作品 9E6F47"
+      },
+      {
         "id": "A44F2F0D6D",
         "className": "一儉",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8935.html",
@@ -3195,10 +3498,34 @@ window.GALLERY_CATALOG = {
         "title": "作品 A845C3"
       },
       {
+        "id": "AA3B1D658C",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8911.html",
+        "title": "作品 AA3B1D"
+      },
+      {
         "id": "B8C21AD260",
         "className": "一儉",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8930.html",
         "title": "作品 B8C21A"
+      },
+      {
+        "id": "BB509A4878",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8903.html",
+        "title": "作品 BB509A"
+      },
+      {
+        "id": "BD3B0C77DC",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8908.html",
+        "title": "作品 BD3B0C"
+      },
+      {
+        "id": "BF0A0B5480",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8905.html",
+        "title": "作品 BF0A0B"
       },
       {
         "id": "C3EB151247",
@@ -3217,6 +3544,12 @@ window.GALLERY_CATALOG = {
         "className": "一儉",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8909.html",
         "title": "作品 CAD82B"
+      },
+      {
+        "id": "D59E35A8AB",
+        "className": "一儉",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E5%84%89/%E4%B8%80%E5%84%8926.html",
+        "title": "作品 D59E35"
       },
       {
         "id": "DD0E6675D4",
@@ -3477,10 +3810,34 @@ window.GALLERY_CATALOG = {
         "title": "作品 02D408"
       },
       {
+        "id": "13406BD781",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE27.html",
+        "title": "作品 13406B"
+      },
+      {
+        "id": "13784B2721",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE10.html",
+        "title": "作品 13784B"
+      },
+      {
         "id": "14F07B1062",
         "className": "一禮",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE26.html",
         "title": "作品 14F07B"
+      },
+      {
+        "id": "200271ABA8",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE25.html",
+        "title": "作品 200271"
+      },
+      {
+        "id": "238E559812",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE20.html",
+        "title": "作品 238E55"
       },
       {
         "id": "27CC4D8827",
@@ -3505,6 +3862,12 @@ window.GALLERY_CATALOG = {
         "className": "一禮",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE13.html",
         "title": "作品 4D5A96"
+      },
+      {
+        "id": "513CC44B7C",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE32.html",
+        "title": "作品 513CC4"
       },
       {
         "id": "54DA8B77BA",
@@ -3561,6 +3924,12 @@ window.GALLERY_CATALOG = {
         "title": "作品 93E3E4"
       },
       {
+        "id": "9839C56F06",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE09.html",
+        "title": "作品 9839C5"
+      },
+      {
         "id": "9CA115DDEA",
         "className": "一禮",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE07.html",
@@ -3577,6 +3946,12 @@ window.GALLERY_CATALOG = {
         "className": "一禮",
         "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE30.html",
         "title": "作品 AB7F0D"
+      },
+      {
+        "id": "AC4D1B50CE",
+        "className": "一禮",
+        "source": "%E4%BD%9C%E5%93%81/%E7%AC%AC%E4%B8%80%E5%80%8BAI%E7%A8%8B%E5%BC%8F/%E4%B8%80%E7%A6%AE/%E4%B8%80%E7%A6%AE33.html",
+        "title": "作品 AC4D1B"
       },
       {
         "id": "B5395CEB1D",

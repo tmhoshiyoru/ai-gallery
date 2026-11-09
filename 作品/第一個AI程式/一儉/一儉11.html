@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灰塵精靈大冒險 - 宮崎駿風打磚塊</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+        
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* 宮崎駿水彩晴空與陽光草地漸層背景 */
+        .ghibli-bg {
+            background: linear-gradient(180deg, #1e3a8a 0%, #0284c7 35%, #06b6d4 65%, #10b981 85%, #047857 100%);
+        }
+
+        /* Canvas 視覺 */
+        canvas {
+            display: block;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 40px rgba(4, 120, 87, 0.45), inset 0 0 20px rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+        }
+
+        /* 吉卜力風按鈕 */
+        .btn-ghibli {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: 2px solid #fef3c7;
+            box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-ghibli:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(217, 119, 6, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+            filter: brightness(1.08);
+        }
+
+        .btn-ghibli:active {
+            transform: translateY(1px);
+        }
+
+        /* 半透明水彩玻璃質感卡片 */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="ghibli-bg min-h-screen flex flex-col items-center justify-center p-3 text-amber-50 overflow-x-hidden">
+
+    <!-- 主介面容器 -->
+    <div class="w-full max-w-4xl flex flex-col items-center">
+        
+        <!-- 標題區塊 -->
+        <header class="text-center mb-3">
+            <h1 class="text-3xl sm:text-4xl font-black text-amber-100 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] tracking-wider">
+                🌱 灰塵精靈大冒險
+            </h1>
+            <p class="text-xs sm:text-sm text-cyan-100 font-bold mt-1 tracking-widest drop-shadow">
+                Studio Ghibli Anime Style Brick Breaker
+            </p>
+        </header>
+
+        <!-- 得分與生命值資訊列 -->
+        <div class="w-full max-w-[800px] flex items-center justify-between mb-3 px-4 py-2.5 rounded-2xl glass-card text-xs sm:text-base font-bold text-amber-50">
+            <!-- 生命值 -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-amber-200">生命:</span>
+                <span id="lives-display" class="text-red-400 tracking-widest text-lg sm:text-xl">❤️❤️❤️</span>
+            </div>
+
+            <!-- 分數 -->
+            <div class="flex items-center gap-1">
+                <span class="text-amber-200">得分:</span>
+                <span id="score" class="text-yellow-300 font-black text-lg sm:text-xl">0</span>
+            </div>
+
+            <!-- 最高分 -->
+            <div class="flex items-center gap-1">
+                <span class="text-amber-200">最高分:</span>
+                <span id="highscore" class="text-emerald-300 font-black text-lg sm:text-xl">0</span>
+            </div>
+
+            <!-- 道具狀態提示 -->
+            <div id="status-badge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-500/80 text-white animate-pulse">
+                🌱 貓公車加長!
+            </div>
+        </div>
+
+        <!-- 遊戲畫布與浮層容器 -->
+        <div class="relative w-full max-w-[800px] aspect-[4/3] flex items-center justify-center">
+            
+            <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+            <!-- 遮罩覆蓋層 (開始/再試一次) -->
+            <div id="overlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md rounded-[1.5rem] flex flex-col items-center justify-center text-center p-6 transition-all duration-300">
+                <h2 id="overlay-title" class="text-3xl sm:text-5xl font-black text-amber-200 mb-3 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+                    灰塵精靈打磚塊
+                </h2>
+                <p id="overlay-msg" class="text-sm sm:text-base text-cyan-100 max-w-md mb-6 leading-relaxed font-bold">
+                    滑動鍵盤左右鍵移動「貓公車」<br>
+                    收集 <span class="text-emerald-300 font-black">[🌱] 魔法種子</span> 可疊加長度<br>
+                    收集 <span class="text-amber-300 font-black">[🌟] 星星金幣</span> 可發射 3 顆灰塵精靈！<br>
+                    <span class="text-red-300 font-black">小心避開 [💣] 炸彈！</span>
+                </p>
+                <button id="start-btn" onclick="startGame()" class="btn-ghibli px-8 py-3.5 rounded-full text-lg sm:text-xl font-black text-amber-950 tracking-wider">
+                    開始遊戲 (Start Game)
+                </button>
+            </div>
+        </div>
+
+        <!-- 底部控制按鈕 -->
+        <div class="w-full max-w-[800px] flex justify-between items-center mt-3 px-2">
+            <span class="text-xs text-amber-100/80 font-bold hidden sm:inline">
+                💡 鍵盤: ← / → 或 A / D | 支援觸控與滑鼠拖曳
+            </span>
+            <button onclick="restartGame()" class="btn-ghibli px-5 py-2 rounded-xl text-sm font-black text-amber-950 ml-auto">
+                🔄 重新開始 (Restart)
+            </button>
+        </div>
+    </div>
+
+    <!-- 遊戲核心邏輯 -->
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 音效合成器 (Web Audio API)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.1) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            hitBrick() { this.playTone(587.33, 'triangle', 0.12, 0.15); }
+            hitPaddle() { this.playTone(329.63, 'sine', 0.1, 0.2); }
+            powerup() {
+                this.playTone(523.25, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(659.25, 'sine', 0.08, 0.15), 60);
+                setTimeout(() => this.playTone(783.99, 'sine', 0.12, 0.15), 120);
+            }
+            bomb() { this.playTone(130.81, 'sawtooth', 0.3, 0.25); }
+            loseLife() { this.playTone(220, 'sawtooth', 0.25, 0.2); }
+            gameOver() { this.playTone(164.81, 'sawtooth', 0.5, 0.3); }
+        }
+
+        const audio = new SoundFX();
+
+        // Canvas 解析度
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // 遊戲變數
+        let score = 0;
+        let lives = 3;
+        let highScore = localStorage.getItem('ghibli_breakout_highscore') || 0;
+        let gameRunning = false;
+        let animationFrameId = null;
+
+        // 磚塊陣列與計數器
+        const BRICK_ROWS = 4;
+        const BRICK_COLS = 17; // 由 12 欄增加至 17 欄 (總數 48 格 ➔ 68 格，精確增加 20 格)
+        let bricks = [];
+        let destroyedCount = 0; // 累積擊碎個數 (用來每 10 個發射炸彈)
+
+        // 雲朵背景
+        const clouds = [
+            { x: 50, y: 80, radius: 45, speed: 0.2 },
+            { x: 300, y: 120, radius: 60, speed: 0.15 },
+            { x: 650, y: 70, radius: 50, speed: 0.25 }
+        ];
+
+        // 貓公車滑塊
+        const BASE_PADDLE_WIDTH = 110;
+        const paddle = {
+            width: BASE_PADDLE_WIDTH,
+            height: 22,
+            x: (CANVAS_WIDTH - BASE_PADDLE_WIDTH) / 2,
+            y: CANVAS_HEIGHT - 40,
+            speed: 9,
+            dx: 0,
+            expandTimer: null,
+            isExpanded: false
+        };
+
+        // 能量球 (灰塵精靈) 陣列
+        let balls = [];
+
+        // 掉落道具與粒子
+        let powerups = [];
+        let particles = [];
+
+        // 控制鍵狀態
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // 更新介面
+        document.getElementById('highscore').innerText = highScore;
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('highscore').innerText = highScore;
+            
+            let heartStr = '';
+            for (let i = 0; i < lives; i++) heartStr += '❤️';
+            document.getElementById('lives-display').innerText = heartStr || '💀';
+
+            const badge = document.getElementById('status-badge');
+            if (paddle.isExpanded) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // 初始化磚塊
+        function initBricks() {
+            bricks = [];
+            const padding = 8;
+            const offsetTop = 60;
+            const offsetLeft = 20;
+            const availableWidth = CANVAS_WIDTH - offsetLeft * 2;
+            const brickWidth = (availableWidth - (BRICK_COLS - 1) * padding) / BRICK_COLS;
+            const brickHeight = 26;
+
+            const colors = ['#38bdf8', '#4ade80', '#facc15', '#f472b6'];
+
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                bricks[r] = [];
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    bricks[r][c] = {
+                        x: offsetLeft + c * (brickWidth + padding),
+                        y: offsetTop + r * (brickHeight + padding),
+                        w: brickWidth,
+                        h: brickHeight,
+                        status: 1,
+                        color: colors[r % colors.length]
+                    };
+                }
+            }
+        }
+
+        // 建立初始球體 (灰塵精靈)
+        function createMainBall() {
+            return {
+                x: CANVAS_WIDTH / 2,
+                y: paddle.y - 15,
+                radius: 10,
+                speed: 6.5,
+                dx: (Math.random() - 0.5) * 6,
+                dy: -6.5,
+                comboCount: 0
+            };
+        }
+
+        // 鍵盤監聽
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed = false;
+        });
+
+        // 觸控與滑鼠操作
+        function handlePointerMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const relativeX = clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = relativeX * scaleX;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, canvasX - paddle.width / 2));
+        }
+
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: true });
+
+        // 生成道具
+        function spawnPowerup(x, y, type) {
+            powerups.push({
+                x: x,
+                y: y,
+                type: type, // 'SEED' (+長度), 'MULTI' (5顆球), 'BOMB' (增加磚塊)
+                radius: 14,
+                dy: 2.2
+            });
+        }
+
+        // 觸發炸彈懲罰：補回 5 個格子
+        function triggerBombPunishment() {
+            let restored = 0;
+            for (let r = BRICK_ROWS - 1; r >= 0; r--) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    if (bricks[r][c].status === 0) {
+                        bricks[r][c].status = 1;
+                        restored++;
+                        createParticles(bricks[r][c].x + bricks[r][c].w / 2, bricks[r][c].y + bricks[r][c].h / 2, '#ef4444', 6);
+                        if (restored >= 5) break;
+                    }
+                }
+                if (restored >= 5) break;
+            }
+        }
+
+        // 生成爆破粒子
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 6,
+                    dy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 3 + 2,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        // 啟動加長道具 (可疊加)
+        function activateExpandPowerup() {
+            audio.powerup();
+            const maxAllowedWidth = 250;
+            paddle.width = Math.min(maxAllowedWidth, paddle.width + 35);
+            paddle.isExpanded = true;
+            updateUI();
+
+            if (paddle.expandTimer) clearTimeout(paddle.expandTimer);
+
+            paddle.expandTimer = setTimeout(() => {
+                paddle.width = BASE_PADDLE_WIDTH;
+                paddle.isExpanded = false;
+                updateUI();
+            }, 5000);
+        }
+
+        // 啟動 3 顆球狂暴
+        function activateMultiBallPowerup() {
+            audio.powerup();
+            for (let i = 0; i < 3; i++) {
+                const angle = (Math.PI / 4) * (i - 1); // 調整 3 顆球分散發射的角度 (-45deg, 0deg, 45deg)
+                const speed = 7;
+                balls.push({
+                    x: paddle.x + paddle.width / 2,
+                    y: paddle.y - 15,
+                    radius: 10,
+                    speed: speed,
+                    dx: Math.sin(angle) * speed,
+                    dy: -Math.abs(Math.cos(angle) * speed),
+                    comboCount: 0
+                });
+            }
+        }
+
+        // 開始遊戲
+        function startGame() {
+            audio.init();
+            document.getElementById('overlay').classList.add('opacity-0', 'pointer-events-none');
+            
+            if (!gameRunning) {
+                resetFullGame();
+                gameRunning = true;
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // 重置完整遊戲
+        function resetFullGame() {
+            score = 0;
+            lives = 3;
+            destroyedCount = 0;
+            paddle.width = BASE_PADDLE_WIDTH;
+            paddle.x = (CANVAS_WIDTH - BASE_PADDLE_WIDTH) / 2;
+            paddle.isExpanded = false;
+            if (paddle.expandTimer) clearTimeout(paddle.expandTimer);
+
+            balls = [createMainBall()];
+            powerups = [];
+            particles = [];
+            initBricks();
+            updateUI();
+        }
+
+        function restartGame() {
+            resetFullGame();
+            if (!gameRunning) {
+                gameRunning = true;
+                document.getElementById('overlay').classList.add('opacity-0', 'pointer-events-none');
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // 扣血或重置球位置
+        function handleBallLoss() {
+            lives--;
+            audio.loseLife();
+            updateUI();
+
+            if (lives <= 0) {
+                gameRunning = false;
+                audio.gameOver();
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('ghibli_breakout_highscore', highScore);
+                    updateUI();
+                }
+                document.getElementById('overlay-title').innerText = "💔 Game Over";
+                document.getElementById('overlay-msg').innerHTML = `冒險結束！最終得分：<span class="text-yellow-300 font-black">${score}</span>`;
+                document.getElementById('start-btn').innerText = "再試一次 (Play Again)";
+                document.getElementById('overlay').classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+                balls = [createMainBall()];
+            }
+        }
+
+        // 碰撞檢測與物理更新
+        function updatePhysics() {
+            // 滑塊平移
+            if (rightPressed && paddle.x < CANVAS_WIDTH - paddle.width) {
+                paddle.x += paddle.speed;
+            } else if (leftPressed && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+
+            // 更新雲朵位置
+            clouds.forEach(c => {
+                c.x += c.speed;
+                if (c.x - c.radius > CANVAS_WIDTH) c.x = -c.radius * 2;
+            });
+
+            // 更新粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // 更新道具掉落
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.y += p.dy;
+
+                // 貓公車撿到道具
+                if (p.y + p.radius >= paddle.y && 
+                    p.y - p.radius <= paddle.y + paddle.height &&
+                    p.x >= paddle.x && p.x <= paddle.x + paddle.width) {
+                    
+                    if (p.type === 'SEED') {
+                        activateExpandPowerup();
+                    } else if (p.type === 'MULTI') {
+                        activateMultiBallPowerup();
+                    } else if (p.type === 'BOMB') {
+                        audio.bomb();
+                        triggerBombPunishment();
+                    }
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                // 超出邊界
+                if (p.y > CANVAS_HEIGHT + 20) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // 更新球體狀態
+            let activeBricksLeft = 0;
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    if (bricks[r][c].status === 1) activeBricksLeft++;
+                }
+            }
+
+            // 當前關卡清空 -> 通過關卡升級
+            if (activeBricksLeft === 0) {
+                initBricks();
+                balls = [createMainBall()];
+                return;
+            }
+
+            for (let bIndex = balls.length - 1; bIndex >= 0; bIndex--) {
+                const ball = balls[bIndex];
+                
+                // 發射粒子尾跡
+                if (Math.random() < 0.4) {
+                    particles.push({
+                        x: ball.x,
+                        y: ball.y,
+                        dx: (Math.random() - 0.5) * 1.5,
+                        dy: (Math.random() - 0.5) * 1.5,
+                        radius: Math.random() * 2 + 1,
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        alpha: 0.8,
+                        decay: 0.05
+                    });
+                }
+
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                // 左右壁面反彈
+                if (ball.x + ball.radius > CANVAS_WIDTH) {
+                    ball.x = CANVAS_WIDTH - ball.radius;
+                    ball.dx = -ball.dx;
+                } else if (ball.x - ball.radius < 0) {
+                    ball.x = ball.radius;
+                    ball.dx = -ball.dx;
+                }
+
+                // 頂部反彈
+                if (ball.y - ball.radius < 0) {
+                    ball.y = ball.radius;
+                    ball.dy = -ball.dy;
+                }
+
+                // 貓公車滑塊碰撞
+                if (ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x >= paddle.x && ball.x <= paddle.x + paddle.width) {
+                    
+                    audio.hitPaddle();
+                    ball.dy = -Math.abs(ball.speed);
+
+                    // 依據撞擊滑塊的位置改變反彈角度
+                    const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    ball.dx = hitPoint * (ball.speed * 0.95);
+                    ball.comboCount = 0; // 重置單次擊碎連擊數
+                }
+
+                // 磚塊碰撞檢測
+                for (let r = 0; r < BRICK_ROWS; r++) {
+                    for (let c = 0; c < BRICK_COLS; c++) {
+                        const brick = bricks[r][c];
+                        if (brick.status === 1) {
+                            if (ball.x + ball.radius > brick.x &&
+                                ball.x - ball.radius < brick.x + brick.w &&
+                                ball.y + ball.radius > brick.y &&
+                                ball.y - ball.radius < brick.y + brick.h) {
+                                
+                                brick.status = 0;
+                                ball.dy = -ball.dy;
+                                score += 10;
+                                destroyedCount++;
+                                ball.comboCount++;
+                                audio.hitBrick();
+
+                                createParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 8);
+
+                                // 道具觸發邏輯：
+                                // 1. 每累積擊碎 10 個格子時，同時掉落炸彈與 3 顆球獎勵道具
+                                if (destroyedCount % 10 === 0) {
+                                    spawnPowerup(brick.x + brick.w / 2 - 15, brick.y + brick.h / 2, 'BOMB');
+                                    spawnPowerup(brick.x + brick.w / 2 + 15, brick.y + brick.h / 2, 'MULTI');
+                                }
+                                // 2. 其他擊碎時刻有 20% 機率掉落加長道具 [🌱]
+                                else if (Math.random() < 0.20) {
+                                    spawnPowerup(brick.x + brick.w / 2, brick.y + brick.h / 2, 'SEED');
+                                }
+
+                                updateUI();
+                            }
+                        }
+                    }
+                }
+
+                // 球落入底部
+                if (ball.y - ball.radius > CANVAS_HEIGHT) {
+                    balls.splice(bIndex, 1);
+                }
+            }
+
+            // 若所有球掉光，執行扣血
+            if (balls.length === 0) {
+                handleBallLoss();
+            }
+        }
+
+        // 畫面繪製渲染
+        function render() {
+            // 背景漸層
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+            skyGradient.addColorStop(0, '#38bdf8');
+            skyGradient.addColorStop(0.5, '#7dd3fc');
+            skyGradient.addColorStop(1, '#a7f3d0');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 繪製微風積雲
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            clouds.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.arc(c.x + c.radius * 0.7, c.y - c.radius * 0.2, c.radius * 0.7, 0, Math.PI * 2);
+                ctx.arc(c.x - c.radius * 0.7, c.y + c.radius * 0.1, c.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 繪製磚塊
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const b = bricks[r][c];
+                    if (b.status === 1) {
+                        ctx.save();
+                        ctx.fillStyle = b.color;
+                        ctx.beginPath();
+                        ctx.roundRect(b.x, b.y, b.w, b.h, 6);
+                        ctx.fill();
+
+                        // 高光頂條
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.beginPath();
+                        ctx.roundRect(b.x + 2, b.y + 2, b.w - 4, 4, 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 繪製貓公車滑塊
+            ctx.save();
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 12);
+            ctx.fill();
+
+            // 車燈光芒
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(paddle.x + 10, paddle.y + paddle.height / 2, 5, 0, Math.PI * 2);
+            ctx.arc(paddle.x + paddle.width - 10, paddle.y + paddle.height / 2, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // 繪製掉落道具
+            powerups.forEach(p => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+
+                if (p.type === 'SEED') {
+                    ctx.fillStyle = '#10b981';
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🌱', p.x, p.y);
+                } else if (p.type === 'MULTI') {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🌟', p.x, p.y);
+                } else if (p.type === 'BOMB') {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💣', p.x, p.y);
+                }
+                ctx.restore();
+            });
+
+            // 繪製爆破粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 繪製灰塵精靈小球
+            balls.forEach(ball => {
+                ctx.save();
+                // 黑色精靈本體
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 精靈大眼睛
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(ball.x - 3, ball.y - 2, 3.5, 0, Math.PI * 2);
+                ctx.arc(ball.x + 3, ball.y - 2, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(ball.x - 3, ball.y - 2, 1.5, 0, Math.PI * 2);
+                ctx.arc(ball.x + 3, ball.y - 2, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 遊戲循環引擎
+        function gameLoop() {
+            if (!gameRunning) return;
+            updatePhysics();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 初始化繪製首頁
+        initBricks();
+        render();
+    </script>
+</body>
+</html>
